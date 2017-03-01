@@ -1,0 +1,34 @@
+# This file contains metadata for this plugin interpreted by QGIS and e.g. plugins.qgis.org.
+
+# Mandatory items:
+
+[general]
+name=Vector Tiles Reader
+qgisMinimumVersion=2.18
+qgisMaximumVersion=2.18
+description=Read Mapbox vector tiles from MBTiles file
+about=This Python plugin reads Mapbox vector tiles (MVT) from a local MBTiles file. A possible source of MBTiles is https://openmaptiles.org/. 
+version=0.0.9
+author=Martin Boos
+email=geometalab@gmail.com
+
+# End of mandatory metadata
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+changelog=First release
+
+# Tags are comma separated with spaces allowed
+tags=vector tile, mbtiles, vector
+
+homepage=http://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin
+tracker=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
+repository=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
+category=Vector
+icon=icon.png
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
