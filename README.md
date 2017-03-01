@@ -24,9 +24,10 @@ Vector Tile Reader has been developed by
 Acknowledgments:
 
 * Stefan Keller
-* Carmelo Schumacher
+* Dijan Helbling
 * Nicola Jordan
 * Raphael Das Gupta
+* Carmelo Schumacher
 
 ## Technical documentation
 
