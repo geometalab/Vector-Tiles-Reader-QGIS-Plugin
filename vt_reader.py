@@ -12,12 +12,16 @@ import json
 import glob
 
 class VtReader:
-    _geo_type_options = {1: "Point", 2: "LineString", 3: "Polygon"}
-    _json_data = {"Point": {}, "LineString": {}, "Polygon": {}}
+    geo_types = {1: "Point", 2: "LineString", 3: "Polygon"}    
     _extent = 4096    
     directory = os.path.abspath(os.path.dirname(__file__))
     temp_dir = "%s/tmp" % directory
     filePath = "%s/sample data/zurich_switzerland.mbtiles" % directory
+    json_template = {
+        "Point": {}, 
+        "LineString": {}, 
+        "Polygon": {}
+        }
 
     def __init__(self, iface):
         self.iface = iface
@@ -76,6 +80,7 @@ class VtReader:
         print "Handling record"
         try:
             geometry = [row[0], row[1], row[2]]
+            #print "Geom: ", geometry
             tmp = os.path.join(self.temp_dir, "tmp.txt")
             with open(tmp, 'wb') as f:
                 f.write(row[3])
@@ -87,51 +92,66 @@ class VtReader:
         except:
             print "decoding data with mapbox_vector_tile failed", sys.exc_info()
             return
-        self._write_features(decoded_data, geometry)
+        #print decoded_data
 
-        for value in self._geo_type_options:
-            file_src = self.unique_file_name
+        self.write_features(decoded_data, geometry)
+        for value in self.geo_types:
+            file_src = self.create_unique_file_name()
             with open(file_src, "w") as f:
-                json.dump(self._json_data[self._geo_type_options[value]], f)
-            self._load_layer(file_src)
+                json.dump(self.json_template[self.geo_types[value]], f)
+            self.add_vector_layer(file_src, self.geo_types[value])
 
-    def _load_layer(self, json_src):
+    def add_vector_layer(self, json_src, layer_name):
         # load the created geojson into qgis
-        name = self._mbtile_id
-        layer = QgsVectorLayer(json_src, name, "ogr")
+        layer = QgsVectorLayer(json_src, layer_name, "ogr")
         QgsMapLayerRegistry.instance().addMapLayer(layer)
 
     def _create_layer(self):
         # create a layer for each type
-        for value in self._geo_type_options:
-            self._json_data[self._geo_type_options[value]] = {"type": "FeatureCollection", "crs":
-                {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::3857"}}, "features": []}
+        print "create a layer for each type"
+        for value in self.geo_types:
+            self.json_template[self.geo_types[value]] = {
+                "type": "FeatureCollection", 
+                "crs": { # crs = coordinate reference system
+                    "type": "name", 
+                    "properties": {
+                        "name": "urn:ogc:def:crs:EPSG::3857"
+                        }
+                }, 
+                        "features": []
+            }
+        print "Template: ", self.json_template
 
-    def _write_features(self, decoded_data, geometry):
+    def write_features(self, decoded_data, geometry):
         print "Now creating proper GeoJSON"
         # iterate through all the features of the data and build proper gejson conform objects.
         for name in decoded_data:
-            for index, value in enumerate(decoded_data[name]['features']):
-                data, geo_type = self._build_object(decoded_data[name]["features"][index], geometry)
+            print "Handle features of layer: ", name
+            for index, feature in enumerate(decoded_data[name]['features']):
+                data, geo_type = self.create_feature_json(feature, geometry)
                 if data:
-                    self._json_data[geo_type]["features"].append(data)
-        #print self._json_data
+                    #print "feature: ", data
+                    self.json_template[geo_type]["features"].append(data)
+                break
+        #print self.json_template
 
-    def _build_object(self, data, geometry):
+    def create_feature_json(self, data, geometry):
+        data_type = data["type"]
         #  single feature structure
-        geo_type = self._geo_type_options[data["type"]]
+        geo_type = self.geo_types[data_type]
         coordinates = self._mercator_geometry(data["geometry"], geometry, 0)
-        if data["type"] == 2 and self._counter > 0:
-            # if there it is a MultiLineString, the counter will be greater than zero. return None
+        if data_type == 2 and self._counter > 0:
+            # if there is a MultiLineString, the counter will be greater than zero. return None
             self._counter = 0
             self._bool = True
             return None, geo_type
-        if data["type"] == 1:
+        if data_type == 1:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
-        if data["type"] == 3 and self._counter == 0:
+        if data_type == 3 and self._counter == 0:
             # If there is not a polygon in a polygon, one bracket will be missing.
             coordinates = [coordinates]
+
         feature = {
             "type": "Feature",
             "geometry": {
@@ -169,7 +189,6 @@ class VtReader:
         merc_northing = int(tmp[1] + delta_y / self._extent * coordinates[1])
         return [merc_easting, merc_northing]
 
-    @property
-    def unique_file_name(self):
-        unique_name = "%s.geojson" % uuid.uuid4()
+    def create_unique_file_name(self, ending = "geojson"):
+        unique_name = "{}.{}".format(uuid.uuid4(), ending)
         return os.path.join(self.temp_dir, unique_name)
