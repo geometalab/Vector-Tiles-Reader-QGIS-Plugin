@@ -11,18 +11,29 @@ import uuid
 import json
 import glob
 
-class VtReader:
-    geo_types = {1: "Point", 2: "LineString", 3: "Polygon"}    
+class _GeoTypes:
+    POINT = "Point"
+    LINE_STRING = "LineString"
+    POLYGON = "Polygon"
+
+GeoTypes = _GeoTypes()
+
+class VtReader:  
+    geo_types = {
+        1: GeoTypes.POINT, 
+        2: GeoTypes.LINE_STRING, 
+        3: GeoTypes.POLYGON}  
+
+    json_template = {
+        GeoTypes.POINT: {}, 
+        GeoTypes.LINE_STRING: {}, 
+        GeoTypes.POLYGON: {}}  
+
     _extent = 4096    
     directory = os.path.abspath(os.path.dirname(__file__))
     temp_dir = "%s/tmp" % directory
     filePath = "%s/sample data/zurich_switzerland.mbtiles" % directory
-    json_template = {
-        "Point": {}, 
-        "LineString": {}, 
-        "Polygon": {}
-        }
-
+    
     def __init__(self, iface):
         self.iface = iface
         self.import_libs()
@@ -132,49 +143,61 @@ class VtReader:
                 if data:
                     #print "feature: ", data
                     self.json_template[geo_type]["features"].append(data)
-                break
+                
+                # TODO: remove the break after debugging
+                #break
         #print self.json_template
 
     def create_feature_json(self, data, geometry):
         data_type = data["type"]
         #  single feature structure
         geo_type = self.geo_types[data_type]
-        coordinates = self._mercator_geometry(data["geometry"], geometry, 0)
-        if data_type == 2 and self._counter > 0:
-            # if there is a MultiLineString, the counter will be greater than zero. return None
-            self._counter = 0
-            self._bool = True
-            return None, geo_type
-        if data_type == 1:
+        coordinates = self._mercator_geometry(geo_type, data["geometry"], geometry, 0)        
+
+        if geo_type == GeoTypes.POINT:
+            assert data_type == 1
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
-        if data_type == 3 and self._counter == 0:
+        if geo_type == GeoTypes.POLYGON and self._counter == 0:
+            assert data_type == 3
             # If there is not a polygon in a polygon, one bracket will be missing.
             coordinates = [coordinates]
 
-        feature = {
-            "type": "Feature",
-            "geometry": {
-                "type": geo_type,
-                "coordinates": coordinates
-            },
-            "properties": data["properties"]
-        }
+        feature = None
+        # if there is no MultiLineString create a new feature
+        # if there IS a MultiLineString the counter will be greater than zero
+        if data_type != 2 or self._counter == 0:
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": geo_type,
+                    "coordinates": coordinates
+                },
+                "properties": data["properties"]
+            }
+
         self._counter = 0
         self._bool = True
         return feature, geo_type
 
-    def _mercator_geometry(self, coordinates, geometry, counter):
-        print "mercator iteration {}: {}".format(counter, geometry)
+    def _mercator_geometry(self, geo_type, coordinates, geometry, counter):
+        # print "mercator iteration {}".format(counter)
+        # print "-- type: ", geo_type
+        # print "-- geometry: ", geometry
+        # print "-- coordinates: ", coordinates
+
         # recursively iterate through all the points and create an array,
         tmp = []
 
         for index, coord in enumerate(coordinates):
-            if isinstance(coord[0], int):
+            is_multi = not isinstance(coord[0], int)
+            multi_string = "Multi" if is_multi else ""
+            # print "---- coord: {} (Type: {})".format(coord, "{}{}".format(multi_string, geo_type))
+
+            if not is_multi:
                 tmp.append(self._calculate_geometry(self, coord, geometry))
             else:
-                print "no int at index 0: ", coord
-                tmp.append(self._mercator_geometry(coord, geometry, counter + 1))
+                tmp.append(self._mercator_geometry(geo_type, coord, geometry, counter + 1))
         if self._bool:
             self._counter = counter
             self._bool = False
