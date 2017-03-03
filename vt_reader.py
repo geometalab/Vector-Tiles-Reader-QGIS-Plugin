@@ -6,10 +6,10 @@ import sys
 import os
 import site
 import importlib
-import gzip
 import uuid
 import json
 import glob
+import zlib
 
 class _GeoTypes:
     POINT = "Point"
@@ -117,7 +117,9 @@ class VtReader:
         "{} rows to process".format(len(rowSet))
         for index, row in enumerate(rowSet):
             #self.init_json_template()
-            decoded_data, geometry = self.decode_row(row)            
+            # decoded_data = self.decode_row(row) 
+            decoded_data = self.decode_binary_tile_data(row[3]) 
+            geometry = [row[0], row[1], row[2]]         
             self.write_features(decoded_data, geometry)
             print "Progress: {}%".format(100 / totalNrRows * (index+1))
 
@@ -125,23 +127,15 @@ class VtReader:
         # this means one vector layer per geotype will be added in qgis
         # the other option would be to call this method once per row, then we have to reinitialize the json template for each row again
         self.create_all_layers()        
- 
-    def decode_row(self, row):
+
+    def decode_binary_tile_data(self, data):
         try:
-            geometry = [row[0], row[1], row[2]]
-            tmp = self.create_unique_file_name("bin")
-            with open(tmp, 'wb') as f:
-                f.write(row[3])
-            
-            # TODO: improve the following process by avoiding to write the content to a file to read it then
-            with gzip.open(tmp, 'rb') as f:
-                file_content = f.read()
-            decoded_data = self.mvt.decode(file_content)
-            os.remove(tmp)                      
+            file_content = zlib.decompress(data, 32+ zlib.MAX_WBITS)
+            decoded_data = self.mvt.decode(file_content)                   
         except:
             print "decoding data with mapbox_vector_tile failed", sys.exc_info()
             return
-        return decoded_data, geometry
+        return decoded_data
 
     def create_all_layers(self):
         for value in self.geo_types:
