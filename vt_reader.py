@@ -165,14 +165,16 @@ class VtReader:
         return feature, geo_type
 
     def _mercator_geometry(self, coordinates, geometry, counter):
+        print "mercator iteration {}: {}".format(counter, geometry)
         # recursively iterate through all the points and create an array,
         tmp = []
 
-        for index, value in enumerate(coordinates):
-            if isinstance(coordinates[index][0], int):
-                tmp.append(self._calculate_geometry(self, coordinates[index], geometry))
+        for index, coord in enumerate(coordinates):
+            if isinstance(coord[0], int):
+                tmp.append(self._calculate_geometry(self, coord, geometry))
             else:
-                tmp.append(self._mercator_geometry(coordinates[index], geometry, counter + 1))
+                print "no int at index 0: ", coord
+                tmp.append(self._mercator_geometry(coord, geometry, counter + 1))
         if self._bool:
             self._counter = counter
             self._bool = False
