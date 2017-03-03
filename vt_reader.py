@@ -84,7 +84,7 @@ class VtReader:
     def get_data_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
+        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
         rows = []
         try:
             cur = self.conn.cursor()
@@ -121,7 +121,7 @@ class VtReader:
             decoded_data = self.decode_binary_tile_data(row[3]) 
             geometry = [row[0], row[1], row[2]]         
             self.write_features(decoded_data, geometry)
-            print "Progress: {}%".format(100 / totalNrRows * (index+1))
+            print "Progress: {}%".format(100.0 / totalNrRows * (index+1))
 
         # the layers are only created once
         # this means one vector layer per geotype will be added in qgis
@@ -130,7 +130,8 @@ class VtReader:
 
     def decode_binary_tile_data(self, data):
         try:
-            file_content = zlib.decompress(data, 32+ zlib.MAX_WBITS)
+            # The offset of 32 signals to the zlib header that the gzip header is expected but skipped.
+            file_content = zlib.decompress(data, 32 + zlib.MAX_WBITS)
             decoded_data = self.mvt.decode(file_content)                   
         except:
             print "decoding data with mapbox_vector_tile failed", sys.exc_info()
