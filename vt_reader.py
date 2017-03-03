@@ -84,7 +84,7 @@ class VtReader:
     def get_data_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 3;".format(zoom_level)
+        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
         rows = []
         try:
             cur = self.conn.cursor()
@@ -110,15 +110,16 @@ class VtReader:
                 }, 
                         "features": []
             }
-        #print "Template: ", self.json_template
 
     def handle_all_rows(self, rowSet):
         base_template = self.json_template
-        for row in rowSet:
+        totalNrRows = len(rowSet)
+        "{} rows to process".format(len(rowSet))
+        for index, row in enumerate(rowSet):
             #self.init_json_template()
             decoded_data, geometry = self.decode_row(row)            
             self.write_features(decoded_data, geometry)
-            print "template size: ", len(self.json_template)
+            print "Progress: {}%".format(100 / totalNrRows * (index+1))
 
         # the layers are only created once
         # this means one vector layer per geotype will be added in qgis
@@ -126,22 +127,20 @@ class VtReader:
         self.create_all_layers()        
  
     def decode_row(self, row):
-        print "Handling record"
         try:
             geometry = [row[0], row[1], row[2]]
-            #print "Geom: ", geometry
-            tmp = os.path.join(self.temp_dir, "tmp.txt")
+            tmp = self.create_unique_file_name("bin")
             with open(tmp, 'wb') as f:
                 f.write(row[3])
+            
+            # TODO: improve the following process by avoiding to write the content to a file to read it then
             with gzip.open(tmp, 'rb') as f:
                 file_content = f.read()
             decoded_data = self.mvt.decode(file_content)
-            os.remove(tmp)
-            print "Decoding successful"                        
+            os.remove(tmp)                      
         except:
             print "decoding data with mapbox_vector_tile failed", sys.exc_info()
             return
-        #print decoded_data
         return decoded_data, geometry
 
     def create_all_layers(self):
@@ -160,7 +159,7 @@ class VtReader:
         print "Now creating proper GeoJSON"
         # iterate through all the features of the data and build proper gejson conform objects.
         for name in decoded_data:
-            print "Handle features of layer: ", name
+            #print "Handle features of layer: ", name
             for index, feature in enumerate(decoded_data[name]['features']):
                 data, geo_type = self.create_feature_json(feature, geometry)
                 if data:
