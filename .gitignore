@@ -10,3 +10,4 @@
 out.txt
 .idea
 deprecated/
+tmp/*

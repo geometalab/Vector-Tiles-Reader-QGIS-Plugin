@@ -16,6 +16,7 @@ of the License, or (at your option) any later version.
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
+from vt_reader import VtReader
 
 
 class VtrPlugin:
@@ -47,6 +48,9 @@ class VtrPlugin:
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.action)
         QObject.connect(self.action, SIGNAL("triggered()"), self.run)
+        print "do work!"
+        reader = VtReader(self.iface)
+        reader.do_work()
 
     def unload(self):
         print "VTR Plugin unload"
