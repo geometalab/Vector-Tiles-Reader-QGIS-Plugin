@@ -185,18 +185,16 @@ class VtReader:
         """
         Creates a proper GeoJSON feature for the specified feature
         """
-
         from geojson import Feature, Point, Polygon, LineString
 
         geo_type = self.geo_types[feature["type"]]
         coordinates = feature["geometry"]
+        #print "coordinates: ", coordinates
         coordinates = self.map_coordinates_recursive(coordinates, lambda coords: self._calculate_geometry(self, coords, tile))
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
-
-        feature_json = None
         
         geometry = None
         if geo_type == GeoTypes.POINT:            
@@ -214,7 +212,7 @@ class VtReader:
 
     def map_coordinates_recursive(self, coordinates, func):        
         """
-        Recursively traverses the array of coordinates (breadth first) and applies the specified function
+        Recursively traverses the array of coordinates (depth first) and applies the specified function
         """
         tmp = []
         for coord in coordinates:          
