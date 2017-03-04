@@ -44,10 +44,10 @@ class VtrPlugin:
     def initGui(self):
         print "VTR Plugin initGui"
         self.action = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Add Vector Tiles Layer", self.iface.mainWindow())
+        self.action.triggered.connect(self.run)
         self.iface.addVectorToolBarIcon(self.action)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.action)
-        QObject.connect(self.action, SIGNAL("triggered()"), self.run)
 
         self.reader = VtReader(self.iface)
         self.reader.do_work()
