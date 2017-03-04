@@ -135,8 +135,6 @@ class VtReader:
             file_src = self.create_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            if feature_path == "landcover.wood.forest":
-                print "landcover.wood.forest: ", feature_collection
             self.add_vector_layer(file_src, feature_path, rootGroup)
 
     def add_vector_layer(self, json_src, layer_name, layer_target_group):
