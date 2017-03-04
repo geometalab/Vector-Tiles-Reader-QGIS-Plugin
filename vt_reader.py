@@ -71,7 +71,7 @@ class VtReader:
         site.addsitedir(os.path.join(self.temp_dir, '/ext-libs'))
         self.import_library("google.protobuf")
         self.mvt = self.import_library("mapbox_vector_tile")
-        self.import_library("geojson")
+        self.geojson = self.import_library("geojson")        
 
     def import_library(self, lib):
         print "importing: ", lib
@@ -170,7 +170,7 @@ class VtReader:
             print "Handle features of layer: ", name
             tile_features = tile.decoded_data[name]["features"]
             for index, feature in enumerate(tile_features):
-                data, geo_type = self.create_feature_json(feature, tile)
+                data, geo_type = self.create_geojson_feature(feature, tile)
                 if data:
                     #print "feature: ", data
                     self.json_template[geo_type]["features"].append(data)
@@ -181,83 +181,55 @@ class VtReader:
                 # break
         #print self.json_template
 
-    def create_feature_json(self, feature, tile):
-        #print "feature: ", feature
-        feature_type = feature["type"]
-        #  single feature structure
-        geo_type = self.geo_types[feature_type]
+    def create_geojson_feature(self, feature, tile):
+        """
+        Creates a proper GeoJSON feature for the specified feature
+        """
 
-        coordinates = self._mercator_geometry(geo_type, feature["geometry"], tile, 0)
+        from geojson import Feature, Point, Polygon, LineString
+
+        geo_type = self.geo_types[feature["type"]]
+        coordinates = feature["geometry"]
+        coordinates = self.map_coordinates_recursive(coordinates, lambda coords: self._calculate_geometry(self, coords, tile))
 
         if geo_type == GeoTypes.POINT:
-            assert feature_type == 1
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
-        if geo_type == GeoTypes.POLYGON and self._counter == 0:
-            assert feature_type == 3
-            # If there is not a polygon in a polygon, one bracket will be missing.
-            coordinates = [coordinates]        
 
         feature_json = None
-
-        # if there is no MultiLineString create a new feature
-        # if there IS a MultiLineString the counter will be greater than zero and NO feature will be created
-        if feature_type != 2 or self._counter == 0:
-            feature_json = {
-                "type": "Feature",
-                "geometry": {
-                    "type": geo_type,
-                    "coordinates": coordinates
-                },
-                "properties": feature["properties"]
-            }
+        
+        geometry = None
+        if geo_type == GeoTypes.POINT:            
+            geometry = Point(coordinates)
+        elif geo_type == GeoTypes.POLYGON:    
+            geometry = Polygon(coordinates)
+        elif geo_type == GeoTypes.LINE_STRING:
+            geometry = LineString(coordinates)
         else:
-            print "whats this.........................."
-            print "feature: ", feature
-            print "coordinates: ", coordinates
-            feature_json = {
-                "type": "Feature",
-                "geometry": {
-                    "type": geo_type,
-                    "coordinates": coordinates
-                },
-                "properties": feature["properties"]
-            }
+            raise Exception("Unexpected geo_type: {}".format(geo_type))
 
-        self._counter = 0
-        self._bool = True
+        feature_json = Feature(geometry=geometry, properties=feature["properties"])
+
         return feature_json, geo_type
 
-    def _mercator_geometry(self, geo_type, coordinates, tile, counter):        
-        # print "mercator iteration {}".format(counter)
-        # print "-- type: ", geo_type
-        # print "-- geometry: ", geometry
-        # print "-- coordinates: ", coordinates
-
-        # recursively iterate through all the points and create an array,
+    def map_coordinates_recursive(self, coordinates, func):        
+        """
+        Recursively traverses the array of coordinates (breadth first) and applies the specified function
+        """
         tmp = []
-
-        for index, coord in enumerate(coordinates):
-            is_multi = not isinstance(coord[0], int)
-            multi_string = "Multi" if is_multi else ""
-            # if is_multi:
-            #     print "---- coord: {} (Type: {})".format(coord, "{}{}".format(multi_string, geo_type))
-
-            if not is_multi:
-                tmp.append(self._calculate_geometry(self, coord, tile))
+        for coord in coordinates:          
+            is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
+            if is_coordinate_tuple:
+                newval = func(coord)
+                tmp.append(newval)
             else:
-                #print "is multi: ", coordinates
-                tmp.append(self._mercator_geometry(geo_type, coord, tile, counter + 1))
-
-        if self._bool:
-            self._counter = counter
-            self._bool = False
+                tmp.append(self.map_coordinates_recursive(coord, func))
         return tmp
 
     @staticmethod
     def _calculate_geometry(self, coordinates, tile):
         """
-        Does a mercator transformation on 
+        Does a mercator transformation on the specified coordinate tuple
         """
         # calculate the mercator geometry using external library
         # geometry:: 0: zoom, 1: easting, 2: northing
