@@ -84,7 +84,7 @@ class VtReader:
     def get_data_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 3;".format(zoom_level)
         rows = []
         try:
             cur = self.conn.cursor()
@@ -126,7 +126,7 @@ class VtReader:
         # the layers are only created once
         # this means one vector layer per geotype will be added in qgis
         # the other option would be to call this method once per row, then we have to reinitialize the json template for each row again
-        self.create_all_layers()        
+        self.create_layers_for_geotypes()        
 
     def decode_binary_tile_data(self, data):
         try:
@@ -138,20 +138,22 @@ class VtReader:
             return
         return decoded_data
 
-    def create_all_layers(self):
+    def create_layers_for_geotypes(self):
+        root = QgsProject.instance().layerTreeRoot()
+        myGroup1 = root.addGroup("My Group 1")
         for value in self.geo_types:
             file_src = self.create_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(self.json_template[self.geo_types[value]], f)
-            self.add_vector_layer(file_src, self.geo_types[value])
+            self.add_vector_layer(file_src, self.geo_types[value], myGroup1)
 
-    def add_vector_layer(self, json_src, layer_name):
+    def add_vector_layer(self, json_src, layer_name, layer_target_group):
         # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        QgsMapLayerRegistry.instance().addMapLayer(layer)    
+        QgsMapLayerRegistry.instance().addMapLayer(layer, False)    
+        layer_target_group.addLayer(layer)
 
     def write_features(self, decoded_data, geometry):
-        print "Now creating proper GeoJSON"
         # iterate through all the features of the data and build proper gejson conform objects.
         for name in decoded_data:
             #print "Handle features of layer: ", name
@@ -162,7 +164,9 @@ class VtReader:
                     self.json_template[geo_type]["features"].append(data)
                 
                 # TODO: remove the break after debugging
-                #break
+                # print "feature: ", feature
+                # print "   data: ", data
+                # break
         #print self.json_template
 
     def create_feature_json(self, feature, geometry):
