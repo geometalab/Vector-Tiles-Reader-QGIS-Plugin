@@ -69,12 +69,15 @@ class VtReader:
 
     def import_libs(self):        
         site.addsitedir(os.path.join(self.temp_dir, '/ext-libs'))
-        print "import google.protobuf"
-        import google.protobuf
-        print "importing google.protobuf succeeded"
-        print "import mapbox_vector_tile"
-        self.mvt = importlib.import_module("mapbox_vector_tile")
-        print "importing mapbox_vector_tile succeeded"
+        self.import_library("google.protobuf")
+        self.mvt = self.import_library("mapbox_vector_tile")
+        self.import_library("geojson")
+
+    def import_library(self, lib):
+        print "importing: ", lib
+        module = importlib.import_module(lib)
+        print "import successful"
+        return module
 
     def do_work(self):
         self.clear_temp_dir()
@@ -96,7 +99,7 @@ class VtReader:
     def load_tiles_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
         tile_data_tuples = []
         try:
             cur = self.conn.cursor()
