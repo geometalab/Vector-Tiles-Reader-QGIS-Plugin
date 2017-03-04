@@ -10,6 +10,7 @@ import uuid
 import json
 import glob
 import zlib
+from VectorTileHelper import VectorTile
 
 class _GeoTypes:
     POINT = "Point"
@@ -50,12 +51,10 @@ class VtReader:
             os.remove(f)
 
     def reset_json_template(self):
-        print "resetting template"
         self.json_template = {
             GeoTypes.POINT: {}, 
             GeoTypes.LINE_STRING: {}, 
-            GeoTypes.POLYGON: {}}
-        print "template reset: ", self.json_template 
+            GeoTypes.POLYGON: {}} 
 
     def import_libs(self):        
         site.addsitedir(os.path.join(self.temp_dir, '/ext-libs'))
@@ -69,32 +68,39 @@ class VtReader:
     def do_work(self):
         self.clear_temp_dir()
         self.connect_to_db() 
-        rows = self.get_data_from_db()
+        tiles = self.load_tiles_from_db()
         self.init_json_template()
-        self.handle_all_rows(rows)
+        self.process_tiles(tiles)
 
     def connect_to_db(self):
         try:
             self.conn = sqlite3.connect(self.filePath)
+            self.conn.row_factory = sqlite3.Row
             print "Successfully connected to db"
         except:
             print "Db connection failed:", sys.exc_info()
             return        
 
-    def get_data_from_db(self):
+    def load_tiles_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT * FROM tiles WHERE zoom_level = {} LIMIT 3;".format(zoom_level)
-        rows = []
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
+        tiles = []
         try:
             cur = self.conn.cursor()
-            for row in cur.execute(sql_command):
-                #print "Record loaded:", row    
-                rows.append(row)                       
+            for row in cur.execute(sql_command):      
+                zoom_level = row["zoom_level"]
+                x = row["tile_column"]
+                y = row["tile_row"]
+                binary_data = row["tile_data"]
+                decoded_data = self.decode_binary_tile_data(binary_data) 
+                tile = VectorTile(zoom_level, x, y, decoded_data)
+                #print "Tile: ", tile
+                tiles.append(tile)
         except:
             print "Getting data from db failed:", sys.exc_info()
             return
-        return rows
+        return tiles
 
     def init_json_template(self):
         # create a layer for each type
@@ -110,18 +116,17 @@ class VtReader:
                 }, 
                         "features": []
             }
+        print "template: ", self.json_template
 
-    def handle_all_rows(self, rowSet):
+    def process_tiles(self, tiles):
         base_template = self.json_template
-        totalNrRows = len(rowSet)
-        "{} rows to process".format(len(rowSet))
-        for index, row in enumerate(rowSet):
+        totalNrTiles = len(tiles)
+        #"{} rows to process".format(len(rowSet))
+        for index, tile in enumerate(tiles):
             #self.init_json_template()
-            # decoded_data = self.decode_row(row) 
-            decoded_data = self.decode_binary_tile_data(row[3]) 
-            geometry = [row[0], row[1], row[2]]         
-            self.write_features(decoded_data, geometry)
-            print "Progress: {}%".format(100.0 / totalNrRows * (index+1))
+            
+            self.write_features(tile)
+            print "Progress: {}%".format(100.0 / totalNrTiles * (index+1))
 
         # the layers are only created once
         # this means one vector layer per geotype will be added in qgis
@@ -153,12 +158,13 @@ class VtReader:
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)    
         layer_target_group.addLayer(layer)
 
-    def write_features(self, decoded_data, geometry):
+    def write_features(self, tile):
         # iterate through all the features of the data and build proper gejson conform objects.
-        for name in decoded_data:
-            #print "Handle features of layer: ", name
-            for index, feature in enumerate(decoded_data[name]['features']):
-                data, geo_type = self.create_feature_json(feature, geometry)
+        for name in tile.decoded_data:
+            print "Handle features of layer: ", name
+            tile_features = tile.decoded_data[name]["features"]
+            for index, feature in enumerate(tile_features):
+                data, geo_type = self.create_feature_json(feature, tile)
                 if data:
                     #print "feature: ", data
                     self.json_template[geo_type]["features"].append(data)
@@ -169,12 +175,13 @@ class VtReader:
                 # break
         #print self.json_template
 
-    def create_feature_json(self, feature, geometry):
+    def create_feature_json(self, feature, tile):
         #print "feature: ", feature
         feature_type = feature["type"]
         #  single feature structure
         geo_type = self.geo_types[feature_type]
-        coordinates = self._mercator_geometry(geo_type, feature["geometry"], geometry, 0)
+
+        coordinates = self._mercator_geometry(geo_type, feature["geometry"], tile, 0)
 
         if geo_type == GeoTypes.POINT:
             assert feature_type == 1
@@ -198,12 +205,24 @@ class VtReader:
                 },
                 "properties": feature["properties"]
             }
+        else:
+            print "whats this.........................."
+            print "feature: ", feature
+            print "coordinates: ", coordinates
+            feature_json = {
+                "type": "Feature",
+                "geometry": {
+                    "type": geo_type,
+                    "coordinates": coordinates
+                },
+                "properties": feature["properties"]
+            }
 
         self._counter = 0
         self._bool = True
         return feature_json, geo_type
 
-    def _mercator_geometry(self, geo_type, coordinates, geometry, counter):
+    def _mercator_geometry(self, geo_type, coordinates, tile, counter):        
         # print "mercator iteration {}".format(counter)
         # print "-- type: ", geo_type
         # print "-- geometry: ", geometry
@@ -219,9 +238,10 @@ class VtReader:
             #     print "---- coord: {} (Type: {})".format(coord, "{}{}".format(multi_string, geo_type))
 
             if not is_multi:
-                tmp.append(self._calculate_geometry(self, coord, geometry))
+                tmp.append(self._calculate_geometry(self, coord, tile))
             else:
-                tmp.append(self._mercator_geometry(geo_type, coord, geometry, counter + 1))
+                #print "is multi: ", coordinates
+                tmp.append(self._mercator_geometry(geo_type, coord, tile, counter + 1))
 
         if self._bool:
             self._counter = counter
@@ -229,10 +249,13 @@ class VtReader:
         return tmp
 
     @staticmethod
-    def _calculate_geometry(self, coordinates, geometry):
+    def _calculate_geometry(self, coordinates, tile):
+        """
+        Does a mercator transformation on 
+        """
         # calculate the mercator geometry using external library
         # geometry:: 0: zoom, 1: easting, 2: northing
-        tmp = GlobalMercator().TileBounds(geometry[1], geometry[2], geometry[0])
+        tmp = GlobalMercator().TileBounds(tile.column, tile.row, tile.zoom_level)
         delta_x = tmp[2] - tmp[0]
         delta_y = tmp[3] - tmp[1]
         merc_easting = int(tmp[0] + delta_x / self._extent * coordinates[0])
