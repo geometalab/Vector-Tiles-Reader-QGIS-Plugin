@@ -50,22 +50,17 @@ class VtReader:
             os.remove(f)
 
     def init_json_template(self):
+        from geojson import FeatureCollection
+        crs = { # crs = coordinate reference system
+                "type": "name", 
+                "properties": { 
+                    "name": "urn:ogc:def:crs:EPSG::3857" } }
         self.json_template = {
             GeoTypes.POINT: {}, 
             GeoTypes.LINE_STRING: {}, 
             GeoTypes.POLYGON: {}} 
         for value in self.geo_types:
-            self.json_template[self.geo_types[value]] = {
-                "type": "FeatureCollection", 
-                "crs": { # crs = coordinate reference system
-                    "type": "name", 
-                    "properties": {
-                        "name": "urn:ogc:def:crs:EPSG::3857"
-                        }
-                }, 
-                        "features": []
-            }
-        print "template: ", self.json_template
+            self.json_template[self.geo_types[value]] = FeatureCollection([], crs=crs)
 
     def import_libs(self):        
         site.addsitedir(os.path.join(self.temp_dir, '/ext-libs'))
@@ -99,7 +94,7 @@ class VtReader:
     def load_tiles_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 2;".format(zoom_level)
         tile_data_tuples = []
         try:
             cur = self.conn.cursor()
@@ -108,9 +103,7 @@ class VtReader:
                 tile_col = row["tile_column"]
                 tile_row = row["tile_row"]
                 binary_data = row["tile_data"]
-                #decoded_data = self.decode_binary_tile_data(binary_data) 
                 tile = VectorTile(zoom_level, tile_col, tile_row)
-                #print "Tile: ", tile
                 tile_data_tuples.append((tile, binary_data))
         except:
             print "Getting data from db failed:", sys.exc_info()
@@ -179,7 +172,6 @@ class VtReader:
                 # print "feature: ", feature
                 # print "   data: ", data
                 # break
-        #print self.json_template
 
     def create_geojson_feature(self, feature, tile):
         """
@@ -189,7 +181,6 @@ class VtReader:
 
         geo_type = self.geo_types[feature["type"]]
         coordinates = feature["geometry"]
-        #print "coordinates: ", coordinates
         coordinates = self.map_coordinates_recursive(coordinates, lambda coords: self._calculate_geometry(self, coords, tile))
 
         if geo_type == GeoTypes.POINT:
