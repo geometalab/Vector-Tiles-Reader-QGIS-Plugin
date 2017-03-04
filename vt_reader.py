@@ -45,16 +45,27 @@ class VtReader:
     def clear_temp_dir(self):
         if not os.path.exists(self.temp_dir):
             os.makedirs(self.temp_dir)
-
         files = glob.glob("%s/*" % self.temp_dir)
         for f in files:
             os.remove(f)
 
-    def reset_json_template(self):
+    def init_json_template(self):
         self.json_template = {
             GeoTypes.POINT: {}, 
             GeoTypes.LINE_STRING: {}, 
             GeoTypes.POLYGON: {}} 
+        for value in self.geo_types:
+            self.json_template[self.geo_types[value]] = {
+                "type": "FeatureCollection", 
+                "crs": { # crs = coordinate reference system
+                    "type": "name", 
+                    "properties": {
+                        "name": "urn:ogc:def:crs:EPSG::3857"
+                        }
+                }, 
+                        "features": []
+            }
+        print "template: ", self.json_template
 
     def import_libs(self):        
         site.addsitedir(os.path.join(self.temp_dir, '/ext-libs'))
@@ -68,7 +79,8 @@ class VtReader:
     def do_work(self):
         self.clear_temp_dir()
         self.connect_to_db() 
-        tiles = self.load_tiles_from_db()
+        tile_data_tuples = self.load_tiles_from_db()
+        tiles = self.decode_all_tiles(tile_data_tuples)
         self.init_json_template()
         self.process_tiles(tiles)
 
@@ -84,49 +96,40 @@ class VtReader:
     def load_tiles_from_db(self):
         print "Reading data from db"
         zoom_level = 14
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
-        tiles = []
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+        tile_data_tuples = []
         try:
             cur = self.conn.cursor()
             for row in cur.execute(sql_command):      
                 zoom_level = row["zoom_level"]
-                x = row["tile_column"]
-                y = row["tile_row"]
+                tile_col = row["tile_column"]
+                tile_row = row["tile_row"]
                 binary_data = row["tile_data"]
-                decoded_data = self.decode_binary_tile_data(binary_data) 
-                tile = VectorTile(zoom_level, x, y, decoded_data)
+                #decoded_data = self.decode_binary_tile_data(binary_data) 
+                tile = VectorTile(zoom_level, tile_col, tile_row)
                 #print "Tile: ", tile
-                tiles.append(tile)
+                tile_data_tuples.append((tile, binary_data))
         except:
             print "Getting data from db failed:", sys.exc_info()
             return
-        return tiles
+        return tile_data_tuples
 
-    def init_json_template(self):
-        # create a layer for each type
-        print "create a layer for each type"
-        for value in self.geo_types:
-            self.json_template[self.geo_types[value]] = {
-                "type": "FeatureCollection", 
-                "crs": { # crs = coordinate reference system
-                    "type": "name", 
-                    "properties": {
-                        "name": "urn:ogc:def:crs:EPSG::3857"
-                        }
-                }, 
-                        "features": []
-            }
-        print "template: ", self.json_template
+    def decode_all_tiles(self, tiles_with_encoded_data):
+        tiles = []
+        for tile_data_tuple in tiles_with_encoded_data:
+            tile = tile_data_tuple[0]
+            encoded_data = tile_data_tuple[1]
+            tile.decoded_data = self.decode_binary_tile_data(encoded_data)
+            tiles.append(tile)
+        return tiles
 
     def process_tiles(self, tiles):
         base_template = self.json_template
         totalNrTiles = len(tiles)
-        #"{} rows to process".format(len(rowSet))
         for index, tile in enumerate(tiles):
-            #self.init_json_template()
-            
+            #self.init_json_template()            
             self.write_features(tile)
-            print "Progress: {}%".format(100.0 / totalNrTiles * (index+1))
+            print "Progress: {0:.1f}%".format(100.0 / totalNrTiles * (index+1))
 
         # the layers are only created once
         # this means one vector layer per geotype will be added in qgis
