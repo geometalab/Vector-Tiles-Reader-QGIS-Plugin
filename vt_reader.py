@@ -23,17 +23,13 @@ class VtReader:
     geo_types = {
         1: GeoTypes.POINT, 
         2: GeoTypes.LINE_STRING, 
-        3: GeoTypes.POLYGON}  
-
-    json_template = {
-        GeoTypes.POINT: {}, 
-        GeoTypes.LINE_STRING: {}, 
-        GeoTypes.POLYGON: {}}  
+        3: GeoTypes.POLYGON}   
 
     _extent = 4096    
     directory = os.path.abspath(os.path.dirname(__file__))
     temp_dir = "%s/tmp" % directory
-    filePath = "%s/sample data/zurich_switzerland.mbtiles" % directory
+    file_path = "%s/sample data/zurich_switzerland.mbtiles" % directory
+    all_features = {}
     
     def __init__(self, iface):
         self.iface = iface
@@ -49,18 +45,13 @@ class VtReader:
         for f in files:
             os.remove(f)
 
-    def init_json_template(self):
+    def get_empty_feature_collection(self):
         from geojson import FeatureCollection
         crs = { # crs = coordinate reference system
                 "type": "name", 
                 "properties": { 
-                    "name": "urn:ogc:def:crs:EPSG::3857" } }
-        self.json_template = {
-            GeoTypes.POINT: {}, 
-            GeoTypes.LINE_STRING: {}, 
-            GeoTypes.POLYGON: {}} 
-        for value in self.geo_types:
-            self.json_template[self.geo_types[value]] = FeatureCollection([], crs=crs)
+                    "name": "urn:ogc:def:crs:EPSG::3857" } }        
+        return FeatureCollection([], crs=crs)
 
     def import_libs(self):        
         site.addsitedir(os.path.join(self.temp_dir, '/ext-libs'))
@@ -79,12 +70,11 @@ class VtReader:
         self.connect_to_db() 
         tile_data_tuples = self.load_tiles_from_db()
         tiles = self.decode_all_tiles(tile_data_tuples)
-        self.init_json_template()
         self.process_tiles(tiles)
 
     def connect_to_db(self):
         try:
-            self.conn = sqlite3.connect(self.filePath)
+            self.conn = sqlite3.connect(self.file_path)
             self.conn.row_factory = sqlite3.Row
             print "Successfully connected to db"
         except:
@@ -120,16 +110,10 @@ class VtReader:
         return tiles
 
     def process_tiles(self, tiles):
-        base_template = self.json_template
         totalNrTiles = len(tiles)
-        for index, tile in enumerate(tiles):
-            #self.init_json_template()            
+        for index, tile in enumerate(tiles):          
             self.write_features(tile)
             print "Progress: {0:.1f}%".format(100.0 / totalNrTiles * (index+1))
-
-        # the layers are only created once
-        # this means one vector layer per geotype will be added in qgis
-        # the other option would be to call this method once per row, then we have to reinitialize the json template for each row again
         self.create_layers_for_geotypes()        
 
     def decode_binary_tile_data(self, data):
@@ -144,34 +128,57 @@ class VtReader:
 
     def create_layers_for_geotypes(self):
         root = QgsProject.instance().layerTreeRoot()
-        myGroup1 = root.addGroup("My Group 1")
-        for value in self.geo_types:
+        group_name = os.path.splitext(os.path.basename(self.file_path))[0]
+        rootGroup = root.addGroup(group_name)
+        for feature_path in self.all_features:
+            feature_collection = self.all_features[feature_path]                      
             file_src = self.create_unique_file_name()
             with open(file_src, "w") as f:
-                json.dump(self.json_template[self.geo_types[value]], f)
-            self.add_vector_layer(file_src, self.geo_types[value], myGroup1)
+                json.dump(feature_collection, f)
+            if feature_path == "landcover.wood.forest":
+                print "landcover.wood.forest: ", feature_collection
+            self.add_vector_layer(file_src, feature_path, rootGroup)
 
     def add_vector_layer(self, json_src, layer_name, layer_target_group):
         # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)    
-        layer_target_group.addLayer(layer)
+        layer_target_group.addLayer(layer)    
 
     def write_features(self, tile):
         # iterate through all the features of the data and build proper gejson conform objects.
-        for name in tile.decoded_data:
-            print "Handle features of layer: ", name
-            tile_features = tile.decoded_data[name]["features"]
+        for layer_name in tile.decoded_data:
+            
+            print "Handle features of layer: ", layer_name
+            tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
                 data, geo_type = self.create_geojson_feature(feature, tile)
                 if data:
-                    #print "feature: ", data
-                    self.json_template[geo_type]["features"].append(data)
+                    feature_class = None
+                    feature_subclass = None
+                    if "class" in data.properties:
+                        feature_class = data.properties["class"]
+                        if "subclass" in data.properties:
+                            feature_subclass = data.properties["subclass"]
+                    
+                    if feature_subclass:
+                        assert feature_class, "A feature with a subclass should also have a class"
+
+                    feature_path = layer_name;
+                    if feature_class:
+                        feature_path += "." + feature_class
+                        if feature_subclass:
+                            feature_path += "." +feature_subclass
+
+                    if not feature_path in self.all_features:
+                        self.all_features[feature_path] = self.get_empty_feature_collection()
+
+                    self.all_features[feature_path].features.append(data)
                 
                 # TODO: remove the break after debugging
                 # print "feature: ", feature
                 # print "   data: ", data
-                # break
+                #break
 
     def create_geojson_feature(self, feature, tile):
         """
