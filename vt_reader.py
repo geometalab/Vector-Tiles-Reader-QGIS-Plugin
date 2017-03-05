@@ -221,7 +221,18 @@ class VtReader:
 
     def create_group(self, name, parent_group):
         new_group = parent_group.addGroup(name)
-        return new_group        
+        return new_group
+
+    def load_named_style(self, layer):
+        style_name = "{}.qml".format(layer.name())
+        style_path = os.path.join(self.directory, "styles/{}".format(style_name))
+        if os.path.isfile(style_path):
+            res = layer.loadNamedStyle(style_path)
+            if res[1]: # Style loaded
+                layer.setCustomProperty("layerStyle", style_path)
+                print "Style successfully applied: ", style_name
+        else:
+            print "style does not exist: ", style_path
 
     def add_vector_layer(self, json_src, layer_name, layer_target_group):
         """
@@ -230,6 +241,7 @@ class VtReader:
 
         # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
+        self.load_named_style(layer)
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)    
         layer_target_group.addLayer(layer)    
 
