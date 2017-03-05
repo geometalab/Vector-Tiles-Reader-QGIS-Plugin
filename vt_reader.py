@@ -233,8 +233,6 @@ class VtReader:
             if res[1]: # Style loaded
                 layer.setCustomProperty("layerStyle", style_path)
                 print "Style successfully applied: ", style_name
-        # else:
-        #     print "style does not exist: ", style_path
 
     def add_vector_layer(self, json_src, layer_name, layer_target_group):
         """

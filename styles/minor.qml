@@ -23,7 +23,7 @@
           <prop k="joinstyle" v="round"/>
           <prop k="line_color" v="100,100,100,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="7.1"/>
+          <prop k="line_width" v="6.6"/>
           <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -31,16 +31,16 @@
           <prop k="use_custom_dash" v="0"/>
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
-        <layer pass="4" class="SimpleLine" locked="0">
+        <layer pass="3" class="SimpleLine" locked="0">
           <prop k="capstyle" v="flat"/>
           <prop k="customdash" v="5;2"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MapUnit"/>
           <prop k="draw_inside_polygon" v="0"/>
           <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="255,252,221,255"/>
+          <prop k="line_color" v="255,255,255,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="5.5"/>
+          <prop k="line_width" v="5"/>
           <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -194,7 +194,6 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
-    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/secondary.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
   </customproperties>
@@ -226,7 +225,6 @@
   <SingleCategoryDiagramRenderer diagramType="Histogram" sizeLegend="0" attributeLegend="1">
     <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" sizeScale="0,0,0,0,0,0" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" lineSizeScale="0,0,0,0,0,0" sizeType="MM" lineSizeType="MM" minScaleDenominator="inf">
       <fontProperties description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0" style=""/>
-      <attribute field="" color="#000000" label=""/>
     </DiagramCategory>
     <symbol alpha="1" clip_to_extent="1" type="marker" name="sizeSymbol">
       <layer pass="0" class="SimpleMarker" locked="0">
