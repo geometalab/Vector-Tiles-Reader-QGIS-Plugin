@@ -29,10 +29,10 @@ class VtReader:
         "poi" : 0,
         "transportation" : 1,
         "transportation_name" : 2,
-        "building" : 3,
-        "place" : 4,
-        "aeroway" : 5,
-        "housenumber" : 6,
+        "housenumber" : 3,
+        "building" : 4,
+        "place" : 5,
+        "aeroway" : 6,        
         "boundary" : 7,
         "park" : 8,
         "water_name" : 9,
@@ -185,7 +185,8 @@ class VtReader:
             file_src = self.create_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            self.add_vector_layer(file_src, layer_name, target_group)
+            layer = self.add_vector_layer(file_src, layer_name, target_group)
+            self.load_named_style(layer, feature_path.split(".")[0])
 
     def get_sort_id(self, feature_path):
         # print "get sort id for: ", feature_path
@@ -223,16 +224,17 @@ class VtReader:
         new_group = parent_group.addGroup(name)
         return new_group
 
-    def load_named_style(self, layer):
+    def load_named_style(self, layer, root_group_name):
         style_name = "{}.qml".format(layer.name())
+        # style_name = "{}.qml".format(root_group_name)
         style_path = os.path.join(self.directory, "styles/{}".format(style_name))
         if os.path.isfile(style_path):
             res = layer.loadNamedStyle(style_path)
             if res[1]: # Style loaded
                 layer.setCustomProperty("layerStyle", style_path)
                 print "Style successfully applied: ", style_name
-        else:
-            print "style does not exist: ", style_path
+        # else:
+        #     print "style does not exist: ", style_path
 
     def add_vector_layer(self, json_src, layer_name, layer_target_group):
         """
@@ -241,9 +243,9 @@ class VtReader:
 
         # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        self.load_named_style(layer)
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)    
         layer_target_group.addLayer(layer)    
+        return layer
 
     def write_features(self, tile):
         # iterate through all the features of the data and build proper gejson conform objects.
