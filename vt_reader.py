@@ -25,6 +25,22 @@ class VtReader:
         2: GeoTypes.LINE_STRING, 
         3: GeoTypes.POLYGON}   
 
+    layer_sort_ids = {
+        "poi" : 0,
+        "transportation" : 1,
+        "transportation_name" : 2,
+        "building" : 3,
+        "place" : 4,
+        "aeroway" : 5,
+        "housenumber" : 6,
+        "boundary" : 7,
+        "park" : 8,
+        "water_name" : 9,
+        "waterway" : 10,
+        "landuse" : 11,
+        "landcover" : 12
+    }
+
     _extent = 4096    
     directory = os.path.abspath(os.path.dirname(__file__))
     temp_dir = "%s/tmp" % directory
@@ -93,6 +109,7 @@ class VtReader:
         tile_data_tuples = self.load_tiles_from_db()
         tiles = self.decode_all_tiles(tile_data_tuples)
         self.process_tiles(tiles)
+        self.create_qgis_layer_hierarchy()
 
     def connect_to_db(self):
         """
@@ -137,10 +154,10 @@ class VtReader:
 
     def process_tiles(self, tiles):
         totalNrTiles = len(tiles)
+        print "Processing {} tiles".format(totalNrTiles)
         for index, tile in enumerate(tiles):          
             self.write_features(tile)
-            print "Progress: {0:.1f}%".format(100.0 / totalNrTiles * (index+1))
-        self.create_qgis_layer_hierarchy()        
+            print "Progress: {0:.1f}%".format(100.0 / totalNrTiles * (index+1))      
 
     def decode_binary_tile_data(self, data):
         try:
@@ -156,17 +173,27 @@ class VtReader:
         """
          * Creates a hierarchy of groups and layers in qgis
         """
-
+        print "Creating hierarchy in qgis"
         root = QgsProject.instance().layerTreeRoot()
         group_name = os.path.splitext(os.path.basename(self.file_path))[0]
         rootGroup = root.addGroup(group_name)
-        for feature_path in self.features_by_path:
+        #print "all paths: ", self.features_by_path.keys()
+        feature_paths = sorted(self.features_by_path.keys(), key=lambda path: self.get_sort_id(path))
+        for feature_path in feature_paths:
             target_group, layer_name = self.get_group_for_path(feature_path, rootGroup)
             feature_collection = self.features_by_path[feature_path]                      
             file_src = self.create_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             self.add_vector_layer(file_src, layer_name, target_group)
+
+    def get_sort_id(self, feature_path):
+        # print "get sort id for: ", feature_path
+        first_node = feature_path.split(".")[0]
+        sort_id = 999
+        if first_node in self.layer_sort_ids:
+            sort_id = self.layer_sort_ids[first_node]
+        return sort_id
 
     def get_group_for_path(self, path, root_group):
         """
