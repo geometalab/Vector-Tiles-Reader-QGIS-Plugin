@@ -17,7 +17,10 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
 from vt_reader import VtReader
-import resources
+import resources_rc
+
+import os
+from sourcedialog import SourceDialog
 
 
 class VtrPlugin:
@@ -49,8 +52,12 @@ class VtrPlugin:
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.action)
 
+        self.settingsaction = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Settings", self.iface.mainWindow())
+        self.settingsaction.triggered.connect(self.edit_sources)
+        self.iface.addPluginToMenu("&Vector Tiles Reader", self.settingsaction)
+
         self.reader = VtReader(self.iface)
-        self.reader.do_work()
+        #self.reader.do_work()
 
     def unload(self):
         print "VTR Plugin unload"
@@ -58,8 +65,16 @@ class VtrPlugin:
         self.iface.removeVectorToolBarIcon(self.action)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.action)
+        self.iface.removePluginMenu("&Vector Tiles Reader", self.settingsaction)
 
     def run(self):
         # create and show a configuration dialog or something similar
         print "VTR Plugin: run called!"
         self.reader.do_work()
+
+    def edit_sources(self):
+        print "show dialog"
+        dlg = SourceDialog()
+        dlg.setModal(True)
+        dlg.connect(dlg.btnClose, SIGNAL("clicked()"), dlg.close)
+        dlg.exec_()

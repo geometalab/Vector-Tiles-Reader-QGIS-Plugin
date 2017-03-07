@@ -1,5 +1,7 @@
 <RCC> 
   <qresource prefix="/plugins/vectortilereader">
-    <file>icon.png</file> 
+    <file alias="icon.png">icons/icon.png</file> 
+	<file alias="add.svg">icons/add.svg</file> 
+	<file alias="delete.svg">icons/delete.svg</file> 
   </qresource> 
 </RCC>

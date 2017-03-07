@@ -106,7 +106,7 @@ class VtReader:
     def do_work(self):
         self.reinit()
         self.connect_to_db() 
-        tile_data_tuples = self.load_tiles_from_db()
+        tile_data_tuples = self.load_tiles_from_db(14)
         tiles = self.decode_all_tiles(tile_data_tuples)
         self.process_tiles(tiles)
         self.create_qgis_layer_hierarchy()
@@ -124,9 +124,8 @@ class VtReader:
             print "Db connection failed:", sys.exc_info()
             return        
 
-    def load_tiles_from_db(self):
+    def load_tiles_from_db(self, zoom_level):
         print "Reading data from db"
-        zoom_level = 14
         sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 2;".format(zoom_level)
         tile_data_tuples = []
         try:
