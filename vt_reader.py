@@ -103,10 +103,10 @@ class VtReader:
         print "import successful"
         return module
 
-    def do_work(self):
+    def do_work(self, zoom_level):
         self.reinit()
         self.connect_to_db() 
-        tile_data_tuples = self.load_tiles_from_db(14)
+        tile_data_tuples = self.load_tiles_from_db(zoom_level)
         tiles = self.decode_all_tiles(tile_data_tuples)
         self.process_tiles(tiles)
         self.create_qgis_layer_hierarchy()

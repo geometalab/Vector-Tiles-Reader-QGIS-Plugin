@@ -57,7 +57,7 @@ class VtrPlugin:
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.settingsaction)
 
         self.reader = VtReader(self.iface)
-        #self.reader.do_work()
+        self.run()
 
     def unload(self):
         print "VTR Plugin unload"
@@ -70,7 +70,11 @@ class VtrPlugin:
     def run(self):
         # create and show a configuration dialog or something similar
         print "VTR Plugin: run called!"
-        self.reader.do_work()
+        self.reader.do_work(14)
+        self.reader.do_work(13)
+        self.reader.do_work(12)
+        self.reader.do_work(11)
+        self.reader.do_work(10)
 
     def edit_sources(self):
         print "show dialog"
