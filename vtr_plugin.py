@@ -29,23 +29,10 @@ class VtrPlugin:
     action = None
 
     def __init__(self, iface):
-        # save reference to the QGIS interface
         self.iface = iface
         self.settings = QSettings("Vector Tile Reader","vectortilereader")
-        print "now importing all required stuff"
-        import sys
-        import os
-        import site
-        site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/ext-libs'))
-        print "import google.protobuf"
-        import google.protobuf
-        print "importing google.protobuf succeeded"
-        print "import mapbox_vector_tile"
-        import mapbox_vector_tile 
-        print "importing mapbox_vector_tile succeeded"
 
     def initGui(self):
-        print "VTR Plugin initGui"
         self.action = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Add Vector Tiles Layer", self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addVectorToolBarIcon(self.action)
@@ -60,7 +47,6 @@ class VtrPlugin:
         self.run()
 
     def unload(self):
-        print "VTR Plugin unload"
         # Remove the plugin menu item and icon
         self.iface.removeVectorToolBarIcon(self.action)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.action)
@@ -69,15 +55,9 @@ class VtrPlugin:
 
     def run(self):
         # create and show a configuration dialog or something similar
-        print "VTR Plugin: run called!"
         self.reader.do_work(14)
-        self.reader.do_work(13)
-        self.reader.do_work(12)
-        self.reader.do_work(11)
-        self.reader.do_work(10)
 
     def edit_sources(self):
-        print "show dialog"
         dlg = SourceDialog()
         dlg.setModal(True)
         dlg.connect(dlg.btnClose, SIGNAL("clicked()"), dlg.close)
