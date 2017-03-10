@@ -33,6 +33,17 @@ class VtrPlugin:
         self.settings = QSettings("Vector Tile Reader","vectortilereader")
 
     def initGui(self):
+        print "now importing all required stuff"
+        import sys
+        import os
+        import site
+        site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/ext-libs'))
+        print "import google.protobuf"
+        import google.protobuf
+        print "importing google.protobuf succeeded"
+        print "import mapbox_vector_tile"
+        import mapbox_vector_tile
+        print "importing mapbox_vector_tile succeeded"
         self.action = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Add Vector Tiles Layer", self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addVectorToolBarIcon(self.action)
