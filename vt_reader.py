@@ -78,7 +78,8 @@ class VtReader:
         for f in files:
             os.remove(f)
 
-    def _get_empty_feature_collection(self):
+    @staticmethod
+    def _get_empty_feature_collection():
         """
          * Returns an empty GeoJSON FeatureCollection
         """
@@ -188,7 +189,7 @@ class VtReader:
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = VtReader._add_vector_layer(file_src, layer_name, target_group)
-            VtReader._load_named_style(layer, feature_path.split(".")[0])
+            VtReader._load_named_style(layer)
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
@@ -229,7 +230,7 @@ class VtReader:
         return new_group
 
     @staticmethod
-    def _load_named_style(layer, root_group_name):
+    def _load_named_style(layer):
         style_name = "{}.qml".format(layer.name())
         # style_name = "{}.qml".format(root_group_name)
         style_path = os.path.join(VtReader._directory, "styles/{}".format(style_name))
@@ -252,6 +253,11 @@ class VtReader:
         return layer
 
     def _write_features(self, tile):
+        """
+         * Transforms all features of the specified tile into GeoJSON and writes it into the dictionary
+        :param tile:
+        :return:
+        """
         # iterate through all the features of the data and build proper gejson conform objects.
         for layer_name in tile.decoded_data:
 
@@ -262,7 +268,7 @@ class VtReader:
                 if geojson_feature:
                     feature_path = VtReader._get_feature_path(layer_name, geojson_feature)
                     if feature_path not in self.features_by_path:
-                        self.features_by_path[feature_path] = self._get_empty_feature_collection()
+                        self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
 
                     self.features_by_path[feature_path].features.append(geojson_feature)
 
