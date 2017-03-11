@@ -11,6 +11,7 @@ import json
 import glob
 import zlib
 from VectorTileHelper import VectorTile
+from feature_helper import FeatureMerger
 
 
 class _GeoTypes:
@@ -42,7 +43,7 @@ class VtReader:
         "waterway",
         "water",
         "landcover",
-        "landuse"        
+        "landuse"
     ]
 
     _extent = 4096
@@ -112,10 +113,10 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        mask_level = VtReader._get_mask_layer_id(self.conn)
-        if mask_level:
-            mask_layer_data = self._load_tiles_from_db(mask_level)
-            tile_data_tuples.extend(mask_layer_data)
+        # mask_level = VtReader._get_mask_layer_id(self.conn)
+        # if mask_level:
+        #     mask_layer_data = self._load_tiles_from_db(mask_level)
+        #     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -151,10 +152,11 @@ class VtReader:
     def _load_tiles_from_db(self, zoom_level):
         print "Reading data from db"
         if zoom_level == 14:
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=8 or (zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582);".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=8 or (zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582);".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 2;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
-        #sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
         tile_data_tuples = []
         try:
             cur = self.conn.cursor()
@@ -272,8 +274,14 @@ class VtReader:
 
         # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
+        # layer = QgsVectorLayer(json_src, layer_name, "ogr")
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
+
+        if layer_name == "forest":
+            merger = FeatureMerger()
+            merger.merge_features(layer, layer_target_group)
+
         return layer
 
     def _write_features(self, tile):
@@ -325,6 +333,9 @@ class VtReader:
                 feature_path += "." + feature_subclass
         return feature_path
 
+    all_feature_types = []
+
+    total_feature_count = 0
     @staticmethod
     def _create_geojson_feature(feature, tile):
         """
@@ -341,8 +352,8 @@ class VtReader:
             coordinates = coordinates[0]
 
         # TODO: remove after testing
-        # if geo_type != GeoTypes.POLYGON:
-        #     return None, None
+        if geo_type != GeoTypes.POLYGON:
+            return None, None
 
         if geo_type == GeoTypes.POINT:
             geometry = Point(coordinates)
@@ -353,7 +364,11 @@ class VtReader:
         else:
             raise Exception("Unexpected geo_type: {}".format(geo_type))
 
-        feature_json = Feature(geometry=geometry, properties=feature["properties"])
+        properties = feature["properties"]
+        # print("Properties: {}".format(properties.keys()))
+        properties["featureNr"] = VtReader.total_feature_count
+        VtReader.total_feature_count += 1
+        feature_json = Feature(geometry=geometry, properties=properties)
 
         return feature_json, geo_type
 
