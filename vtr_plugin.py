@@ -67,6 +67,7 @@ class VtrPlugin:
     def run(self):
         # create and show a configuration dialog or something similar
         self.reader.do_work(14)
+        # self.reader.do_work(8)
 
     def edit_sources(self):
         dlg = SourceDialog()

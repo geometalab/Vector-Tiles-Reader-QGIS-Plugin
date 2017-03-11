@@ -28,21 +28,22 @@ class VtReader:
         2: GeoTypes.LINE_STRING,
         3: GeoTypes.POLYGON}
 
-    layer_sort_ids = {
-        "poi": 0,
-        "transportation": 1,
-        "transportation_name": 2,
-        "housenumber": 3,
-        "building": 4,
-        "place": 5,
-        "aeroway": 6,
-        "boundary": 7,
-        "park": 8,
-        "water_name": 9,
-        "waterway": 10,
-        "landuse": 11,
-        "landcover": 12
-    }
+    layer_sort_ids = [
+        "poi",
+        "transportation",
+        "transportation_name",
+        "housenumber",
+        "building",
+        "place",
+        "aeroway",
+        "boundary",
+        "park",
+        "water_name",
+        "waterway",
+        "water",
+        "landuse",
+        "landcover"
+    ]
 
     _extent = 4096
     _directory = os.path.abspath(os.path.dirname(__file__))
@@ -111,6 +112,9 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
+        mask_level = self._get_mask_layer_id()
+        if mask_level:
+            mask_layer_data = self._load_tiles_from_db(mask_level)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -128,9 +132,23 @@ class VtReader:
             print "Db connection failed:", sys.exc_info()
             return
 
+    def _get_mask_layer_id():
+        sql_command = "select masklevel from metadata"
+        mask_level = None
+        try:
+            cur = self.conn.cursor()
+            mask_level = cur.fetchOne(sql_command)
+        except:
+            print("Loading mask level failed")
+        return mask_level
+
     def _load_tiles_from_db(self, zoom_level):
         print "Reading data from db"
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 3;".format(zoom_level)
+        if zoom_level == 14:
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=8 or (zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582);".format(zoom_level)
+        else:
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
+        #sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
         tile_data_tuples = []
         try:
             cur = self.conn.cursor()
@@ -197,7 +215,7 @@ class VtReader:
         first_node = feature_path.split(".")[0]
         sort_id = 999
         if first_node in VtReader.layer_sort_ids:
-            sort_id = VtReader.layer_sort_ids[first_node]
+            sort_id = VtReader.layer_sort_ids.index(first_node)
         return sort_id
 
     def _get_group_for_path(self, path, root_group):
@@ -261,7 +279,7 @@ class VtReader:
         # iterate through all the features of the data and build proper gejson conform objects.
         for layer_name in tile.decoded_data:
 
-            print "Handle features of layer: ", layer_name
+            # print "Handle features of layer: ", layer_name
             tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
@@ -315,6 +333,10 @@ class VtReader:
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
+
+        # TODO: remove after testing
+        if geo_type != GeoTypes.POLYGON:
+            return None, None
 
         if geo_type == GeoTypes.POINT:
             geometry = Point(coordinates)
