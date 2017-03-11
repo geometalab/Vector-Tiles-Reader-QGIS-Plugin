@@ -41,8 +41,8 @@ class VtReader:
         "water_name",
         "waterway",
         "water",
-        "landuse",
-        "landcover"
+        "landcover",
+        "landuse"        
     ]
 
     _extent = 4096
@@ -112,9 +112,10 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        mask_level = self._get_mask_layer_id()
+        mask_level = VtReader._get_mask_layer_id(self.conn)
         if mask_level:
             mask_layer_data = self._load_tiles_from_db(mask_level)
+            tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -132,14 +133,19 @@ class VtReader:
             print "Db connection failed:", sys.exc_info()
             return
 
-    def _get_mask_layer_id():
-        sql_command = "select masklevel from metadata"
+    @staticmethod
+    def _get_mask_layer_id(connection):
+        sql_command = "select value as 'masklevel' from metadata where name = 'maskLevel'"
         mask_level = None
         try:
-            cur = self.conn.cursor()
-            mask_level = cur.fetchOne(sql_command)
+            cur = connection.cursor()
+            cur.execute(sql_command)
+            row = cur.fetchone()
+            if row:
+                mask_level = row["masklevel"]
+                print("Loaded masklevel is: {}".format(mask_level))
         except:
-            print("Loading mask level failed")
+            print("Loading mask level failed: {}".format(sys.exc_info()))
         return mask_level
 
     def _load_tiles_from_db(self, zoom_level):
@@ -335,8 +341,8 @@ class VtReader:
             coordinates = coordinates[0]
 
         # TODO: remove after testing
-        if geo_type != GeoTypes.POLYGON:
-            return None, None
+        # if geo_type != GeoTypes.POLYGON:
+        #     return None, None
 
         if geo_type == GeoTypes.POINT:
             geometry = Point(coordinates)
