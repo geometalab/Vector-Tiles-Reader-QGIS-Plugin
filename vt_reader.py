@@ -1,4 +1,4 @@
-from qgis.core import *
+from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
 from GlobalMapTiles import GlobalMercator
 
 import sqlite3
@@ -257,14 +257,17 @@ class VtReader:
 
     @staticmethod
     def _load_named_style(layer):
-        style_name = "{}.qml".format(layer.name())
-        # style_name = "{}.qml".format(root_group_name)
-        style_path = os.path.join(VtReader._directory, "styles/{}".format(style_name))
-        if os.path.isfile(style_path):
-            res = layer.loadNamedStyle(style_path)
-            if res[1]:  # Style loaded
-                layer.setCustomProperty("layerStyle", style_path)
-                print "Style successfully applied: ", style_name
+        try:
+            style_name = "{}.qml".format(layer.name())
+            # style_name = "{}.qml".format(root_group_name)
+            style_path = os.path.join(VtReader._directory, "styles/{}".format(style_name))
+            if os.path.isfile(style_path):
+                res = layer.loadNamedStyle(style_path)
+                if res[1]:  # Style loaded
+                    layer.setCustomProperty("layerStyle", style_path)
+                    print("Style successfully applied: {}".format(style_name))
+        except:
+            print("Loading style failed: {}".format(sys.exc_info()))
 
     @staticmethod
     def _add_vector_layer(json_src, layer_name, layer_target_group):
@@ -274,13 +277,33 @@ class VtReader:
 
         # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        # layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-        layer_target_group.addLayer(layer)
+        # QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+        # layer_target_group.addLayer(layer)
 
-        if layer_name == "forest":
+        # if layer_name == "forest":
+        #     merger = FeatureMerger()
+        #     layer = merger.merge_features(layer, layer_target_group)
+        #     layer.setName(layer_name)
+
+        if layer_name in ["forest"]:
             merger = FeatureMerger()
-            merger.merge_features(layer, layer_target_group)
+            dissolved_layer = merger.merge_features(layer)
+            print("dissolved layer: {}".format(dissolved_layer))
+            if dissolved_layer:
+                # dissolved_layer.setName(layer_name)
+
+                root = QgsProject.instance().layerTreeRoot()
+                root_layer = root.findLayer(dissolved_layer.id())
+                print "root: ", root_layer.name()
+
+                # QgsMapLayerRegistry.instance().addMapLayer(dissolved_layer, False)
+                layer_target_group.addLayer(dissolved_layer)
+                dissolved_layer.setName(layer_name)
+                root.removeChildNode(root_layer)
+                layer = dissolved_layer
+        else:
+            QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+            layer_target_group.addLayer(layer)
 
         return layer
 
@@ -333,9 +356,8 @@ class VtReader:
                 feature_path += "." + feature_subclass
         return feature_path
 
-    all_feature_types = []
-
     total_feature_count = 0
+
     @staticmethod
     def _create_geojson_feature(feature, tile):
         """
@@ -352,8 +374,8 @@ class VtReader:
             coordinates = coordinates[0]
 
         # TODO: remove after testing
-        if geo_type != GeoTypes.POLYGON:
-            return None, None
+        # if geo_type != GeoTypes.POLYGON:
+        #     return None, None
 
         if geo_type == GeoTypes.POINT:
             geometry = Point(coordinates)
