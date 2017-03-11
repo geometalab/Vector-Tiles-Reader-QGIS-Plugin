@@ -1,4 +1,4 @@
-from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
+from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
 from GlobalMapTiles import GlobalMercator
 
 import sqlite3
@@ -50,6 +50,7 @@ class VtReader:
     _directory = os.path.abspath(os.path.dirname(__file__))
     _temp_dir = "%s/tmp" % _directory
     file_path = "%s/sample data/zurich_switzerland.mbtiles" % _directory
+    _layers_to_dissolve = []
 
     def __init__(self, iface):
         self.iface = iface
@@ -113,7 +114,7 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        # mask_level = VtReader._get_mask_layer_id(self.conn)
+        mask_level = VtReader._get_mask_layer_id(self.conn)
         # if mask_level:
         #     mask_layer_data = self._load_tiles_from_db(mask_level)
         #     tile_data_tuples.extend(mask_layer_data)
@@ -203,10 +204,10 @@ class VtReader:
          * Creates a hierarchy of groups and layers in qgis
         """
         print "Creating hierarchy in qgis"
+        print "Layers to dissolve: ", self._layers_to_dissolve
         root = QgsProject.instance().layerTreeRoot()
         group_name = os.path.splitext(os.path.basename(self.file_path))[0]
         rootGroup = root.addGroup(group_name)
-        # print "all paths: ", self.features_by_path.keys()
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         for feature_path in feature_paths:
             target_group, layer_name = self._get_group_for_path(feature_path, rootGroup)
@@ -214,7 +215,7 @@ class VtReader:
             file_src = self._create_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer = VtReader._add_vector_layer(file_src, layer_name, target_group)
+            layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
             VtReader._load_named_style(layer)
 
     @staticmethod
@@ -269,38 +270,23 @@ class VtReader:
         except:
             print("Loading style failed: {}".format(sys.exc_info()))
 
-    @staticmethod
-    def _add_vector_layer(json_src, layer_name, layer_target_group):
+    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
         """
 
-        # load the created geojson into qgis
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        # QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-        # layer_target_group.addLayer(layer)
-
-        # if layer_name == "forest":
-        #     merger = FeatureMerger()
-        #     layer = merger.merge_features(layer, layer_target_group)
-        #     layer.setName(layer_name)
-
-        if layer_name in ["forest"]:
+        if layer_name in ["forest"]:  # feature_path in self._layers_to_dissolve:
             merger = FeatureMerger()
-            dissolved_layer = merger.merge_features(layer)
-            print("dissolved layer: {}".format(dissolved_layer))
+            dissolved_layer = merger.merge_features(QgsVectorLayer(json_src, layer_name, "ogr"))
             if dissolved_layer:
-                # dissolved_layer.setName(layer_name)
+                uniquename = VtReader._create_unique_file_name()
+                QgsVectorFileWriter.writeAsVectorFormat(dissolved_layer, uniquename, 'utf-8', dissolved_layer.crs(), 'GeoJson')
+                QgsMapLayerRegistry.instance().removeMapLayer(dissolved_layer)
 
-                root = QgsProject.instance().layerTreeRoot()
-                root_layer = root.findLayer(dissolved_layer.id())
-                print "root: ", root_layer.name()
-
-                # QgsMapLayerRegistry.instance().addMapLayer(dissolved_layer, False)
-                layer_target_group.addLayer(dissolved_layer)
-                dissolved_layer.setName(layer_name)
-                root.removeChildNode(root_layer)
-                layer = dissolved_layer
+                layer = QgsVectorLayer(uniquename, layer_name, "ogr")
+                QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+                layer_target_group.addLayer(layer)
         else:
             QgsMapLayerRegistry.instance().addMapLayer(layer, False)
             layer_target_group.addLayer(layer)
@@ -326,6 +312,9 @@ class VtReader:
                         self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
 
                     self.features_by_path[feature_path].features.append(geojson_feature)
+
+                    if geo_type in [GeoTypes.POLYGON] and feature_path not in self._layers_to_dissolve:
+                        self._layers_to_dissolve.append(feature_path)
 
                 # TODO: remove the break after debugging
                 # print "feature: ", feature

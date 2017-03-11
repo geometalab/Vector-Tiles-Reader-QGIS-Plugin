@@ -36,7 +36,7 @@ class FeatureMerger:
         return intersection_layer
 
     def _join_by_attribute(self, layer):
-        print("create join layer")
+        # print("create join layer")
         processing.runandload("qgis:joinattributesbylocation", layer, layer, u'intersects', 0, 1, "min,max", 1, 'memory:temp_layer')
         joined_layer = self._get_layer("Joined layer")
         return joined_layer
@@ -53,7 +53,6 @@ class FeatureMerger:
         layer.addExpressionField("concat(\"minfeatureNr\", \"maxfeatureNr\") ", field)
 
     def _dissolve(self, layer):
-        print("dissolve layer")
         processing.runandload("qgis:dissolve", layer, False, "newFeatureNr", "memory:temp_layer")
         dissolved_layer = self._get_layer("Dissolved")
         return dissolved_layer
