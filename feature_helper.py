@@ -19,10 +19,13 @@ class FeatureMerger:
         intersection_layer = None
         layer_name = layer.name()
         info("Merging features of layer '{}'".format(layer_name))
-        # print "now merging features of layer: ", layer_name
 
         # cleaned_layer = self._clean_layer(layer)
         validated_layer = self._validate_layer(layer)
+        feature_count = len(validated_layer.allFeatureIds())
+        if feature_count == 0:
+            debug("There are no features left after validation and therefore there is nothing to merge.".format(layer_name))
+            return layer
 
         if validated_layer:
             intersection_layer = self._create_intersection_layer(validated_layer)
