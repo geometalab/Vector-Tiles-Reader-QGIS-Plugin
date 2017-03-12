@@ -12,6 +12,8 @@ import glob
 import zlib
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
+from file_helper import FileHelper
+from geojson import FeatureCollection
 
 
 class _GeoTypes:
@@ -67,7 +69,7 @@ class VtReader:
          >> Cleans the qgis group cache
         """
 
-        self._clear_temp_dir()
+        FileHelper.clear_temp_dir()
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
 
@@ -87,7 +89,6 @@ class VtReader:
          * Returns an empty GeoJSON FeatureCollection
         """
 
-        from geojson import FeatureCollection
         crs = {  # crs = coordinate reference system
             "type": "name",
             "properties": {
@@ -276,20 +277,23 @@ class VtReader:
         """
 
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        if layer_name in ["forest"]:  # feature_path in self._layers_to_dissolve:
+        if layer_name in ["forest", "vineyard"]:
+        # if feature_path in self._layers_to_dissolve:
             merger = FeatureMerger()
             dissolved_layer = merger.merge_features(QgsVectorLayer(json_src, layer_name, "ogr"))
             if dissolved_layer:
-                uniquename = VtReader._create_unique_file_name()
-                QgsVectorFileWriter.writeAsVectorFormat(dissolved_layer, uniquename, 'utf-8', dissolved_layer.crs(), 'GeoJson')
-                QgsMapLayerRegistry.instance().removeMapLayer(dissolved_layer)
+                layer = dissolved_layer
+                layer.setName(layer_name)
+                # uniquename = VtReader._create_unique_file_name()
+                # QgsVectorFileWriter.writeAsVectorFormat(dissolved_layer, uniquename, 'utf-8', dissolved_layer.crs(), 'GeoJson')
+                # QgsMapLayerRegistry.instance().removeMapLayer(dissolved_layer)
+                #
+                # layer = QgsVectorLayer(uniquename, layer_name, "ogr")
+                # QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+                # layer_target_group.addLayer(layer)
 
-                layer = QgsVectorLayer(uniquename, layer_name, "ogr")
-                QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-                layer_target_group.addLayer(layer)
-        else:
-            QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-            layer_target_group.addLayer(layer)
+        QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+        layer_target_group.addLayer(layer)
 
         return layer
 
