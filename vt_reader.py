@@ -8,7 +8,6 @@ import zlib
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
-from geojson import FeatureCollection, Feature, Point, Polygon, LineString
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
 from GlobalMapTiles import GlobalMercator
 
@@ -75,7 +74,7 @@ class VtReader:
         """
          * Returns an empty GeoJSON FeatureCollection
         """
-
+        from geojson import FeatureCollection
         crs = {  # crs = coordinate reference system
             "type": "name",
             "properties": {
@@ -103,12 +102,14 @@ class VtReader:
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
         mask_level = self._get_mask_layer_id()
-        # if mask_level:
-        #     mask_layer_data = self._load_tiles_from_db(mask_level)
-        #     tile_data_tuples.extend(mask_layer_data)
+        if mask_level:
+            mask_layer_data = self._load_tiles_from_db(mask_level)
+            tile_data_tuples.extend(mask_layer_data)
+            # tile_data_tuples = mask_layer_data
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
+        print("Import complete!")
 
     def _connect_to_db(self):
         """
@@ -257,11 +258,11 @@ class VtReader:
     def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
+         * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        if layer_name in ["forest", "vineyard"]:
-        # if feature_path in self._layers_to_dissolve:
+        if feature_path in self._layers_to_dissolve:
             merger = FeatureMerger()
             dissolved_layer = merger.merge_features(QgsVectorLayer(json_src, layer_name, "ogr"))
             if dissolved_layer:
@@ -331,6 +332,7 @@ class VtReader:
         Creates a proper GeoJSON feature for the specified feature
         """
 
+        from geojson import Feature, Point, Polygon, LineString
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
         coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
@@ -351,6 +353,10 @@ class VtReader:
             geometry = LineString(coordinates)
         else:
             raise Exception("Unexpected geo_type: {}".format(geo_type))
+
+        # if VtReader.total_feature_count == 47:
+        #     print("this is an invalid geometry")
+        #     print(geometry)
 
         properties = feature["properties"]
         properties["featureNr"] = VtReader.total_feature_count
