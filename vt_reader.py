@@ -237,14 +237,9 @@ class VtReader:
                 break
             current_path += "." + name
             if current_path not in self.qgis_layer_groups_by_feature_path:
-                self.qgis_layer_groups_by_feature_path[current_path] = VtReader._create_group(name, current_group)
+                self.qgis_layer_groups_by_feature_path[current_path] = current_group.addGroup(name)
             current_group = self.qgis_layer_groups_by_feature_path[current_path]
         return current_group, target_layer_name
-
-    @staticmethod
-    def _create_group(name, parent_group):
-        new_group = parent_group.addGroup(name)
-        return new_group
 
     @staticmethod
     def _load_named_style(layer):
