@@ -147,7 +147,8 @@ class VtReader:
             tile_data_tuples.append(self._create_tile(row))
         return tile_data_tuples
 
-    def _create_tile(self, row):
+    @staticmethod
+    def _create_tile(row):
         zoom_level = row["zoom_level"]
         tile_col = row["tile_column"]
         tile_row = row["tile_row"]
@@ -197,10 +198,10 @@ class VtReader:
         print "Layers to dissolve: ", self._layers_to_dissolve
         root = QgsProject.instance().layerTreeRoot()
         group_name = os.path.splitext(os.path.basename(self._file_path))[0]
-        rootGroup = root.addGroup(group_name)
+        root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         for feature_path in feature_paths:
-            target_group, layer_name = self._get_group_for_path(feature_path, rootGroup)
+            target_group, layer_name = self._get_group_for_path(feature_path, root_group)
             feature_collection = self.features_by_path[feature_path]
             file_src = FileHelper.get_unique_file_name()
             with open(file_src, "w") as f:
@@ -210,7 +211,6 @@ class VtReader:
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
-        # print "get sort id for: ", feature_path
         first_node = feature_path.split(".")[0]
         sort_id = 999
         if first_node in VtReader.layer_sort_ids:
@@ -250,7 +250,6 @@ class VtReader:
     def _load_named_style(layer):
         try:
             style_name = "{}.qml".format(layer.name())
-            # style_name = "{}.qml".format(root_group_name)
             style_path = os.path.join(FileHelper.get_directory(), "styles/{}".format(style_name))
             if os.path.isfile(style_path):
                 res = layer.loadNamedStyle(style_path)
@@ -287,8 +286,6 @@ class VtReader:
         """
         # iterate through all the features of the data and build proper gejson conform objects.
         for layer_name in tile.decoded_data:
-
-            # print "Handle features of layer: ", layer_name
             tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
@@ -341,7 +338,7 @@ class VtReader:
 
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
-        coordinates = VtReader._map_coordinates_recursive(coordinates, lambda coords: VtReader._calculate_geometry(coords, tile))
+        coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
@@ -361,7 +358,6 @@ class VtReader:
             raise Exception("Unexpected geo_type: {}".format(geo_type))
 
         properties = feature["properties"]
-        # print("Properties: {}".format(properties.keys()))
         properties["featureNr"] = VtReader.total_feature_count
         VtReader.total_feature_count += 1
         feature_json = Feature(geometry=geometry, properties=properties)
