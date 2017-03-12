@@ -10,8 +10,12 @@ class FileHelper:
         pass
 
     @staticmethod
+    def get_directory():
+        return os.path.abspath(os.path.dirname(__file__))
+
+    @staticmethod
     def get_temp_dir():
-        directory = os.path.abspath(os.path.dirname(__file__))
+        directory = FileHelper.get_directory()
         temp_dir = "{}\\tmp".format(directory)
         return temp_dir
 

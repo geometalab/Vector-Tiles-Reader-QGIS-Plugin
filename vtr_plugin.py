@@ -17,9 +17,9 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
 from vt_reader import VtReader
-import resources_rc
 
 import os
+import site
 from sourcedialog import SourceDialog
 
 
@@ -34,9 +34,7 @@ class VtrPlugin:
 
     def initGui(self):
         print "now importing all required stuff"
-        import sys
-        import os
-        import site
+
         site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/ext-libs'))
         print "import google.protobuf"
         import google.protobuf

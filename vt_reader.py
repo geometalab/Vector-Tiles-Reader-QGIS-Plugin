@@ -1,19 +1,16 @@
-from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
-from GlobalMapTiles import GlobalMercator
-
 import sqlite3
 import sys
 import os
 import site
 import importlib
-import uuid
 import json
-import glob
 import zlib
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
-from geojson import FeatureCollection
+from geojson import FeatureCollection, Feature, Point, Polygon, LineString
+from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
+from GlobalMapTiles import GlobalMercator
 
 
 class _GeoTypes:
@@ -49,9 +46,7 @@ class VtReader:
     ]
 
     _extent = 4096
-    _directory = os.path.abspath(os.path.dirname(__file__))
-    _temp_dir = "%s/tmp" % _directory
-    file_path = "%s/sample data/zurich_switzerland.mbtiles" % _directory
+    _file_path = "{}/sample data/zurich_switzerland.mbtiles".format(FileHelper.get_directory())
     _layers_to_dissolve = []
 
     def __init__(self, iface):
@@ -60,6 +55,8 @@ class VtReader:
         self._counter = 0
         self._bool = True
         self._mbtile_id = "name"
+        self.features_by_path = {}
+        self.qgis_layer_groups_by_feature_path = {}
 
     def reinit(self):
         """
@@ -72,16 +69,6 @@ class VtReader:
         FileHelper.clear_temp_dir()
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
-
-    def _clear_temp_dir(self):
-        """
-         * Removes all files from the temp_dir
-        """
-        if not os.path.exists(self._temp_dir):
-            os.makedirs(self._temp_dir)
-        files = glob.glob("%s/*" % self._temp_dir)
-        for f in files:
-            os.remove(f)
 
     @staticmethod
     def _get_empty_feature_collection():
@@ -100,7 +87,7 @@ class VtReader:
          * Imports the external libraries that are required by this plugin
         """
 
-        site.addsitedir(os.path.join(self._temp_dir, '/ext-libs'))
+        site.addsitedir(os.path.join(FileHelper.get_temp_dir(), '/ext-libs'))
         self._import_library("google.protobuf")
         self.mvt = self._import_library("mapbox_vector_tile")
         self.geojson = self._import_library("geojson")
@@ -115,7 +102,7 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        mask_level = VtReader._get_mask_layer_id(self.conn)
+        mask_level = self._get_mask_layer_id()
         # if mask_level:
         #     mask_layer_data = self._load_tiles_from_db(mask_level)
         #     tile_data_tuples.extend(mask_layer_data)
@@ -129,26 +116,20 @@ class VtReader:
         """
 
         try:
-            self.conn = sqlite3.connect(self.file_path)
+            self.conn = sqlite3.connect(self._file_path)
             self.conn.row_factory = sqlite3.Row
             print "Successfully connected to db"
         except:
             print "Db connection failed:", sys.exc_info()
             return
 
-    @staticmethod
-    def _get_mask_layer_id(connection):
+    def _get_mask_layer_id(self):
         sql_command = "select value as 'masklevel' from metadata where name = 'maskLevel'"
         mask_level = None
-        try:
-            cur = connection.cursor()
-            cur.execute(sql_command)
-            row = cur.fetchone()
-            if row:
-                mask_level = row["masklevel"]
-                print("Loaded masklevel is: {}".format(mask_level))
-        except:
-            print("Loading mask level failed: {}".format(sys.exc_info()))
+        rows = self._get_from_db(sql=sql_command)
+        if rows:
+            mask_level = rows[0]["masklevel"]
+
         return mask_level
 
     def _load_tiles_from_db(self, zoom_level):
@@ -159,20 +140,28 @@ class VtReader:
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+
         tile_data_tuples = []
+        rows = self._get_from_db(sql=sql_command)
+        for row in rows:
+            tile_data_tuples.append(self._create_tile(row))
+        return tile_data_tuples
+
+    def _create_tile(self, row):
+        zoom_level = row["zoom_level"]
+        tile_col = row["tile_column"]
+        tile_row = row["tile_row"]
+        binary_data = row["tile_data"]
+        tile = VectorTile(zoom_level, tile_col, tile_row)
+        return tile, binary_data
+
+    def _get_from_db(self, sql):
         try:
             cur = self.conn.cursor()
-            for row in cur.execute(sql_command):
-                zoom_level = row["zoom_level"]
-                tile_col = row["tile_column"]
-                tile_row = row["tile_row"]
-                binary_data = row["tile_data"]
-                tile = VectorTile(zoom_level, tile_col, tile_row)
-                tile_data_tuples.append((tile, binary_data))
+            cur.execute(sql)
+            return cur.fetchall()
         except:
             print "Getting data from db failed:", sys.exc_info()
-            return
-        return tile_data_tuples
 
     def _decode_all_tiles(self, tiles_with_encoded_data):
         tiles = []
@@ -184,11 +173,11 @@ class VtReader:
         return tiles
 
     def _process_tiles(self, tiles):
-        totalNrTiles = len(tiles)
-        print "Processing {} tiles".format(totalNrTiles)
+        total_nr_tiles = len(tiles)
+        print "Processing {} tiles".format(total_nr_tiles)
         for index, tile in enumerate(tiles):
             self._write_features(tile)
-            print "Progress: {0:.1f}%".format(100.0 / totalNrTiles * (index + 1))
+            print "Progress: {0:.1f}%".format(100.0 / total_nr_tiles * (index + 1))
 
     def _decode_binary_tile_data(self, data):
         try:
@@ -207,13 +196,13 @@ class VtReader:
         print "Creating hierarchy in qgis"
         print "Layers to dissolve: ", self._layers_to_dissolve
         root = QgsProject.instance().layerTreeRoot()
-        group_name = os.path.splitext(os.path.basename(self.file_path))[0]
+        group_name = os.path.splitext(os.path.basename(self._file_path))[0]
         rootGroup = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         for feature_path in feature_paths:
             target_group, layer_name = self._get_group_for_path(feature_path, rootGroup)
             feature_collection = self.features_by_path[feature_path]
-            file_src = self._create_unique_file_name()
+            file_src = FileHelper.get_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
@@ -262,7 +251,7 @@ class VtReader:
         try:
             style_name = "{}.qml".format(layer.name())
             # style_name = "{}.qml".format(root_group_name)
-            style_path = os.path.join(VtReader._directory, "styles/{}".format(style_name))
+            style_path = os.path.join(FileHelper.get_directory(), "styles/{}".format(style_name))
             if os.path.isfile(style_path):
                 res = layer.loadNamedStyle(style_path)
                 if res[1]:  # Style loaded
@@ -284,13 +273,6 @@ class VtReader:
             if dissolved_layer:
                 layer = dissolved_layer
                 layer.setName(layer_name)
-                # uniquename = VtReader._create_unique_file_name()
-                # QgsVectorFileWriter.writeAsVectorFormat(dissolved_layer, uniquename, 'utf-8', dissolved_layer.crs(), 'GeoJson')
-                # QgsMapLayerRegistry.instance().removeMapLayer(dissolved_layer)
-                #
-                # layer = QgsVectorLayer(uniquename, layer_name, "ogr")
-                # QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-                # layer_target_group.addLayer(layer)
 
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
@@ -356,7 +338,6 @@ class VtReader:
         """
         Creates a proper GeoJSON feature for the specified feature
         """
-        from geojson import Feature, Point, Polygon, LineString
 
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
@@ -415,8 +396,3 @@ class VtReader:
         merc_easting = int(tmp[0] + delta_x / VtReader._extent * coordinates[0])
         merc_northing = int(tmp[1] + delta_y / VtReader._extent * coordinates[1])
         return [merc_easting, merc_northing]
-
-    @staticmethod
-    def _create_unique_file_name(ending="geojson"):
-        unique_name = "{}.{}".format(uuid.uuid4(), ending)
-        return os.path.join(VtReader._temp_dir, unique_name)
