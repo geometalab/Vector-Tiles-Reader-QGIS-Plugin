@@ -10,6 +10,7 @@ from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
 from GlobalMapTiles import GlobalMercator
+from log_helper import info, warn, critical, debug
 
 
 class _GeoTypes:
@@ -137,7 +138,7 @@ class VtReader:
         print "Reading data from db"
         if zoom_level == 14:
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=8 or (zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582);".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 2;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 9;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
@@ -195,8 +196,8 @@ class VtReader:
         """
          * Creates a hierarchy of groups and layers in qgis
         """
-        print "Creating hierarchy in qgis"
-        print "Layers to dissolve: ", self._layers_to_dissolve
+        print("Creating hierarchy in qgis")
+        print("Layers to dissolve: {}".format(self._layers_to_dissolve))
         root = QgsProject.instance().layerTreeRoot()
         group_name = os.path.splitext(os.path.basename(self._file_path))[0]
         root_group = root.addGroup(group_name)
@@ -209,6 +210,9 @@ class VtReader:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
             VtReader._load_named_style(layer)
+            # todo: remove after debugging
+            # if layer_name == "commercial":
+            #     print("Features of layer commercial: {}".format(feature_collection))
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
@@ -286,6 +290,7 @@ class VtReader:
             for index, feature in enumerate(tile_features):
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
                 if geojson_feature:
+                    # debug("Feature: {}", geojson_feature)
                     feature_path = VtReader._get_feature_path(layer_name, geojson_feature)
                     if feature_path not in self.features_by_path:
                         self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
@@ -332,14 +337,20 @@ class VtReader:
         Creates a proper GeoJSON feature for the specified feature
         """
 
-        from geojson import Feature, Point, Polygon, LineString
+        from geojson import Feature, Point, Polygon, LineString, utils
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
+
         coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
+
+        coordinates = VtReader.reduce_nesting(coordinates)
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
+
+        # if feature["properties"]["class"] == "commercial":
+        #     print("This is the commercial feature: {}".format(feature))
 
         # TODO: remove after testing
         # if geo_type != GeoTypes.POLYGON:
@@ -379,6 +390,24 @@ class VtReader:
             else:
                 tmp.append(VtReader._map_coordinates_recursive(coord, func))
         return tmp
+
+    @staticmethod
+    def reduce_nesting(coordinates):
+        """
+         * Removes unnecessary nesting from a recursive array of coordinates, otherwise the GeoJSON feature could be invalid
+        """
+        tmp = []
+        for coord in coordinates:
+            is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
+            if is_coordinate_tuple:
+                tmp.append(coord)
+            else:
+                if len(coord) == 1 and not isinstance(coord[0], int):
+                    tmp.append(coord[0])
+                else:
+                    tmp.append(VtReader.reduce_nesting(coord))
+        return tmp
+
 
     @staticmethod
     def _calculate_geometry(coordinates, tile):
