@@ -139,7 +139,7 @@ class VtReader:
         print("Reading tiles of zoom level {}".format(zoom_level))
         if zoom_level == 14:
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 3;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
@@ -396,53 +396,13 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        # print "coords before: ", coordinates
-        # coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: coords)
         coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
-        # print "   coords after: ", coordinates
-
-        # if geo_type == GeoTypes.POINT:
-        #     # points = []
-        #     # for p in coordinates:
-        #     #     points.append(p[0])
-        #     coordinates = coordinates[0]
-        # elif geo_type == GeoTypes.LINE_STRING:
-        #     pass
-        # elif geo_type == GeoTypes.POLYGON:
-        #     # coordinates = VtReader._classify_rings(coordinates)
-        #     pass
-        #
-        # is_multi = False
-        # if len(coordinates) == 1:
-        #     coordinates = coordinates[0]
-        # else:
-        #     is_multi = True
-
-        # is_multi = len(coordinates) > 1
-        # is_multi = False
-        # if len(coordinates) == 1:
-        #     coordinates = coordinates[0]
-        # else:
-        #     is_multi = True
-
-        # if geo_type == GeoTypes.POLYGON:
-        #     coordinates = VtReader._classify_rings(coordinates)
-
-        # coordinates = VtReader.reduce_nesting(coordinates)
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
 
         is_multi = VtReader._get_is_multi(geo_type, coordinates)
-        # if not is_multi:
-        #     coordinates = coordinates[0]
-
-        # is_multi = False
-
-        # if geo_type == GeoTypes.POINT:
-        #     # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
-        #     coordinates = coordinates[0]
 
         properties = feature["properties"]
         properties["zoomLevel"] = tile.zoom_level
@@ -457,9 +417,13 @@ class VtReader:
     def _get_is_multi(geo_type, coordinates):
         is_multi = False
         if geo_type == GeoTypes.POINT:
-            is_multi = len(coordinates) > 1 and all(isinstance(c, int) for c in coordinates)
-        elif geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-            # array of arrays
+            is_single = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
+            return not is_single
+        elif geo_type == GeoTypes.LINE_STRING:
+            is_array_of_tuples = all(len(c) == 2 and all(isinstance(ci, int) for ci in c) for c in coordinates)
+            is_single = is_array_of_tuples
+            return not is_single
+        elif geo_type == GeoTypes.POLYGON:
             is_multi = len(coordinates) > 1 and not all(isinstance(c, int) for c in coordinates)
 
         return is_multi
@@ -467,8 +431,6 @@ class VtReader:
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, is_multi):
-        # from geojson import Feature, Point, Polygon, LineString, utils, MultiPoint, MultiPolygon, MultiLineString
-
         type_string = geo_type
         if is_multi:
             type_string = "Multi{}".format(geo_type)
@@ -483,28 +445,6 @@ class VtReader:
         }
         return feature_json
 
-
-        # if geo_type == GeoTypes.POINT:
-        #     if is_multi:
-        #         geometry = Point(coordinates)
-        #     else:
-        #         geometry = Point(coordinates)
-        # elif geo_type == GeoTypes.POLYGON:
-        #     if is_multi:
-        #         geometry = MultiPolygon(coordinates)
-        #     else:
-        #         geometry = Polygon(coordinates)
-        # elif geo_type == GeoTypes.LINE_STRING:
-        #     if is_multi:
-        #         geometry = MultiLineString(coordinates)
-        #     else:
-        #         geometry = LineString(coordinates)
-        # else:
-        #     raise Exception("Unexpected geo_type: {}".format(geo_type))
-        #
-        # feature_json = Feature(geometry=geometry, properties=properties)
-        #
-        # return feature_json
 
     @staticmethod
     def _classify_rings(rings):
