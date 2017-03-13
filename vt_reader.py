@@ -5,7 +5,6 @@ import site
 import importlib
 import json
 import zlib
-import hashlib
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
@@ -105,10 +104,10 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        mask_level = self._get_mask_layer_id()
-        if mask_level:
-            mask_layer_data = self._load_tiles_from_db(mask_level)
-            tile_data_tuples.extend(mask_layer_data)
+        # mask_level = self._get_mask_layer_id()
+        # if mask_level:
+        #     mask_layer_data = self._load_tiles_from_db(mask_level)
+        #     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -139,8 +138,8 @@ class VtReader:
     def _load_tiles_from_db(self, zoom_level):
         print("Reading tiles of zoom level {}".format(zoom_level))
         if zoom_level == 14:
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 3;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
@@ -222,8 +221,11 @@ class VtReader:
                 VtReader._load_named_style(layer)
             elif layer:
                 VtReader._load_named_style(layer)
+            else:
+                raise "What just happened?"
 
-    def _fix_layer(self, valid_layer_source, invalid_layer_source):
+    @staticmethod
+    def _fix_layer(valid_layer_source, invalid_layer_source):
         debug("Valid features in: {}", valid_layer_source)
         debug("Invalid features in: {}", invalid_layer_source)
 
@@ -255,6 +257,8 @@ class VtReader:
             coords = geometry["coordinates"]
             nr_new_features = len(coords)
             debug("{} features will result from split".format(nr_new_features))
+            if nr_new_features == 0:
+                debug("zero result features for feature: {}".format(feature))
 
             for index, c in enumerate(coords):
                 newprops = props.copy()
@@ -376,78 +380,54 @@ class VtReader:
             if feature_subclass:
                 feature_path += "." + feature_subclass
 
-        feature_path += "_{}".format(zoom_level)
+        # feature_path += "_{}".format(zoom_level)
         return feature_path
 
     total_feature_count = 0
 
     @staticmethod
-    def _create_geojson_feature(feature, tile, reduce_nesting=True):
+    def _create_geojson_feature(feature, tile):
         """
         Creates a proper GeoJSON feature for the specified feature
         """
 
-        # from geojson import Feature, Point, Polygon, LineString, utils, MultiPoint, MultiPolygon, MultiLineString
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
         coordinates = VtReader.reduce_nesting(coordinates)
 
-        # if geo_type == GeoTypes.POLYGON:
-        #     coordinates = VtReader._classify_rings(coordinates)
-
         coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
+
+        is_multi = False
+        # if len(coordinates) == 1:
+        #     coordinates = coordinates[0]
+        # else:
+        #     is_multi = True
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
 
-        # TODO: remove after testing
-        # if geo_type != GeoTypes.POLYGON:
-        #     return None, None
-
-        # is_multi = False
-        # if len(coordinates) == 1:
-        #     coordinates = coordinates[0]
-        # else:
-        #     is_multi = True
-        #
-        # if geo_type == GeoTypes.POINT:
-        #     geometry = Point(coordinates)
-        # elif geo_type == GeoTypes.POLYGON:
-        #     if is_multi:
-        #         geometry = MultiPolygon(coordinates)
-        #         print("Multi: {}".format(geometry))
-        #     else:
-        #         geometry = Polygon(coordinates)
-        # elif geo_type == GeoTypes.LINE_STRING:
-        #     geometry = LineString(coordinates)
-        # else:
-        #     raise Exception("Unexpected geo_type: {}".format(geo_type))
-
-        # type_string = geo_type
-        # if is_multi:
-        #     type_string = "Multi{}".format(type_string)
-
         properties = feature["properties"]
         properties["zoomLevel"] = tile.zoom_level
         properties["featureNr"] = VtReader.total_feature_count
-        # properties["tag"] = VtReader.total_feature_count
-        # properties["geometryType"] = type_string
         VtReader.total_feature_count += 1
 
-        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
+        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties, is_multi)
 
         return feature_json, geo_type
 
     @staticmethod
-    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
+    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, is_multi=False):
         from geojson import Feature, Point, Polygon, LineString, utils, MultiPoint, MultiPolygon, MultiLineString
 
         if geo_type == GeoTypes.POINT:
             geometry = Point(coordinates)
         elif geo_type == GeoTypes.POLYGON:
-            geometry = Polygon(coordinates)
+            if is_multi:
+                geometry = MultiPolygon(coordinates)
+            else:
+                geometry = Polygon(coordinates)
         elif geo_type == GeoTypes.LINE_STRING:
             geometry = LineString(coordinates)
         else:
