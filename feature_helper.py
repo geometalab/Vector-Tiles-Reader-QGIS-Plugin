@@ -15,8 +15,9 @@ class FeatureMerger:
         pass
 
     def merge_features(self, layer, remove_invalid_features=False):
+
         # return layer, None
-        #
+
         layer_name = layer.name()
         if layer_name not in ["forest_8", "forest_14", "forest", "forest_14", "lake_14", "lake"]:
             return layer, None
