@@ -14,8 +14,10 @@ from GlobalMapTiles import GlobalMercator
 from log_helper import info, warn, critical, debug
 
 
-
 class _GeoTypes:
+    def __init__(self):
+        pass
+
     POINT = "Point"
     LINE_STRING = "LineString"
     POLYGON = "Polygon"
@@ -103,11 +105,10 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        # mask_level = self._get_mask_layer_id()
-        # if mask_level:
-            # mask_layer_data = self._load_tiles_from_db(mask_level)
-            # tile_data_tuples.extend(mask_layer_data)
-            # tile_data_tuples = mask_layer_data
+        mask_level = self._get_mask_layer_id()
+        if mask_level:
+            mask_layer_data = self._load_tiles_from_db(mask_level)
+            tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -138,8 +139,8 @@ class VtReader:
     def _load_tiles_from_db(self, zoom_level):
         print("Reading tiles of zoom level {}".format(zoom_level))
         if zoom_level == 14:
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
@@ -221,9 +222,6 @@ class VtReader:
                 VtReader._load_named_style(layer)
             elif layer:
                 VtReader._load_named_style(layer)
-                # todo: remove after debugging
-                # if layer_name == "commercial":
-                #     print("Features of layer commercial: {}".format(feature_collection))
 
     def _fix_layer(self, valid_layer_source, invalid_layer_source):
         debug("Valid features in: {}", valid_layer_source)
@@ -345,8 +343,8 @@ class VtReader:
             tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
-                if geojson_feature and geo_type == GeoTypes.POLYGON:
-                    feature_path = VtReader._get_feature_path(layer_name, geojson_feature, geo_type, tile.column, tile.row)
+                if geojson_feature:
+                    feature_path = VtReader._get_feature_path(layer_name, geojson_feature, tile.zoom_level)
                     if feature_path not in self.features_by_path:
                         self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
 
@@ -354,11 +352,6 @@ class VtReader:
 
                     if geo_type in [GeoTypes.POLYGON] and feature_path not in self._layers_to_dissolve:
                         self._layers_to_dissolve.append(feature_path)
-
-                # TODO: remove the break after debugging
-                # print "feature: ", feature
-                # print "   data: ", data
-                # break
 
     @staticmethod
     def _get_feature_class_and_subclass(feature):
@@ -375,7 +368,7 @@ class VtReader:
         return feature_class, feature_subclass
 
     @staticmethod
-    def _get_feature_path(layer_name, feature, geo_type, column, row):
+    def _get_feature_path(layer_name, feature, zoom_level):
         feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
         feature_path = layer_name
         if feature_class:
@@ -383,8 +376,7 @@ class VtReader:
             if feature_subclass:
                 feature_path += "." + feature_subclass
 
-        feature_path += "_{}".format(geo_type)
-        # feature_path += "_{}_{}_{}".format(geo_type, column, row)
+        feature_path += "_{}".format(zoom_level)
         return feature_path
 
     total_feature_count = 0
