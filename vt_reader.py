@@ -5,6 +5,7 @@ import site
 import importlib
 import json
 import zlib
+import numbers
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
@@ -14,10 +15,12 @@ from log_helper import info, warn, critical, debug
 
 
 class _GeoTypes:
+    def __init__(self):
+        pass
+
     POINT = "Point"
     LINE_STRING = "LineString"
     POLYGON = "Polygon"
-
 
 GeoTypes = _GeoTypes()
 
@@ -106,7 +109,6 @@ class VtReader:
         if mask_level:
             mask_layer_data = self._load_tiles_from_db(mask_level)
             tile_data_tuples.extend(mask_layer_data)
-            # tile_data_tuples = mask_layer_data
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -135,13 +137,15 @@ class VtReader:
         return mask_level
 
     def _load_tiles_from_db(self, zoom_level):
-        print "Reading data from db"
+        print("Reading tiles of zoom level {}".format(zoom_level))
         if zoom_level == 14:
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=8 or (zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582);".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 20;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
@@ -208,11 +212,62 @@ class VtReader:
             file_src = FileHelper.get_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
-            VtReader._load_named_style(layer)
-            # todo: remove after debugging
-            # if layer_name == "commercial":
-            #     print("Features of layer commercial: {}".format(feature_collection))
+            layer, invalid_layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, add_invalid_layer=False)
+            if invalid_layer:
+                debug("invalid layer: {}".format(invalid_layer.source()))
+                new_feature_collection = self._fix_layer(layer.source(), invalid_layer.source())
+                new_file_src = FileHelper.get_unique_file_name()
+                with open(new_file_src, "w") as f:
+                    json.dump(new_feature_collection, f)
+                debug("Fixed layer: {}".format(new_file_src))
+                layer, invalid_layer = self._add_vector_layer(new_file_src, layer_name, target_group, feature_path, add_invalid_layer=True)
+                VtReader._load_named_style(layer)
+            elif layer:
+                VtReader._load_named_style(layer)
+            else:
+                raise "What just happened?"
+
+    @staticmethod
+    def _fix_layer(valid_layer_source, invalid_layer_source):
+        debug("Valid features in: {}", valid_layer_source)
+        debug("Invalid features in: {}", invalid_layer_source)
+
+        new_feature_collection = VtReader._get_empty_feature_collection()
+
+        with open(invalid_layer_source) as data_file:
+            feature_collection_invalid = json.load(data_file)
+        with open(valid_layer_source) as data_file:
+            feature_collection = json.load(data_file)
+
+        feature_nrs = []
+        feature_nrs_invalid = []
+        for f in feature_collection_invalid["features"]:
+            feature_nrs_invalid.append(f["properties"]["featureNr"])
+
+        for f in feature_collection["features"]:
+            nr = f["properties"]["featureNr"]
+            if nr not in feature_nrs_invalid:
+                # debug("this feature is valid: {}".format(nr))
+                feature_nrs.append(nr)
+                new_feature_collection["features"].append(f)
+
+        for feature in feature_collection_invalid["features"]:
+            props = feature["properties"]
+            nr = props["featureNr"]
+            debug("now splitting feature: {}".format(nr))
+            geometry = feature["geometry"]
+            geo_type = geometry["type"]
+            coords = geometry["coordinates"]
+            nr_new_features = len(coords)
+            debug("{} features will result from split".format(nr_new_features))
+
+            for index, c in enumerate(coords):
+                newprops = props.copy()
+                newprops["featureNr"] = int("{}{}".format(nr, index))
+                feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, [c], newprops)
+                new_feature_collection["features"].append(feature_json)
+
+        return new_feature_collection
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
@@ -249,7 +304,9 @@ class VtReader:
     @staticmethod
     def _load_named_style(layer):
         try:
-            style_name = "{}.qml".format(layer.name())
+            name = layer.name().split("_")[0]
+            style_name = "{}.qml".format(name)
+            # style_name = "{}.qml".format(layer.name())
             style_path = os.path.join(FileHelper.get_directory(), "styles/{}".format(style_name))
             if os.path.isfile(style_path):
                 res = layer.loadNamedStyle(style_path)
@@ -259,24 +316,28 @@ class VtReader:
         except:
             print("Loading style failed: {}".format(sys.exc_info()))
 
-    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path):
+    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path, add_invalid_layer=False):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
+        invalid_layer = None
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
         if feature_path in self._layers_to_dissolve:
-            merger = FeatureMerger()
-            dissolved_layer = merger.merge_features(QgsVectorLayer(json_src, layer_name, "ogr"))
-            if dissolved_layer:
+            remove_invalid = not add_invalid_layer
+            dissolved_layer, invalid = FeatureMerger().merge_features(layer, remove_invalid_features=remove_invalid)
+            if invalid:
+                invalid_layer = invalid
+            elif dissolved_layer:
                 layer = dissolved_layer
                 layer.setName(layer_name)
 
-        QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-        layer_target_group.addLayer(layer)
+        if not invalid_layer or add_invalid_layer:
+            QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+            layer_target_group.addLayer(layer)
 
-        return layer
+        return layer, invalid_layer
 
     def _write_features(self, tile):
         """
@@ -290,8 +351,7 @@ class VtReader:
             for index, feature in enumerate(tile_features):
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
                 if geojson_feature:
-                    # debug("Feature: {}", geojson_feature)
-                    feature_path = VtReader._get_feature_path(layer_name, geojson_feature)
+                    feature_path = VtReader._get_feature_path(layer_name, geojson_feature, tile.zoom_level)
                     if feature_path not in self.features_by_path:
                         self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
 
@@ -300,19 +360,15 @@ class VtReader:
                     if geo_type in [GeoTypes.POLYGON] and feature_path not in self._layers_to_dissolve:
                         self._layers_to_dissolve.append(feature_path)
 
-                # TODO: remove the break after debugging
-                # print "feature: ", feature
-                # print "   data: ", data
-                # break
-
     @staticmethod
     def _get_feature_class_and_subclass(feature):
         feature_class = None
         feature_subclass = None
-        if "class" in feature.properties:
-            feature_class = feature.properties["class"]
-            if "subclass" in feature.properties:
-                feature_subclass = feature.properties["subclass"]
+        properties = feature["properties"]
+        if "class" in properties:
+            feature_class = properties["class"]
+            if "subclass" in properties:
+                feature_subclass = properties["subclass"]
                 if feature_subclass == feature_class:
                     feature_subclass = None
         if feature_subclass:
@@ -320,13 +376,15 @@ class VtReader:
         return feature_class, feature_subclass
 
     @staticmethod
-    def _get_feature_path(layer_name, feature):
+    def _get_feature_path(layer_name, feature, zoom_level):
         feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
         feature_path = layer_name
         if feature_class:
             feature_path += "." + feature_class
             if feature_subclass:
                 feature_path += "." + feature_subclass
+
+        feature_path += "_{}".format(zoom_level)
         return feature_path
 
     total_feature_count = 0
@@ -337,44 +395,72 @@ class VtReader:
         Creates a proper GeoJSON feature for the specified feature
         """
 
-        from geojson import Feature, Point, Polygon, LineString, utils
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
+        # # todo: remove after testing
+        # if geo_type != GeoTypes.POLYGON:
+        #     return None, None
 
-        coordinates = VtReader.reduce_nesting(coordinates)
+        coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
 
-        # if feature["properties"]["class"] == "commercial":
-        #     print("This is the commercial feature: {}".format(feature))
-
-        # TODO: remove after testing
-        # if geo_type != GeoTypes.POLYGON:
-        #     return None, None
-
-        if geo_type == GeoTypes.POINT:
-            geometry = Point(coordinates)
-        elif geo_type == GeoTypes.POLYGON:
-            geometry = Polygon(coordinates)
-        elif geo_type == GeoTypes.LINE_STRING:
-            geometry = LineString(coordinates)
-        else:
-            raise Exception("Unexpected geo_type: {}".format(geo_type))
-
-        # if VtReader.total_feature_count == 47:
-        #     print("this is an invalid geometry")
-        #     print(geometry)
-
         properties = feature["properties"]
+        properties["zoomLevel"] = tile.zoom_level
         properties["featureNr"] = VtReader.total_feature_count
+        properties["col"] = tile.column
+        properties["row"] = tile.row
         VtReader.total_feature_count += 1
-        feature_json = Feature(geometry=geometry, properties=properties)
+
+        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
         return feature_json, geo_type
+
+    @staticmethod
+    def _get_is_multi(geo_type, coordinates):
+        if geo_type == GeoTypes.POINT:
+            is_single = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
+            return not is_single
+        elif geo_type == GeoTypes.LINE_STRING:
+            is_array_of_tuples = all(len(c) == 2 and all(isinstance(ci, int) for ci in c) for c in coordinates)
+            is_single = is_array_of_tuples
+            return not is_single
+        elif geo_type == GeoTypes.POLYGON:
+            is_multi = VtReader.get_array_depth(coordinates, 0) >= 2
+            return is_multi
+
+        return False
+
+    @staticmethod
+    def get_array_depth(arr, depth):
+        if all(isinstance(c, numbers.Real) for c in arr[0]):
+            return depth
+        else:
+            depth += 1
+            return VtReader.get_array_depth(arr[0], depth)
+
+    @staticmethod
+    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
+
+        is_multi = VtReader._get_is_multi(geo_type, coordinates)
+
+        type_string = geo_type
+        if is_multi:
+            type_string = "Multi{}".format(geo_type)
+
+        feature_json = {
+            "type": "Feature",
+            "geometry": {
+                "type": type_string,
+                "coordinates": coordinates
+            },
+            "properties": properties
+        }
+
+        return feature_json
 
     @staticmethod
     def _map_coordinates_recursive(coordinates, func):
@@ -392,25 +478,7 @@ class VtReader:
         return tmp
 
     @staticmethod
-    def reduce_nesting(coordinates):
-        """
-         * Removes unnecessary nesting from a recursive array of coordinates, otherwise the GeoJSON feature could be invalid
-        """
-        tmp = []
-        for coord in coordinates:
-            is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
-            if is_coordinate_tuple:
-                tmp.append(coord)
-            else:
-                if len(coord) == 1 and not isinstance(coord[0], int):
-                    tmp.append(coord[0])
-                else:
-                    tmp.append(VtReader.reduce_nesting(coord))
-        return tmp
-
-
-    @staticmethod
-    def _calculate_geometry(coordinates, tile):
+    def _transform_to_epsg3857(coordinates, tile):
         """
         Does a mercator transformation on the specified coordinate tuple
         """
