@@ -145,7 +145,7 @@ class VtReader:
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
@@ -358,9 +358,6 @@ class VtReader:
                     if geo_type in [GeoTypes.POLYGON] and feature_path not in self._layers_to_dissolve:
                         self._layers_to_dissolve.append(feature_path)
 
-                    # todo: remove after testing
-                    # break
-
     @staticmethod
     def _get_feature_class_and_subclass(feature):
         feature_class = None
@@ -403,16 +400,11 @@ class VtReader:
         # if geo_type != GeoTypes.POLYGON:
         #     return None, None
 
-        coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
+        coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
-
-        # is_multi = VtReader._get_is_multi(geo_type, coordinates)
-
-        # if not is_multi:
-        #     coordinates = VtReader.reduce_nesting(coordinates)
 
         properties = feature["properties"]
         properties["zoomLevel"] = tile.zoom_level
@@ -435,10 +427,6 @@ class VtReader:
             is_single = is_array_of_tuples
             return not is_single
         elif geo_type == GeoTypes.POLYGON:
-            # TODO: here is something still wrong
-            # <= 1  --> forest in Hitzkirch is correct, but lake zurich misses a feature
-            # <= 2  --> forest in Hitzkirch is wrong, but lake zurich is correct
-            # is_single = len(coordinates) <= 2
             is_multi = VtReader.get_array_depth(coordinates, 0) >= 2
             return is_multi
 
@@ -451,7 +439,6 @@ class VtReader:
         else:
             depth += 1
             return VtReader.get_array_depth(arr[0], depth)
-
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
@@ -470,59 +457,10 @@ class VtReader:
             },
             "properties": properties
         }
+
         return feature_json
 
-
-    @staticmethod
-    def _classify_rings(rings):
-        """
-         * classifies an array of rings into polygons with outer rings and holes
-        :param rings:
-        :return:
-        """
-
-        if len(rings) <= 1:
-            return [rings]
-
-        polygons = []
-        polygon = []
-        ccw = None
-        for ring in rings:
-            area = VtReader._signed_area(ring)
-            if area == 0:
-                continue
-
-            if not ccw:
-                ccw = area < 0
-
-            if ccw == area < 0:
-                if polygon:
-                    polygons.append(polygon)
-                polygon = [ring]
-            else:
-                if not polygon:
-                    polygon = []
-                polygon.append(ring)
-
-        if polygon:
-            polygons.append(polygon)
-        return polygons
-
-    @staticmethod
-    def _signed_area(ring):
-        area_sum = 0
-        i = 0
-        ring_len = len(ring)
-        j = ring_len - 1
-        while i < ring_len:
-            p1 = ring[i]
-            p2 = ring[j]
-            area_sum += (p2[0] - p1[0]) * (p1[1] + p2[1])
-            j = i
-            i += 1
-        return area_sum
-
-    @staticmethod
+     @staticmethod
     def _map_coordinates_recursive(coordinates, func):
         """
         Recursively traverses the array of coordinates (depth first) and applies the specified function
@@ -538,28 +476,7 @@ class VtReader:
         return tmp
 
     @staticmethod
-    def reduce_nesting(coordinates):
-        """
-         * Removes unnecessary nesting from a recursive array of coordinates, otherwise the GeoJSON feature could be invalid
-        """
-        tmp = []
-        for coord in coordinates:
-            if isinstance(coord, int):
-                tmp.append(coord)
-            else:
-                is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
-                if is_coordinate_tuple:
-                    tmp.append(coord)
-                else:
-                    if len(coord) == 1 and not isinstance(coord[0], int):
-                        tmp.append(coord[0])
-                    else:
-                        tmp.append(VtReader.reduce_nesting(coord))
-        return tmp
-
-
-    @staticmethod
-    def _calculate_geometry(coordinates, tile):
+    def _transform_to_epsg3857(coordinates, tile):
         """
         Does a mercator transformation on the specified coordinate tuple
         """
