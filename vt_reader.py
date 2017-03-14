@@ -5,6 +5,7 @@ import site
 import importlib
 import json
 import zlib
+import numbers
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
@@ -138,8 +139,10 @@ class VtReader:
     def _load_tiles_from_db(self, zoom_level):
         print("Reading tiles of zoom level {}".format(zoom_level))
         if zoom_level == 14:
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
@@ -396,26 +399,34 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
+        # # todo: remove after testing
+        # if geo_type != GeoTypes.POLYGON:
+        #     return None, None
+
         coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._calculate_geometry(coords, tile))
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             coordinates = coordinates[0]
 
-        is_multi = VtReader._get_is_multi(geo_type, coordinates)
+        # is_multi = VtReader._get_is_multi(geo_type, coordinates)
+
+        # if not is_multi:
+        #     coordinates = VtReader.reduce_nesting(coordinates)
 
         properties = feature["properties"]
         properties["zoomLevel"] = tile.zoom_level
         properties["featureNr"] = VtReader.total_feature_count
+        properties["col"] = tile.column
+        properties["row"] = tile.row
         VtReader.total_feature_count += 1
 
-        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties, is_multi)
+        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
         return feature_json, geo_type
 
     @staticmethod
     def _get_is_multi(geo_type, coordinates):
-        is_multi = False
         if geo_type == GeoTypes.POINT:
             is_single = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
             return not is_single
@@ -424,13 +435,29 @@ class VtReader:
             is_single = is_array_of_tuples
             return not is_single
         elif geo_type == GeoTypes.POLYGON:
-            is_multi = len(coordinates) > 1 and not all(isinstance(c, int) for c in coordinates)
+            # TODO: here is something still wrong
+            # <= 1  --> forest in Hitzkirch is correct, but lake zurich misses a feature
+            # <= 2  --> forest in Hitzkirch is wrong, but lake zurich is correct
+            # is_single = len(coordinates) <= 2
+            is_multi = VtReader.get_array_depth(coordinates, 0) >= 2
+            return is_multi
 
-        return is_multi
+        return False
+
+    @staticmethod
+    def get_array_depth(arr, depth):
+        if all(isinstance(c, numbers.Real) for c in arr[0]):
+            return depth
+        else:
+            depth += 1
+            return VtReader.get_array_depth(arr[0], depth)
 
 
     @staticmethod
-    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, is_multi):
+    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
+
+        is_multi = VtReader._get_is_multi(geo_type, coordinates)
+
         type_string = geo_type
         if is_multi:
             type_string = "Multi{}".format(geo_type)
