@@ -105,10 +105,10 @@ class VtReader:
         self.reinit()
         self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        # mask_level = self._get_mask_layer_id()
-        # if mask_level:
-        #     mask_layer_data = self._load_tiles_from_db(mask_level)
-        #     tile_data_tuples.extend(mask_layer_data)
+        mask_level = self._get_mask_layer_id()
+        if mask_level:
+            mask_layer_data = self._load_tiles_from_db(mask_level)
+            tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -304,7 +304,9 @@ class VtReader:
     @staticmethod
     def _load_named_style(layer):
         try:
-            style_name = "{}.qml".format(layer.name())
+            name = layer.name().split("_")[0]
+            style_name = "{}.qml".format(name)
+            # style_name = "{}.qml".format(layer.name())
             style_path = os.path.join(FileHelper.get_directory(), "styles/{}".format(style_name))
             if os.path.isfile(style_path):
                 res = layer.loadNamedStyle(style_path)
@@ -382,7 +384,7 @@ class VtReader:
             if feature_subclass:
                 feature_path += "." + feature_subclass
 
-        # feature_path += "_{}".format(zoom_level)
+        feature_path += "_{}".format(zoom_level)
         return feature_path
 
     total_feature_count = 0
@@ -460,7 +462,7 @@ class VtReader:
 
         return feature_json
 
-     @staticmethod
+    @staticmethod
     def _map_coordinates_recursive(coordinates, func):
         """
         Recursively traverses the array of coordinates (depth first) and applies the specified function
