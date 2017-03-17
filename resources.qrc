@@ -3,5 +3,6 @@
     <file alias="icon.png">icons/icon.png</file> 
 	<file alias="add.svg">icons/add.svg</file> 
 	<file alias="delete.svg">icons/delete.svg</file> 
+	<file alias="folder.svg">icons/folder.svg</file> 
   </qresource> 
 </RCC>
