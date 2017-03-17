@@ -20,7 +20,7 @@ class FeatureMerger:
 
         layer_name = layer.name()
         # todo: remove after testing
-        if layer_name.split("_")[0] not in ["forest", "lake"]:
+        if layer_name.split("_")[0] not in ["forest", "lake", "residential"]:
             return layer
 
         info("Merging features of layer: {}".format(layer_name))
