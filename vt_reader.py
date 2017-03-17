@@ -1,8 +1,6 @@
 import sqlite3
 import sys
 import os
-import site
-import importlib
 import json
 import zlib
 import numbers
@@ -13,6 +11,7 @@ from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVector
 from GlobalMapTiles import GlobalMercator
 from log_helper import info, warn, critical, debug
 
+import mapbox_vector_tile
 
 class _GeoTypes:
     def __init__(self):
@@ -54,7 +53,6 @@ class VtReader:
 
     def __init__(self, iface):
         self.iface = iface
-        self._import_libs()
         self._counter = 0
         self._bool = True
         self._mbtile_id = "name"
@@ -78,30 +76,17 @@ class VtReader:
         """
          * Returns an empty GeoJSON FeatureCollection
         """
-        from geojson import FeatureCollection
         crs = {  # crs = coordinate reference system
             "type": "name",
             "properties": {
                     "name": "urn:ogc:def:crs:EPSG::3857"}}
-        return FeatureCollection([], crs=crs)
 
-    def _import_libs(self):
-        """
-         * Imports the external libraries that are required by this plugin
-        """
+        return {
+            "type": "FeatureCollection",
+            "crs": crs,
+            "features": [] }
 
-        site.addsitedir(os.path.join(FileHelper.get_temp_dir(), '/ext-libs'))
-        self._import_library("google.protobuf")
-        self.mvt = self._import_library("mapbox_vector_tile")
-        self.geojson = self._import_library("geojson")
-
-    def _import_library(self, lib):
-        print "importing: ", lib
-        module = importlib.import_module(lib)
-        print "import successful"
-        return module
-
-    def do_work(self, zoom_level):
+    def load_vector_tiles(self, zoom_level):
         self.reinit()
         self._connect_to_db()
         mask_level = self._get_mask_layer_id()
@@ -141,8 +126,8 @@ class VtReader:
         if zoom_level != mask_layer:
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
@@ -179,7 +164,8 @@ class VtReader:
             tile = tile_data_tuple[0]
             encoded_data = tile_data_tuple[1]
             tile.decoded_data = self._decode_binary_tile_data(encoded_data)
-            tiles.append(tile)
+            if tile.decoded_data:
+                tiles.append(tile)
             print "Progress: {0:.1f}%".format(100.0 / total_nr_tiles * (index + 1))
         return tiles
 
@@ -194,7 +180,7 @@ class VtReader:
         try:
             # The offset of 32 signals to the zlib header that the gzip header is expected but skipped.
             file_content = zlib.decompress(data, 32 + zlib.MAX_WBITS)
-            decoded_data = self.mvt.decode(file_content)
+            decoded_data = mapbox_vector_tile.decode(file_content)
         except:
             print "decoding data with mapbox_vector_tile failed", sys.exc_info()
             return
@@ -218,48 +204,6 @@ class VtReader:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
             VtReader._load_named_style(layer)
-
-    @staticmethod
-    def _fix_layer(valid_layer_source, invalid_layer_source):
-        debug("Valid features in: {}", valid_layer_source)
-        debug("Invalid features in: {}", invalid_layer_source)
-
-        new_feature_collection = VtReader._get_empty_feature_collection()
-
-        with open(invalid_layer_source) as data_file:
-            feature_collection_invalid = json.load(data_file)
-        with open(valid_layer_source) as data_file:
-            feature_collection = json.load(data_file)
-
-        feature_nrs = []
-        feature_nrs_invalid = []
-        for f in feature_collection_invalid["features"]:
-            feature_nrs_invalid.append(f["properties"]["featureNr"])
-
-        for f in feature_collection["features"]:
-            nr = f["properties"]["featureNr"]
-            if nr not in feature_nrs_invalid:
-                # debug("this feature is valid: {}".format(nr))
-                feature_nrs.append(nr)
-                new_feature_collection["features"].append(f)
-
-        for feature in feature_collection_invalid["features"]:
-            props = feature["properties"]
-            nr = props["featureNr"]
-            debug("now splitting feature: {}".format(nr))
-            geometry = feature["geometry"]
-            geo_type = geometry["type"]
-            coords = geometry["coordinates"]
-            nr_new_features = len(coords)
-            debug("{} features will result from split".format(nr_new_features))
-
-            for index, c in enumerate(coords):
-                newprops = props.copy()
-                newprops["featureNr"] = int("{}{}".format(nr, index))
-                feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, [c], newprops)
-                new_feature_collection["features"].append(feature_json)
-
-        return new_feature_collection
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
@@ -340,7 +284,7 @@ class VtReader:
                     if feature_path not in self.features_by_path:
                         self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
 
-                    self.features_by_path[feature_path].features.append(geojson_feature)
+                    self.features_by_path[feature_path]["features"].append(geojson_feature)
 
                     geotypes_to_dissolve = [GeoTypes.POLYGON]
                     if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:

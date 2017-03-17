@@ -16,9 +16,10 @@ of the License, or (at your option) any later version.
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
-from vt_reader import VtReader
+from log_helper import info
 
 import os
+import sys
 import site
 from sourcedialog import SourceDialog
 
@@ -33,15 +34,6 @@ class VtrPlugin:
         self.settings = QSettings("Vector Tile Reader","vectortilereader")
 
     def initGui(self):
-        print "now importing all required stuff"
-
-        site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/ext-libs'))
-        print "import google.protobuf"
-        import google.protobuf
-        print "importing google.protobuf succeeded"
-        print "import mapbox_vector_tile"
-        import mapbox_vector_tile
-        print "importing mapbox_vector_tile succeeded"
         self.action = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Add Vector Tiles Layer", self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addVectorToolBarIcon(self.action)
@@ -51,9 +43,22 @@ class VtrPlugin:
         self.settingsaction = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Settings", self.iface.mainWindow())
         self.settingsaction.triggered.connect(self.edit_sources)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.settingsaction)
+        self.init_vt_reader()
+        info("Vector Tile Reader Plugin loaded...")
 
+    def init_vt_reader(self):
+        self._add_path_to_dependencies_to_syspath()
+        # A lazy import is required because the vtreader depends on the external libs
+        from vt_reader import VtReader
         self.reader = VtReader(self.iface)
-        self.run()
+
+    def _add_path_to_dependencies_to_syspath(self):
+        """
+         * Adds the path to the external libraries to the sys.path if not already added
+        """
+        ext_libs_path = os.path.abspath(os.path.dirname(__file__) + '/ext-libs')
+        if ext_libs_path not in sys.path:
+            site.addsitedir(ext_libs_path)
 
     def unload(self):
         # Remove the plugin menu item and icon
@@ -64,8 +69,7 @@ class VtrPlugin:
 
     def run(self):
         # create and show a configuration dialog or something similar
-        self.reader.do_work(14)
-        # self.reader.do_work(8)
+        self.reader.load_vector_tiles(zoom_level=14)
 
     def edit_sources(self):
         dlg = SourceDialog()

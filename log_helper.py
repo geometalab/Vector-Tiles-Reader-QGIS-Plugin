@@ -29,9 +29,8 @@ def _log_message(msg, level, *args):
         logging.critical(msg)
     elif not level:
         logging.debug(msg)
-        print(msg)
         # TODO: disable after debugging
         level = QgsMessageLog.INFO
 
-    if level:
-        QgsMessageLog.logMessage(msg, 'Vector Tile Reader', level)
+    print(msg)
+    QgsMessageLog.logMessage(msg, 'Vector Tile Reader', level)
