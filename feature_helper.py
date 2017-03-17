@@ -14,57 +14,21 @@ class FeatureMerger:
     def __init__(self):
         pass
 
-    def merge_features(self, layer, remove_invalid_features=False):
+    def merge_features(self, layer):
 
         # return layer, None
 
         layer_name = layer.name()
         # todo: remove after testing
         if layer_name.split("_")[0] not in ["forest", "lake"]:
-            return layer, None
+            return layer
 
-        info("Merging features of layer '{}'".format(layer_name))
-
-        # valid_layer, invalid_layer = self._validate_layer(layer)
-        #
-        # invalid_feature_ids = invalid_layer.allFeatureIds()
-        # nr_invalid_features = len(invalid_feature_ids)
-        # debug("Nr. invalid features: {}".format(nr_invalid_features))
-
-        # if nr_invalid_features > 0:
-        #     if remove_invalid_features:
-        #         return layer, invalid_layer
-        #     else:
-        #         debug("This file contains features, that cannot be fixed: {}".format(invalid_layer.source()))
-        #         valid_layer = layer
+        info("Merging features of layer: {}".format(layer_name))
 
         self._prepare_features_for_dissolvment(layer)
         dissolved_layer = self._dissolve(layer)
 
-        return dissolved_layer, None
-
-    # @staticmethod
-    # def _validate_layer(layer):
-    #     """
-    #      * Validates the layer and removes all invalid geometries.
-    #     :param layer:
-    #     :return:
-    #     """
-    #     debug("Validating layer")
-    #     target_file_valid = FileHelper.get_unique_file_name()
-    #     target_file_invalid = FileHelper.get_unique_file_name()
-    #     processing.runalg("qgis:checkvalidity", layer, 2, target_file_valid, target_file_invalid, None)
-    #     valid_layer = QgsVectorLayer(target_file_valid, "Valid", "ogr")
-    #     invalid_layer = QgsVectorLayer(target_file_invalid, "Invalid", "ogr")
-    #     return valid_layer, invalid_layer
-
-    # @staticmethod
-    # def _create_intersection_layer(layer):
-    #     debug("Intersecting layer")
-    #     target_file = FileHelper.get_unique_file_name()
-    #     processing.runalg("qgis:intersection", layer, layer, True, target_file)
-    #     intersection_layer = QgsVectorLayer(target_file, "Intersection", "ogr")
-    #     return intersection_layer
+        return dissolved_layer
 
     @staticmethod
     def _prepare_features_for_dissolvment(layer):
@@ -113,14 +77,6 @@ class FeatureMerger:
 
         neighbours.extend(new_neighbours)
         return neighbours
-
-    # @staticmethod
-    # def _get_layer(name):
-    #     result = None
-    #     layers = QgsMapLayerRegistry.instance().mapLayersByName(name)
-    #     if len(layers) > 0:
-    #         result = layers[0]
-    #     return result
 
     @staticmethod
     def _dissolve(layer):

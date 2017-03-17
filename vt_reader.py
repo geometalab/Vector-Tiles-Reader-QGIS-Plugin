@@ -216,20 +216,8 @@ class VtReader:
             file_src = FileHelper.get_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer, invalid_layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, add_invalid_layer=False)
-            if invalid_layer:
-                debug("invalid layer: {}".format(invalid_layer.source()))
-                new_feature_collection = self._fix_layer(layer.source(), invalid_layer.source())
-                new_file_src = FileHelper.get_unique_file_name()
-                with open(new_file_src, "w") as f:
-                    json.dump(new_feature_collection, f)
-                debug("Fixed layer: {}".format(new_file_src))
-                layer, invalid_layer = self._add_vector_layer(new_file_src, layer_name, target_group, feature_path, add_invalid_layer=True)
-                VtReader._load_named_style(layer)
-            elif layer:
-                VtReader._load_named_style(layer)
-            else:
-                raise "What just happened?"
+            layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
+            VtReader._load_named_style(layer)
 
     @staticmethod
     def _fix_layer(valid_layer_source, invalid_layer_source):
@@ -320,28 +308,21 @@ class VtReader:
         except:
             print("Loading style failed: {}".format(sys.exc_info()))
 
-    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path, add_invalid_layer=False):
+    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
-        invalid_layer = None
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
         if feature_path in self._layers_to_dissolve:
-            remove_invalid = not add_invalid_layer
-            dissolved_layer, invalid = FeatureMerger().merge_features(layer, remove_invalid_features=remove_invalid)
-            if invalid:
-                invalid_layer = invalid
-            elif dissolved_layer:
-                layer = dissolved_layer
-                layer.setName(layer_name)
+            layer = FeatureMerger().merge_features(layer)
+            layer.setName(layer_name)
 
-        if not invalid_layer or add_invalid_layer:
-            QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-            layer_target_group.addLayer(layer)
+        QgsMapLayerRegistry.instance().addMapLayer(layer, False)
+        layer_target_group.addLayer(layer)
 
-        return layer, invalid_layer
+        return layer
 
     def _write_features(self, tile):
         """
