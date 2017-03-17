@@ -109,7 +109,7 @@ class FeatureMerger:
                     feature_handler(intersecting_f)
 
         for n in new_neighbours:
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(index, n, neighbours, feature_dict, feature_handler)
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, n, neighbours, feature_dict, feature_handler)
 
         neighbours.extend(new_neighbours)
         return neighbours
