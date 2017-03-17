@@ -33,13 +33,13 @@ class VtReader:
 
     layer_sort_ids = [
         "poi",
+        "boundary",
         "transportation",
         "transportation_name",
         "housenumber",
         "building",
         "place",
         "aeroway",
-        "boundary",
         "park",
         "water_name",
         "waterway",
@@ -104,11 +104,11 @@ class VtReader:
     def do_work(self, zoom_level):
         self.reinit()
         self._connect_to_db()
-        tile_data_tuples = self._load_tiles_from_db(zoom_level)
         mask_level = self._get_mask_layer_id()
-        if mask_level:
-            mask_layer_data = self._load_tiles_from_db(mask_level)
-            tile_data_tuples.extend(mask_layer_data)
+        tile_data_tuples = self._load_tiles_from_db(zoom_level, mask_level)
+        # if mask_level:
+        #     mask_layer_data = self._load_tiles_from_db(mask_level)
+        #     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -136,13 +136,14 @@ class VtReader:
 
         return mask_level
 
-    def _load_tiles_from_db(self, zoom_level):
+    def _load_tiles_from_db(self, zoom_level, mask_layer):
         print("Reading tiles of zoom level {}".format(zoom_level))
-        if zoom_level == 14:
+        if zoom_level != mask_layer:
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
         else:
             sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
             # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
@@ -172,11 +173,14 @@ class VtReader:
 
     def _decode_all_tiles(self, tiles_with_encoded_data):
         tiles = []
-        for tile_data_tuple in tiles_with_encoded_data:
+        total_nr_tiles = len(tiles_with_encoded_data)
+        print "Decoding {} tiles".format(total_nr_tiles)
+        for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
             tile = tile_data_tuple[0]
             encoded_data = tile_data_tuple[1]
             tile.decoded_data = self._decode_binary_tile_data(encoded_data)
             tiles.append(tile)
+            print "Progress: {0:.1f}%".format(100.0 / total_nr_tiles * (index + 1))
         return tiles
 
     def _process_tiles(self, tiles):
@@ -357,7 +361,9 @@ class VtReader:
 
                     self.features_by_path[feature_path].features.append(geojson_feature)
 
-                    if geo_type in [GeoTypes.POLYGON] and feature_path not in self._layers_to_dissolve:
+                    geotypes_to_dissolve = [GeoTypes.POLYGON]
+                    if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:
+                        debug("Dissolving the following types: {}".format(", ".join(geotypes_to_dissolve)))
                         self._layers_to_dissolve.append(feature_path)
 
     @staticmethod

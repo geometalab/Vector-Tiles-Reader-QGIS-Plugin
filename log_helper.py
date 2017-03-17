@@ -23,11 +23,11 @@ def _log_message(msg, level, *args):
 
     if level == QgsMessageLog.INFO:
         logging.info(msg)
-    if level == QgsMessageLog.WARNING:
+    elif level == QgsMessageLog.WARNING:
         logging.warning(msg)
-    if level == QgsMessageLog.CRITICAL:
+    elif level == QgsMessageLog.CRITICAL:
         logging.critical(msg)
-    if not level:
+    elif not level:
         logging.debug(msg)
         print(msg)
         # TODO: disable after debugging
