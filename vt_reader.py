@@ -48,8 +48,10 @@ class VtReader:
     ]
 
     _extent = 4096
-    _file_path = "{}/sample data/zurich_switzerland.mbtiles".format(FileHelper.get_directory())
     _layers_to_dissolve = []
+
+    # todo: remove hardcoded path after testing
+    _file_path = "{}/sample data/zurich_switzerland.mbtiles".format(FileHelper.get_directory())
 
     def __init__(self, iface):
         self.iface = iface
@@ -84,11 +86,16 @@ class VtReader:
         return {
             "type": "FeatureCollection",
             "crs": crs,
-            "features": [] }
+            "features": []}
 
-    def load_vector_tiles(self, zoom_level):
+    def load_vector_tiles_default(self, zoom_level):
+        self.load_vector_tiles(zoom_level, self._file_path)
+
+    def load_vector_tiles(self, zoom_level, path):
+        self._file_path = path
+        debug("Loading vector tiles: {}".format(path))
         self.reinit()
-        self._connect_to_db()
+        self._connect_to_db(path)
         mask_level = self._get_mask_layer_id()
         tile_data_tuples = self._load_tiles_from_db(zoom_level, mask_level)
         # if mask_level:
@@ -99,13 +106,13 @@ class VtReader:
         self._create_qgis_layer_hierarchy()
         print("Import complete!")
 
-    def _connect_to_db(self):
+    def _connect_to_db(self, path):
         """
          * Since an mbtile file is a sqlite database, we can connect to it
         """
 
         try:
-            self.conn = sqlite3.connect(self._file_path)
+            self.conn = sqlite3.connect(path)
             self.conn.row_factory = sqlite3.Row
             print "Successfully connected to db"
         except:

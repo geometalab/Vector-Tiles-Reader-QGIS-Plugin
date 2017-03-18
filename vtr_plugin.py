@@ -16,7 +16,9 @@ of the License, or (at your option) any later version.
 from PyQt4.QtCore import QSettings
 from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton, QFileDialog
 from qgis.core import *
-from log_helper import info
+
+from file_helper import FileHelper
+from log_helper import info, debug
 
 import os
 import sys
@@ -33,6 +35,7 @@ class VtrPlugin:
         self.iface = iface
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._init_openfile_dialog()
+        self.recently_used = []
 
     def _init_openfile_dialog(self):
         dlg = QFileDialog()
@@ -42,9 +45,9 @@ class VtrPlugin:
 
 
     def initGui(self):
+        self._load_recently_used()
         self.action = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Add Vector Tiles Layer", self.iface.mainWindow())
         self.action.triggered.connect(self.run)
-        # self.iface.addVectorToolBarIcon(self.action)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.action)
         self.settingsaction = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Settings", self.iface.mainWindow())
@@ -58,7 +61,13 @@ class VtrPlugin:
         self.popupMenu = QMenu(self.iface.mainWindow())
         default_action = self._create_action("Add Vector Tiles Layer", "icon.png", self.run)
         self.popupMenu.addAction(default_action)
-        self.popupMenu.addAction(self._create_action("Choose Mapbox Tiles File (...)", "folder.svg", self._open_file_browser))
+        self.popupMenu.addAction(self._create_action("Open Mapbox Tiles...", "folder.svg", self._open_file_browser))
+
+        self.recent = self.popupMenu.addMenu("Open Recent")
+        debug("Recently used: {}", self.recently_used)
+        for path in self.recently_used:
+            debug("Create action: {}".format(path))
+            self._add_recently_used(path)
 
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
@@ -66,11 +75,17 @@ class VtrPlugin:
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
+    def _add_recently_used(self, path):
+        if path not in self.recently_used:
+            self.recently_used.append(path)
+        self.recent.addAction(path, lambda path=path: self.reader.load_vector_tiles(14, str(path)))
+
     def _open_file_browser(self):
         path = QFileDialog.getOpenFileName(self.iface.mainWindow(), "Select Mapbox Tiles", "", "Mapbox Tiles (*.mbtiles)")
-        # path = self.open_mbtile_dialog.exec_()
-        if path:
-            print("Selected: {}".format(path))
+        if path and os.path.isfile(path):
+            self._add_recently_used(path)
+            self._save_recently_used()
+            self.reader.load_vector_tiles(14, path)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
@@ -92,19 +107,32 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
-        # Remove the plugin menu item and icon
-        # self.iface.removeVectorToolBarIcon(self.action)
         self.iface.removeVectorToolBarIcon(self.toolButtonAction)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.action)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.settingsaction)
 
     def run(self):
-        # create and show a configuration dialog or something similar
-        self.reader.load_vector_tiles(zoom_level=14)
+        self.reader.load_vector_tiles_default(zoom_level=14)
 
     def edit_sources(self):
         dlg = SourceDialog()
         dlg.setModal(True)
         dlg.connect(dlg.btnClose, SIGNAL("clicked()"), dlg.close)
         dlg.exec_()
+
+    def _load_recently_used(self):
+        recently_used = FileHelper.get_recently_used_file()
+        if os.path.isfile(recently_used):
+            with open(recently_used, 'r') as f:
+                for line in f:
+                    line = line.rstrip("\n")
+                    if os.path.isfile(line):
+                        debug("recently used: {}".format(line))
+                        self.recently_used.append(line)
+
+    def _save_recently_used(self):
+        recently_used = FileHelper.get_recently_used_file()
+        with open(recently_used, 'w') as f:
+            for path in self.recently_used:
+                f.write("{}\n".format(path))

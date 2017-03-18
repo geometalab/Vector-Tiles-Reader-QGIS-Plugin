@@ -6,17 +6,29 @@ import sys
 
 class FileHelper:
 
+    recently_used_filename = "data.bin"
+
     def __init__(self):
         pass
+
+    @staticmethod
+    def get_recently_used_file():
+        path = os.path.join(FileHelper.get_data_dir(), FileHelper.recently_used_filename)
+        return path
 
     @staticmethod
     def get_directory():
         return os.path.abspath(os.path.dirname(__file__))
 
     @staticmethod
+    def get_data_dir():
+        dir = FileHelper.get_directory()
+        return os.path.join(dir, "data")
+
+    @staticmethod
     def get_temp_dir():
-        directory = FileHelper.get_directory()
-        temp_dir = "{}\\tmp".format(directory)
+        directory = FileHelper.get_data_dir()
+        temp_dir = os.path.join(directory, "tmp")
         return temp_dir
 
     @staticmethod
@@ -27,7 +39,7 @@ class FileHelper:
         temp_dir = FileHelper.get_temp_dir()
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
-        files = glob.glob("{}\\*".format(temp_dir))
+        files = glob.glob(os.path.join(temp_dir, "*"))
         try:
             for f in files:
                 os.remove(f)
