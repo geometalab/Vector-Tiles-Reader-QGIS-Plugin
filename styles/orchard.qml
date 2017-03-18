@@ -25,16 +25,54 @@
       <symbol alpha="1" clip_to_extent="1" type="fill" name="0">
         <layer pass="0" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="color" v="205,235,176,255"/>
+          <prop k="color" v="174,223,163,255"/>
           <prop k="joinstyle" v="bevel"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="outline_color" v="0,0,0,255"/>
-          <prop k="outline_style" v="no"/>
+          <prop k="outline_color" v="175,179,138,255"/>
+          <prop k="outline_style" v="solid"/>
           <prop k="outline_width" v="0.26"/>
           <prop k="outline_width_unit" v="MM"/>
           <prop k="style" v="solid"/>
+        </layer>
+        <layer pass="0" class="PointPatternFill" locked="0">
+          <prop k="displacement_x" v="0"/>
+          <prop k="displacement_x_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="displacement_x_unit" v="MM"/>
+          <prop k="displacement_y" v="1"/>
+          <prop k="displacement_y_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="displacement_y_unit" v="MM"/>
+          <prop k="distance_x" v="1.5"/>
+          <prop k="distance_x_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="distance_x_unit" v="MM"/>
+          <prop k="distance_y" v="2"/>
+          <prop k="distance_y_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="distance_y_unit" v="MM"/>
+          <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="outline_width_unit" v="MM"/>
+          <symbol alpha="1" clip_to_extent="1" type="marker" name="@0@1">
+            <layer pass="0" class="SimpleMarker" locked="0">
+              <prop k="angle" v="0"/>
+              <prop k="color" v="117,158,108,255"/>
+              <prop k="horizontal_anchor_point" v="1"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="name" v="circle"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,0"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0"/>
+              <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="scale_method" v="area"/>
+              <prop k="size" v="0.6"/>
+              <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="size_unit" v="MM"/>
+              <prop k="vertical_anchor_point" v="1"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
     </symbols>
@@ -182,7 +220,7 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
-    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/grass.qml"/>
+    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/orchard.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
   </customproperties>
@@ -252,7 +290,7 @@
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
-  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="572537378">
+  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="1">
     <columns>
       <column width="-1" hidden="0" type="field" name="class"/>
       <column width="-1" hidden="0" type="field" name="subclass"/>
