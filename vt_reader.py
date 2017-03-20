@@ -2,7 +2,6 @@ import sqlite3
 import sys
 import os
 import json
-import zlib
 import numbers
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
@@ -10,6 +9,8 @@ from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
 from GlobalMapTiles import GlobalMercator
 from log_helper import info, warn, critical, debug
+from cStringIO import StringIO
+from gzip import GzipFile
 
 import mapbox_vector_tile
 
@@ -185,8 +186,7 @@ class VtReader:
 
     def _decode_binary_tile_data(self, data):
         try:
-            # The offset of 32 signals to the zlib header that the gzip header is expected but skipped.
-            file_content = zlib.decompress(data, 32 + zlib.MAX_WBITS)
+            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
             decoded_data = mapbox_vector_tile.decode(file_content)
         except:
             print "decoding data with mapbox_vector_tile failed", sys.exc_info()
