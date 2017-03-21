@@ -16,7 +16,7 @@ class FeatureMerger:
 
     def merge_features(self, layer):
 
-        # return layer, None
+        return layer
 
         layer_name = layer.name()
         # todo: remove after testing
