@@ -52,7 +52,7 @@ class VtReader:
     _layers_to_dissolve = []
 
     # todo: remove hardcoded path after testing
-    _file_path = "{}/sample data/zurich_switzerland.mbtiles".format(FileHelper.get_directory())
+    _current_mbtiles_path = "{}/sample data/zurich_switzerland.mbtiles".format(FileHelper.get_directory())
 
     def __init__(self, iface):
         self.iface = iface
@@ -77,9 +77,9 @@ class VtReader:
     @staticmethod
     def _get_empty_feature_collection():
         """
-         * Returns an empty GeoJSON FeatureCollection
+         * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
-        crs = {  # crs = coordinate reference system
+        crs = {
             "type": "name",
             "properties": {
                     "name": "urn:ogc:def:crs:EPSG::3857"}}
@@ -89,19 +89,24 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_vector_tiles_default(self, zoom_level):
-        self.load_vector_tiles(zoom_level, self._file_path)
+    def load_vector_tiles_default(self):
+        self._connect_to_db(self._current_mbtiles_path)
+
+        zoom_level = self._get_metadata_value("maxzoom")
+        # todo: handle case where maxzoom is not found in metadata
+        self.load_vector_tiles(zoom_level, self._current_mbtiles_path)
 
     def load_vector_tiles(self, zoom_level, path):
-        self._file_path = path
+        self._current_mbtiles_path = path
         debug("Loading vector tiles: {}".format(path))
         self.reinit()
         self._connect_to_db(path)
-        mask_level = self._get_mask_layer_id()
-        tile_data_tuples = self._load_tiles_from_db(zoom_level, mask_level)
-        # if mask_level:
-        #     mask_layer_data = self._load_tiles_from_db(mask_level)
-        #     tile_data_tuples.extend(mask_layer_data)
+        mask_level = self._get_metadata_value("maskLevel")
+
+        tile_data_tuples = self._load_tiles_from_db(zoom_level)
+        if mask_level:
+            mask_layer_data = self._load_tiles_from_db(mask_level)
+            tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy()
@@ -120,26 +125,25 @@ class VtReader:
             print "Db connection failed:", sys.exc_info()
             return
 
-    def _get_mask_layer_id(self):
-        sql_command = "select value as 'masklevel' from metadata where name = 'maskLevel'"
-        mask_level = None
+    def _get_metadata_value(self, field_name):
+        debug("Loading metadata value '{}'".format(field_name))
+        sql_command = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
+        value = None
         rows = self._get_from_db(sql=sql_command)
         if rows:
-            mask_level = rows[0]["masklevel"]
+            value = rows[0][field_name]
+            debug("Value is: {}".format(value))
 
-        return mask_level
+        return value
 
-    def _load_tiles_from_db(self, zoom_level, mask_layer):
+    def _load_tiles_from_db(self, zoom_level):
         print("Reading tiles of zoom level {}".format(zoom_level))
-        if zoom_level != mask_layer:
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
-        else:
-            sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
-            # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 10;".format(zoom_level)
+
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
@@ -200,7 +204,7 @@ class VtReader:
         print("Creating hierarchy in qgis")
         print("Layers to dissolve: {}".format(self._layers_to_dissolve))
         root = QgsProject.instance().layerTreeRoot()
-        group_name = os.path.splitext(os.path.basename(self._file_path))[0]
+        group_name = os.path.splitext(os.path.basename(self._current_mbtiles_path))[0]
         root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         for feature_path in feature_paths:

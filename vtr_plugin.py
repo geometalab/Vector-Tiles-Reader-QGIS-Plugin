@@ -113,7 +113,7 @@ class VtrPlugin:
         self.iface.removePluginMenu("&Vector Tiles Reader", self.settingsaction)
 
     def run(self):
-        self.reader.load_vector_tiles_default(zoom_level=14)
+        self.reader.load_vector_tiles_default()
 
     def edit_sources(self):
         dlg = SourceDialog()
