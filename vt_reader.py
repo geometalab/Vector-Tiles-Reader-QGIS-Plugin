@@ -56,11 +56,8 @@ class VtReader:
 
     def __init__(self, iface):
         self.iface = iface
-        self._counter = 0
-        self._bool = True
-        self._mbtile_id = "name"
-        self.features_by_path = {}
-        self.qgis_layer_groups_by_feature_path = {}
+        FileHelper.clear_temp_dir()
+        self.reinit()
 
     def reinit(self):
         """
@@ -69,8 +66,6 @@ class VtReader:
          >> Cleans the feature cache
          >> Cleans the qgis group cache
         """
-
-        FileHelper.clear_temp_dir()
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
 
@@ -89,34 +84,28 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_vector_tiles_default(self):
-        self._connect_to_db(self._current_mbtiles_path)
 
-        zoom_level = self._get_metadata_value("maxzoom")
-        # todo: handle case where maxzoom is not found in metadata
-        self.load_vector_tiles(zoom_level, self._current_mbtiles_path)
-
-    def load_vector_tiles(self, zoom_level, path):
+    def load_vector_tiles(self, zoom_level, path, load_mask_layer=True, merge_features=True):
         self._current_mbtiles_path = path
         debug("Loading vector tiles: {}".format(path))
         self.reinit()
         self._connect_to_db(path)
-        mask_level = self._get_metadata_value("maskLevel")
-
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
-        if mask_level:
-            mask_layer_data = self._load_tiles_from_db(mask_level)
-            tile_data_tuples.extend(mask_layer_data)
+
+        if load_mask_layer:
+            mask_level = self._get_metadata_value("maskLevel")
+            if mask_level:
+                mask_layer_data = self._load_tiles_from_db(mask_level)
+                tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
-        self._create_qgis_layer_hierarchy()
+        self._create_qgis_layer_hierarchy(merge_features=merge_features)
         print("Import complete!")
 
     def _connect_to_db(self, path):
         """
          * Since an mbtile file is a sqlite database, we can connect to it
         """
-
         try:
             self.conn = sqlite3.connect(path)
             self.conn.row_factory = sqlite3.Row
@@ -141,7 +130,7 @@ class VtReader:
 
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10645 and tile_column>=8580 and tile_column<= 8582;".format(zoom_level)
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10650 and tile_column>=8575 and tile_column<= 8582;".format(zoom_level)
         sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
 
@@ -197,7 +186,7 @@ class VtReader:
             return
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self):
+    def _create_qgis_layer_hierarchy(self, merge_features):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
@@ -213,7 +202,7 @@ class VtReader:
             file_src = FileHelper.get_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path)
+            layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)
             VtReader._load_named_style(layer)
 
     @staticmethod
@@ -263,14 +252,14 @@ class VtReader:
         except:
             print("Loading style failed: {}".format(sys.exc_info()))
 
-    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path):
+    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path, merge_features):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        if feature_path in self._layers_to_dissolve:
+        if merge_features and feature_path in self._layers_to_dissolve:
             layer = FeatureMerger().merge_features(layer)
             layer.setName(layer_name)
 

@@ -113,7 +113,7 @@ class VtrPlugin:
         self.iface.removePluginMenu("&Vector Tiles Reader", self.settingsaction)
 
     def run(self):
-        self.reader.load_vector_tiles_default()
+        self._open_file_browser()
 
     def edit_sources(self):
         dlg = SourceDialog()
