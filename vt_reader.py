@@ -286,7 +286,7 @@ class VtReader:
 
                     self.features_by_path[feature_path]["features"].append(geojson_feature)
 
-                    geotypes_to_dissolve = [GeoTypes.POLYGON]
+                    geotypes_to_dissolve = [GeoTypes.POLYGON, GeoTypes.LINE_STRING]
                     if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:
                         self._layers_to_dissolve.append(feature_path)
 
