@@ -38,15 +38,14 @@ Name conventions for Vector Tiles Reader QGIS Plugin:
 * Lower Case no space: vector_tiles_reader
 * Abbreviated name   : vtr
 
+## Requirements
+* QGIS 2.18
+* This Plugin was tested on Ubuntu 16.10 and Windows 10
+
 ## Installation
+### Windows
+Copy cloned folder or create symlink to: 
+%userprofile%/.qgis2/python/plugins
 
-Copy folder to:
-
-~/.qgis2/python/plugins
-
-~ means the home directory
-on Windows usually something like: 'C:\Users\{user}'
-
-### Development
-
-tbd
+### Ubuntu
+The script install.sh creates a symlink from the current directory to the qgis plugins directory
