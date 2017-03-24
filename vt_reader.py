@@ -348,10 +348,6 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        # # todo: remove after testing
-        # if geo_type != GeoTypes.POLYGON:
-        #     return None, None
-
         coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
 
         if geo_type == GeoTypes.POINT:
