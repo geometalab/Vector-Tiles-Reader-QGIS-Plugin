@@ -18,7 +18,7 @@ from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton, QFileDialog
 from qgis.core import *
 
 from file_helper import FileHelper
-from log_helper import info, debug
+from log_helper import debug, info, warn, critical
 
 import os
 import sys
@@ -93,7 +93,11 @@ class VtrPlugin:
 
     def _load_mbtiles(self, path):
         reader = self._create_reader(path)
-        reader.load_vector_tiles(14)
+        max_zoom = reader.get_max_zoom()
+        if max_zoom:
+            reader.load_vector_tiles(max_zoom)
+        else:
+            warn("Max Zoom not found, cannot load data")
 
     def _create_reader(self, mbtiles_path):
         self._add_path_to_dependencies_to_syspath()

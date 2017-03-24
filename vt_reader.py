@@ -54,6 +54,7 @@ class VtReader:
     def __init__(self, iface, mbtiles_path):
         self.iface = iface
         self._current_mbtiles_path = mbtiles_path
+        self.conn = None
         FileHelper.clear_temp_dir()
         self.reinit()
 
@@ -87,11 +88,10 @@ class VtReader:
         mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
-        self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
 
         if load_mask_layer:
-            mask_level = self._get_metadata_value("maskLevel")
+            mask_level = self._get_mask_level()
             if mask_level:
                 mask_layer_data = self._load_tiles_from_db(mask_level)
                 tile_data_tuples.extend(mask_layer_data)
@@ -123,15 +123,23 @@ class VtReader:
             warn("Db connection failed:", sys.exc_info())
             return
 
+    def _get_mask_level(self):
+        return self._get_metadata_value("maskLevel")
+
+    def get_max_zoom(self):
+        return self._get_metadata_value("maxzoom")
+
     def _get_metadata_value(self, field_name):
         debug("Loading metadata value '{}'", field_name)
         sql_command = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
         value = None
-        rows = self._get_from_db(sql=sql_command)
-        if rows:
-            value = rows[0][field_name]
-            debug("Value is: {}".format(value))
-
+        try:
+            rows = self._get_from_db(sql=sql_command)
+            if rows:
+                value = rows[0][field_name]
+                debug("Value is: {}".format(value))
+        except:
+            critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
     def _load_tiles_from_db(self, zoom_level):
@@ -159,6 +167,9 @@ class VtReader:
         return tile, binary_data
 
     def _get_from_db(self, sql):
+        debug("Execute SQL: {}", sql)
+        if not self.conn:
+            self._connect_to_db()
         try:
             cur = self.conn.cursor()
             cur.execute(sql)
