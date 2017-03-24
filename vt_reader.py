@@ -51,9 +51,6 @@ class VtReader:
     _extent = 4096
     _layers_to_dissolve = []
 
-    # todo: remove hardcoded path after testing
-    _current_mbtiles_path = "{}/sample data/zurich_switzerland.mbtiles".format(FileHelper.get_directory())
-
     def __init__(self, iface):
         self.iface = iface
         FileHelper.clear_temp_dir()
@@ -85,11 +82,10 @@ class VtReader:
             "features": []}
 
 
-    def load_vector_tiles(self, zoom_level, path, load_mask_layer=True, merge_features=True):
-        self._current_mbtiles_path = path
-        debug("Loading vector tiles: {}".format(path))
+    def load_vector_tiles(self, zoom_level, mbtiles_path, load_mask_layer=True, merge_features=True):
+        debug("Loading vector tiles: {}".format(mbtiles_path))
         self.reinit()
-        self._connect_to_db(path)
+        self._connect_to_db(mbtiles_path)
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
 
         if load_mask_layer:
@@ -99,7 +95,7 @@ class VtReader:
                 tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
-        self._create_qgis_layer_hierarchy(merge_features=merge_features)
+        self._create_qgis_layer_hierarchy(merge_features=merge_features, mbtiles_path=mbtiles_path)
         print("Import complete!")
 
     def _connect_to_db(self, path):
@@ -186,14 +182,14 @@ class VtReader:
             return
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self, merge_features):
+    def _create_qgis_layer_hierarchy(self, merge_features, mbtiles_path):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
         print("Creating hierarchy in qgis")
         print("Layers to dissolve: {}".format(self._layers_to_dissolve))
         root = QgsProject.instance().layerTreeRoot()
-        group_name = os.path.splitext(os.path.basename(self._current_mbtiles_path))[0]
+        group_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
         root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         for feature_path in feature_paths:
