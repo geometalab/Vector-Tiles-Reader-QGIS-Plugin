@@ -55,6 +55,7 @@ class VtReader:
         self.iface = iface
         self._current_mbtiles_path = mbtiles_path
         self.conn = None
+        self.max_zoom = None
         FileHelper.clear_temp_dir()
         self.reinit()
 
@@ -114,20 +115,22 @@ class VtReader:
         """
          * Since an mbtile file is a sqlite database, we can connect to it
         """
-        debug("Connection to: {}", self._current_mbtiles_path)
+        debug("Connecting to: {}", self._current_mbtiles_path)
         try:
             self.conn = sqlite3.connect(self._current_mbtiles_path)
             self.conn.row_factory = sqlite3.Row
-            debug("Connection established")
+            debug("Successfully connected")
         except:
-            warn("Db connection failed:", sys.exc_info())
+            critical("Db connection failed:", sys.exc_info())
             return
 
     def _get_mask_level(self):
         return self._get_metadata_value("maskLevel")
 
     def get_max_zoom(self):
-        return self._get_metadata_value("maxzoom")
+        if not self.max_zoom:
+            self.max_zoom = self._get_metadata_value("maxzoom")
+        return self.max_zoom
 
     def _get_metadata_value(self, field_name):
         debug("Loading metadata value '{}'", field_name)
@@ -142,13 +145,13 @@ class VtReader:
             critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
-    def _load_tiles_from_db(self, zoom_level):
+    def _load_tiles_from_db(self, zoom_level, max_tiles=1):
         info("Reading tiles of zoom level {}", zoom_level)
 
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10650 and tile_column>=8575 and tile_column<= 8582;".format(zoom_level)
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT {};".format(zoom_level, max_tiles)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
 
         tile_data_tuples = []
@@ -156,6 +159,33 @@ class VtReader:
         for row in rows:
             tile_data_tuples.append(self._create_tile(row))
         return tile_data_tuples
+
+    def is_mapbox_vector_tile(self):
+        """
+         * A .mbtiles file is a Mapbox Vector Tile if the binary tile data is gzipped.
+        :return:
+        """
+        gzip_headers = [0x1f, 0x8b]
+        debug("Checking if file corresponds to Mapbox format (i.e. gzipped)")
+        is_valid = False
+
+        try:
+            max_zoom = self.get_max_zoom()
+            if max_zoom:
+                tile_data_tuples = self._load_tiles_from_db(max_tiles=1, zoom_level=max_zoom)
+                if len(tile_data_tuples) == 1:
+                    undecoded_data = tile_data_tuples[0][1]
+                    if undecoded_data:
+                        first_byte = int(hex(ord(undecoded_data[0])), 16)
+                        second_byte = int(hex(ord(undecoded_data[1])), 16)
+                        is_valid = first_byte == gzip_headers[0] and second_byte == gzip_headers[1]
+                        if is_valid:
+                            debug("File is valid mbtiles")
+                        else:
+                            debug("File is not in Mapbox format")
+        except:
+            warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
+        return is_valid
 
     @staticmethod
     def _create_tile(row):
@@ -167,10 +197,11 @@ class VtReader:
         return tile, binary_data
 
     def _get_from_db(self, sql):
-        debug("Execute SQL: {}", sql)
         if not self.conn:
+            debug("Not connected yet.")
             self._connect_to_db()
         try:
+            debug("Execute SQL: {}", sql)
             cur = self.conn.cursor()
             cur.execute(sql)
             return cur.fetchall()

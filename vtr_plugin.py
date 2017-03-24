@@ -93,11 +93,16 @@ class VtrPlugin:
 
     def _load_mbtiles(self, path):
         reader = self._create_reader(path)
-        max_zoom = reader.get_max_zoom()
-        if max_zoom:
-            reader.load_vector_tiles(max_zoom)
+        is_valid = reader.is_mapbox_vector_tile()
+        if is_valid:
+            max_zoom = reader.get_max_zoom()
+            if max_zoom:
+                reader.load_vector_tiles(max_zoom)
+            else:
+                warn("Max Zoom not found, cannot load data")
         else:
-            warn("Max Zoom not found, cannot load data")
+            warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
+
 
     def _create_reader(self, mbtiles_path):
         self._add_path_to_dependencies_to_syspath()
