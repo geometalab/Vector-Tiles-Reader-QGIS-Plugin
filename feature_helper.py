@@ -51,7 +51,7 @@ class FeatureMerger:
             FeatureMerger._assign_dissolve_group_to_neighbours_rec(_DISSOLVE_GROUP_FIELD, index, f, [], feature_dict, feature_handler=lambda feat: layer.updateFeature(feat))
             layer.updateFeature(f)
         layer.commitChanges()
-        print 'Processing complete.'
+        debug('Dissolvement complete: {}', layer.name())
         return
 
     @staticmethod

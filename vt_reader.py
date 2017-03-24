@@ -82,8 +82,8 @@ class VtReader:
             "features": []}
 
 
-    def load_vector_tiles(self, zoom_level, mbtiles_path, load_mask_layer=True, merge_features=True):
-        debug("Loading vector tiles: {}".format(mbtiles_path))
+    def load_vector_tiles(self, zoom_level, mbtiles_path, load_mask_layer=False, merge_features=True):
+        debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
         self._connect_to_db(mbtiles_path)
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
@@ -97,7 +97,7 @@ class VtReader:
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy(merge_features=merge_features, mbtiles_path=mbtiles_path)
         self._close_connection()
-        print("Import complete!")
+        info("Import complete!")
 
     def _close_connection(self):
         if self.conn:
@@ -112,16 +112,17 @@ class VtReader:
         """
          * Since an mbtile file is a sqlite database, we can connect to it
         """
+        debug("Connection to: {}", path)
         try:
             self.conn = sqlite3.connect(path)
             self.conn.row_factory = sqlite3.Row
-            print "Successfully connected to db"
+            debug("Connection established")
         except:
-            print "Db connection failed:", sys.exc_info()
+            warn("Db connection failed:", sys.exc_info())
             return
 
     def _get_metadata_value(self, field_name):
-        debug("Loading metadata value '{}'".format(field_name))
+        debug("Loading metadata value '{}'", field_name)
         sql_command = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
         value = None
         rows = self._get_from_db(sql=sql_command)
@@ -132,12 +133,12 @@ class VtReader:
         return value
 
     def _load_tiles_from_db(self, zoom_level):
-        print("Reading tiles of zoom level {}".format(zoom_level))
+        info("Reading tiles of zoom level {}", zoom_level)
 
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10650 and tile_column>=8575 and tile_column<= 8582;".format(zoom_level)
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 5;".format(zoom_level)
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT 1;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
 
         tile_data_tuples = []
@@ -161,34 +162,34 @@ class VtReader:
             cur.execute(sql)
             return cur.fetchall()
         except:
-            print "Getting data from db failed:", sys.exc_info()
+            critical("Getting data from db failed:", sys.exc_info())
 
     def _decode_all_tiles(self, tiles_with_encoded_data):
         tiles = []
         total_nr_tiles = len(tiles_with_encoded_data)
-        print "Decoding {} tiles".format(total_nr_tiles)
+        info("Decoding {} tiles", total_nr_tiles)
         for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
             tile = tile_data_tuple[0]
             encoded_data = tile_data_tuple[1]
             tile.decoded_data = self._decode_binary_tile_data(encoded_data)
             if tile.decoded_data:
                 tiles.append(tile)
-            print "Progress: {0:.1f}%".format(100.0 / total_nr_tiles * (index + 1))
+            debug("Progress: {0:.1f}%", 100.0 / total_nr_tiles * (index + 1))
         return tiles
 
     def _process_tiles(self, tiles):
         total_nr_tiles = len(tiles)
-        print "Processing {} tiles".format(total_nr_tiles)
+        info("Processing {} tiles", total_nr_tiles)
         for index, tile in enumerate(tiles):
             self._write_features(tile)
-            print "Progress: {0:.1f}%".format(100.0 / total_nr_tiles * (index + 1))
+            debug("Progress: {0:.1f}%", 100.0 / total_nr_tiles * (index + 1))
 
     def _decode_binary_tile_data(self, data):
         try:
             file_content = GzipFile('', 'r', 0, StringIO(data)).read()
             decoded_data = mapbox_vector_tile.decode(file_content)
         except:
-            print "decoding data with mapbox_vector_tile failed", sys.exc_info()
+            critical("decoding data with mapbox_vector_tile failed", sys.exc_info())
             return
         return decoded_data
 
@@ -196,8 +197,8 @@ class VtReader:
         """
          * Creates a hierarchy of groups and layers in qgis
         """
-        print("Creating hierarchy in qgis")
-        print("Layers to dissolve: {}".format(self._layers_to_dissolve))
+        debug("Creating hierarchy in QGIS")
+        debug("Layers to dissolve: {}", self._layers_to_dissolve)
         root = QgsProject.instance().layerTreeRoot()
         group_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
         root_group = root.addGroup(group_name)
@@ -254,9 +255,9 @@ class VtReader:
                 res = layer.loadNamedStyle(style_path)
                 if res[1]:  # Style loaded
                     layer.setCustomProperty("layerStyle", style_path)
-                    print("Style successfully applied: {}".format(style_name))
+                    debug("Style successfully applied: {}", style_name)
         except:
-            print("Loading style failed: {}".format(sys.exc_info()))
+            critical("Loading style failed: {}", sys.exc_info())
 
     def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path, merge_features):
         """

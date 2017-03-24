@@ -3,23 +3,23 @@ import logging
 
 
 def info(msg, *args):
-    _log_message(msg, QgsMessageLog.INFO, args)
+    _log_message(msg, QgsMessageLog.INFO, *args)
 
 
 def warn(msg, *args):
-    _log_message(msg, QgsMessageLog.WARNING, args)
+    _log_message(msg, QgsMessageLog.WARNING, *args)
 
 
 def critical(msg, *args):
-    _log_message(msg, QgsMessageLog.CRITICAL, args)
+    _log_message(msg, QgsMessageLog.CRITICAL, *args)
 
 
 def debug(msg, *args):
-    _log_message(msg, None, args)
+    _log_message(msg, None, *args)
 
 
 def _log_message(msg, level, *args):
-    msg = msg.format(args)
+    msg = msg.format(*args)
 
     if level == QgsMessageLog.INFO:
         logging.info(msg)

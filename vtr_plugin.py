@@ -66,7 +66,7 @@ class VtrPlugin:
         self.recent = self.popupMenu.addMenu("Open Recent")
         debug("Recently used: {}", self.recently_used)
         for path in self.recently_used:
-            debug("Create action: {}".format(path))
+            debug("Create action: {}", path)
             self._add_recently_used(path)
 
         self.toolButton = QToolButton()
@@ -128,7 +128,7 @@ class VtrPlugin:
                 for line in f:
                     line = line.rstrip("\n")
                     if os.path.isfile(line):
-                        debug("recently used: {}".format(line))
+                        debug("recently used: {}", line)
                         self.recently_used.append(line)
 
     def _save_recently_used(self):

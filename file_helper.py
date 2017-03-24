@@ -2,6 +2,7 @@ import os
 import glob
 import uuid
 import sys
+from log_helper import debug
 
 
 class FileHelper:
@@ -44,7 +45,7 @@ class FileHelper:
             for f in files:
                 os.remove(f)
         except:
-            print("A file could not be deleted: {}".format(sys.exc_info()))
+            debug("A file could not be deleted: {}", sys.exc_info())
 
     @staticmethod
     def get_unique_file_name(ending="geojson"):
