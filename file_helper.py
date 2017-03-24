@@ -1,8 +1,6 @@
 import os
 import glob
 import uuid
-import sys
-from log_helper import debug
 
 
 class FileHelper:
@@ -45,10 +43,45 @@ class FileHelper:
             for f in files:
                 os.remove(f)
         except:
-            debug("A file could not be deleted: {}", sys.exc_info())
+            pass
 
     @staticmethod
     def get_unique_file_name(ending="geojson"):
         temp_dir = FileHelper.get_temp_dir()
         unique_name = "{}.{}".format(uuid.uuid4(), ending)
         return os.path.join(temp_dir, unique_name)
+
+    @staticmethod
+    def is_sqlite_db(path):
+        header_string = "SQLite"
+        chunksize = len(header_string)
+        with open(path, "r") as f:
+            content = f.read(chunksize)
+        expected_header = bytearray("SQLite")  # map(lambda c: hex(ord(c)), header_string)
+        header_matching = FileHelper._are_headers_equal(content, expected_header)
+        return header_matching
+
+    @staticmethod
+    def is_mapbox_pbf(content):
+        result = False
+        if len(content) >= 2:
+            gzip_headers = bytearray([0x1f, 0x8b])
+            first_two_bytes = bytearray([content[0], content[1]])
+            result = FileHelper._are_headers_equal(first_two_bytes, expected_header_bytes=gzip_headers)
+        return result
+
+
+    @staticmethod
+    def _are_headers_equal(content, expected_header_bytes):
+        all_same = True
+        br = bytearray(content)
+        for index, b in enumerate(expected_header_bytes):
+            try:
+                # all_same = hex(ord(content[index])) == b
+                all_same = br[index] == b
+                if not all_same:
+                    break
+            except IndexError:
+                all_same = False
+                break
+        return all_same

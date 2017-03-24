@@ -14,7 +14,7 @@ of the License, or (at your option) any later version.
 """
 
 from PyQt4.QtCore import QSettings
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton, QFileDialog
+from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton, QFileDialog, QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
@@ -93,22 +93,27 @@ class VtrPlugin:
 
     def _load_mbtiles(self, path):
         reader = self._create_reader(path)
-        is_valid = reader.is_mapbox_vector_tile()
-        if is_valid:
-            max_zoom = reader.get_max_zoom()
-            if max_zoom:
-                reader.load_vector_tiles(max_zoom)
+        if reader:
+            is_valid = reader.is_mapbox_vector_tile()
+            if is_valid:
+                max_zoom = reader.get_max_zoom()
+                if max_zoom:
+                    reader.load_vector_tiles(max_zoom)
+                else:
+                    warn("Max Zoom not found, cannot load data")
             else:
-                warn("Max Zoom not found, cannot load data")
-        else:
-            warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
+                warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
 
 
     def _create_reader(self, mbtiles_path):
         self._add_path_to_dependencies_to_syspath()
         # A lazy import is required because the vtreader depends on the external libs
         from vt_reader import VtReader
-        reader = VtReader(self.iface, mbtiles_path=mbtiles_path)
+        reader = None
+        try:
+            reader = VtReader(self.iface, mbtiles_path=mbtiles_path)
+        except RuntimeError:
+            QMessageBox.critical(None, "Loading failed", str(sys.exc_info()[1]))
         return reader
 
     def _add_path_to_dependencies_to_syspath(self):

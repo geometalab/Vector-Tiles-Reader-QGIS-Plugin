@@ -53,6 +53,10 @@ class VtReader:
 
     def __init__(self, iface, mbtiles_path):
         self.iface = iface
+        is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
+        if not is_sqlite_db:
+            raise RuntimeError("This file is not a valid mbtiles.")
+
         self._current_mbtiles_path = mbtiles_path
         self.conn = None
         self.max_zoom = None
@@ -148,11 +152,21 @@ class VtReader:
     def _load_tiles_from_db(self, zoom_level, max_tiles=1):
         info("Reading tiles of zoom level {}", zoom_level)
 
+        where_clause = ""
+        if zoom_level:
+            where_clause = "WHERE zoom_level = {}".format(zoom_level)
+
+        limit = ""
+        if max_tiles:
+            limit = "LIMIT {}".format(max_tiles)
+
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10650 and tile_column>=8575 and tile_column<= 8582;".format(zoom_level)
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT {};".format(zoom_level, max_tiles)
+        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT {};".format(zoom_level, max_tiles)
         # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
+
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};".format(where_clause, limit)
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
@@ -165,27 +179,21 @@ class VtReader:
          * A .mbtiles file is a Mapbox Vector Tile if the binary tile data is gzipped.
         :return:
         """
-        gzip_headers = [0x1f, 0x8b]
         debug("Checking if file corresponds to Mapbox format (i.e. gzipped)")
-        is_valid = False
-
+        is_mapbox_pbf = False
         try:
-            max_zoom = self.get_max_zoom()
-            if max_zoom:
-                tile_data_tuples = self._load_tiles_from_db(max_tiles=1, zoom_level=max_zoom)
-                if len(tile_data_tuples) == 1:
-                    undecoded_data = tile_data_tuples[0][1]
-                    if undecoded_data:
-                        first_byte = int(hex(ord(undecoded_data[0])), 16)
-                        second_byte = int(hex(ord(undecoded_data[1])), 16)
-                        is_valid = first_byte == gzip_headers[0] and second_byte == gzip_headers[1]
-                        if is_valid:
-                            debug("File is valid mbtiles")
-                        else:
-                            debug("File is not in Mapbox format")
+            tile_data_tuples = self._load_tiles_from_db(max_tiles=1, zoom_level=None)
+            if len(tile_data_tuples) == 1:
+                undecoded_data = tile_data_tuples[0][1]
+                if undecoded_data:
+                    is_mapbox_pbf = FileHelper.is_mapbox_pbf(undecoded_data)
+                    if is_mapbox_pbf:
+                        debug("File is valid mbtiles")
+                    else:
+                        debug("pbf is not gzipped")
         except:
             warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
-        return is_valid
+        return is_mapbox_pbf
 
     @staticmethod
     def _create_tile(row):
