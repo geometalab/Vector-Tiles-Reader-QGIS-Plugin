@@ -96,7 +96,17 @@ class VtReader:
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy(merge_features=merge_features, mbtiles_path=mbtiles_path)
+        self._close_connection()
         print("Import complete!")
+
+    def _close_connection(self):
+        if self.conn:
+            try:
+                self.conn.close()
+                debug("Connection closed")
+            except:
+                warn("Closing connection failed: {}".format(sys.exc_info()))
+        self.conn = None
 
     def _connect_to_db(self, path):
         """
