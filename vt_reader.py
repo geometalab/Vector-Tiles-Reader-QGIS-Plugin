@@ -51,8 +51,9 @@ class VtReader:
     _extent = 4096
     _layers_to_dissolve = []
 
-    def __init__(self, iface):
+    def __init__(self, iface, mbtiles_path):
         self.iface = iface
+        self._current_mbtiles_path = mbtiles_path
         FileHelper.clear_temp_dir()
         self.reinit()
 
@@ -82,10 +83,11 @@ class VtReader:
             "features": []}
 
 
-    def load_vector_tiles(self, zoom_level, mbtiles_path, load_mask_layer=False, merge_features=True):
+    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_features=True):
+        mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
-        self._connect_to_db(mbtiles_path)
+        self._connect_to_db()
         tile_data_tuples = self._load_tiles_from_db(zoom_level)
 
         if load_mask_layer:
@@ -108,13 +110,13 @@ class VtReader:
                 warn("Closing connection failed: {}".format(sys.exc_info()))
         self.conn = None
 
-    def _connect_to_db(self, path):
+    def _connect_to_db(self):
         """
          * Since an mbtile file is a sqlite database, we can connect to it
         """
-        debug("Connection to: {}", path)
+        debug("Connection to: {}", self._current_mbtiles_path)
         try:
-            self.conn = sqlite3.connect(path)
+            self.conn = sqlite3.connect(self._current_mbtiles_path)
             self.conn.row_factory = sqlite3.Row
             debug("Connection established")
         except:

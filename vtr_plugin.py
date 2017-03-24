@@ -53,7 +53,6 @@ class VtrPlugin:
         self.settingsaction = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Settings", self.iface.mainWindow())
         self.settingsaction.triggered.connect(self.edit_sources)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.settingsaction)
-        self.init_vt_reader()
         self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
 
@@ -78,25 +77,30 @@ class VtrPlugin:
     def _add_recently_used(self, path):
         if path not in self.recently_used:
             self.recently_used.append(path)
-        self.recent.addAction(path, lambda path=path: self.reader.load_vector_tiles(14, str(path)))
+        self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
     def _open_file_browser(self):
         path = QFileDialog.getOpenFileName(self.iface.mainWindow(), "Select Mapbox Tiles", "", "Mapbox Tiles (*.mbtiles)")
         if path and os.path.isfile(path):
             self._add_recently_used(path)
             self._save_recently_used()
-            self.reader.load_vector_tiles(14, path)
+            self._load_mbtiles(path)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
         return new_action
 
-    def init_vt_reader(self):
+    def _load_mbtiles(self, path):
+        reader = self._create_reader(path)
+        reader.load_vector_tiles(14)
+
+    def _create_reader(self, mbtiles_path):
         self._add_path_to_dependencies_to_syspath()
         # A lazy import is required because the vtreader depends on the external libs
         from vt_reader import VtReader
-        self.reader = VtReader(self.iface)
+        reader = VtReader(self.iface, mbtiles_path=mbtiles_path)
+        return reader
 
     def _add_path_to_dependencies_to_syspath(self):
         """
