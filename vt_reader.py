@@ -52,10 +52,25 @@ class VtReader:
     _layers_to_dissolve = []
 
     def __init__(self, iface, mbtiles_path):
+        """
+         * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
+        :param iface: 
+        :param mbtiles_path: 
+        """
+
         self.iface = iface
-        is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
-        if not is_sqlite_db:
-            raise RuntimeError("This file is not a valid mbtiles.")
+        self.is_web_source = mbtiles_path.lower().startswith("http://")
+        if self.is_web_source:
+            content = FileHelper.load_url(url=mbtiles_path, size=2)
+            if not FileHelper.is_mapbox_pbf(content=content):
+                warn("The specified url doesnt provide valid Mapbox pbf")
+                raise RuntimeError("This file is not a valid url")
+            else:
+                debug("The url provides valid Mapbox pbf")
+        else:
+            is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
+            if not is_sqlite_db:
+                raise RuntimeError("This file is not a valid mbtiles.")
 
         self._current_mbtiles_path = mbtiles_path
         self.conn = None
@@ -93,18 +108,28 @@ class VtReader:
         mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
-        tile_data_tuples = self._load_tiles_from_db(zoom_level)
 
-        if load_mask_layer:
-            mask_level = self._get_mask_level()
-            if mask_level:
-                mask_layer_data = self._load_tiles_from_db(mask_level)
-                tile_data_tuples.extend(mask_layer_data)
+        tile_data_tuples = []
+        if self.is_web_source:
+            tile_data_tuples.append(self._load_tiles_from_url())
+        else:
+            tile_data_tuples = self._load_tiles_from_file(zoom_level)
+            if load_mask_layer and not self.is_web_source:
+                mask_level = self._get_mask_level()
+                if mask_level:
+                    mask_layer_data = self._load_tiles_from_file(mask_level)
+                    tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy(merge_features=merge_features, mbtiles_path=mbtiles_path)
         self._close_connection()
         info("Import complete!")
+
+    def _load_tiles_from_url(self):
+        content = FileHelper.load_url(self._current_mbtiles_path)
+        tile = VectorTile(14, 8568, 10636)
+        return tile, content
+
 
     def _close_connection(self):
         if self.conn:
@@ -149,7 +174,7 @@ class VtReader:
             critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
-    def _load_tiles_from_db(self, zoom_level, max_tiles=1):
+    def _load_tiles_from_file(self, zoom_level, max_tiles=1):
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""
@@ -182,7 +207,7 @@ class VtReader:
         debug("Checking if file corresponds to Mapbox format (i.e. gzipped)")
         is_mapbox_pbf = False
         try:
-            tile_data_tuples = self._load_tiles_from_db(max_tiles=1, zoom_level=None)
+            tile_data_tuples = self._load_tiles_from_file(max_tiles=1, zoom_level=None)
             if len(tile_data_tuples) == 1:
                 undecoded_data = tile_data_tuples[0][1]
                 if undecoded_data:

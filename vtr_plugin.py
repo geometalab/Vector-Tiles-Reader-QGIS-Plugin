@@ -14,7 +14,7 @@ of the License, or (at your option) any later version.
 """
 
 from PyQt4.QtCore import QSettings
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton, QFileDialog, QMessageBox
+from PyQt4.QtGui import QColor, QAction, QIcon, QMenu, QToolButton, QFileDialog, QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
@@ -61,6 +61,7 @@ class VtrPlugin:
         default_action = self._create_action("Add Vector Tiles Layer", "icon.png", self.run)
         self.popupMenu.addAction(default_action)
         self.popupMenu.addAction(self._create_action("Open Mapbox Tiles...", "folder.svg", self._open_file_browser))
+        self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
 
         self.recent = self.popupMenu.addMenu("Open Recent")
         debug("Recently used: {}", self.recently_used)
@@ -73,6 +74,11 @@ class VtrPlugin:
         self.toolButton.setDefaultAction(default_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
+
+    def _load_from_url(self):
+        url = "http://localhost:6767/planet_osm_polygon/14/8568/5747.pbf"
+        reader = self._create_reader(url)
+        reader.load_vector_tiles(14)
 
     def _add_recently_used(self, path):
         if path not in self.recently_used:

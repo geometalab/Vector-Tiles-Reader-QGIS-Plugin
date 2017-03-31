@@ -1,6 +1,7 @@
 import os
 import glob
 import uuid
+import urllib2
 
 
 class FileHelper:
@@ -46,7 +47,25 @@ class FileHelper:
             pass
 
     @staticmethod
+    def load_url(url, size=None):
+        """
+         * Reads the content of the specified url. If the size parameter is set, only so many bytes will be read
+        :param url: The url to load 
+        :param size: The nr of bytes to read, None if all should be read
+        :return: 
+        """
+        req = urllib2.Request(url)
+        content = None
+        try:
+            response = urllib2.urlopen(req)
+            content = response.read(size)
+        except urllib2.HTTPError as e:
+            print("Opening url failed with error code '{}': {}", e.code, url)
+        return content
+
+    @staticmethod
     def get_unique_file_name(ending="geojson"):
+        # todo: use temp directory provided by OS
         temp_dir = FileHelper.get_temp_dir()
         unique_name = "{}.{}".format(uuid.uuid4(), ending)
         return os.path.join(temp_dir, unique_name)
