@@ -77,7 +77,7 @@ class VtrPlugin:
 
     def _load_from_url(self):
         # todo: remove hardcoded url
-        url = "http://localhost:6767/planet_osm_polygon/14/8568/5747.pbf"
+        url = "http://192.168.0.18:6767/planet_osm_polygon/14/8568/5747.pbf"
         reader = self._create_reader(url)
         reader.load_vector_tiles(14)
 

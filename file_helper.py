@@ -55,7 +55,9 @@ class FileHelper:
             response = urllib2.urlopen(req)
             content = response.read(size)
         except urllib2.HTTPError as e:
-            print("Opening url failed with error code '{}': {}", e.code, url)
+            print("Opening url failed with error code '{}': {}".format(e.code, url))
+        except urllib2.URLError:
+            print("The URL seems to be invalid")
         return content
 
     @staticmethod
