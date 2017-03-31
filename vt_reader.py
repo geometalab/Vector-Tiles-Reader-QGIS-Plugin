@@ -326,8 +326,7 @@ class VtReader:
         try:
             name = layer.name().split("_")[0]
             style_name = "{}.qml".format(name)
-            # style_name = "{}.qml".format(layer.name())
-            style_path = os.path.join(FileHelper.get_directory(), "styles/{}".format(style_name))
+            style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
             if os.path.isfile(style_path):
                 res = layer.loadNamedStyle(style_path)
                 if res[1]:  # Style loaded

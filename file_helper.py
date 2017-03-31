@@ -2,6 +2,7 @@ import os
 import glob
 import uuid
 import urllib2
+import tempfile
 
 
 class FileHelper:
@@ -13,22 +14,16 @@ class FileHelper:
 
     @staticmethod
     def get_recently_used_file():
-        path = os.path.join(FileHelper.get_data_dir(), FileHelper.recently_used_filename)
+        path = os.path.join(FileHelper.get_temp_dir(), FileHelper.recently_used_filename)
         return path
 
     @staticmethod
-    def get_directory():
+    def get_plugin_directory():
         return os.path.abspath(os.path.dirname(__file__))
 
     @staticmethod
-    def get_data_dir():
-        dir = FileHelper.get_directory()
-        return os.path.join(dir, "data")
-
-    @staticmethod
     def get_temp_dir():
-        directory = FileHelper.get_data_dir()
-        temp_dir = os.path.join(directory, "tmp")
+        temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
         return temp_dir
 
     @staticmethod

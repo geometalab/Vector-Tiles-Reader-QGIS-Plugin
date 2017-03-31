@@ -24,3 +24,7 @@ def test_is_not_mapbox_pbf():
     with open(file, 'r') as f:
         content = f.read(10)
     assert not FileHelper.is_mapbox_pbf(content)
+
+def test_gettempdir():
+    tempdir = FileHelper.get_temp_dir()
+    assert tempdir
