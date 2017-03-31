@@ -76,6 +76,7 @@ class VtrPlugin:
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
     def _load_from_url(self):
+        # todo: remove hardcoded url
         url = "http://localhost:6767/planet_osm_polygon/14/8568/5747.pbf"
         reader = self._create_reader(url)
         reader.load_vector_tiles(14)
