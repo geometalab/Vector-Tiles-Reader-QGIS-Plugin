@@ -19,11 +19,12 @@ from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
+from ui.dialogs import FileConnectionDialog
 
 import os
 import sys
 import site
-from sourcedialog import SourceDialog
+from ui.dialogs import FileConnectionDialog
 
 
 class VtrPlugin:
@@ -36,6 +37,7 @@ class VtrPlugin:
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._init_openfile_dialog()
         self.recently_used = []
+        self.file_dialog = FileConnectionDialog(iface, on_open_file=None)
 
     def _init_openfile_dialog(self):
         dlg = QFileDialog()
@@ -50,9 +52,6 @@ class VtrPlugin:
         self.action.triggered.connect(self.run)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.action)
-        self.settingsaction = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Settings", self.iface.mainWindow())
-        self.settingsaction.triggered.connect(self.edit_sources)
-        self.iface.addPluginToMenu("&Vector Tiles Reader", self.settingsaction)
         self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
 
@@ -60,7 +59,7 @@ class VtrPlugin:
         self.popupMenu = QMenu(self.iface.mainWindow())
         default_action = self._create_action("Add Vector Tiles Layer", "icon.png", self.run)
         self.popupMenu.addAction(default_action)
-        self.popupMenu.addAction(self._create_action("Open Mapbox Tiles...", "folder.svg", self._open_file_browser))
+        self.popupMenu.addAction(self._create_action("Open Mapbox Tiles...", "folder.svg", self.file_dialog.show))
         self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
 
         self.recent = self.popupMenu.addMenu("Open Recent")
@@ -86,8 +85,7 @@ class VtrPlugin:
             self.recently_used.append(path)
         self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
-    def _open_file_browser(self):
-        path = QFileDialog.getOpenFileName(self.iface.mainWindow(), "Select Mapbox Tiles", "", "Mapbox Tiles (*.mbtiles)")
+    def _load_file(self, path):
         if path and os.path.isfile(path):
             self._add_recently_used(path)
             self._save_recently_used()
@@ -135,16 +133,9 @@ class VtrPlugin:
         self.iface.removeVectorToolBarIcon(self.toolButtonAction)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.action)
-        self.iface.removePluginMenu("&Vector Tiles Reader", self.settingsaction)
 
     def run(self):
-        self._open_file_browser()
-
-    def edit_sources(self):
-        dlg = SourceDialog()
-        dlg.setModal(True)
-        dlg.connect(dlg.btnClose, SIGNAL("clicked()"), dlg.close)
-        dlg.exec_()
+        self.file_dialog.show()
 
     def _load_recently_used(self):
         recently_used = FileHelper.get_recently_used_file()

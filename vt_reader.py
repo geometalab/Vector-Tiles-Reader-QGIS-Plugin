@@ -75,6 +75,7 @@ class VtReader:
         self._current_mbtiles_path = mbtiles_path
         self.conn = None
         self.max_zoom = None
+        self.min_zoom = None
         FileHelper.clear_temp_dir()
         self.reinit()
 
@@ -158,15 +159,46 @@ class VtReader:
 
     def get_max_zoom(self):
         if not self.max_zoom:
-            self.max_zoom = self._get_metadata_value("maxzoom")
+            self.max_zoom = self._get_zoom(max_zoom=True)
         return self.max_zoom
+
+    def get_min_zoom(self):
+        if not self.min_zoom:
+            self.min_zoom = self._get_zoom(max_zoom=False)
+        return self.min_zoom
+
+    def _get_zoom(self, max_zoom=True):
+        if max_zoom:
+            field_name = "maxzoom"
+        else:
+            field_name = "minzoom"
+        zoom = self._get_metadata_value(field_name)
+        if not zoom:
+            zoom = self._get_zoom_from_tiles(max_zoom=max_zoom)
+        return zoom
+
+
+    def _get_zoom_from_tiles(self, max_zoom=True):
+        if max_zoom:
+            order = "desc"
+        else:
+            order = "asc"
+
+        query = ("select zoom_level as 'zoom_level'"
+                 "from tiles"
+                 "order by zoom_level {}"
+                 "limit 1").format(order)
+        return self._get_single_value(sql_query=query, field_name="zoom_level")
 
     def _get_metadata_value(self, field_name):
         debug("Loading metadata value '{}'", field_name)
-        sql_command = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
+        sql = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
+        return self._get_single_value(sql_query=sql, field_name=field_name)
+
+    def _get_single_value(self, sql_query, field_name):
         value = None
         try:
-            rows = self._get_from_db(sql=sql_command)
+            rows = self._get_from_db(sql=sql_query)
             if rows:
                 value = rows[0][field_name]
                 debug("Value is: {}".format(value))
