@@ -55,9 +55,11 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self._update_open_button_state()
 
     def _update_open_button_state(self):
-        is_valid_dir = self.rbDirectory.isChecked() and os.path.isdir(self.path)
-        is_valid_file = self.rbFile.isChecked() and os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
-        is_enabled = is_valid_dir or is_valid_file
+        is_enabled = False
+        if self.path:
+            is_valid_dir = self.rbDirectory.isChecked() and os.path.isdir(self.path)
+            is_valid_file = self.rbFile.isChecked() and os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
+            is_enabled = is_valid_dir or is_valid_file
         self.btnOpen.setEnabled(is_enabled)
 
     def _handle_open_click(self):
