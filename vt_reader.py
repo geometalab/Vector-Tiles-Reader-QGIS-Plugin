@@ -50,6 +50,7 @@ class VtReader:
 
     _extent = 4096
     _layers_to_dissolve = []
+    _zoom_level_delimiter = "*"
 
     def __init__(self, iface, mbtiles_path):
         """
@@ -360,7 +361,7 @@ class VtReader:
         :return: 
         """
         try:
-            name = layer.name().split("_")[0]
+            name = layer.name().split(VtReader._zoom_level_delimiter)[0]
             style_name = "{}.qml".format(name)
             style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
             if os.path.isfile(style_path):
@@ -433,7 +434,7 @@ class VtReader:
             if feature_subclass:
                 feature_path += "." + feature_subclass
 
-        feature_path += "_{}".format(zoom_level)
+        feature_path += "{}{}".format(VtReader._zoom_level_delimiter, zoom_level)
         return feature_path
 
     total_feature_count = 0

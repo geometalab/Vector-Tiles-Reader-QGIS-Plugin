@@ -15,13 +15,7 @@ class FeatureMerger:
         pass
 
     def merge_features(self, layer):
-
-        # return layer
-
         layer_name = layer.name()
-        # todo: remove after testing
-        if layer_name.split("_")[0] not in ["forest", "lake", "residential", "river", "stream"]:
-            return layer
 
         info("Merging features of layer: {}".format(layer_name))
 
