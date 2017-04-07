@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>616</width>
+    <width>578</width>
     <height>316</height>
    </rect>
   </property>
@@ -18,6 +18,12 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>250</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Add Vector Tile Layer</string>
@@ -55,6 +61,16 @@
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="1">
+         <widget class="QRadioButton" name="rbFile">
+          <property name="text">
+           <string>File</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
         <item row="2" column="1">
          <widget class="QLineEdit" name="txtPath">
           <property name="sizePolicy">
@@ -110,16 +126,6 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QRadioButton" name="rbFile">
-          <property name="text">
-           <string>File</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="1">
          <widget class="QRadioButton" name="rbDirectory">
           <property name="text">
@@ -142,7 +148,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Dataset</string>
+           <string>Source</string>
           </property>
           <property name="margin">
            <number>0</number>
@@ -183,7 +189,7 @@
         <x>10</x>
         <y>20</y>
         <width>541</width>
-        <height>122</height>
+        <height>131</height>
        </rect>
       </property>
       <layout class="QFormLayout" name="formLayout_2">
@@ -248,7 +254,7 @@
        </item>
        <item row="5" column="1">
         <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
+         <item alignment="Qt::AlignVCenter">
           <widget class="QRadioButton" name="rbZoomManual">
            <property name="maximumSize">
             <size>
@@ -264,16 +270,22 @@
            </attribute>
           </widget>
          </item>
-         <item>
+         <item alignment="Qt::AlignVCenter">
           <widget class="QSpinBox" name="zoomSpin">
            <property name="enabled">
             <bool>false</bool>
            </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>22</height>
+            </size>
            </property>
           </widget>
          </item>
@@ -307,9 +319,6 @@
        </item>
       </layout>
      </widget>
-     <zorder>layoutWidget</zorder>
-     <zorder>formLayoutWidget_2</zorder>
-     <zorder>layoutWidget</zorder>
     </widget>
    </item>
    <item row="3" column="0">

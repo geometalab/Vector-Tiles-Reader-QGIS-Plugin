@@ -22,6 +22,10 @@ class FileHelper:
         return os.path.abspath(os.path.dirname(__file__))
 
     @staticmethod
+    def get_home_directory():
+        return os.path.expanduser("~")
+
+    @staticmethod
     def get_temp_dir():
         temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
         return temp_dir

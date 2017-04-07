@@ -104,7 +104,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_features=True, apply_styles=True):
+    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True):
         mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
@@ -121,7 +121,7 @@ class VtReader:
                     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
-        self._create_qgis_layer_hierarchy(merge_features=merge_features, mbtiles_path=mbtiles_path)
+        self._create_qgis_layer_hierarchy(merge_features=merge_tiles, mbtiles_path=mbtiles_path, apply_styles=apply_styles)
         self._close_connection()
         info("Import complete!")
 
@@ -301,7 +301,7 @@ class VtReader:
             return
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self, merge_features, mbtiles_path):
+    def _create_qgis_layer_hierarchy(self, merge_features, mbtiles_path, apply_styles):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
@@ -318,7 +318,8 @@ class VtReader:
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)
-            VtReader._load_named_style(layer)
+            if apply_styles:
+                VtReader._apply_named_style(layer)
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
@@ -353,7 +354,12 @@ class VtReader:
         return current_group, target_layer_name
 
     @staticmethod
-    def _load_named_style(layer):
+    def _apply_named_style(layer):
+        """
+         * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
+        :param layer: 
+        :return: 
+        """
         try:
             name = layer.name().split("_")[0]
             style_name = "{}.qml".format(name)

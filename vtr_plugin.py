@@ -36,7 +36,7 @@ class VtrPlugin:
         self.iface = iface
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self.recently_used = []
-        self.file_dialog = FileConnectionDialog(iface)
+        self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
 
     def initGui(self):
@@ -71,7 +71,7 @@ class VtrPlugin:
         load_directory = self.file_dialog.load_directory_checked()
         debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, file: {}",
               apply_styles, merge_tiles, load_directory, path)
-        self._load_from_disk()
+        self._load_from_disk(path, load_directory=load_directory, apply_styles=apply_styles, merge_tiles=merge_tiles)
 
     def _load_from_url(self):
         # todo: remove hardcoded url
@@ -84,11 +84,11 @@ class VtrPlugin:
             self.recently_used.append(path)
         self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
-    def _load_from_disk(self, path):
+    def _load_from_disk(self, path, load_directory, apply_styles, merge_tiles):
         if path and os.path.isfile(path):
-            self._add_recently_used(path)
-            self._save_recently_used()
-            self._load_mbtiles(path)
+            # self._add_recently_used(path)
+            # self._save_recently_used()
+            self._load_mbtiles(path, apply_styles=apply_styles, merge_tiles=merge_tiles)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
@@ -102,7 +102,7 @@ class VtrPlugin:
             if is_valid:
                 max_zoom = reader.get_max_zoom()
                 if max_zoom:
-                    reader.load_vector_tiles(zoom_level=max_zoom, load_mask_layer=False, merge_features=merge_tiles, apply_styles=apply_styles)
+                    reader.load_vector_tiles(zoom_level=max_zoom, load_mask_layer=False, merge_tiles=merge_tiles, apply_styles=apply_styles)
                 else:
                     warn("Max Zoom not found, cannot load data")
             else:
