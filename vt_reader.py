@@ -205,7 +205,7 @@ class VtReader:
             critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
-    def _load_tiles_from_file(self, zoom_level, max_tiles=1):
+    def _load_tiles_from_file(self, zoom_level, max_tiles=None):
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""
@@ -306,7 +306,6 @@ class VtReader:
          * Creates a hierarchy of groups and layers in qgis
         """
         debug("Creating hierarchy in QGIS")
-        debug("Layers to dissolve: {}", self._layers_to_dissolve)
         root = QgsProject.instance().layerTreeRoot()
         group_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
         root_group = root.addGroup(group_name)
