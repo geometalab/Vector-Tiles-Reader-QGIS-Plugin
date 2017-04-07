@@ -72,9 +72,16 @@ class VtrPlugin:
         merge_tiles = self.file_dialog.is_merge_tiles_enabled()
         apply_styles = self.file_dialog.is_apply_styles_enabled()
         load_directory = self.file_dialog.load_directory_checked()
-        debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, path: {}",
-              apply_styles, merge_tiles, load_directory, path)
-        self._load_from_disk(path, load_directory=load_directory, apply_styles=apply_styles, merge_tiles=merge_tiles)
+        tile_number_limit = self.file_dialog.get_tile_number_limit()
+        manual_zoom = self.file_dialog.get_manual_zoom()
+        debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, tilelimit: {}, manual_zoom: {}, path: {}",
+              apply_styles, merge_tiles, load_directory, tile_number_limit, manual_zoom, path)
+        self._load_from_disk(path=path,
+                             load_directory=load_directory,
+                             apply_styles=apply_styles,
+                             merge_tiles=merge_tiles,
+                             tile_number_limit=tile_number_limit,
+                             manual_zoom=manual_zoom)
 
     def _load_from_url(self):
         # todo: remove hardcoded url
@@ -82,12 +89,12 @@ class VtrPlugin:
         reader = self._create_reader(url)
         reader.load_vector_tiles(14)
 
-    def _add_recently_used(self, path):
-        if path not in self.recently_used:
-            self.recently_used.append(path)
-        self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
+    # def _add_recently_used(self, path):
+    #     if path not in self.recently_used:
+    #         self.recently_used.append(path)
+    #     self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
-    def _load_from_disk(self, path, load_directory, apply_styles, merge_tiles):
+    def _load_from_disk(self, path, load_directory, apply_styles, merge_tiles, tile_number_limit, manual_zoom):
         files_to_load = []
         if not load_directory and path and os.path.isfile(path):
             debug("Load file: {}", path)
@@ -103,28 +110,36 @@ class VtrPlugin:
                     file_path = os.path.join(path, o)
                     debug("This is a mbtiles file")
                     files_to_load.append(file_path)
-
         for f in files_to_load:
-            self._load_mbtiles(f, apply_styles=apply_styles, merge_tiles=merge_tiles)
+            self._load_mbtiles(f, apply_styles=apply_styles, merge_tiles=merge_tiles, tile_limit=tile_number_limit, manual_zoom=manual_zoom)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_mbtiles(self, path, apply_styles, merge_tiles):
+    def _load_mbtiles(self, path, apply_styles, merge_tiles, tile_limit, manual_zoom):
         reader = self._create_reader(path)
         if reader:
             is_valid = reader.is_mapbox_vector_tile()
             if is_valid:
                 max_zoom = reader.get_max_zoom()
-                if max_zoom:
-                    reader.load_vector_tiles(zoom_level=max_zoom, load_mask_layer=False, merge_tiles=merge_tiles, apply_styles=apply_styles)
+                min_zoom = reader.get_min_zoom()
+                debug("valid zoom range: {} - {}", min_zoom, max_zoom)
+                zoom = max_zoom
+                if manual_zoom:
+                    zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
+                if zoom:
+                    debug("Zoom: {}", zoom)
+                    reader.load_vector_tiles(zoom_level=zoom, load_mask_layer=False, merge_tiles=merge_tiles, apply_styles=apply_styles, tilenumber_limit=tile_limit)
                 else:
                     warn("Max Zoom not found, cannot load data")
             else:
                 warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
 
+    @staticmethod
+    def clamp(minimum, x, maximum):
+        return max(minimum, min(x, maximum))
 
     def _create_reader(self, mbtiles_path):
         self._add_path_to_dependencies_to_syspath()

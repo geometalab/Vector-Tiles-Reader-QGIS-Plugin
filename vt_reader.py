@@ -105,7 +105,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True):
+    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
         mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
@@ -114,11 +114,11 @@ class VtReader:
         if self.is_web_source:
             tile_data_tuples.append(self._load_tiles_from_url())
         else:
-            tile_data_tuples = self._load_tiles_from_file(zoom_level)
+            tile_data_tuples = self._load_tiles_from_file(zoom_level, max_tiles=tilenumber_limit)
             if load_mask_layer and not self.is_web_source:
                 mask_level = self._get_mask_level()
                 if mask_level:
-                    mask_layer_data = self._load_tiles_from_file(mask_level)
+                    mask_layer_data = self._load_tiles_from_file(mask_level, max_tiles=tilenumber_limit)
                     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
@@ -175,8 +175,9 @@ class VtReader:
         zoom = self._get_metadata_value(field_name)
         if not zoom:
             zoom = self._get_zoom_from_tiles(max_zoom=max_zoom)
+        if zoom:
+            zoom = int(zoom)
         return zoom
-
 
     def _get_zoom_from_tiles(self, max_zoom=True):
         if max_zoom:
@@ -206,7 +207,7 @@ class VtReader:
             critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
-    def _load_tiles_from_file(self, zoom_level, max_tiles=None):
+    def _load_tiles_from_file(self, zoom_level, max_tiles):
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""

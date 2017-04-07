@@ -44,11 +44,22 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.rbFile.toggled.connect(self._update_open_button_state)
         self.rbDirectory.toggled.connect(self._update_open_button_state)
         self.btnOpen.clicked.connect(self._handle_open_click)
-        self.rbZoomManual.setEnabled(False)
+        self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.rbZoomAuto.setEnabled(False)
+        self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
 
     def load_directory_checked(self):
         return self.rbDirectory.isChecked()
+
+    def get_manual_zoom(self):
+        if not self.rbZoomManual.isChecked():
+            return None
+        return self.zoomSpin.value()
+
+    def get_tile_number_limit(self):
+        if not self.chkLimitNrOfTiles.isChecked():
+            return None
+        return self.spinNrOfLoadedTiles.value()
 
     def is_apply_styles_enabled(self):
         return self.chkApplyStyles.isChecked()
