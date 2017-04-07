@@ -26,6 +26,8 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.rbFile.toggled.connect(self._update_open_button_state)
         self.rbDirectory.toggled.connect(self._update_open_button_state)
         self.btnOpen.clicked.connect(self._handle_open_click)
+        self.rbZoomManual.setEnabled(False)
+        self.rbZoomAuto.setEnabled(False)
 
     def load_directory_checked(self):
         return self.rbDirectory.isChecked()
