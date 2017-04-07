@@ -23,8 +23,8 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.home_directory = home_directory
         self.btnBrowse.clicked.connect(self._open_browser)
         self.txtPath.textChanged.connect(self._on_path_changed)
-        self.rbFile.toggled.connect(self._on_type_changed)
-        self.rbDirectory.toggled.connect(self._on_type_changed)
+        self.rbFile.toggled.connect(self._update_open_button_state)
+        self.rbDirectory.toggled.connect(self._update_open_button_state)
         self.btnOpen.clicked.connect(self._handle_open_click)
 
     def load_directory_checked(self):
@@ -50,22 +50,15 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
             self.path = open_file_name
             self.txtPath.setText(open_file_name)
 
-    def _on_type_changed(self):
-        if self.rbDirectory.isChecked() and self.path:
-            directory = self.path
-            if os.path.isfile(directory):
-                directory = os.path.dirname(self.path)
-            self.txtPath.setText(directory)
-        else:
-            self.txtPath.setText(None)
-
     def _on_path_changed(self):
         self.path = self.txtPath.text()
-        has_path = True
-        if not self.path:
-            self.path = None
-            has_path = False
-        self.btnOpen.setEnabled(has_path)
+        self._update_open_button_state()
+
+    def _update_open_button_state(self):
+        is_valid_dir = self.rbDirectory.isChecked() and os.path.isdir(self.path)
+        is_valid_file = self.rbFile.isChecked() and os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
+        is_enabled = is_valid_dir or is_valid_file
+        self.btnOpen.setEnabled(is_enabled)
 
     def _handle_open_click(self):
         self.close()
