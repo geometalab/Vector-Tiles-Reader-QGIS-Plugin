@@ -104,8 +104,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-
-    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_features=True):
+    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_features=True, apply_styles=True):
         mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()

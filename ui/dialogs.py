@@ -11,9 +11,9 @@ import os
 
 class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
-    path_changed = pyqtSignal(str)
+    on_open = pyqtSignal(str)
 
-    def __init__(self, iface, on_open_file):
+    def __init__(self, iface):
         QtGui.QDialog.__init__(self)
         # Set up the user interface from Designer.
         # After setupUI you can access any designer object by doing
@@ -21,27 +21,28 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+        self.path = None
         self.iface = iface
         self.btnBrowse.clicked.connect(self._open_browser)
         self.txtPath.textChanged.connect(self._on_path_changed)
         self.rbFile.toggled.connect(self._on_type_changed)
         self.rbDirectory.toggled.connect(self._on_type_changed)
-        # self.btnOpen.clicked.connect(lambda e: on_open_file(self.path))
+        self.btnOpen.clicked.connect(self._handle_open_click)
 
-    def set_min_zoom(self, zoom):
-        self.zoomSpin.setMinimum(zoom)
+    def load_directory_checked(self):
+        return self.rbDirectory.isChecked()
 
-    def set_max_zoom(self, zoom):
-        self.zoomSpin.setMaximum(zoom)
+    def is_apply_styles_enabled(self):
+        return self.chkApplyStyles.isChecked()
 
-    def set_open_button_enabled(self, is_enabled):
-        self.btnOpen.setEnabled(is_enabled)
+    def is_merge_tiles_enabled(self):
+        return self.chkMergeTiles.isChecked()
 
     def _open_browser(self):
         if self.rbFile.isChecked():
-            self.path = QFileDialog.getOpenFileName(self, "Select Mapbox Tiles", "", "Mapbox Tiles (*.mbtiles)")
+            self.path = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", "", "Mapbox Tiles (*.mbtiles)")
         else:
-            self.path = QFileDialog.getExistingDirectory(self, "Select Mapbox Tiles Directory", "")
+            self.path = QFileDialog.getExistingDirectory(None, "Select Mapbox Tiles Directory", "")
 
         self.txtPath.setText(self.path)
 
@@ -53,10 +54,14 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
     def _on_path_changed(self):
         self.path = self.txtPath.text()
+        has_path = True
         if not self.path:
             self.path = None
-            self.set_open_button_enabled(False)
-        self.path_changed.emit(self.path)
+            has_path = False
+        self.btnOpen.setEnabled(has_path)
+
+    def _handle_open_click(self):
+        self.on_open.emit(self.path)
 
     def show(self):
         self.exec_()

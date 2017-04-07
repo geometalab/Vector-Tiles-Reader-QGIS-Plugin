@@ -35,16 +35,9 @@ class VtrPlugin:
     def __init__(self, iface):
         self.iface = iface
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self._init_openfile_dialog()
         self.recently_used = []
-        self.file_dialog = FileConnectionDialog(iface, on_open_file=None)
-
-    def _init_openfile_dialog(self):
-        dlg = QFileDialog()
-        dlg.setNameFilter("Mapbox Tiles (*.mbtiles)")
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        self.open_mbtile_dialog = dlg
-
+        self.file_dialog = FileConnectionDialog(iface)
+        self.file_dialog.on_open.connect(self._on_open_mbtiles)
 
     def initGui(self):
         self._load_recently_used()
@@ -57,22 +50,28 @@ class VtrPlugin:
 
     def add_menu(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        default_action = self._create_action("Add Vector Tiles Layer", "icon.png", self.run)
-        self.popupMenu.addAction(default_action)
-        self.popupMenu.addAction(self._create_action("Open Mapbox Tiles...", "folder.svg", self.file_dialog.show))
-        self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
-
-        self.recent = self.popupMenu.addMenu("Open Recent")
-        debug("Recently used: {}", self.recently_used)
-        for path in self.recently_used:
-            debug("Create action: {}", path)
-            self._add_recently_used(path)
+        default_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
+        self.popupMenu.addAction(self._create_action("Add Vector Tile Layer...", "folder.svg", self.file_dialog.show))
+        # self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
+        # self.recent = self.popupMenu.addMenu("Open Recent")
+        # debug("Recently used: {}", self.recently_used)
+        # for path in self.recently_used:
+        #     debug("Create action: {}", path)
+        #     self._add_recently_used(path)
 
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
         self.toolButton.setDefaultAction(default_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
+
+    def _on_open_mbtiles(self, path):
+        merge_tiles = self.file_dialog.is_merge_tiles_enabled()
+        apply_styles = self.file_dialog.is_apply_styles_enabled()
+        load_directory = self.file_dialog.load_directory_checked()
+        debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, file: {}",
+              apply_styles, merge_tiles, load_directory, path)
+        self._load_from_disk()
 
     def _load_from_url(self):
         # todo: remove hardcoded url
@@ -85,7 +84,7 @@ class VtrPlugin:
             self.recently_used.append(path)
         self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
-    def _load_file(self, path):
+    def _load_from_disk(self, path):
         if path and os.path.isfile(path):
             self._add_recently_used(path)
             self._save_recently_used()
@@ -96,14 +95,14 @@ class VtrPlugin:
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_mbtiles(self, path):
+    def _load_mbtiles(self, path, apply_styles, merge_tiles):
         reader = self._create_reader(path)
         if reader:
             is_valid = reader.is_mapbox_vector_tile()
             if is_valid:
                 max_zoom = reader.get_max_zoom()
                 if max_zoom:
-                    reader.load_vector_tiles(max_zoom)
+                    reader.load_vector_tiles(zoom_level=max_zoom, load_mask_layer=False, merge_features=merge_tiles, apply_styles=apply_styles)
                 else:
                     warn("Max Zoom not found, cannot load data")
             else:
