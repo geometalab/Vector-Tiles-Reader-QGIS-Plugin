@@ -45,6 +45,8 @@ class VtrPlugin:
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.add_layer_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.add_layer_action)
+        self.iface.addLayerMenu().addAction(self.add_layer_action)  # Add action to the menu: Layer->Add Layer
+
         self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
 
@@ -165,6 +167,7 @@ class VtrPlugin:
         self.iface.removePluginMenu("&Vector Tiles Reader", self.add_layer_action)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.add_layer_action)
+        self.iface.addLayerMenu().removeAction(self.add_layer_action)
 
     def run(self):
         self.file_dialog.show()
