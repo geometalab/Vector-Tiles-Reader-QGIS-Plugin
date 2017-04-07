@@ -64,13 +64,13 @@ class VtReader:
             content = FileHelper.load_url(url=mbtiles_path, size=2)
             if not FileHelper.is_mapbox_pbf(content=content):
                 warn("The specified url doesnt provide valid Mapbox pbf")
-                raise RuntimeError("This file is not a valid url")
+                raise RuntimeError("This is not a valid url")
             else:
                 debug("The url provides valid Mapbox pbf")
         else:
             is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
             if not is_sqlite_db:
-                raise RuntimeError("This file is not a valid mbtiles.")
+                raise RuntimeError("The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(mbtiles_path))
 
         self._current_mbtiles_path = mbtiles_path
         self.conn = None

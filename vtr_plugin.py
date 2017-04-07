@@ -69,7 +69,7 @@ class VtrPlugin:
         merge_tiles = self.file_dialog.is_merge_tiles_enabled()
         apply_styles = self.file_dialog.is_apply_styles_enabled()
         load_directory = self.file_dialog.load_directory_checked()
-        debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, file: {}",
+        debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, path: {}",
               apply_styles, merge_tiles, load_directory, path)
         self._load_from_disk(path, load_directory=load_directory, apply_styles=apply_styles, merge_tiles=merge_tiles)
 
@@ -85,10 +85,24 @@ class VtrPlugin:
         self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
     def _load_from_disk(self, path, load_directory, apply_styles, merge_tiles):
-        if path and os.path.isfile(path):
+        files_to_load = []
+        if not load_directory and path and os.path.isfile(path):
+            debug("Load file: {}", path)
+            files_to_load.append(path)
             # self._add_recently_used(path)
             # self._save_recently_used()
-            self._load_mbtiles(path, apply_styles=apply_styles, merge_tiles=merge_tiles)
+        if load_directory and path and os.path.isdir(path):
+            debug("Load directory: {}", path)
+            for o in os.listdir(path):
+                ext = os.path.splitext(o)[1]
+                debug("dir entry: {}, ext: {}", o, ext)
+                if ext == ".mbtiles":
+                    file_path = os.path.join(path, o)
+                    debug("This is a mbtiles file")
+                    files_to_load.append(file_path)
+
+        for f in files_to_load:
+            self._load_mbtiles(f, apply_styles=apply_styles, merge_tiles=merge_tiles)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())

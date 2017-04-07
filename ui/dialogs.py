@@ -52,7 +52,10 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
     def _on_type_changed(self):
         if self.rbDirectory.isChecked() and self.path:
-            self.txtPath.setText(os.path.dirname(self.path))
+            directory = self.path
+            if os.path.isfile(directory):
+                directory = os.path.dirname(self.path)
+            self.txtPath.setText(directory)
         else:
             self.txtPath.setText(None)
 
