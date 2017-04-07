@@ -19,18 +19,17 @@ from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
-from ui.dialogs import FileConnectionDialog
+from ui.dialogs import FileConnectionDialog, AboutDialog
 
 import os
 import sys
 import site
-from ui.dialogs import FileConnectionDialog
 
 
 class VtrPlugin:
     _dialog = None
     _model = None
-    action = None
+    add_layer_action = None
 
     def __init__(self, iface):
         self.iface = iface
@@ -41,12 +40,16 @@ class VtrPlugin:
 
     def initGui(self):
         self._load_recently_used()
-        self.action = QAction(QIcon(':/plugins/vectortilereader/icon.png'), "Add Vector Tiles Layer", self.iface.mainWindow())
-        self.action.triggered.connect(self.run)
-        self.iface.addPluginToMenu("&Vector Tiles Reader", self.action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.action)
+        self.add_layer_action = self._create_action("Add Vector Tiles Layer", "icon.png", self.run)
+        self.about_action = self._create_action("About", "", self.show_about)
+        self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
+        self.iface.addPluginToMenu("&Vector Tiles Reader", self.add_layer_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.add_layer_action)
         self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
+
+    def show_about(self):
+        AboutDialog().show()
 
     def add_menu(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -144,8 +147,9 @@ class VtrPlugin:
 
     def unload(self):
         self.iface.removeVectorToolBarIcon(self.toolButtonAction)
-        self.iface.removePluginMenu("&Vector Tiles Reader", self.action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.action)
+        self.iface.removePluginMenu("&Vector Tiles Reader", self.add_layer_action)
+        self.iface.removePluginMenu("&Vector Tiles Reader", self.about_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.add_layer_action)
 
     def run(self):
         self.file_dialog.show()

@@ -1,10 +1,28 @@
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal
-from PyQt4.QtGui import QColor, QAction, QIcon, QMenu, QToolButton, QFileDialog, QMessageBox
+from PyQt4.QtGui import QFileDialog
 from dlg_file_connection import Ui_DlgFileConnection
 from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
+from dlg_about import Ui_DlgAbout
 import os
+
+
+class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.setupUi(self)
+        self._load_about()
+
+    def _load_about(self):
+        about_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "about.html")
+        if os.path.isfile(about_path):
+            with open(about_path, 'r') as f:
+                html = f.read()
+                self.txtAbout.setHtml(html)
+
+    def show(self):
+        self.exec_()
 
 
 class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
