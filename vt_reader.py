@@ -324,10 +324,12 @@ class VtReader:
 
     @staticmethod
     def _get_feature_sort_id(feature_path):
-        first_node = feature_path.split(".")[0]
+        nodes = feature_path.split(".")
         sort_id = 999
-        if first_node in VtReader.layer_sort_ids:
-            sort_id = VtReader.layer_sort_ids.index(first_node)
+        for node in nodes:
+            current_node = node.split(VtReader._zoom_level_delimiter)[0]
+            if current_node in VtReader.layer_sort_ids:
+                sort_id = VtReader.layer_sort_ids.index(current_node)
         return sort_id
 
     def _get_group_for_path(self, path, root_group):
