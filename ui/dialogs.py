@@ -47,6 +47,14 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.rbZoomAuto.setEnabled(False)
         self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
+        self.lblError.setVisible(False)
+
+    def show_error(self, error):
+        self.lblError.setText(error)
+        self.lblError.setVisible(True)
+
+    def hide_error(self):
+        self.lblError.setVisible(False)
 
     def load_directory_checked(self):
         return self.rbDirectory.isChecked()
@@ -88,9 +96,17 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
     def _update_open_button_state(self):
         is_enabled = False
         if self.path:
-            is_valid_dir = self.rbDirectory.isChecked() and os.path.isdir(self.path)
-            is_valid_file = self.rbFile.isChecked() and os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
+            is_valid_dir = self.load_directory_checked() and os.path.isdir(self.path)
+            is_valid_file = not self.load_directory_checked() and os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
             is_enabled = is_valid_dir or is_valid_file
+            if self.load_directory_checked() and not is_valid_dir:
+                self.show_error("This is not a valid directory")
+            elif not self.load_directory_checked() and not is_valid_file:
+                self.show_error("This is not a valid mbtiles file")
+            else:
+                self.hide_error()
+        else:
+            self.hide_error()
         self.btnOpen.setEnabled(is_enabled)
 
     def _handle_open_click(self):
