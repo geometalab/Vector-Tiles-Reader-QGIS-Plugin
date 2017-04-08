@@ -19,7 +19,7 @@ from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
-from ui.dialogs import FileConnectionDialog, AboutDialog
+from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog
 
 import os
 import sys
@@ -46,8 +46,8 @@ class VtrPlugin:
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.add_layer_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.add_layer_action)
         self.iface.addLayerMenu().addAction(self.add_layer_action)  # Add action to the menu: Layer->Add Layer
-
         self.add_menu()
+        self.progress_dialog = ProgressDialog()
         info("Vector Tile Reader Plugin loaded...")
 
     def show_about(self):
@@ -107,10 +107,8 @@ class VtrPlugin:
             debug("Load directory: {}", path)
             for o in os.listdir(path):
                 ext = os.path.splitext(o)[1]
-                debug("dir entry: {}, ext: {}", o, ext)
                 if ext == ".mbtiles":
                     file_path = os.path.join(path, o)
-                    debug("This is a mbtiles file")
                     files_to_load.append(file_path)
         for f in files_to_load:
             self._load_mbtiles(f, apply_styles=apply_styles, merge_tiles=merge_tiles, tile_limit=tile_number_limit, manual_zoom=manual_zoom)
@@ -123,21 +121,25 @@ class VtrPlugin:
     def _load_mbtiles(self, path, apply_styles, merge_tiles, tile_limit, manual_zoom):
         reader = self._create_reader(path)
         if reader:
-            is_valid = reader.is_mapbox_vector_tile()
-            if is_valid:
-                max_zoom = reader.get_max_zoom()
-                min_zoom = reader.get_min_zoom()
-                debug("valid zoom range: {} - {}", min_zoom, max_zoom)
-                zoom = max_zoom
-                if manual_zoom:
-                    zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
-                if zoom:
-                    debug("Zoom: {}", zoom)
-                    reader.load_vector_tiles(zoom_level=zoom, load_mask_layer=False, merge_tiles=merge_tiles, apply_styles=apply_styles, tilenumber_limit=tile_limit)
+            try:
+                is_valid = reader.is_mapbox_vector_tile()
+                if is_valid:
+                    max_zoom = reader.get_max_zoom()
+                    min_zoom = reader.get_min_zoom()
+                    debug("valid zoom range: {} - {}", min_zoom, max_zoom)
+                    zoom = max_zoom
+                    if manual_zoom:
+                        zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
+                    if zoom:
+                        debug("Zoom: {}", zoom)
+                        reader.load_vector_tiles(zoom_level=zoom, load_mask_layer=False, merge_tiles=merge_tiles, apply_styles=apply_styles, tilenumber_limit=tile_limit)
+                    else:
+                        warn("Max Zoom not found, cannot load data")
                 else:
-                    warn("Max Zoom not found, cannot load data")
-            else:
-                warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
+                    warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
+            except RuntimeError:
+                QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
+                critical(str(sys.exc_info()[1]))
 
     @staticmethod
     def clamp(minimum, x, maximum):
@@ -149,10 +151,28 @@ class VtrPlugin:
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface, mbtiles_path=mbtiles_path)
+            reader = VtReader(self.iface, mbtiles_path=mbtiles_path, progress_handler=self.handle_progress_update)
         except RuntimeError:
-            QMessageBox.critical(None, "Loading failed", str(sys.exc_info()[1]))
+            QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
+            critical(str(sys.exc_info()[1]))
         return reader
+
+    def handle_progress_update(self, title, progress, max_progress, msg, show_progress):
+        if show_progress and not self.progress_dialog.is_open:
+            self.progress_dialog.open()
+        elif show_progress is False and self.progress_dialog.is_open:
+            self.progress_dialog.hide()
+            self.progress_dialog.set_message(None)
+        if title:
+            self.progress_dialog.setWindowTitle(title)
+        if max_progress:
+            self.progress_dialog.set_maximum(max_progress)
+        if msg:
+            self.progress_dialog.set_message(msg)
+        if progress:
+            self.progress_dialog.set_progress(progress)
+        if self.progress_dialog.is_open and not self.progress_dialog.isActiveWindow():
+            self.progress_dialog.activateWindow()
 
     def _add_path_to_dependencies_to_syspath(self):
         """

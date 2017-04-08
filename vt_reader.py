@@ -52,7 +52,7 @@ class VtReader:
     _layers_to_dissolve = []
     _zoom_level_delimiter = "*"
 
-    def __init__(self, iface, mbtiles_path):
+    def __init__(self, iface, mbtiles_path, progress_handler):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
@@ -60,6 +60,7 @@ class VtReader:
         """
 
         self.iface = iface
+        self.progress_handler = progress_handler
         self.is_web_source = mbtiles_path.lower().startswith("http://")
         if self.is_web_source:
             content = FileHelper.load_url(url=mbtiles_path, size=2)
@@ -90,6 +91,10 @@ class VtReader:
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
 
+    def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
+        if self.progress_handler:
+            self.progress_handler(title, progress, max_progress, msg, show_dialog)
+
     @staticmethod
     def _get_empty_feature_collection():
         """
@@ -106,6 +111,8 @@ class VtReader:
             "features": []}
 
     def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
+        self._update_progress(title="Loading '{}'".format(os.path.basename(self._current_mbtiles_path)))
+        self._update_progress(show_dialog=True)
         mbtiles_path = self._current_mbtiles_path
         debug("Loading vector tiles: {}", mbtiles_path)
         self.reinit()
@@ -124,6 +131,7 @@ class VtReader:
         self._process_tiles(tiles)
         self._create_qgis_layer_hierarchy(merge_features=merge_tiles, mbtiles_path=mbtiles_path, apply_styles=apply_styles)
         self._close_connection()
+        self._update_progress(show_dialog=False)
         info("Import complete!")
 
     def _load_tiles_from_url(self):
@@ -278,21 +286,27 @@ class VtReader:
         tiles = []
         total_nr_tiles = len(tiles_with_encoded_data)
         info("Decoding {} tiles", total_nr_tiles)
+        self._update_progress(progress=0, max_progress=100, msg="Loading tiles...")
         for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
             tile = tile_data_tuple[0]
             encoded_data = tile_data_tuple[1]
             tile.decoded_data = self._decode_binary_tile_data(encoded_data)
             if tile.decoded_data:
                 tiles.append(tile)
-            debug("Progress: {0:.1f}%", 100.0 / total_nr_tiles * (index + 1))
+            progress = int(100.0 / total_nr_tiles * (index + 1))
+            self._update_progress(progress=progress)
+            debug("Progress: {0:.1f}%", progress)
         return tiles
 
     def _process_tiles(self, tiles):
         total_nr_tiles = len(tiles)
         info("Processing {} tiles", total_nr_tiles)
+        self._update_progress(progress=0, max_progress=100, msg="Processing features...")
         for index, tile in enumerate(tiles):
             self._write_features(tile)
-            debug("Progress: {0:.1f}%", 100.0 / total_nr_tiles * (index + 1))
+            progress = int(100.0 / total_nr_tiles * (index + 1))
+            self._update_progress(progress=progress)
+            debug("Progress: {0:.1f}%", progress)
 
     def _decode_binary_tile_data(self, data):
         try:
@@ -312,15 +326,23 @@ class VtReader:
         group_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
         root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
-        for feature_path in feature_paths:
+        self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
+        layers = []
+        for index, feature_path in enumerate(feature_paths):
             target_group, layer_name = self._get_group_for_path(feature_path, root_group)
             feature_collection = self.features_by_path[feature_path]
             file_src = FileHelper.get_unique_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)
-            if apply_styles:
+            layers.append(layer)
+            self._update_progress(progress=index+1)
+
+        if apply_styles:
+            self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
+            for index, layer in enumerate(layers):
                 VtReader._apply_named_style(layer)
+                self._update_progress(progress=index+1)
 
     @staticmethod
     def _get_feature_sort_id(feature_path):

@@ -5,6 +5,7 @@ from dlg_file_connection import Ui_DlgFileConnection
 from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
 from dlg_about import Ui_DlgAbout
+from dlg_progress import Ui_DlgProgress
 import os
 
 
@@ -115,6 +116,35 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
     def show(self):
         self.exec_()
+
+
+class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.setupUi(self)
+        self.lblMessage.setVisible(False)
+        self.is_open = False
+
+    def set_maximum(self, max):
+        self.progressBar.setMaximum(max)
+
+    def set_progress(self, value):
+        self.progressBar.setValue(value)
+
+    def set_message(self, msg=None):
+        self.lblMessage.setText(msg)
+        if msg:
+            self.lblMessage.setVisible(True)
+        else:
+            self.lblMessage.setVisible(False)
+
+    def open(self):
+        self.is_open = True
+        self.show()
+
+    def hide(self):
+        self.is_open = False
+        self.close()
 
 
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
