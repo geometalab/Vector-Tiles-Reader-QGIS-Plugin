@@ -480,10 +480,10 @@ class VtReader:
             coordinates = coordinates[0]
 
         properties = feature["properties"]
-        properties["zoomLevel"] = tile.zoom_level
-        properties["featureNr"] = VtReader.total_feature_count
-        properties["col"] = tile.column
-        properties["row"] = tile.row
+        properties["_zoomLevel"] = tile.zoom_level
+        properties["_featureNr"] = VtReader.total_feature_count
+        properties["_col"] = tile.column
+        properties["_row"] = tile.row
         VtReader.total_feature_count += 1
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
