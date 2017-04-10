@@ -6,7 +6,7 @@ import numbers
 from VectorTileHelper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
-from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsVectorFileWriter
+from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
 from GlobalMapTiles import GlobalMercator
 from log_helper import info, warn, critical, debug
 from cStringIO import StringIO
@@ -111,6 +111,16 @@ class VtReader:
             "features": []}
 
     def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
+        """
+         * Loads the vector tiles from either a file or a URL and adds them to QGIS
+        :param zoom_level: The zoom level to load
+        :param load_mask_layer: If True the mask layer will also be loaded
+        :param merge_tiles: If True neighbouring tiles and features will be merged
+        :param apply_styles: If True the default styles will be applied
+        :param tilenumber_limit: If set then the nr of tiles being loaded will be restricted
+        :return: 
+        """
+
         self._update_progress(title="Loading '{}'".format(os.path.basename(self._current_mbtiles_path)))
         self._update_progress(show_dialog=True)
         mbtiles_path = self._current_mbtiles_path
@@ -139,8 +149,11 @@ class VtReader:
         tile = VectorTile(14, 8568, 10636)
         return tile, content
 
-
     def _close_connection(self):
+        """
+         * Closes the current db connection
+        :return: 
+        """
         if self.conn:
             try:
                 self.conn.close()
@@ -163,14 +176,26 @@ class VtReader:
             return
 
     def _get_mask_level(self):
+        """
+         * Returns the mask level from the metadata table
+        :return: 
+        """
         return self._get_metadata_value("maskLevel")
 
     def get_max_zoom(self):
+        """
+         * Returns the maximum zoom that is found in either the metadata or the tile table
+        :return: 
+        """
         if not self.max_zoom:
             self.max_zoom = self._get_zoom(max_zoom=True)
         return self.max_zoom
 
     def get_min_zoom(self):
+        """
+         * Returns the minimum zoom that is found in either the metadata or the tile table
+        :return: 
+        """
         if not self.min_zoom:
             self.min_zoom = self._get_zoom(max_zoom=False)
         return self.min_zoom
@@ -182,12 +207,12 @@ class VtReader:
             field_name = "minzoom"
         zoom = self._get_metadata_value(field_name)
         if not zoom:
-            zoom = self._get_zoom_from_tiles(max_zoom=max_zoom)
+            zoom = self._get_zoom_from_tiles_table(max_zoom=max_zoom)
         if zoom:
             zoom = int(zoom)
         return zoom
 
-    def _get_zoom_from_tiles(self, max_zoom=True):
+    def _get_zoom_from_tiles_table(self, max_zoom=True):
         if max_zoom:
             order = "desc"
         else:
@@ -205,6 +230,13 @@ class VtReader:
         return self._get_single_value(sql_query=sql, field_name=field_name)
 
     def _get_single_value(self, sql_query, field_name):
+        """
+         * Helper function that can be used to safely load a single value from the db
+         * Returns the value or None if result is empty or execution of query failed
+        :param sql_query: 
+        :param field_name: 
+        :return: 
+        """
         value = None
         try:
             rows = self._get_from_db(sql=sql_query)
@@ -225,12 +257,6 @@ class VtReader:
         limit = ""
         if max_tiles:
             limit = "LIMIT {}".format(max_tiles)
-
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10638 and tile_column=8568;".format(zoom_level)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row = 10644 and tile_column=8581;".format(zoom_level)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} and tile_row >= 10640 and tile_row <= 10650 and tile_column>=8575 and tile_column<= 8582;".format(zoom_level)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {} LIMIT {};".format(zoom_level, max_tiles)
-        # sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level = {};".format(zoom_level)
 
         sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};".format(where_clause, limit)
 

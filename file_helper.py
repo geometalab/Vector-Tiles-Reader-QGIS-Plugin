@@ -77,7 +77,7 @@ class FileHelper:
         chunksize = len(header_string)
         with open(path, "r") as f:
             content = f.read(chunksize)
-        expected_header = bytearray("SQLite")  # map(lambda c: hex(ord(c)), header_string)
+        expected_header = bytearray("SQLite")
         header_matching = FileHelper._are_headers_equal(content, expected_header)
         return header_matching
 
@@ -90,14 +90,12 @@ class FileHelper:
             result = FileHelper._are_headers_equal(first_two_bytes, expected_header_bytes=gzip_headers)
         return result
 
-
     @staticmethod
     def _are_headers_equal(content, expected_header_bytes):
         all_same = True
         br = bytearray(content)
         for index, b in enumerate(expected_header_bytes):
             try:
-                # all_same = hex(ord(content[index])) == b
                 all_same = br[index] == b
                 if not all_same:
                     break
