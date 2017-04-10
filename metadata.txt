@@ -5,7 +5,7 @@
 [general]
 name=Vector Tiles Reader
 qgisMinimumVersion=2.18
-qgisMaximumVersion=2.18
+qgisMaximumVersion=2.99
 description=Read Mapbox vector tiles from MBTiles file
 about=This Python plugin reads Mapbox vector tiles (MVT) from a local MBTiles file. A possible source of MBTiles is https://openmaptiles.org/. 
 version=0.2.0
