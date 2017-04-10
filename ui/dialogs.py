@@ -142,7 +142,6 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self.lblMessage.setVisible(False)
-        self.is_open = False
 
     def set_maximum(self, max):
         self.progressBar.setMaximum(max)
@@ -158,11 +157,9 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
             self.lblMessage.setVisible(False)
 
     def open(self):
-        self.is_open = True
         self.show()
 
     def hide(self):
-        self.is_open = False
         self.close()
 
 

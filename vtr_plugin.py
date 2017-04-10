@@ -167,9 +167,9 @@ class VtrPlugin:
         return reader
 
     def handle_progress_update(self, title, progress, max_progress, msg, show_progress):
-        if show_progress and not self.progress_dialog.is_open:
+        if show_progress:
             self.progress_dialog.open()
-        elif show_progress is False and self.progress_dialog.is_open:
+        elif show_progress is False:
             self.progress_dialog.hide()
             self.progress_dialog.set_message(None)
         if title:
@@ -180,7 +180,7 @@ class VtrPlugin:
             self.progress_dialog.set_message(msg)
         if progress:
             self.progress_dialog.set_progress(progress)
-        if self.progress_dialog.is_open and not self.progress_dialog.isActiveWindow():
+        if self.progress_dialog.isVisible() and not self.progress_dialog.isActiveWindow():
             self.progress_dialog.activateWindow()
 
     def _add_path_to_dependencies_to_syspath(self):
