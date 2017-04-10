@@ -168,9 +168,58 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
+        self.connections = []
+        self.selected_connection = None
+        self.cbxConnections.currentIndexChanged.connect(self._handle_connection_change)
+        self.btnCreateConnection.clicked.connect(self._create_connection)
+
+    def show(self):
+        self.exec_()
+
+    def _create_connection(self):
+        dlg = EditServerConnection()
+        result = dlg.exec_()
+        print(result)
+        if result == QtGui.QDialog.Accepted:
+            name, url = dlg.get_connection()
+            print("Connection created: {}".format(url))
+            # self.connections.append(conn)
+            # self.cbxConnections.setCurrentIndex(len(self.connections)-1)
+        else:
+            print("cancelled")
+
+
+    def _handle_connection_change(self, index):
+        if self.cbxConnections.currentIndex():
+            new_conn = self.connections[self.cbxConnections.currentIndex()]
+            if not self.selected_connection or new_conn.url != self.selected_connection.url:
+                self.selected_connection = new_conn
+        enable = False
+        if self.selected_connection:
+            enable = True
+        self.btnConnect.setEnabled(enable)
+        self.btnEdit.setEnabled(enable)
+        self.btnDelete.setEnabled(enable)
 
 
 class EditServerConnection(QtGui.QDialog, Ui_DlgEditServerConnection):
-    def __init__(self):
+    def __init__(self, name=None, url=None):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
+        self.txtName.textChanged.connect(self._update_save_btn_state)
+        self.txtUrl.textChanged.connect(self._update_save_btn_state)
+        if name:
+            self.txtName.setText(name)
+        if url:
+            self.txtUrl.setText(url)
+
+    def _update_save_btn_state(self):
+        url = self.txtUrl.text()
+        if self.txtName.text() and url and url.lower().startswith("http://") and url.lower().endswith(".json"):
+            self.btnSave.setEnabled(True)
+        else:
+            self.btnSave.setEnabled(False)
+
+    def get_connection(self):
+        return self.txtName.text(), self.txtUrl.text()
+
