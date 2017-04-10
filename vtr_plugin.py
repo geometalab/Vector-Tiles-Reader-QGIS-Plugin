@@ -52,9 +52,12 @@ class VtrPlugin:
         info("Vector Tile Reader Plugin loaded...")
 
     def _update_zoom_from_file(self, path):
+        min_zoom = None
+        max_zoom = None
         reader = self._create_reader(path)
-        min_zoom = reader.get_min_zoom()
-        max_zoom = reader.get_max_zoom()
+        if reader:
+            min_zoom = reader.get_min_zoom()
+            max_zoom = reader.get_max_zoom()
         self.file_dialog.set_zoom(min_zoom, max_zoom)
 
     def show_about(self):

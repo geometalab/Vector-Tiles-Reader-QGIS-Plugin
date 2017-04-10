@@ -54,10 +54,12 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
             self.zoomSpin.setMinimum(min_zoom)
         else:
             self.zoomSpin.setMinimum(0)
-        self.zoomSpin.setMaximum(max_zoom)
         max_zoom_text = "Max. Zoom"
         if max_zoom:
+            self.zoomSpin.setMaximum(max_zoom)
             max_zoom_text += " ({})".format(max_zoom)
+        else:
+            self.zoomSpin.setMaximum(99)
         self.rbZoomMax.setText(max_zoom_text)
 
         zoom_range_text = ""
