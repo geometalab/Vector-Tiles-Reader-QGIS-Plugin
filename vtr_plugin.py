@@ -73,13 +73,11 @@ class VtrPlugin:
     def _on_open_mbtiles(self, path):
         merge_tiles = self.file_dialog.is_merge_tiles_enabled()
         apply_styles = self.file_dialog.is_apply_styles_enabled()
-        load_directory = self.file_dialog.load_directory_checked()
         tile_number_limit = self.file_dialog.get_tile_number_limit()
         manual_zoom = self.file_dialog.get_manual_zoom()
-        debug("Load mbtiles: apply styles: {}, merge tiles: {}, load directory: {}, tilelimit: {}, manual_zoom: {}, path: {}",
-              apply_styles, merge_tiles, load_directory, tile_number_limit, manual_zoom, path)
+        debug("Load mbtiles: apply styles: {}, merge tiles: {}, tilelimit: {}, manual_zoom: {}, path: {}",
+              apply_styles, merge_tiles, tile_number_limit, manual_zoom, path)
         self._load_from_disk(path=path,
-                             load_directory=load_directory,
                              apply_styles=apply_styles,
                              merge_tiles=merge_tiles,
                              tile_number_limit=tile_number_limit,
@@ -96,22 +94,16 @@ class VtrPlugin:
     #         self.recently_used.append(path)
     #     self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
 
-    def _load_from_disk(self, path, load_directory, apply_styles, merge_tiles, tile_number_limit, manual_zoom):
-        files_to_load = []
-        if not load_directory and path and os.path.isfile(path):
+    def _load_from_disk(self, path, apply_styles, merge_tiles, tile_number_limit, manual_zoom):
+        if path and os.path.isfile(path):
             debug("Load file: {}", path)
-            files_to_load.append(path)
             # self._add_recently_used(path)
             # self._save_recently_used()
-        if load_directory and path and os.path.isdir(path):
-            debug("Load directory: {}", path)
-            for o in os.listdir(path):
-                ext = os.path.splitext(o)[1]
-                if ext == ".mbtiles":
-                    file_path = os.path.join(path, o)
-                    files_to_load.append(file_path)
-        for f in files_to_load:
-            self._load_mbtiles(f, apply_styles=apply_styles, merge_tiles=merge_tiles, tile_limit=tile_number_limit, manual_zoom=manual_zoom)
+            self._load_mbtiles(path,
+                               apply_styles=apply_styles,
+                               merge_tiles=merge_tiles,
+                               tile_limit=tile_number_limit,
+                               manual_zoom=manual_zoom)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
@@ -132,7 +124,12 @@ class VtrPlugin:
                         zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
                     if zoom:
                         debug("Zoom: {}", zoom)
-                        reader.load_vector_tiles(zoom_level=zoom, load_mask_layer=False, merge_tiles=merge_tiles, apply_styles=apply_styles, tilenumber_limit=tile_limit)
+                        reader.load_vector_tiles(
+                            zoom_level=zoom,
+                            load_mask_layer=False,
+                            merge_tiles=merge_tiles,
+                            apply_styles=apply_styles,
+                            tilenumber_limit=tile_limit)
                     else:
                         warn("Max Zoom not found, cannot load data")
                 else:

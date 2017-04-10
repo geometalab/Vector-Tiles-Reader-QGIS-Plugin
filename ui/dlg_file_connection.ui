@@ -35,10 +35,10 @@
    <bool>true</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout_4">
-   <item row="0" column="0">
-    <widget class="QGroupBox" name="groupBox">
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="groupBox_2">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -46,7 +46,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>0</height>
+       <height>190</height>
       </size>
      </property>
      <property name="maximumSize">
@@ -55,125 +55,185 @@
        <height>16777215</height>
       </size>
      </property>
-     <property name="sizeIncrement">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
      <property name="title">
-      <string>Source</string>
+      <string>Options</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="1">
-         <widget class="QRadioButton" name="rbFile">
-          <property name="text">
-           <string>File</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2">
-         <widget class="QPushButton" name="btnBrowse">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Browse</string>
-          </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/plugins/vectortilereader/folder.svg</normaloff>:/plugins/vectortilereader/folder.svg</iconset>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="minimumSize">
-           <size>
-            <width>40</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Source</string>
-          </property>
-          <property name="margin">
-           <number>0</number>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1" alignment="Qt::AlignVCenter">
-         <widget class="QLineEdit" name="txtPath">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>20</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QRadioButton" name="rbDirectory">
-          <property name="text">
-           <string>Directory</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1" colspan="2">
-         <widget class="QLabel" name="lblError">
-          <property name="styleSheet">
-           <string notr="true">color: rgb(255, 0, 0);</string>
-          </property>
-          <property name="text">
-           <string>Show any errors here</string>
-          </property>
-          <property name="scaledContents">
-           <bool>false</bool>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
-          </property>
-          <property name="indent">
-           <number>-1</number>
-          </property>
-          <property name="textInteractionFlags">
-           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Type</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
+     <widget class="QWidget" name="formLayoutWidget_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>40</y>
+        <width>981</width>
+        <height>330</height>
+       </rect>
+      </property>
+      <layout class="QFormLayout" name="formLayout_2">
+       <property name="fieldGrowthPolicy">
+        <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+       </property>
+       <item row="1" column="0" colspan="2">
+        <widget class="QCheckBox" name="chkMergeTiles">
+         <property name="text">
+          <string>Merge Tiles (disable for performance)</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Zoom</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QRadioButton" name="rbZoomMax">
+         <property name="text">
+          <string>Max. Zoom</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">buttonGroup_2</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QRadioButton" name="rbZoomAuto">
+         <property name="text">
+          <string>Auto (scale-dependent)</string>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">buttonGroup_2</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,0,0">
+         <property name="horizontalSpacing">
+          <number>6</number>
+         </property>
+         <item row="1" column="1" alignment="Qt::AlignLeft|Qt::AlignVCenter">
+          <widget class="QSpinBox" name="spinNrOfLoadedTiles">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>21</height>
+            </size>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+           <property name="value">
+            <number>10</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="chkLimitNrOfTiles">
+           <property name="text">
+            <string>Limit the number of loaded tiles</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QRadioButton" name="rbZoomManual">
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">buttonGroup_2</string>
+           </attribute>
+          </widget>
+         </item>
+         <item alignment="Qt::AlignLeft">
+          <widget class="QSpinBox" name="zoomSpin">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>70</width>
+             <height>16777215</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="8" column="0" colspan="2">
+        <widget class="QCheckBox" name="chkApplyStyles">
+         <property name="text">
+          <string>Apply default styles for OpenMapTiles</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item row="2" column="0">
@@ -222,10 +282,10 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0">
-    <widget class="QGroupBox" name="groupBox_2">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -233,7 +293,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>190</height>
+       <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
@@ -242,169 +302,101 @@
        <height>16777215</height>
       </size>
      </property>
-     <property name="title">
-      <string>Options</string>
+     <property name="sizeIncrement">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
      </property>
-     <widget class="QWidget" name="formLayoutWidget_2">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>40</y>
-        <width>981</width>
-        <height>301</height>
-       </rect>
-      </property>
-      <layout class="QFormLayout" name="formLayout_2">
-       <property name="fieldGrowthPolicy">
-        <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-       </property>
-       <item row="0" column="0" colspan="2">
-        <widget class="QCheckBox" name="chkApplyStyles">
-         <property name="text">
-          <string>Apply Styles (disable for performance)</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="QCheckBox" name="chkMergeTiles">
-         <property name="text">
-          <string>Merge Tiles (disable for performance)</string>
-         </property>
-         <property name="checked">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_5">
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>Zoom</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QRadioButton" name="rbZoomMax">
-         <property name="text">
-          <string>Max. Zoom</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-         <attribute name="buttonGroup">
-          <string notr="true">buttonGroup_2</string>
-         </attribute>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QRadioButton" name="rbZoomAuto">
-         <property name="text">
-          <string>Auto (scale-dependent)</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string notr="true">buttonGroup_2</string>
-         </attribute>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="2">
-        <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,1">
-         <property name="horizontalSpacing">
-          <number>6</number>
-         </property>
-         <item row="1" column="1" alignment="Qt::AlignLeft|Qt::AlignVCenter">
-          <widget class="QSpinBox" name="spinNrOfLoadedTiles">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>21</height>
-            </size>
-           </property>
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>9999</number>
-           </property>
-           <property name="value">
-            <number>10</number>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" alignment="Qt::AlignLeft|Qt::AlignVCenter">
-          <widget class="QCheckBox" name="chkLimitNrOfTiles">
-           <property name="text">
-            <string>Limit the number of loaded tiles</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="6" column="1">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="5" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QRadioButton" name="rbZoomManual">
-           <property name="text">
-            <string/>
-           </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroup_2</string>
-           </attribute>
-          </widget>
-         </item>
-         <item alignment="Qt::AlignLeft">
-          <widget class="QSpinBox" name="zoomSpin">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>70</width>
-             <height>16777215</height>
-            </size>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
+     <property name="title">
+      <string>Source</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="2" alignment="Qt::AlignVCenter">
+         <widget class="QPushButton" name="btnBrowse">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Browse</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resources.qrc">
+            <normaloff>:/plugins/vectortilereader/folder.svg</normaloff>:/plugins/vectortilereader/folder.svg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="2" alignment="Qt::AlignTop">
+         <widget class="QLabel" name="lblError">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(255, 0, 0);</string>
+          </property>
+          <property name="text">
+           <string>Show any errors here</string>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <property name="indent">
+           <number>-1</number>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" alignment="Qt::AlignVCenter">
+         <widget class="QLineEdit" name="txtPath">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>20</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="minimumSize">
+           <size>
+            <width>40</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Source</string>
+          </property>
+          <property name="margin">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

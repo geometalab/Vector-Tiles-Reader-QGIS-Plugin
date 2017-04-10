@@ -42,8 +42,6 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.home_directory = home_directory
         self.btnBrowse.clicked.connect(self._open_browser)
         self.txtPath.textChanged.connect(self._on_path_changed)
-        self.rbFile.toggled.connect(self._update_open_button_state)
-        self.rbDirectory.toggled.connect(self._update_open_button_state)
         self.btnOpen.clicked.connect(self._handle_open_click)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.rbZoomAuto.setEnabled(False)
@@ -81,10 +79,7 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         if not open_path:
             open_path = self.home_directory
 
-        if self.rbFile.isChecked():
-            open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", open_path, "Mapbox Tiles (*.mbtiles)")
-        else:
-            open_file_name = QFileDialog.getExistingDirectory(None, "Select Mapbox Tiles Directory", open_path)
+        open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", open_path, "Mapbox Tiles (*.mbtiles)")
 
         if open_file_name:
             self.path = open_file_name
@@ -95,20 +90,16 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self._update_open_button_state()
 
     def _update_open_button_state(self):
-        is_enabled = False
+        is_valid_file = False
         if self.path:
-            is_valid_dir = self.load_directory_checked() and os.path.isdir(self.path)
-            is_valid_file = not self.load_directory_checked() and os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
-            is_enabled = is_valid_dir or is_valid_file
-            if self.load_directory_checked() and not is_valid_dir:
-                self.show_error("This is not a valid directory")
-            elif not self.load_directory_checked() and not is_valid_file:
-                self.show_error("This is not a valid mbtiles file")
+            is_valid_file = os.path.isfile(self.path) and os.path.splitext(self.path)[1] == ".mbtiles"
+            if not is_valid_file:
+                self.show_error("This file does not exist or is not valid")
             else:
                 self.hide_error()
         else:
             self.hide_error()
-        self.btnOpen.setEnabled(is_enabled)
+        self.btnOpen.setEnabled(is_valid_file)
 
     def _handle_open_click(self):
         self.close()
