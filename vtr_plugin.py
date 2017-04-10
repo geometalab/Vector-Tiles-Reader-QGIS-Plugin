@@ -37,6 +37,7 @@ class VtrPlugin:
         self.recently_used = []
         self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
+        self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
 
     def initGui(self):
         self._load_recently_used()
@@ -49,6 +50,12 @@ class VtrPlugin:
         self.add_menu()
         self.progress_dialog = ProgressDialog()
         info("Vector Tile Reader Plugin loaded...")
+
+    def _update_zoom_from_file(self, path):
+        reader = self._create_reader(path)
+        min_zoom = reader.get_min_zoom()
+        max_zoom = reader.get_max_zoom()
+        self.file_dialog.set_zoom(min_zoom, max_zoom)
 
     def show_about(self):
         AboutDialog().show()

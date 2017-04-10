@@ -28,6 +28,7 @@ class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
 
 class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
+    on_valid_file_path_changed = pyqtSignal(str)
     on_open = pyqtSignal(str)
 
     def __init__(self, home_directory):
@@ -47,6 +48,22 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.rbZoomAuto.setEnabled(False)
         self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
         self.lblError.setVisible(False)
+
+    def set_zoom(self, min_zoom=None, max_zoom=None):
+        if min_zoom:
+            self.zoomSpin.setMinimum(min_zoom)
+        else:
+            self.zoomSpin.setMinimum(0)
+        self.zoomSpin.setMaximum(max_zoom)
+        max_zoom_text = "Max. Zoom"
+        if max_zoom:
+            max_zoom_text += " ({})".format(max_zoom)
+        self.rbZoomMax.setText(max_zoom_text)
+
+        zoom_range_text = ""
+        if min_zoom or max_zoom:
+            zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
+        self.lblZoomRange.setText(zoom_range_text)
 
     def show_error(self, error):
         self.lblError.setText(error)
@@ -99,6 +116,10 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
                 self.hide_error()
         else:
             self.hide_error()
+        if is_valid_file:
+            self.on_valid_file_path_changed.emit(self.path)
+        else:
+            self.set_zoom(None, None)
         self.btnOpen.setEnabled(is_valid_file)
 
     def _handle_open_click(self):
