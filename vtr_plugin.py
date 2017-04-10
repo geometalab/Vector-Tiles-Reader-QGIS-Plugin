@@ -19,7 +19,7 @@ from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
-from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog
+from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
 
 import os
 import sys
@@ -38,6 +38,7 @@ class VtrPlugin:
         self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
         self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
+        self.server_dialog = ServerConnectionDialog()
 
     def initGui(self):
         self._load_recently_used()
@@ -67,8 +68,10 @@ class VtrPlugin:
 
     def add_menu(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        default_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
+        open_file_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
+        open_server_action = self._create_action("Add Vector Tile Server Layer...", "folder.svg", self.server_dialog.show)
         self.popupMenu.addAction(self._create_action("Add Vector Tile Layer...", "folder.svg", self.file_dialog.show))
+        self.popupMenu.addAction(open_server_action)
         # self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
         # self.recent = self.popupMenu.addMenu("Open Recent")
         # debug("Recently used: {}", self.recently_used)
@@ -78,7 +81,8 @@ class VtrPlugin:
 
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(default_action)
+        # self.toolButton.setDefaultAction(open_file_action)
+        self.toolButton.setDefaultAction(open_server_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
