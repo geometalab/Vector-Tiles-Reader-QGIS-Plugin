@@ -40,7 +40,7 @@ class VtrPlugin:
 
     def initGui(self):
         self._load_recently_used()
-        self.add_layer_action = self._create_action("Add Vector Tiles Layer", "icon.png", self.run)
+        self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
         self.about_action = self._create_action("About", "", self.show_about)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.add_layer_action)
