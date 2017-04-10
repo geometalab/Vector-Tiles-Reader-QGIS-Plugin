@@ -71,6 +71,11 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.lblError.setText(error)
         self.lblError.setVisible(True)
 
+    def clear_path(self):
+        self.txtPath.setText(None)
+        self._update_open_button_state()
+        # todo: why is the open button still enabled at this point?
+
     def hide_error(self):
         self.lblError.setVisible(False)
 

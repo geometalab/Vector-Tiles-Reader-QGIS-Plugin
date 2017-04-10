@@ -58,6 +58,8 @@ class VtrPlugin:
         if reader:
             min_zoom = reader.get_min_zoom()
             max_zoom = reader.get_max_zoom()
+        else:
+            self.file_dialog.clear_path()
         self.file_dialog.set_zoom(min_zoom, max_zoom)
 
     def show_about(self):
