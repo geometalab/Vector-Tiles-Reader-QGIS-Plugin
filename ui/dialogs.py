@@ -1,6 +1,6 @@
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, QSettings
-from PyQt4.QtGui import QFileDialog
+from PyQt4.QtGui import QFileDialog, QMessageBox
 from dlg_file_connection import Ui_DlgFileConnection
 from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
@@ -165,6 +165,8 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
 
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
 
+    on_connect = pyqtSignal(str)
+
     _connections_array = "connections"
 
     def __init__(self):
@@ -175,6 +177,8 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.selected_connection = None
         self.cbxConnections.currentIndexChanged['QString'].connect(self._handle_connection_change)
         self.btnCreateConnection.clicked.connect(self._create_connection)
+        self.btnConnect.clicked.connect(self._on_connect)
+        self.btnDelete.clicked.connect(self._delete_connection)
         self._load_connections()
 
     def _load_connections(self):
@@ -190,6 +194,16 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         if len(self.connections) > 0:
             self.cbxConnections.setCurrentIndex(0)
 
+    def _delete_connection(self):
+        index = self.cbxConnections.currentIndex()
+        connection = self.cbxConnections.currentText()
+        msg = "Are you sure you want to remove the connection '{}' and all associated settings?".format(connection)
+        reply = QMessageBox.question(self.activateWindow(), 'Confirm Delete', msg, QMessageBox.Yes, QMessageBox.No)
+        if reply == QtGui.QMessageBox.Yes:
+            self.cbxConnections.removeItem(index)
+            self.connections.pop(connection)
+            self._save_connections()
+
     def _save_connections(self):
         settings = self.settings
         settings.beginWriteArray(self._connections_array)
@@ -202,6 +216,11 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     def _add_connection(self, name, url):
         self.connections[name] = url
 
+    def _on_connect(self):
+        name = self.cbxConnections.currentText()
+        if name in self.connections:
+            self.on_connect.emit(self.connections[name])
+
     def show(self):
         self.exec_()
 
@@ -212,6 +231,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         if result == QtGui.QDialog.Accepted:
             name, url = dlg.get_connection()
             self._add_connection(name, url)
+            self.cbxConnections.addItem(name)
             self._save_connections()
 
     def _handle_connection_change(self, name):
