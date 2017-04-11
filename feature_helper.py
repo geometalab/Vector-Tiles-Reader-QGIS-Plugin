@@ -75,7 +75,7 @@ class FeatureMerger:
     @staticmethod
     def _dissolve(layer):
         debug("Dissolving layer")
-        target_file = FileHelper.get_unique_file_name()
+        target_file = FileHelper.get_unique_geojson_file_name()
         processing.runalg("qgis:dissolve", layer, False, "dissolveGroup", target_file)
         dissolved_layer = QgsVectorLayer(target_file, "Dissolved", "ogr")
         return dissolved_layer
