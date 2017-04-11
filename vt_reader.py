@@ -58,7 +58,7 @@ class VtReader:
         :param iface: 
         :param mbtiles_path: 
         """
-
+        FileHelper.assure_temp_dirs_exist()
         self.iface = iface
         self.progress_handler = progress_handler
         self.is_web_source = mbtiles_path.lower().startswith("http://")
@@ -78,7 +78,6 @@ class VtReader:
         self.conn = None
         self.max_zoom = None
         self.min_zoom = None
-        FileHelper.clear_temp_dir()
         self.reinit()
 
     def reinit(self):
@@ -357,7 +356,7 @@ class VtReader:
         for index, feature_path in enumerate(feature_paths):
             target_group, layer_name = self._get_group_for_path(feature_path, root_group)
             feature_collection = self.features_by_path[feature_path]
-            file_src = FileHelper.get_unique_file_name()
+            file_src = FileHelper.get_unique_geojson_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)

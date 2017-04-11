@@ -8,6 +8,7 @@ import tempfile
 class FileHelper:
 
     recently_used_filename = "data.bin"
+    geojson_folder = "geojson"
 
     def __init__(self):
         pass
@@ -26,8 +27,11 @@ class FileHelper:
         return os.path.expanduser("~")
 
     @staticmethod
-    def get_temp_dir():
+    def get_temp_dir(path_extension=None):
         temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
+        if path_extension:
+            temp_dir = os.path.join(temp_dir, path_extension)
+
         return temp_dir
 
     @staticmethod
@@ -65,11 +69,20 @@ class FileHelper:
         return content
 
     @staticmethod
-    def get_unique_file_name(ending="geojson"):
-        # todo: use temp directory provided by OS
-        temp_dir = FileHelper.get_temp_dir()
-        unique_name = "{}.{}".format(uuid.uuid4(), ending)
-        return os.path.join(temp_dir, unique_name)
+    def assure_temp_dirs_exist():
+        FileHelper._assure_dir_exists(FileHelper.get_temp_dir())
+        FileHelper._assure_dir_exists(FileHelper.get_temp_dir(FileHelper.geojson_folder))
+
+    @staticmethod
+    def _assure_dir_exists(path):
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+    @staticmethod
+    def get_unique_geojson_file_name():
+        path = os.path.join(FileHelper.get_temp_dir(), FileHelper.geojson_folder)
+        unique_name = "{}.{}".format(uuid.uuid4(), "geojson")
+        return os.path.join(path, unique_name)
 
     @staticmethod
     def is_sqlite_db(path):
