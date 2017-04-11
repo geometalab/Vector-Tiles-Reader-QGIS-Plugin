@@ -1,5 +1,5 @@
 from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignal
+from PyQt4.QtCore import pyqtSignal, QSettings
 from PyQt4.QtGui import QFileDialog
 from dlg_file_connection import Ui_DlgFileConnection
 from dlg_server_connections import Ui_DlgServerConnections
@@ -164,13 +164,43 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
 
 
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
+
+    _connections_array = "connections"
+
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
-        self.connections = []
+        self.settings = QSettings("VtrSettings")
+        self.connections = {}
         self.selected_connection = None
-        self.cbxConnections.currentIndexChanged.connect(self._handle_connection_change)
+        self.cbxConnections.currentIndexChanged['QString'].connect(self._handle_connection_change)
         self.btnCreateConnection.clicked.connect(self._create_connection)
+        self._load_connections()
+
+    def _load_connections(self):
+        settings = self.settings
+        connections = settings.beginReadArray(self._connections_array)
+        for i in range(connections):
+            settings.setArrayIndex(i)
+            name = settings.value("name")
+            url = settings.value("url")
+            self._add_connection(name, url)
+        settings.endArray()
+        self.cbxConnections.addItems(self.connections.keys())
+        if len(self.connections) > 0:
+            self.cbxConnections.setCurrentIndex(0)
+
+    def _save_connections(self):
+        settings = self.settings
+        settings.beginWriteArray(self._connections_array)
+        for index, key in enumerate(self.connections):
+            settings.setArrayIndex(index)
+            settings.setValue("name", key)
+            settings.setValue("url", self.connections[key])
+        settings.endArray()
+
+    def _add_connection(self, name, url):
+        self.connections[name] = url
 
     def show(self):
         self.exec_()
@@ -181,20 +211,13 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         print(result)
         if result == QtGui.QDialog.Accepted:
             name, url = dlg.get_connection()
-            print("Connection created: {}".format(url))
-            # self.connections.append(conn)
-            # self.cbxConnections.setCurrentIndex(len(self.connections)-1)
-        else:
-            print("cancelled")
+            self._add_connection(name, url)
+            self._save_connections()
 
-
-    def _handle_connection_change(self, index):
-        if self.cbxConnections.currentIndex():
-            new_conn = self.connections[self.cbxConnections.currentIndex()]
-            if not self.selected_connection or new_conn.url != self.selected_connection.url:
-                self.selected_connection = new_conn
+    def _handle_connection_change(self, name):
+        print("connection changed to: {}".format(name))
         enable = False
-        if self.selected_connection:
+        if name in self.connections:
             enable = True
         self.btnConnect.setEnabled(enable)
         self.btnEdit.setEnabled(enable)
@@ -213,11 +236,10 @@ class EditServerConnection(QtGui.QDialog, Ui_DlgEditServerConnection):
             self.txtUrl.setText(url)
 
     def _update_save_btn_state(self):
-        url = self.txtUrl.text()
-        if self.txtName.text() and url and url.lower().startswith("http://") and url.lower().endswith(".json"):
-            self.btnSave.setEnabled(True)
-        else:
-            self.btnSave.setEnabled(False)
+        enable = False
+        if self.txtName.text() and self.txtUrl.text():
+            enable = True
+        self.btnSave.setEnabled(enable)
 
     def get_connection(self):
         return self.txtName.text(), self.txtUrl.text()
