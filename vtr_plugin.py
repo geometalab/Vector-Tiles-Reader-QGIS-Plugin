@@ -180,8 +180,6 @@ class VtrPlugin:
             self.progress_dialog.set_message(msg)
         if progress:
             self.progress_dialog.set_progress(progress)
-        if self.progress_dialog.isVisible() and not self.progress_dialog.isActiveWindow():
-            self.progress_dialog.activateWindow()
 
     def _add_path_to_dependencies_to_syspath(self):
         """
