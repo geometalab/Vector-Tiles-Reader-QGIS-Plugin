@@ -19,6 +19,7 @@ from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
+from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
 
 import os
@@ -39,6 +40,7 @@ class VtrPlugin:
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
         self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
         self.server_dialog = ServerConnectionDialog()
+        self.server_dialog.on_connect.connect(self._on_connect)
 
     def initGui(self):
         self._load_recently_used()
@@ -51,6 +53,12 @@ class VtrPlugin:
         self.add_menu()
         self.progress_dialog = ProgressDialog()
         info("Vector Tile Reader Plugin loaded...")
+
+    def _on_connect(self, url):
+        debug("Connect to url: {}", url)
+        tilejson = TileJSON(url)
+        if tilejson.load():
+            layers = tilejson.vector_layers()
 
     def _update_zoom_from_file(self, path):
         min_zoom = None
