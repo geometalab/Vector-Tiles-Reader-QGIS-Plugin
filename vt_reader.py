@@ -61,7 +61,7 @@ class VtReader:
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
         self.progress_handler = progress_handler
-        self.is_web_source = mbtiles_path.lower().startswith("http://")
+        self.is_web_source = mbtiles_path.lower().startswith("http://") or mbtiles_path.lower().startswith("https://")
         if self.is_web_source:
             content = FileHelper.load_url(url=mbtiles_path, size=2)
             if not FileHelper.is_mapbox_pbf(content=content):
@@ -145,7 +145,7 @@ class VtReader:
 
     def _load_tiles_from_url(self):
         content = FileHelper.load_url(self._current_mbtiles_path)
-        tile = VectorTile(14, 8568, 10636)
+        tile = VectorTile(14, 8463, 8097)
         return tile, content
 
     def _close_connection(self):

@@ -41,6 +41,7 @@ class VtrPlugin:
         self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
         self.server_dialog = ServerConnectionDialog()
         self.server_dialog.on_connect.connect(self._on_connect)
+        self.server_dialog.on_add.connect(self._on_add_server_layer)
 
     def initGui(self):
         self._load_recently_used()
@@ -59,6 +60,22 @@ class VtrPlugin:
         tilejson = TileJSON(url)
         if tilejson.load():
             layers = tilejson.vector_layers()
+            self.server_dialog.set_layers(layers)
+        else:
+            self.server_dialog.set_layers([])
+            tilejson = None
+        self.tilejson = tilejson
+
+    def _on_add_server_layer(self):
+        assert self.tilejson
+        url = self.tilejson.tiles()[0]
+        apply_styles = self.server_dialog.apply_styles_enabled()
+        merge_tiles = self.server_dialog.merge_tiles_enabled()
+        debug("Add layer: {}", url)
+        url = url.replace("{z}", "14").replace("{x}", "8463").replace("{y}", "8097")
+        reader = self._create_reader(url)
+        reader.load_vector_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+
 
     def _update_zoom_from_file(self, path):
         min_zoom = None
