@@ -48,6 +48,7 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.rbZoomAuto.setEnabled(False)
         self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
         self.lblError.setVisible(False)
+        self.lblZoomRange.setText("")
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom:
