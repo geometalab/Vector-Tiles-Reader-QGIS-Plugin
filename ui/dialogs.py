@@ -139,8 +139,8 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
 
 class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
-    def __init__(self):
-        QtGui.QDialog.__init__(self)
+    def __init__(self, parent=None):
+        QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
         self.lblMessage.setVisible(False)
 
