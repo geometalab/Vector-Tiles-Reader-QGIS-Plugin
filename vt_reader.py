@@ -109,7 +109,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
+    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load

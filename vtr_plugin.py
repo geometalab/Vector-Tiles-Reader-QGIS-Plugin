@@ -74,7 +74,7 @@ class VtrPlugin:
         debug("Add layer: {}", url)
         url = url.replace("{z}", "14").replace("{x}", "8463").replace("{y}", "8097")
         reader = self._create_reader(url)
-        reader.load_vector_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+        reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
 
 
     def _update_zoom_from_file(self, path):
@@ -128,7 +128,7 @@ class VtrPlugin:
         # todo: remove hardcoded url
         url = "http://192.168.0.18:6767/planet_osm_polygon/14/8568/5747.pbf"
         reader = self._create_reader(url)
-        reader.load_vector_tiles(14)
+        reader.load_tiles(14)
 
     # def _add_recently_used(self, path):
     #     if path not in self.recently_used:
@@ -165,7 +165,7 @@ class VtrPlugin:
                         zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
                     if zoom:
                         debug("Zoom: {}", zoom)
-                        reader.load_vector_tiles(
+                        reader.load_tiles(
                             zoom_level=zoom,
                             load_mask_layer=False,
                             merge_tiles=merge_tiles,
