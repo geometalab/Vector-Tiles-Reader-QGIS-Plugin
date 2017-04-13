@@ -78,15 +78,6 @@ class VtReader:
         self.conn = None
         self.max_zoom = None
         self.min_zoom = None
-        self.reinit()
-
-    def reinit(self):
-        """
-         * Reinitializes the VtReader
-         >> Cleans the temp directory
-         >> Cleans the feature cache
-         >> Cleans the qgis group cache
-        """
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
 
@@ -123,8 +114,7 @@ class VtReader:
         self._update_progress(title="Loading '{}'".format(os.path.basename(self._current_mbtiles_path)))
         self._update_progress(show_dialog=True)
         mbtiles_path = self._current_mbtiles_path
-        debug("Loading vector tiles: {}", mbtiles_path)
-        self.reinit()
+        debug("Loading zoom level '{}' of: {}", zoom_level, mbtiles_path)
 
         tile_data_tuples = []
         if self.is_web_source:
@@ -138,7 +128,10 @@ class VtReader:
                     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
-        self._create_qgis_layer_hierarchy(merge_features=merge_tiles, mbtiles_path=mbtiles_path, apply_styles=apply_styles)
+        self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
+                                          merge_features=merge_tiles,
+                                          mbtiles_path=mbtiles_path,
+                                          apply_styles=apply_styles)
         self._close_connection()
         self._update_progress(show_dialog=False)
         info("Import complete!")
@@ -342,14 +335,17 @@ class VtReader:
             return
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self, merge_features, mbtiles_path, apply_styles):
+    def _create_qgis_layer_hierarchy(self, zoom_level, merge_features, mbtiles_path, apply_styles):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
         debug("Creating hierarchy in QGIS")
         root = QgsProject.instance().layerTreeRoot()
-        group_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
-        root_group = root.addGroup(group_name)
+        base_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
+        group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
+        root_group = root.findGroup(group_name)
+        if not root_group:
+            root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
         layers = []
