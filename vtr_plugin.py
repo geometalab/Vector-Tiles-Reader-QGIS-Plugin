@@ -160,10 +160,11 @@ class VtrPlugin:
                     max_zoom = reader.get_max_zoom()
                     min_zoom = reader.get_min_zoom()
                     debug("valid zoom range: {} - {}", min_zoom, max_zoom)
+                    debug("manual zoom: {}", manual_zoom)
                     zoom = max_zoom
-                    if manual_zoom:
+                    if manual_zoom is not None:
                         zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
-                    if zoom:
+                    if zoom is not None:
                         debug("Zoom: {}", zoom)
                         reader.load_tiles(
                             zoom_level=zoom,

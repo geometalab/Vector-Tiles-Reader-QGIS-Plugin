@@ -243,11 +243,11 @@ class VtReader:
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""
-        if zoom_level:
+        if zoom_level is not None:
             where_clause = "WHERE zoom_level = {}".format(zoom_level)
 
         limit = ""
-        if max_tiles:
+        if max_tiles is not None:
             limit = "LIMIT {}".format(max_tiles)
 
         sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};".format(where_clause, limit)
