@@ -6,7 +6,7 @@ from GlobalMapTiles import GlobalMercator
 
 class TileJSON:
     """
-     * Helper class to process a TileJSON url v2.2.0
+     * Wrapper for TileJSON v2.2.0
      * https://github.com/mapbox/tilejson-spec/tree/master/2.2.0
     """
     def __init__(self, url):
