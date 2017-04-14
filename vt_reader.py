@@ -3,7 +3,7 @@ import sys
 import os
 import json
 import numbers
-from VectorTileHelper import VectorTile
+from tile_helper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry

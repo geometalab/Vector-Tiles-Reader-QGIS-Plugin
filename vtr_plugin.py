@@ -14,11 +14,12 @@ of the License, or (at your option) any later version.
 """
 
 from PyQt4.QtCore import QSettings
-from PyQt4.QtGui import QColor, QAction, QIcon, QMenu, QToolButton, QFileDialog, QMessageBox
+from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
+from tile_helper import tile_bounds
 from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
 
@@ -33,7 +34,9 @@ class VtrPlugin:
     add_layer_action = None
 
     def __init__(self, iface):
+        self._add_path_to_dependencies_to_syspath()
         self.iface = iface
+        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self.recently_used = []
         self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
@@ -54,6 +57,28 @@ class VtrPlugin:
         self.add_menu()
         self.progress_dialog = ProgressDialog()
         info("Vector Tile Reader Plugin loaded...")
+
+    def _on_map_extent_changed(self):
+        pass
+
+    def _get_visible_extent_as_tile_bounds(self, ):
+        import pyproj
+        e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
+        e = map(lambda x: map(float, x.split(" ")), e)
+        min_extent = e[0]
+        max_extent = e[1]
+        wgs84 = pyproj.Proj("+init=EPSG:4326")
+        espg3857 = pyproj.Proj("+init=EPSG:3857")
+        min_proj = pyproj.transform(espg3857, wgs84, min_extent[0], min_extent[1])
+        max_proj = pyproj.transform(espg3857, wgs84, max_extent[0], max_extent[1])
+
+        bounds = []
+        bounds.extend(min_proj)
+        bounds.extend(max_proj)
+
+        tile = tile_bounds(14, bounds)
+        return tile
+
 
     def _on_connect(self, url):
         debug("Connect to url: {}", url)
@@ -185,7 +210,6 @@ class VtrPlugin:
         return max(minimum, min(x, maximum))
 
     def _create_reader(self, mbtiles_path):
-        self._add_path_to_dependencies_to_syspath()
         # A lazy import is required because the vtreader depends on the external libs
         from vt_reader import VtReader
         reader = None
