@@ -2,7 +2,7 @@ import sys
 import urllib2
 import json
 from log_helper import critical, debug
-from GlobalMapTiles import GlobalMercator
+from tile_helper import coordinate_to_tile, tile_bounds
 
 class TileJSON:
     """
@@ -36,38 +36,15 @@ class TileJSON:
             assert len(bounds) == 4
         return bounds
 
-    def bounds_tile(self, zoom, manual_bounds=None):
+    def bounds_tile(self, zoom):
         """
          * Returns the tile boundaries in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
         :param zoom: 
         :param manual_bounds: 
-        :return: 
-        """
+        :return:         """
 
         bounds = self.bounds_longlat()
-        if manual_bounds:
-            bounds = manual_bounds
-        bounds_tile = None
-        if bounds:
-            lng_min = bounds[0]
-            lat_min = bounds[1]
-            lng_max = bounds[2]
-            lat_max = bounds[3]
-
-            xy_min = self._coordinate_to_tile(zoom, lat_max, lng_min)
-            xy_max = self._coordinate_to_tile(zoom, lat_min, lng_max)
-
-            # print("xy_min: ", xy_min)
-            # print("xy_max: ", xy_max)
-            bounds_tile = [xy_min, xy_max]
-        return bounds_tile
-
-    def _coordinate_to_tile(self, zoom, lat, lng):
-        gm = GlobalMercator()
-        m = gm.LatLonToMeters(lat, lng)
-        t = gm.MetersToTile(m[0], m[1], zoom)
-        tile = gm.GoogleTile(t[0], t[1], zoom)
-        return tile
+        return tile_bounds(zoom, bounds)
 
     def vector_layers(self):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
