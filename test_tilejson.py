@@ -1,6 +1,6 @@
 from tile_json import TileJSON
 import pytest
-from tile_helper import tile_bounds, coordinate_to_tile
+from tile_helper import get_tile_bounds, coordinate_to_tile
 
 def test_load():
     tj = _get_loaded()
@@ -15,7 +15,7 @@ def test_bounds():
 def test_manual_bounds():
     # boundary for mbtiles zurich 4 tiles in bottom left corner
     b = [8.268328, 47.222658, 8.298712, 47.243988]
-    t = tile_bounds(14, b)
+    t = get_tile_bounds(14, b)
     assert t[0] == (8568, 5746)
     assert t[1] == (8569, 5747)
 

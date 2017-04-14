@@ -22,7 +22,7 @@ def coordinate_to_tile(zoom, lat, lng):
     return tile
 
 
-def tile_bounds(zoom, bounds):
+def get_tile_bounds(zoom, bounds):
     """
      * Returns the tile boundaries in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param zoom: 

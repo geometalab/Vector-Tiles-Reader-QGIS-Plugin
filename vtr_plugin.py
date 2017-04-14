@@ -19,7 +19,7 @@ from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
-from tile_helper import tile_bounds
+from tile_helper import get_tile_bounds
 from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
 
@@ -59,9 +59,10 @@ class VtrPlugin:
         info("Vector Tile Reader Plugin loaded...")
 
     def _on_map_extent_changed(self):
-        pass
+        b = self._get_visible_extent_as_tile_bounds()
+        print(b)
 
-    def _get_visible_extent_as_tile_bounds(self, ):
+    def _get_visible_extent_as_tile_bounds(self):
         import pyproj
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
         e = map(lambda x: map(float, x.split(" ")), e)
@@ -76,9 +77,8 @@ class VtrPlugin:
         bounds.extend(min_proj)
         bounds.extend(max_proj)
 
-        tile = tile_bounds(14, bounds)
+        tile = get_tile_bounds(14, bounds=bounds)
         return tile
-
 
     def _on_connect(self, url):
         debug("Connect to url: {}", url)
@@ -97,9 +97,28 @@ class VtrPlugin:
         apply_styles = self.server_dialog.apply_styles_enabled()
         merge_tiles = self.server_dialog.merge_tiles_enabled()
         debug("Add layer: {}", url)
-        url = url.replace("{z}", "14").replace("{x}", "8463").replace("{y}", "8097")
-        reader = self._create_reader(url)
-        reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+
+        tiles = self._get_tiles_to_load(14)
+        for t in tiles:
+            zoom = str(t[0])
+            col = str(t[1])
+            row = str(t[2])
+            newurl = url.replace("{z}", zoom).replace("{x}", col).replace("{y}", row)
+            reader = self._create_reader(newurl)
+            reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+
+    def _get_tiles_to_load(self, zoom):
+        extent = self._get_visible_extent_as_tile_bounds()
+        nr_tiles_x = extent[1][0] - extent[0][0] + 1
+        nr_tiles_y = extent[1][1] - extent[0][1] + 1
+        tiles = []
+        for x in range(nr_tiles_x):
+            for y in range(nr_tiles_y):
+                col = x + extent[0][0]
+                row = y + extent[0][1]
+                tiles.append((zoom, col, row))
+        debug("tiles to load: {}", tiles)
+        return tiles
 
 
     def _update_zoom_from_file(self, path):
