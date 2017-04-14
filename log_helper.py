@@ -38,6 +38,8 @@ def _log_message(msg, level, *args):
             logging.critical(msg)
         elif level == _DEBUG:
             logging.debug(msg)
+
+        if level != _INFO:
             print(msg)
 
         _log_to_qgis(msg, level)
@@ -62,7 +64,7 @@ def _log_to_qgis(msg, level):
     elif level == _INFO:
         qgis_level = qgis.QgsMessageLog.INFO
     elif level == _WARN:
-        qgis_level = qgis.QgsMessageLog.WARN
+        qgis_level = qgis.QgsMessageLog.WARNING
     elif level == _CRITICAL:
         qgis_level = qgis.QgsMessageLog.CRITICAL
 

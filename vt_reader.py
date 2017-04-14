@@ -65,8 +65,9 @@ class VtReader:
         if self.is_web_source:
             content = FileHelper.load_url(url=mbtiles_path, size=2)
             if not FileHelper.is_mapbox_pbf(content=content):
-                warn("The specified url doesnt provide valid Mapbox pbf")
-                raise RuntimeError("This is not a valid url")
+                warn("The specified url doesnt provide valid Mapbox pbf", "")
+                raise RuntimeError("The url '{}' doesn't provide a gzipped pbf and cannot be loaded."
+                                   .format(mbtiles_path))
             else:
                 debug("The url provides valid Mapbox pbf")
         else:

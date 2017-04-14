@@ -1,8 +1,8 @@
 import sys
-import urllib2
 import json
 from log_helper import critical, debug
 from tile_helper import get_tile_bounds
+from file_helper import FileHelper
 
 class TileJSON:
     """
@@ -14,19 +14,22 @@ class TileJSON:
         self.json = None
 
     def load(self):
-        self._set_debug_json()
-        return True
+        # todo: disable after debugging
+        # self._set_debug_json()
+        # return True
 
+        debug("Loading TileJSON")
         success = False
         try:
-            response = urllib2.urlopen(self.url)
-            data = response.read()
+            data = FileHelper.load_url(self.url)
             self.json = json.loads(data)
-            debug("TileJSON loaded: {}", self.json)
-            success = True
-        except urllib2.HTTPError as e:
-            critical("HTTP error {}: {}", e.code, e.message)
+            if self.json:
+                debug("TileJSON loaded: {}", self.json)
+                success = True
+            else:
+                debug("Loading TileJSON failed")
         except:
+            print("error")
             critical("Loading TileJSON failed ({}): {}", self.url, sys.exc_info())
         return success
 
