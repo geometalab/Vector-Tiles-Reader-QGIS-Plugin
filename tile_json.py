@@ -2,7 +2,7 @@ import sys
 import urllib2
 import json
 from log_helper import critical, debug
-from tile_helper import coordinate_to_tile, tile_bounds
+from tile_helper import get_tile_bounds
 
 class TileJSON:
     """
@@ -44,7 +44,7 @@ class TileJSON:
         :return:         """
 
         bounds = self.bounds_longlat()
-        return tile_bounds(zoom, bounds)
+        return get_tile_bounds(zoom, bounds)
 
     def vector_layers(self):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
