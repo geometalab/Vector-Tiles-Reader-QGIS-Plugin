@@ -104,8 +104,13 @@ class VtrPlugin:
             col = str(t[1])
             row = str(t[2])
             newurl = url.replace("{z}", zoom).replace("{x}", col).replace("{y}", row)
+            debug("Loading url: {}", newurl)
             reader = self._create_reader(newurl)
-            reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+            if reader:
+                reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+
+            # todo: remove after debugging
+            break
 
     def _get_tiles_to_load(self, zoom):
         extent = self._get_visible_extent_as_tile_bounds()

@@ -3,6 +3,7 @@ import glob
 import uuid
 import urllib2
 import tempfile
+from log_helper import critical
 
 
 class FileHelper:
@@ -57,15 +58,15 @@ class FileHelper:
         :param size: The nr of bytes to read, None if all should be read
         :return: 
         """
-        req = urllib2.Request(url)
+        req = urllib2.Request(url, headers={'User-Agent': "Magic Browser"})
         content = None
         try:
             response = urllib2.urlopen(req)
             content = response.read(size)
         except urllib2.HTTPError as e:
-            print("Opening url failed with error code '{}': {}".format(e.code, url))
+            critical("Opening url failed with error code '{}': {}", e.code, url)
         except urllib2.URLError:
-            print("The URL seems to be invalid")
+            critical("The URL seems to be invalid: {}", url)
         return content
 
     @staticmethod
