@@ -60,16 +60,13 @@ class VtReader:
         """
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
+        self.is_gzipped = True
         self.progress_handler = progress_handler
         self.is_web_source = mbtiles_path.lower().startswith("http://") or mbtiles_path.lower().startswith("https://")
         if self.is_web_source:
             content = FileHelper.load_url(url=mbtiles_path, size=2)
-            if not FileHelper.is_mapbox_pbf(content=content):
-                warn("The specified url doesnt provide valid Mapbox pbf", "")
-                raise RuntimeError("The url '{}' doesn't provide a gzipped pbf and cannot be loaded."
-                                   .format(mbtiles_path))
-            else:
-                debug("The url provides valid Mapbox pbf")
+            self.is_gzipped = FileHelper.is_gzipped(content=content)
+            debug("PBF is gzipped: {}", self.is_gzipped)
         else:
             is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
             if not is_sqlite_db:
@@ -271,7 +268,7 @@ class VtReader:
             if len(tile_data_tuples) == 1:
                 undecoded_data = tile_data_tuples[0][1]
                 if undecoded_data:
-                    is_mapbox_pbf = FileHelper.is_mapbox_pbf(undecoded_data)
+                    is_mapbox_pbf = FileHelper.is_gzipped(undecoded_data)
                     if is_mapbox_pbf:
                         debug("File is valid mbtiles")
                     else:
@@ -329,7 +326,10 @@ class VtReader:
 
     def _decode_binary_tile_data(self, data):
         try:
-            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+            if self.is_gzipped:
+                file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+            else:
+                file_content = data
             decoded_data = mapbox_vector_tile.decode(file_content)
         except:
             critical("decoding data with mapbox_vector_tile failed", sys.exc_info())

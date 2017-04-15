@@ -96,7 +96,7 @@ class FileHelper:
         return header_matching
 
     @staticmethod
-    def is_mapbox_pbf(content):
+    def is_gzipped(content):
         result = False
         if len(content) >= 2:
             gzip_headers = bytearray([0x1f, 0x8b])
