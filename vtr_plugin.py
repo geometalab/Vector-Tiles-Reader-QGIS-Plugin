@@ -100,6 +100,7 @@ class VtrPlugin:
         debug("Add layer: {}", url)
 
         tiles = self._get_tiles_to_load(14)
+        debug("{} tiles will be loaded from the server", len(tiles))
         for t in tiles:
             zoom = str(t[0])
             col = str(t[1])
@@ -108,7 +109,7 @@ class VtrPlugin:
             debug("Loading url: {}", newurl)
             reader = self._create_reader(newurl)
             if reader:
-                reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles)
+                reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles, tile_x=col, tile_y=row)
 
             # todo: remove after debugging
             break
@@ -173,12 +174,6 @@ class VtrPlugin:
                              merge_tiles=merge_tiles,
                              tile_number_limit=tile_number_limit,
                              manual_zoom=manual_zoom)
-
-    def _load_from_url(self):
-        # todo: remove hardcoded url
-        url = "http://192.168.0.18:6767/planet_osm_polygon/14/8568/5747.pbf"
-        reader = self._create_reader(url)
-        reader.load_tiles(14)
 
     # def _add_recently_used(self, path):
     #     if path not in self.recently_used:

@@ -60,14 +60,9 @@ class VtReader:
         """
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
-        self.is_gzipped = True
         self.progress_handler = progress_handler
         self.is_web_source = mbtiles_path.lower().startswith("http://") or mbtiles_path.lower().startswith("https://")
-        if self.is_web_source:
-            content = FileHelper.load_url(url=mbtiles_path, size=2)
-            self.is_gzipped = FileHelper.is_gzipped(content=content)
-            debug("PBF is gzipped: {}", self.is_gzipped)
-        else:
+        if not self.is_web_source:
             is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
             if not is_sqlite_db:
                 raise RuntimeError("The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(mbtiles_path))
@@ -98,7 +93,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
+    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None, tile_x=None, tile_y=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
@@ -129,7 +124,9 @@ class VtReader:
         self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
                                           merge_features=merge_tiles,
                                           mbtiles_path=mbtiles_path,
-                                          apply_styles=apply_styles)
+                                          apply_styles=apply_styles,
+                                          col=tile_x,
+                                          row=tile_y)
         self._close_connection()
         self._update_progress(show_dialog=False)
         info("Import complete!")
@@ -326,7 +323,8 @@ class VtReader:
 
     def _decode_binary_tile_data(self, data):
         try:
-            if self.is_gzipped:
+            is_gzipped = FileHelper.is_gzipped(data)
+            if is_gzipped:
                 file_content = GzipFile('', 'r', 0, StringIO(data)).read()
             else:
                 file_content = data
@@ -336,14 +334,19 @@ class VtReader:
             return
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self, zoom_level, merge_features, mbtiles_path, apply_styles):
+    def _create_qgis_layer_hierarchy(self, zoom_level, merge_features, mbtiles_path, apply_styles, col=None, row=None):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
         debug("Creating hierarchy in QGIS")
         root = QgsProject.instance().layerTreeRoot()
-        base_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
-        group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
+        if not self.is_web_source:
+            base_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
+            group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
+        else:
+            assert col
+            assert row
+            group_name = "{}_{}{}{}".format(col, row, self._zoom_level_delimiter, zoom_level)
         root_group = root.findGroup(group_name)
         if not root_group:
             root_group = root.addGroup(group_name)
