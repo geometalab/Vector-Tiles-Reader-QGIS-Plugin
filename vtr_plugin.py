@@ -59,8 +59,9 @@ class VtrPlugin:
         info("Vector Tile Reader Plugin loaded...")
 
     def _on_map_extent_changed(self):
-        b = self._get_visible_extent_as_tile_bounds()
-        print(b)
+        # b = self._get_visible_extent_as_tile_bounds()
+        # print(b)
+        pass
 
     def _get_visible_extent_as_tile_bounds(self):
         import pyproj
