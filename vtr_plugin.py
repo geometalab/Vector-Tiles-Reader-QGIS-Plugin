@@ -26,6 +26,7 @@ from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, Server
 import os
 import sys
 import site
+import math
 
 
 class VtrPlugin:
@@ -63,7 +64,7 @@ class VtrPlugin:
         # print(b)
         pass
 
-    def _get_visible_extent_as_tile_bounds(self):
+    def _get_visible_extent_as_tile_bounds(self, tilejson_scheme):
         import pyproj
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
         e = map(lambda x: map(float, x.split(" ")), e)
@@ -78,7 +79,7 @@ class VtrPlugin:
         bounds.extend(min_proj)
         bounds.extend(max_proj)
 
-        tile = get_tile_bounds(14, bounds=bounds)
+        tile = get_tile_bounds(14, bounds=bounds, scheme=tilejson_scheme)
         return tile
 
     def _on_connect(self, url):
@@ -95,11 +96,12 @@ class VtrPlugin:
     def _on_add_server_layer(self):
         assert self.tilejson
         url = self.tilejson.tiles()[0]
+        scheme = self.tilejson.scheme()
         apply_styles = self.server_dialog.apply_styles_enabled()
         merge_tiles = self.server_dialog.merge_tiles_enabled()
         debug("Add layer: {}", url)
 
-        tiles = self._get_tiles_to_load(14)
+        tiles = self._get_tiles_to_load(14, scheme)
         debug("{} tiles will be loaded from the server", len(tiles))
         for t in tiles:
             zoom = str(t[0])
@@ -114,10 +116,10 @@ class VtrPlugin:
             # todo: remove after debugging
             break
 
-    def _get_tiles_to_load(self, zoom):
-        extent = self._get_visible_extent_as_tile_bounds()
-        nr_tiles_x = extent[1][0] - extent[0][0] + 1
-        nr_tiles_y = extent[1][1] - extent[0][1] + 1
+    def _get_tiles_to_load(self, zoom, scheme):
+        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
+        nr_tiles_x = int(math.fabs(extent[1][0] - extent[0][0]) + 1)
+        nr_tiles_y = int(math.fabs(extent[1][1] - extent[0][1]) + 1)
         tiles = []
         for x in range(nr_tiles_x):
             for y in range(nr_tiles_y):
