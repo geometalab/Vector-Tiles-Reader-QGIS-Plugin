@@ -1,4 +1,4 @@
-from GlobalMapTiles import GlobalMercator
+from global_map_tiles import GlobalMercator
 
 
 class VectorTile:

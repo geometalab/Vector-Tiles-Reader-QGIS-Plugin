@@ -7,7 +7,7 @@ from tile_helper import VectorTile
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
-from GlobalMapTiles import GlobalMercator
+from global_map_tiles import GlobalMercator
 from log_helper import info, warn, critical, debug
 from cStringIO import StringIO
 from gzip import GzipFile
