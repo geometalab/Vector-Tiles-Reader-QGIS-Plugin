@@ -8,16 +8,10 @@ from log_helper import critical
 
 class FileHelper:
 
-    recently_used_filename = "data.bin"
     geojson_folder = "geojson"
 
     def __init__(self):
         pass
-
-    @staticmethod
-    def get_recently_used_file():
-        path = os.path.join(FileHelper.get_temp_dir(), FileHelper.recently_used_filename)
-        return path
 
     @staticmethod
     def get_plugin_directory():

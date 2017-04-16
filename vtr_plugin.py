@@ -39,7 +39,6 @@ class VtrPlugin:
         self.iface = iface
         self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.recently_used = []
         self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
         self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
@@ -48,7 +47,6 @@ class VtrPlugin:
         self.server_dialog.on_add.connect(self._on_add_server_layer)
 
     def initGui(self):
-        self._load_recently_used()
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
         self.about_action = self._create_action("About", "", self.show_about)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
@@ -118,9 +116,6 @@ class VtrPlugin:
                                   tile_x=col,
                                   tile_y=row)
 
-            # todo: remove after debugging
-            break
-
     def _get_tiles_to_load(self, zoom, scheme):
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
         nr_tiles_x = int(math.fabs(extent[1][0] - extent[0][0]) + 1)
@@ -133,7 +128,6 @@ class VtrPlugin:
                 tiles.append((zoom, col, row))
         debug("tiles to load: {}", tiles)
         return tiles
-
 
     def _update_zoom_from_file(self, path):
         min_zoom = None
@@ -152,20 +146,13 @@ class VtrPlugin:
     def add_menu(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         open_file_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
-        open_server_action = self._create_action("Add Vector Tile Server Layer...", "folder.svg", self.server_dialog.show)
+        open_server_action = self._create_action("Add Vector Tile Server Layer...", "server.svg", self.server_dialog.show)
         self.popupMenu.addAction(self._create_action("Add Vector Tile Layer...", "folder.svg", self.file_dialog.show))
         self.popupMenu.addAction(open_server_action)
-        # self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
-        # self.recent = self.popupMenu.addMenu("Open Recent")
-        # debug("Recently used: {}", self.recently_used)
-        # for path in self.recently_used:
-        #     debug("Create action: {}", path)
-        #     self._add_recently_used(path)
-
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
-        # self.toolButton.setDefaultAction(open_file_action)
-        self.toolButton.setDefaultAction(open_server_action)
+        self.toolButton.setDefaultAction(open_file_action)
+        # self.toolButton.setDefaultAction(open_server_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
@@ -182,16 +169,9 @@ class VtrPlugin:
                              tile_number_limit=tile_number_limit,
                              manual_zoom=manual_zoom)
 
-    # def _add_recently_used(self, path):
-    #     if path not in self.recently_used:
-    #         self.recently_used.append(path)
-    #     self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
-
     def _load_from_disk(self, path, apply_styles, merge_tiles, tile_number_limit, manual_zoom):
         if path and os.path.isfile(path):
             debug("Load file: {}", path)
-            # self._add_recently_used(path)
-            # self._save_recently_used()
             self._load_mbtiles(path,
                                apply_styles=apply_styles,
                                merge_tiles=merge_tiles,
@@ -281,19 +261,3 @@ class VtrPlugin:
 
     def run(self):
         self.file_dialog.show()
-
-    def _load_recently_used(self):
-        recently_used = FileHelper.get_recently_used_file()
-        if os.path.isfile(recently_used):
-            with open(recently_used, 'r') as f:
-                for line in f:
-                    line = line.rstrip("\n")
-                    if os.path.isfile(line):
-                        debug("recently used: {}", line)
-                        self.recently_used.append(line)
-
-    def _save_recently_used(self):
-        recently_used = FileHelper.get_recently_used_file()
-        with open(recently_used, 'w') as f:
-            for path in self.recently_used:
-                f.write("{}\n".format(path))
