@@ -3,11 +3,11 @@ import sys
 import os
 import json
 import numbers
-from VectorTileHelper import VectorTile
+from tile_helper import VectorTile, change_scheme
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
-from GlobalMapTiles import GlobalMercator
+from global_map_tiles import GlobalMercator
 from log_helper import info, warn, critical, debug
 from cStringIO import StringIO
 from gzip import GzipFile
@@ -58,18 +58,11 @@ class VtReader:
         :param iface: 
         :param mbtiles_path: 
         """
-
+        FileHelper.assure_temp_dirs_exist()
         self.iface = iface
         self.progress_handler = progress_handler
-        self.is_web_source = mbtiles_path.lower().startswith("http://")
-        if self.is_web_source:
-            content = FileHelper.load_url(url=mbtiles_path, size=2)
-            if not FileHelper.is_mapbox_pbf(content=content):
-                warn("The specified url doesnt provide valid Mapbox pbf")
-                raise RuntimeError("This is not a valid url")
-            else:
-                debug("The url provides valid Mapbox pbf")
-        else:
+        self.is_web_source = mbtiles_path.lower().startswith("http://") or mbtiles_path.lower().startswith("https://")
+        if not self.is_web_source:
             is_sqlite_db = FileHelper.is_sqlite_db(mbtiles_path)
             if not is_sqlite_db:
                 raise RuntimeError("The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(mbtiles_path))
@@ -78,16 +71,7 @@ class VtReader:
         self.conn = None
         self.max_zoom = None
         self.min_zoom = None
-        FileHelper.clear_temp_dir()
-        self.reinit()
-
-    def reinit(self):
-        """
-         * Reinitializes the VtReader
-         >> Cleans the temp directory
-         >> Cleans the feature cache
-         >> Cleans the qgis group cache
-        """
+        self.scheme = None
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
 
@@ -110,7 +94,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_vector_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None):
+    def load_tiles(self, scheme, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None, tile_x=None, tile_y=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
@@ -124,29 +108,37 @@ class VtReader:
         self._update_progress(title="Loading '{}'".format(os.path.basename(self._current_mbtiles_path)))
         self._update_progress(show_dialog=True)
         mbtiles_path = self._current_mbtiles_path
-        debug("Loading vector tiles: {}", mbtiles_path)
-        self.reinit()
+        debug("Loading zoom level '{}' of: {}", zoom_level, mbtiles_path)
 
         tile_data_tuples = []
         if self.is_web_source:
-            tile_data_tuples.append(self._load_tiles_from_url())
+            tile_data_tuples.append(self._load_tiles_from_url(scheme, zoom_level, tile_x, tile_y))
         else:
-            tile_data_tuples = self._load_tiles_from_file(zoom_level, max_tiles=tilenumber_limit)
+            tile_data_tuples = self._load_tiles_from_file(scheme=scheme,
+                                                          zoom_level=zoom_level,
+                                                          max_tiles=tilenumber_limit)
             if load_mask_layer and not self.is_web_source:
                 mask_level = self._get_mask_level()
                 if mask_level:
-                    mask_layer_data = self._load_tiles_from_file(mask_level, max_tiles=tilenumber_limit)
+                    mask_layer_data = self._load_tiles_from_file(scheme=scheme,
+                                                                 zoom_level=mask_level,
+                                                                 max_tiles=tilenumber_limit)
                     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
-        self._create_qgis_layer_hierarchy(merge_features=merge_tiles, mbtiles_path=mbtiles_path, apply_styles=apply_styles)
+        self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
+                                          merge_features=merge_tiles,
+                                          mbtiles_path=mbtiles_path,
+                                          apply_styles=apply_styles,
+                                          col=tile_x,
+                                          row=tile_y)
         self._close_connection()
         self._update_progress(show_dialog=False)
         info("Import complete!")
 
-    def _load_tiles_from_url(self):
+    def _load_tiles_from_url(self, scheme, zoom, col, row):
         content = FileHelper.load_url(self._current_mbtiles_path)
-        tile = VectorTile(14, 8568, 10636)
+        tile = VectorTile(scheme, zoom, col, row)
         return tile, content
 
     def _close_connection(self):
@@ -200,6 +192,11 @@ class VtReader:
             self.min_zoom = self._get_zoom(max_zoom=False)
         return self.min_zoom
 
+    def get_scheme(self):
+        if not self.scheme:
+            self.scheme = self._get_metadata_value("scheme", default="tms")
+        return self.scheme
+
     def _get_zoom(self, max_zoom=True):
         if max_zoom:
             field_name = "maxzoom"
@@ -224,10 +221,13 @@ class VtReader:
                  "limit 1").format(order)
         return self._get_single_value(sql_query=query, field_name="zoom_level")
 
-    def _get_metadata_value(self, field_name):
+    def _get_metadata_value(self, field_name, default=None):
         debug("Loading metadata value '{}'", field_name)
         sql = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
-        return self._get_single_value(sql_query=sql, field_name=field_name)
+        value = self._get_single_value(sql_query=sql, field_name=field_name)
+        if default and not value:
+            value = default
+        return value
 
     def _get_single_value(self, sql_query, field_name):
         """
@@ -247,15 +247,15 @@ class VtReader:
             critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
-    def _load_tiles_from_file(self, zoom_level, max_tiles):
+    def _load_tiles_from_file(self, scheme, zoom_level, max_tiles):
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""
-        if zoom_level:
+        if zoom_level is not None:
             where_clause = "WHERE zoom_level = {}".format(zoom_level)
 
         limit = ""
-        if max_tiles:
+        if max_tiles is not None:
             limit = "LIMIT {}".format(max_tiles)
 
         sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};".format(where_clause, limit)
@@ -263,7 +263,7 @@ class VtReader:
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
         for row in rows:
-            tile_data_tuples.append(self._create_tile(row))
+            tile_data_tuples.append(self._create_tile(scheme, row))
         return tile_data_tuples
 
     def is_mapbox_vector_tile(self):
@@ -274,11 +274,12 @@ class VtReader:
         debug("Checking if file corresponds to Mapbox format (i.e. gzipped)")
         is_mapbox_pbf = False
         try:
-            tile_data_tuples = self._load_tiles_from_file(max_tiles=1, zoom_level=None)
+            scheme = self.get_scheme()
+            tile_data_tuples = self._load_tiles_from_file(scheme=scheme, max_tiles=1, zoom_level=None)
             if len(tile_data_tuples) == 1:
                 undecoded_data = tile_data_tuples[0][1]
                 if undecoded_data:
-                    is_mapbox_pbf = FileHelper.is_mapbox_pbf(undecoded_data)
+                    is_mapbox_pbf = FileHelper.is_gzipped(undecoded_data)
                     if is_mapbox_pbf:
                         debug("File is valid mbtiles")
                     else:
@@ -288,12 +289,12 @@ class VtReader:
         return is_mapbox_pbf
 
     @staticmethod
-    def _create_tile(row):
+    def _create_tile(scheme, row):
         zoom_level = row["zoom_level"]
         tile_col = row["tile_column"]
         tile_row = row["tile_row"]
         binary_data = row["tile_data"]
-        tile = VectorTile(zoom_level, tile_col, tile_row)
+        tile = VectorTile(scheme, zoom_level, tile_col, tile_row)
         return tile, binary_data
 
     def _get_from_db(self, sql):
@@ -336,28 +337,40 @@ class VtReader:
 
     def _decode_binary_tile_data(self, data):
         try:
-            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+            is_gzipped = FileHelper.is_gzipped(data)
+            if is_gzipped:
+                file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+            else:
+                file_content = data
             decoded_data = mapbox_vector_tile.decode(file_content)
         except:
             critical("decoding data with mapbox_vector_tile failed", sys.exc_info())
             return
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self, merge_features, mbtiles_path, apply_styles):
+    def _create_qgis_layer_hierarchy(self, zoom_level, merge_features, mbtiles_path, apply_styles, col=None, row=None):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
         debug("Creating hierarchy in QGIS")
         root = QgsProject.instance().layerTreeRoot()
-        group_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
-        root_group = root.addGroup(group_name)
+        if not self.is_web_source:
+            base_name = os.path.splitext(os.path.basename(mbtiles_path))[0]
+            group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
+        else:
+            assert col
+            assert row
+            group_name = "{}_{}{}{}".format(col, row, self._zoom_level_delimiter, zoom_level)
+        root_group = root.findGroup(group_name)
+        if not root_group:
+            root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
         self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
         layers = []
         for index, feature_path in enumerate(feature_paths):
             target_group, layer_name = self._get_group_for_path(feature_path, root_group)
             feature_collection = self.features_by_path[feature_path]
-            file_src = FileHelper.get_unique_file_name()
+            file_src = FileHelper.get_unique_geojson_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)
@@ -577,11 +590,15 @@ class VtReader:
     @staticmethod
     def _transform_to_epsg3857(coordinates, tile):
         """
-        Does a mercator transformation on the specified coordinate tuple
+         * Transforms the tile x/y to EPSG:3857 coordinates
+         * Currently works only with the tms scheme
         """
-        # calculate the mercator geometry using external library
-        # geometry:: 0: zoom, 1: easting, 2: northing
-        tmp = GlobalMercator().TileBounds(tile.column, tile.row, tile.zoom_level)
+
+        row = tile.row
+        if tile.scheme != "tms":
+            row = change_scheme(tile.zoom_level, row)
+
+        tmp = GlobalMercator().TileBounds(tile.column, row, tile.zoom_level)
         delta_x = tmp[2] - tmp[0]
         delta_y = tmp[3] - tmp[1]
         merc_easting = int(tmp[0] + delta_x / VtReader._extent * coordinates[0])

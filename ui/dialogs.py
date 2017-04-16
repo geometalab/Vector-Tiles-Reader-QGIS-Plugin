@@ -1,6 +1,6 @@
 from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignal
-from PyQt4.QtGui import QFileDialog
+from PyQt4.QtCore import pyqtSignal, QSettings
+from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem
 from dlg_file_connection import Ui_DlgFileConnection
 from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
@@ -139,8 +139,8 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
 
 class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
-    def __init__(self):
-        QtGui.QDialog.__init__(self)
+    def __init__(self, parent=None):
+        QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
         self.lblMessage.setVisible(False)
 
@@ -165,12 +165,137 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
 
 
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
+
+    on_connect = pyqtSignal(str)
+    on_add = pyqtSignal()
+
+    _connections_array = "connections"
+    _table_headers = ["ID"]
+
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
+        self.settings = QSettings("VtrSettings")
+        self.connections = {}
+        self.selected_connection = None
+        self.selected_layer_id = None
+        self.cbxConnections.currentIndexChanged['QString'].connect(self._handle_connection_change)
+        self.btnCreateConnection.clicked.connect(self._create_connection)
+        self.btnConnect.clicked.connect(self._on_connect)
+        self.btnDelete.clicked.connect(self._delete_connection)
+        self.btnAdd.clicked.connect(self.on_add)
+        self._load_connections()
+
+    def _load_connections(self):
+        settings = self.settings
+        connections = settings.beginReadArray(self._connections_array)
+        for i in range(connections):
+            settings.setArrayIndex(i)
+            name = settings.value("name")
+            url = settings.value("url")
+            self._add_connection(name, url)
+        settings.endArray()
+        self.cbxConnections.addItems(self.connections.keys())
+        if len(self.connections) > 0:
+            self.cbxConnections.setCurrentIndex(0)
+
+    def apply_styles_enabled(self):
+        return self.chkApplyStyles.isChecked()
+
+    def merge_tiles_enabled(self):
+        return self.chkMergeTiles.isChecked()
+
+    # def _selected_layer_changed(self):
+    #     layer_id = None
+    #     for index in self.tblLayers.selectionModel().selectedRows():
+    #         layer_id = index.data()
+    #         print("selected: {}".format(layer_id))
+    #         break
+    #     self.btnAdd.setEnabled(layer_id is not None)
+    #     self.selected_layer_id = layer_id
+
+    def _add_layer(self):
+        self.on_add.emit(self.selected_layer_id)
+
+    def _delete_connection(self):
+        index = self.cbxConnections.currentIndex()
+        connection = self.cbxConnections.currentText()
+        msg = "Are you sure you want to remove the connection '{}' and all associated settings?".format(connection)
+        reply = QMessageBox.question(self.activateWindow(), 'Confirm Delete', msg, QMessageBox.Yes, QMessageBox.No)
+        if reply == QtGui.QMessageBox.Yes:
+            self.cbxConnections.removeItem(index)
+            self.connections.pop(connection)
+            self._save_connections()
+
+    def _save_connections(self):
+        settings = self.settings
+        settings.beginWriteArray(self._connections_array)
+        for index, key in enumerate(self.connections):
+            settings.setArrayIndex(index)
+            settings.setValue("name", key)
+            settings.setValue("url", self.connections[key])
+        settings.endArray()
+
+    def _add_connection(self, name, url):
+        self.connections[name] = url
+
+    def _on_connect(self):
+        name = self.cbxConnections.currentText()
+        if name in self.connections:
+            self.on_connect.emit(self.connections[name])
+
+    def show(self):
+        self.exec_()
+
+    def set_layers(self, layers):
+        model = QStandardItemModel()
+        model.setHorizontalHeaderLabels(self._table_headers)
+        for l in layers:
+            item = QStandardItem(l["id"])
+            item.setEditable(False)
+            model.appendRow(item)
+        self.tblLayers.setModel(model)
+        add_enabled = layers is not None and len(layers) > 0
+        self.btnAdd.setEnabled(add_enabled)
+        # self.tblLayers.selectionModel().selectionChanged.connect(self._selected_layer_changed)
+
+    def _create_connection(self):
+        dlg = EditServerConnection()
+        result = dlg.exec_()
+        print(result)
+        if result == QtGui.QDialog.Accepted:
+            name, url = dlg.get_connection()
+            self._add_connection(name, url)
+            self.cbxConnections.addItem(name)
+            self._save_connections()
+
+    def _handle_connection_change(self, name):
+        print("connection changed to: {}".format(name))
+        enable = False
+        if name in self.connections:
+            enable = True
+        self.btnConnect.setEnabled(enable)
+        self.btnEdit.setEnabled(enable)
+        self.btnDelete.setEnabled(enable)
 
 
 class EditServerConnection(QtGui.QDialog, Ui_DlgEditServerConnection):
-    def __init__(self):
+    def __init__(self, name=None, url=None):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
+        self.txtName.textChanged.connect(self._update_save_btn_state)
+        self.txtUrl.textChanged.connect(self._update_save_btn_state)
+        if name:
+            self.txtName.setText(name)
+        if url:
+            self.txtUrl.setText(url)
+
+    def _update_save_btn_state(self):
+        enable = False
+        if self.txtName.text() and self.txtUrl.text():
+            enable = True
+        self.btnSave.setEnabled(enable)
+
+    def get_connection(self):
+        return self.txtName.text(), self.txtUrl.text()
+

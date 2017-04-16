@@ -14,16 +14,19 @@ of the License, or (at your option) any later version.
 """
 
 from PyQt4.QtCore import QSettings
-from PyQt4.QtGui import QColor, QAction, QIcon, QMenu, QToolButton, QFileDialog, QMessageBox
+from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
 from log_helper import debug, info, warn, critical
-from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog
+from tile_helper import get_tile_bounds
+from tile_json import TileJSON
+from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
 
 import os
 import sys
 import site
+import math
 
 
 class VtrPlugin:
@@ -32,15 +35,18 @@ class VtrPlugin:
     add_layer_action = None
 
     def __init__(self, iface):
+        self._add_path_to_dependencies_to_syspath()
         self.iface = iface
+        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.recently_used = []
         self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
         self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
+        self.server_dialog = ServerConnectionDialog()
+        self.server_dialog.on_connect.connect(self._on_connect)
+        self.server_dialog.on_add.connect(self._on_add_server_layer)
 
     def initGui(self):
-        self._load_recently_used()
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
         self.about_action = self._create_action("About", "", self.show_about)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
@@ -50,6 +56,78 @@ class VtrPlugin:
         self.add_menu()
         self.progress_dialog = ProgressDialog()
         info("Vector Tile Reader Plugin loaded...")
+
+    def _on_map_extent_changed(self):
+        # b = self._get_visible_extent_as_tile_bounds()
+        # print(b)
+        pass
+
+    def _get_visible_extent_as_tile_bounds(self, tilejson_scheme):
+        import pyproj
+        e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
+        e = map(lambda x: map(float, x.split(" ")), e)
+        min_extent = e[0]
+        max_extent = e[1]
+        wgs84 = pyproj.Proj("+init=EPSG:4326")
+        espg3857 = pyproj.Proj("+init=EPSG:3857")
+        min_proj = pyproj.transform(espg3857, wgs84, min_extent[0], min_extent[1])
+        max_proj = pyproj.transform(espg3857, wgs84, max_extent[0], max_extent[1])
+
+        bounds = []
+        bounds.extend(min_proj)
+        bounds.extend(max_proj)
+
+        tile = get_tile_bounds(14, bounds=bounds, scheme=tilejson_scheme)
+        return tile
+
+    def _on_connect(self, url):
+        debug("Connect to url: {}", url)
+        tilejson = TileJSON(url)
+        if tilejson.load():
+            layers = tilejson.vector_layers()
+            self.server_dialog.set_layers(layers)
+        else:
+            self.server_dialog.set_layers([])
+            tilejson = None
+        self.tilejson = tilejson
+
+    def _on_add_server_layer(self):
+        assert self.tilejson
+        url = self.tilejson.tiles()[0]
+        scheme = self.tilejson.scheme()
+        apply_styles = self.server_dialog.apply_styles_enabled()
+        merge_tiles = self.server_dialog.merge_tiles_enabled()
+        debug("Add layer: {}", url)
+
+        tiles = self._get_tiles_to_load(14, scheme)
+        debug("{} tiles will be loaded from the server", len(tiles))
+        for t in tiles:
+            zoom = str(t[0])
+            col = str(t[1])
+            row = str(t[2])
+            newurl = url.replace("{z}", zoom).replace("{x}", col).replace("{y}", row)
+            debug("Loading url: {}", newurl)
+            reader = self._create_reader(newurl)
+            if reader:
+                reader.load_tiles(scheme=scheme,
+                                  zoom_level=14,
+                                  apply_styles=apply_styles,
+                                  merge_tiles=merge_tiles,
+                                  tile_x=col,
+                                  tile_y=row)
+
+    def _get_tiles_to_load(self, zoom, scheme):
+        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
+        nr_tiles_x = int(math.fabs(extent[1][0] - extent[0][0]) + 1)
+        nr_tiles_y = int(math.fabs(extent[1][1] - extent[0][1]) + 1)
+        tiles = []
+        for x in range(nr_tiles_x):
+            for y in range(nr_tiles_y):
+                col = x + extent[0][0]
+                row = y + extent[0][1]
+                tiles.append((zoom, col, row))
+        debug("tiles to load: {}", tiles)
+        return tiles
 
     def _update_zoom_from_file(self, path):
         min_zoom = None
@@ -67,18 +145,14 @@ class VtrPlugin:
 
     def add_menu(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        default_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
+        open_file_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
+        open_server_action = self._create_action("Add Vector Tile Server Layer...", "server.svg", self.server_dialog.show)
         self.popupMenu.addAction(self._create_action("Add Vector Tile Layer...", "folder.svg", self.file_dialog.show))
-        # self.popupMenu.addAction(self._create_action("Load url", "folder.svg", self._load_from_url))
-        # self.recent = self.popupMenu.addMenu("Open Recent")
-        # debug("Recently used: {}", self.recently_used)
-        # for path in self.recently_used:
-        #     debug("Create action: {}", path)
-        #     self._add_recently_used(path)
-
+        self.popupMenu.addAction(open_server_action)
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(default_action)
+        self.toolButton.setDefaultAction(open_file_action)
+        # self.toolButton.setDefaultAction(open_server_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
@@ -95,22 +169,9 @@ class VtrPlugin:
                              tile_number_limit=tile_number_limit,
                              manual_zoom=manual_zoom)
 
-    def _load_from_url(self):
-        # todo: remove hardcoded url
-        url = "http://192.168.0.18:6767/planet_osm_polygon/14/8568/5747.pbf"
-        reader = self._create_reader(url)
-        reader.load_vector_tiles(14)
-
-    # def _add_recently_used(self, path):
-    #     if path not in self.recently_used:
-    #         self.recently_used.append(path)
-    #     self.recent.addAction(path, lambda path=path: self._load_mbtiles(path))
-
     def _load_from_disk(self, path, apply_styles, merge_tiles, tile_number_limit, manual_zoom):
         if path and os.path.isfile(path):
             debug("Load file: {}", path)
-            # self._add_recently_used(path)
-            # self._save_recently_used()
             self._load_mbtiles(path,
                                apply_styles=apply_styles,
                                merge_tiles=merge_tiles,
@@ -130,13 +191,16 @@ class VtrPlugin:
                 if is_valid:
                     max_zoom = reader.get_max_zoom()
                     min_zoom = reader.get_min_zoom()
+                    scheme = reader.get_scheme()
                     debug("valid zoom range: {} - {}", min_zoom, max_zoom)
+                    debug("manual zoom: {}", manual_zoom)
                     zoom = max_zoom
-                    if manual_zoom:
+                    if manual_zoom is not None:
                         zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
-                    if zoom:
+                    if zoom is not None:
                         debug("Zoom: {}", zoom)
-                        reader.load_vector_tiles(
+                        reader.load_tiles(
+                            scheme=scheme,
                             zoom_level=zoom,
                             load_mask_layer=False,
                             merge_tiles=merge_tiles,
@@ -155,7 +219,6 @@ class VtrPlugin:
         return max(minimum, min(x, maximum))
 
     def _create_reader(self, mbtiles_path):
-        self._add_path_to_dependencies_to_syspath()
         # A lazy import is required because the vtreader depends on the external libs
         from vt_reader import VtReader
         reader = None
@@ -198,19 +261,3 @@ class VtrPlugin:
 
     def run(self):
         self.file_dialog.show()
-
-    def _load_recently_used(self):
-        recently_used = FileHelper.get_recently_used_file()
-        if os.path.isfile(recently_used):
-            with open(recently_used, 'r') as f:
-                for line in f:
-                    line = line.rstrip("\n")
-                    if os.path.isfile(line):
-                        debug("recently used: {}", line)
-                        self.recently_used.append(line)
-
-    def _save_recently_used(self):
-        recently_used = FileHelper.get_recently_used_file()
-        with open(recently_used, 'w') as f:
-            for path in self.recently_used:
-                f.write("{}\n".format(path))

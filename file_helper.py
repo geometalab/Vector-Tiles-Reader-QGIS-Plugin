@@ -3,19 +3,15 @@ import glob
 import uuid
 import urllib2
 import tempfile
+from log_helper import critical
 
 
 class FileHelper:
 
-    recently_used_filename = "data.bin"
+    geojson_folder = "geojson"
 
     def __init__(self):
         pass
-
-    @staticmethod
-    def get_recently_used_file():
-        path = os.path.join(FileHelper.get_temp_dir(), FileHelper.recently_used_filename)
-        return path
 
     @staticmethod
     def get_plugin_directory():
@@ -26,8 +22,11 @@ class FileHelper:
         return os.path.expanduser("~")
 
     @staticmethod
-    def get_temp_dir():
+    def get_temp_dir(path_extension=None):
         temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
+        if path_extension:
+            temp_dir = os.path.join(temp_dir, path_extension)
+
         return temp_dir
 
     @staticmethod
@@ -53,23 +52,32 @@ class FileHelper:
         :param size: The nr of bytes to read, None if all should be read
         :return: 
         """
-        req = urllib2.Request(url)
+        req = urllib2.Request(url, headers={'User-Agent': "Magic Browser"})
         content = None
         try:
             response = urllib2.urlopen(req)
             content = response.read(size)
         except urllib2.HTTPError as e:
-            print("Opening url failed with error code '{}': {}".format(e.code, url))
+            critical("Opening url failed with error code '{}': {}", e.code, url)
         except urllib2.URLError:
-            print("The URL seems to be invalid")
+            critical("The URL seems to be invalid: {}", url)
         return content
 
     @staticmethod
-    def get_unique_file_name(ending="geojson"):
-        # todo: use temp directory provided by OS
-        temp_dir = FileHelper.get_temp_dir()
-        unique_name = "{}.{}".format(uuid.uuid4(), ending)
-        return os.path.join(temp_dir, unique_name)
+    def assure_temp_dirs_exist():
+        FileHelper._assure_dir_exists(FileHelper.get_temp_dir())
+        FileHelper._assure_dir_exists(FileHelper.get_temp_dir(FileHelper.geojson_folder))
+
+    @staticmethod
+    def _assure_dir_exists(path):
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+    @staticmethod
+    def get_unique_geojson_file_name():
+        path = os.path.join(FileHelper.get_temp_dir(), FileHelper.geojson_folder)
+        unique_name = "{}.{}".format(uuid.uuid4(), "geojson")
+        return os.path.join(path, unique_name)
 
     @staticmethod
     def is_sqlite_db(path):
@@ -82,7 +90,7 @@ class FileHelper:
         return header_matching
 
     @staticmethod
-    def is_mapbox_pbf(content):
+    def is_gzipped(content):
         result = False
         if len(content) >= 2:
             gzip_headers = bytearray([0x1f, 0x8b])
