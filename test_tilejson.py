@@ -58,6 +58,11 @@ def _get_test_tilejson():
         "description": "A tileset showcasing all layers in OpenMapTiles. http://openmaptiles.org",
         "maxzoom": 14,
         "minzoom": 0,
+        "version": "3.5",
+        "bounds": [-180, -85.0511, 180, 85.0511],
+        "maskLevel": "8",
+        "planettime": "1491177600000",
+        "tilejson": "2.0.0",
         "vector_layers": [{
                 "maxzoom": 14,
                 "fields": {
@@ -215,10 +220,5 @@ def _get_test_tilejson():
                 "id": "poi",
                 "description": ""
             }
-        ],
-        "version": "3.5",
-        "bounds": [-180, -85.0511, 180, 85.0511],
-        "maskLevel": "8",
-        "planettime": "1491177600000",
-        "tilejson": "2.0.0"
+        ]
     }
