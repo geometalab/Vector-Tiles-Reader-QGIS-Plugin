@@ -5,10 +5,11 @@ class VectorTile:
     
     decoded_data = None
 
-    def __init__(self, zoom_level, x, y):
-        self.zoom_level = zoom_level
-        self.column = x
-        self.row = y
+    def __init__(self, scheme, zoom_level, x, y):
+        self.scheme = scheme
+        self.zoom_level = int(zoom_level)
+        self.column = int(x)
+        self.row = int(y)
     
     def __str__(self):
         return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)
@@ -45,12 +46,18 @@ def get_tile_bounds(zoom, bounds, scheme="xyz"):
 
         is_tms_scheme = scheme == "tms"
         if is_tms_scheme:
-            xy_min = (xy_min[0], _change_scheme(zoom, xy_min[1]))
-            xy_max = (xy_max[0], _change_scheme(zoom, xy_max[1]))
+            xy_min = (xy_min[0], change_scheme(zoom, xy_min[1]))
+            xy_max = (xy_max[0], change_scheme(zoom, xy_max[1]))
 
         tiles = [xy_min, xy_max]
     return tiles
 
 
-def _change_scheme(zoom, y):
+def change_scheme(zoom, y):
+    """
+     * Transforms the y coordinate (row) from TMS scheme to XYZ scheme and vice-versa
+    :param zoom: 
+    :param y: 
+    :return: 
+    """
     return (2 ** zoom) - y - 1

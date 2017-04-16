@@ -111,7 +111,12 @@ class VtrPlugin:
             debug("Loading url: {}", newurl)
             reader = self._create_reader(newurl)
             if reader:
-                reader.load_tiles(14, apply_styles=apply_styles, merge_tiles=merge_tiles, tile_x=col, tile_y=row)
+                reader.load_tiles(scheme=scheme,
+                                  zoom_level=14,
+                                  apply_styles=apply_styles,
+                                  merge_tiles=merge_tiles,
+                                  tile_x=col,
+                                  tile_y=row)
 
             # todo: remove after debugging
             break
@@ -206,6 +211,7 @@ class VtrPlugin:
                 if is_valid:
                     max_zoom = reader.get_max_zoom()
                     min_zoom = reader.get_min_zoom()
+                    scheme = reader.get_scheme()
                     debug("valid zoom range: {} - {}", min_zoom, max_zoom)
                     debug("manual zoom: {}", manual_zoom)
                     zoom = max_zoom
@@ -214,6 +220,7 @@ class VtrPlugin:
                     if zoom is not None:
                         debug("Zoom: {}", zoom)
                         reader.load_tiles(
+                            scheme=scheme,
                             zoom_level=zoom,
                             load_mask_layer=False,
                             merge_tiles=merge_tiles,

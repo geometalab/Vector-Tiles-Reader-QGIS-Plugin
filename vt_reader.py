@@ -3,7 +3,7 @@ import sys
 import os
 import json
 import numbers
-from tile_helper import VectorTile
+from tile_helper import VectorTile, change_scheme
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
@@ -71,6 +71,7 @@ class VtReader:
         self.conn = None
         self.max_zoom = None
         self.min_zoom = None
+        self.scheme = None
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
 
@@ -93,7 +94,7 @@ class VtReader:
             "crs": crs,
             "features": []}
 
-    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None, tile_x=None, tile_y=None):
+    def load_tiles(self, scheme, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, tilenumber_limit=None, tile_x=None, tile_y=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
@@ -111,13 +112,17 @@ class VtReader:
 
         tile_data_tuples = []
         if self.is_web_source:
-            tile_data_tuples.append(self._load_tiles_from_url())
+            tile_data_tuples.append(self._load_tiles_from_url(scheme, zoom_level, tile_x, tile_y))
         else:
-            tile_data_tuples = self._load_tiles_from_file(zoom_level, max_tiles=tilenumber_limit)
+            tile_data_tuples = self._load_tiles_from_file(scheme=scheme,
+                                                          zoom_level=zoom_level,
+                                                          max_tiles=tilenumber_limit)
             if load_mask_layer and not self.is_web_source:
                 mask_level = self._get_mask_level()
                 if mask_level:
-                    mask_layer_data = self._load_tiles_from_file(mask_level, max_tiles=tilenumber_limit)
+                    mask_layer_data = self._load_tiles_from_file(scheme=scheme,
+                                                                 zoom_level=mask_level,
+                                                                 max_tiles=tilenumber_limit)
                     tile_data_tuples.extend(mask_layer_data)
         tiles = self._decode_all_tiles(tile_data_tuples)
         self._process_tiles(tiles)
@@ -131,9 +136,9 @@ class VtReader:
         self._update_progress(show_dialog=False)
         info("Import complete!")
 
-    def _load_tiles_from_url(self):
+    def _load_tiles_from_url(self, scheme, zoom, col, row):
         content = FileHelper.load_url(self._current_mbtiles_path)
-        tile = VectorTile(14, 8463, 8097)
+        tile = VectorTile(scheme, zoom, col, row)
         return tile, content
 
     def _close_connection(self):
@@ -187,6 +192,11 @@ class VtReader:
             self.min_zoom = self._get_zoom(max_zoom=False)
         return self.min_zoom
 
+    def get_scheme(self):
+        if not self.scheme:
+            self.scheme = self._get_metadata_value("scheme", default="tms")
+        return self.scheme
+
     def _get_zoom(self, max_zoom=True):
         if max_zoom:
             field_name = "maxzoom"
@@ -211,10 +221,13 @@ class VtReader:
                  "limit 1").format(order)
         return self._get_single_value(sql_query=query, field_name="zoom_level")
 
-    def _get_metadata_value(self, field_name):
+    def _get_metadata_value(self, field_name, default=None):
         debug("Loading metadata value '{}'", field_name)
         sql = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
-        return self._get_single_value(sql_query=sql, field_name=field_name)
+        value = self._get_single_value(sql_query=sql, field_name=field_name)
+        if default and not value:
+            value = default
+        return value
 
     def _get_single_value(self, sql_query, field_name):
         """
@@ -234,7 +247,7 @@ class VtReader:
             critical("Loading metadata value '{}' failed: {}", field_name, sys.exc_info())
         return value
 
-    def _load_tiles_from_file(self, zoom_level, max_tiles):
+    def _load_tiles_from_file(self, scheme, zoom_level, max_tiles):
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""
@@ -250,7 +263,7 @@ class VtReader:
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
         for row in rows:
-            tile_data_tuples.append(self._create_tile(row))
+            tile_data_tuples.append(self._create_tile(scheme, row))
         return tile_data_tuples
 
     def is_mapbox_vector_tile(self):
@@ -261,7 +274,8 @@ class VtReader:
         debug("Checking if file corresponds to Mapbox format (i.e. gzipped)")
         is_mapbox_pbf = False
         try:
-            tile_data_tuples = self._load_tiles_from_file(max_tiles=1, zoom_level=None)
+            scheme = self.get_scheme()
+            tile_data_tuples = self._load_tiles_from_file(scheme=scheme, max_tiles=1, zoom_level=None)
             if len(tile_data_tuples) == 1:
                 undecoded_data = tile_data_tuples[0][1]
                 if undecoded_data:
@@ -275,12 +289,12 @@ class VtReader:
         return is_mapbox_pbf
 
     @staticmethod
-    def _create_tile(row):
+    def _create_tile(scheme, row):
         zoom_level = row["zoom_level"]
         tile_col = row["tile_column"]
         tile_row = row["tile_row"]
         binary_data = row["tile_data"]
-        tile = VectorTile(zoom_level, tile_col, tile_row)
+        tile = VectorTile(scheme, zoom_level, tile_col, tile_row)
         return tile, binary_data
 
     def _get_from_db(self, sql):
@@ -576,11 +590,15 @@ class VtReader:
     @staticmethod
     def _transform_to_epsg3857(coordinates, tile):
         """
-        Does a mercator transformation on the specified coordinate tuple
+         * Transforms the tile x/y to EPSG:3857 coordinates
+         * Currently works only with the tms scheme
         """
-        # calculate the mercator geometry using external library
-        # geometry:: 0: zoom, 1: easting, 2: northing
-        tmp = GlobalMercator().TileBounds(tile.column, tile.row, tile.zoom_level)
+
+        row = tile.row
+        if tile.scheme != "tms":
+            row = change_scheme(tile.zoom_level, row)
+
+        tmp = GlobalMercator().TileBounds(tile.column, row, tile.zoom_level)
         delta_x = tmp[2] - tmp[0]
         delta_y = tmp[3] - tmp[1]
         merc_easting = int(tmp[0] + delta_x / VtReader._extent * coordinates[0])
