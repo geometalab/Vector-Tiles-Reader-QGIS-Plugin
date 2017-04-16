@@ -48,185 +48,177 @@ def _get_loaded():
 
 def _get_test_tilejson():
     return {
-            "attribution": "<a href=\"http://www.openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"http://www.openstreetmap.org/about/\" target=\"_blank\">&copy; OpenStreetMap contributors</a>",
-            "bounds": [-180, -85.05112877980659, 180, 85.0511287798066],
-            "center": [5.9290021, 1.6631951, 4],
-            "created": 1484041965082,
-            "description": "A tileset showcasing all layers in OpenMapTiles. http://openmaptiles.org. Switzerland in EPSG:21781",
-            "filesize": 163278848,
-            "format": "pbf",
-            "id": "openmaptiles.c69qy1yd",
-            "mapbox_logo": True,
-            "maxzoom": 14,
-            "minzoom": 0,
-            "modified": 1484041964729,
-            "name": "20161214-dn68t9",
-            "private": False,
-            "scheme": "xyz",
-            "tilejson": "2.2.0",
-            "tiles": ["https://a.tiles.mapbox.com/v4/openmaptiles.c69qy1yd/{z}/{x}/{y}.vector.pbf?access_token=pk.eyJ1Ijoib3Blbm1hcHRpbGVzIiwiYSI6ImNpdnY3eTJxZzAwMGMyb3BpdWJmajcxNzcifQ.hP1BxcxldIhakMcPSJLQ1Q", "https://b.tiles.mapbox.com/v4/openmaptiles.c69qy1yd/{z}/{x}/{y}.vector.pbf?access_token=pk.eyJ1Ijoib3Blbm1hcHRpbGVzIiwiYSI6ImNpdnY3eTJxZzAwMGMyb3BpdWJmajcxNzcifQ.hP1BxcxldIhakMcPSJLQ1Q"],
-            "vector_layers": [{
-                    "description": "",
-                    "fields": {
-                        "class": "String"
-                    },
-                    "id": "water",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String",
-                        "name": "String"
-                    },
-                    "id": "waterway",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String",
-                        "subclass": "String"
-                    },
-                    "id": "landcover",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String"
-                    },
-                    "id": "landuse",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String"
-                    },
-                    "id": "park",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "admin_level": "Number"
-                    },
-                    "id": "boundary",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String"
-                    },
-                    "id": "aeroway",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "brunnel": "String",
-                        "class": "String",
-                        "oneway": "Number",
-                        "ramp": "Number",
-                        "service": "String"
-                    },
-                    "id": "transportation",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "render_height": "Number",
-                        "render_min_height": "Number"
-                    },
-                    "id": "building",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String",
-                        "name": "String",
-                        "name_en": "String"
-                    },
-                    "id": "water_name",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String",
-                        "name": "String",
-                        "ref": "String",
-                        "ref_length": "Number"
-                    },
-                    "id": "transportation_name",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "capital": "Number",
-                        "class": "String",
-                        "name": "String",
-                        "name_en": "String",
-                        "rank": "Number"
-                    },
-                    "id": "place",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "housenumber": "String"
-                    },
-                    "id": "housenumber",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }, {
-                    "description": "",
-                    "fields": {
-                        "class": "String",
-                        "name": "String",
-                        "name_en": "String",
-                        "rank": "Number",
-                        "subclass": "String"
-                    },
-                    "id": "poi",
-                    "maxzoom": 14,
-                    "minzoom": 0,
-                    "source": "openmaptiles.c69qy1yd",
-                    "source_name": "20161214-dn68t9"
-                }
-            ],
-            "version": "1.0.0",
-            "webpage": "https://a.tiles.mapbox.com/v4/openmaptiles.c69qy1yd/page.html?access_token=pk.eyJ1Ijoib3Blbm1hcHRpbGVzIiwiYSI6ImNpdnY3eTJxZzAwMGMyb3BpdWJmajcxNzcifQ.hP1BxcxldIhakMcPSJLQ1Q"
-        }
+        "tiles": ["https://free-0.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT", "https://free-1.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT", "https://free-2.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT", "https://free-3.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT"],
+        "name": "OpenMapTiles",
+        "format": "pbf",
+        "basename": "v3.5.mbtiles",
+        "id": "openmaptiles",
+        "attribution": "<a href=\"http://www.openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"http://www.openstreetmap.org/about/\" target=\"_blank\">&copy; OpenStreetMap contributors</a>",
+        "center": [-12.2168, 28.6135, 4],
+        "description": "A tileset showcasing all layers in OpenMapTiles. http://openmaptiles.org",
+        "maxzoom": 14,
+        "minzoom": 0,
+        "vector_layers": [{
+                "maxzoom": 14,
+                "fields": {
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "water",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "name_en": "String",
+                    "name": "String",
+                    "name_de": "String",
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "waterway",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "class": "String",
+                    "subclass": "String"
+                },
+                "minzoom": 0,
+                "id": "landcover",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "landuse",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "name": "String",
+                    "osm_id": "Number",
+                    "rank": "Number",
+                    "ele": "Number",
+                    "name_de": "String",
+                    "ele_ft": "Number",
+                    "name_en": "String"
+                },
+                "minzoom": 0,
+                "id": "mountain_peak",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "park",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "admin_level": "Number",
+                    "disputed": "Number",
+                    "maritime": "Number"
+                },
+                "minzoom": 0,
+                "id": "boundary",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "aeroway",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "brunnel": "String",
+                    "ramp": "Number",
+                    "class": "String",
+                    "service": "String",
+                    "oneway": "Number"
+                },
+                "minzoom": 0,
+                "id": "transportation",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "render_min_height": "Number",
+                    "render_height": "Number"
+                },
+                "minzoom": 0,
+                "id": "building",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "name_en": "String",
+                    "name": "String",
+                    "name_de": "String",
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "water_name",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "name": "String",
+                    "ref_length": "Number",
+                    "name_de": "String",
+                    "name_en": "String",
+                    "ref": "String",
+                    "class": "String",
+                    "network": "String"
+                },
+                "minzoom": 0,
+                "id": "transportation_name",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "name": "String",
+                    "rank": "Number",
+                    "name_de": "String",
+                    "capital": "Number",
+                    "name_en": "String",
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "place",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "housenumber": "String"
+                },
+                "minzoom": 0,
+                "id": "housenumber",
+                "description": ""
+            }, {
+                "maxzoom": 14,
+                "fields": {
+                    "name": "String",
+                    "rank": "Number",
+                    "name_de": "String",
+                    "subclass": "String",
+                    "name_en": "String",
+                    "class": "String"
+                },
+                "minzoom": 0,
+                "id": "poi",
+                "description": ""
+            }
+        ],
+        "version": "3.5",
+        "bounds": [-180, -85.0511, 180, 85.0511],
+        "maskLevel": "8",
+        "planettime": "1491177600000",
+        "tilejson": "2.0.0"
+    }
