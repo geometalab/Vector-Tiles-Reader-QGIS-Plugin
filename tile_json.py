@@ -60,6 +60,9 @@ class TileJSON:
         tiles = self._get_value("tiles", is_array=True, is_required=True)
         return tiles
 
+    def id(self):
+        return self._get_value("id")
+
     def min_zoom(self):
         min_zoom = self._get_value("minzoom")
         return min_zoom
@@ -67,6 +70,9 @@ class TileJSON:
     def max_zoom(self):
         max_zoom = self._get_value("maxzoom")
         return max_zoom
+
+    def mask_level(self):
+        return self._get_value("maskLevel")
 
     def _get_value(self, field_name, is_array=False, is_required=False):
         if is_required and not field_name in self.json:

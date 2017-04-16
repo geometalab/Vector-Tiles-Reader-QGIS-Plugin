@@ -82,6 +82,7 @@ class VtrPlugin:
 
     def _on_connect(self, url):
         debug("Connect to url: {}", url)
+        self.url = url
         tilejson = TileJSON(url)
         if tilejson.load():
             layers = tilejson.vector_layers()
@@ -91,51 +92,27 @@ class VtrPlugin:
             tilejson = None
         self.tilejson = tilejson
 
-    def _on_add_server_layer(self):
+    def _on_add_server_layer(self, url):
         assert self.tilejson
-        url = self.tilejson.tiles()[0]
         scheme = self.tilejson.scheme()
         apply_styles = self.server_dialog.apply_styles_enabled()
         merge_tiles = self.server_dialog.merge_tiles_enabled()
         debug("Add layer: {}", url)
 
-        tiles = self._get_tiles_to_load(14, scheme)
-        debug("{} tiles will be loaded from the server", len(tiles))
-        for t in tiles:
-            zoom = str(t[0])
-            col = str(t[1])
-            row = str(t[2])
-            newurl = url.replace("{z}", zoom).replace("{x}", col).replace("{y}", row)
-            debug("Loading url: {}", newurl)
-            reader = self._create_reader(newurl)
-            if reader:
-                reader.load_tiles(scheme=scheme,
-                                  zoom_level=14,
-                                  apply_styles=apply_styles,
-                                  merge_tiles=merge_tiles,
-                                  tile_x=col,
-                                  tile_y=row)
-
-    def _get_tiles_to_load(self, zoom, scheme):
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
-        nr_tiles_x = int(math.fabs(extent[1][0] - extent[0][0]) + 1)
-        nr_tiles_y = int(math.fabs(extent[1][1] - extent[0][1]) + 1)
-        tiles = []
-        for x in range(nr_tiles_x):
-            for y in range(nr_tiles_y):
-                col = x + extent[0][0]
-                row = y + extent[0][1]
-                tiles.append((zoom, col, row))
-        debug("tiles to load: {}", tiles)
-        return tiles
+        reader = self._create_reader(url)
+        reader.load_tiles(zoom_level=14,
+                          apply_styles=apply_styles,
+                          merge_tiles=merge_tiles,
+                          extent_to_load=extent)
 
     def _update_zoom_from_file(self, path):
         min_zoom = None
         max_zoom = None
         reader = self._create_reader(path)
         if reader:
-            min_zoom = reader.get_min_zoom()
-            max_zoom = reader.get_max_zoom()
+            min_zoom = reader.source.min_zoom()
+            max_zoom = reader.source.max_zoom()
         else:
             self.file_dialog.clear_path()
         self.file_dialog.set_zoom(min_zoom, max_zoom)
@@ -163,20 +140,11 @@ class VtrPlugin:
         manual_zoom = self.file_dialog.get_manual_zoom()
         debug("Load mbtiles: apply styles: {}, merge tiles: {}, tilelimit: {}, manual_zoom: {}, path: {}",
               apply_styles, merge_tiles, tile_number_limit, manual_zoom, path)
-        self._load_from_disk(path=path,
-                             apply_styles=apply_styles,
-                             merge_tiles=merge_tiles,
-                             tile_number_limit=tile_number_limit,
-                             manual_zoom=manual_zoom)
-
-    def _load_from_disk(self, path, apply_styles, merge_tiles, tile_number_limit, manual_zoom):
-        if path and os.path.isfile(path):
-            debug("Load file: {}", path)
-            self._load_mbtiles(path,
-                               apply_styles=apply_styles,
-                               merge_tiles=merge_tiles,
-                               tile_limit=tile_number_limit,
-                               manual_zoom=manual_zoom)
+        self._load_mbtiles(path=path,
+                           apply_styles=apply_styles,
+                           merge_tiles=merge_tiles,
+                           tile_limit=tile_number_limit,
+                           manual_zoom=manual_zoom)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
@@ -184,46 +152,33 @@ class VtrPlugin:
         return new_action
 
     def _load_mbtiles(self, path, apply_styles, merge_tiles, tile_limit, manual_zoom):
+        debug("Load file: {}", path)
         reader = self._create_reader(path)
         if reader:
             try:
-                is_valid = reader.is_mapbox_vector_tile()
+                is_valid = reader.source.is_mapbox_vector_tile()
                 if is_valid:
-                    max_zoom = reader.get_max_zoom()
-                    min_zoom = reader.get_min_zoom()
-                    scheme = reader.get_scheme()
-                    debug("valid zoom range: {} - {}", min_zoom, max_zoom)
-                    debug("manual zoom: {}", manual_zoom)
-                    zoom = max_zoom
+                    zoom = reader.source.max_zoom()
                     if manual_zoom is not None:
-                        zoom = VtrPlugin.clamp(min_zoom, manual_zoom, max_zoom)
-                    if zoom is not None:
-                        debug("Zoom: {}", zoom)
-                        reader.load_tiles(
-                            scheme=scheme,
-                            zoom_level=zoom,
-                            load_mask_layer=False,
-                            merge_tiles=merge_tiles,
-                            apply_styles=apply_styles,
-                            tilenumber_limit=tile_limit)
-                    else:
-                        warn("Max Zoom not found, cannot load data")
+                        zoom = manual_zoom
+                    reader.load_tiles(zoom_level=zoom,
+                                      load_mask_layer=False,
+                                      merge_tiles=merge_tiles,
+                                      apply_styles=apply_styles,
+                                      max_tiles=tile_limit)
+
                 else:
                     warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
             except RuntimeError:
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
 
-    @staticmethod
-    def clamp(minimum, x, maximum):
-        return max(minimum, min(x, maximum))
-
-    def _create_reader(self, mbtiles_path):
+    def _create_reader(self, path_or_url):
         # A lazy import is required because the vtreader depends on the external libs
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface, mbtiles_path=mbtiles_path, progress_handler=self.handle_progress_update)
+            reader = VtReader(self.iface, path_or_url=path_or_url, progress_handler=self.handle_progress_update)
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))

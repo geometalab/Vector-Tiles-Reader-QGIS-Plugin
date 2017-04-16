@@ -1,4 +1,5 @@
 from global_map_tiles import GlobalMercator
+import math
 
 
 class VectorTile:
@@ -50,6 +51,18 @@ def get_tile_bounds(zoom, bounds, scheme="xyz"):
             xy_max = (xy_max[0], change_scheme(zoom, xy_max[1]))
 
         tiles = [xy_min, xy_max]
+    return tiles
+
+
+def get_all_tiles(bounds):
+    nr_tiles_x = int(math.fabs(bounds[1][0] - bounds[0][0]) + 1)
+    nr_tiles_y = int(math.fabs(bounds[1][1] - bounds[0][1]) + 1)
+    tiles = []
+    for x in range(nr_tiles_x):
+        for y in range(nr_tiles_y):
+            col = x + bounds[0][0]
+            row = y + bounds[0][1]
+            tiles.append((col, row))
     return tiles
 
 

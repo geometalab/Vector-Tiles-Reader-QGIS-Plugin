@@ -167,7 +167,7 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
 
     on_connect = pyqtSignal(str)
-    on_add = pyqtSignal()
+    on_add = pyqtSignal(str)
 
     _connections_array = "connections"
     _table_headers = ["ID"]
@@ -183,8 +183,11 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.btnCreateConnection.clicked.connect(self._create_connection)
         self.btnConnect.clicked.connect(self._on_connect)
         self.btnDelete.clicked.connect(self._delete_connection)
-        self.btnAdd.clicked.connect(self.on_add)
+        self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self._load_connections()
+
+    def _load_tiles_for_connection(self):
+        self.on_add.emit(self._get_current_url())
 
     def _load_connections(self):
         settings = self.settings
@@ -215,7 +218,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     #     self.selected_layer_id = layer_id
 
     def _add_layer(self):
-        self.on_add.emit(self.selected_layer_id)
+        self.on_add.emit(self._get_current_url())
 
     def _delete_connection(self):
         index = self.cbxConnections.currentIndex()
@@ -240,9 +243,11 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.connections[name] = url
 
     def _on_connect(self):
+        self.on_connect.emit(self._get_current_url())
+
+    def _get_current_url(self):
         name = self.cbxConnections.currentText()
-        if name in self.connections:
-            self.on_connect.emit(self.connections[name])
+        return self.connections[name]
 
     def show(self):
         self.exec_()
