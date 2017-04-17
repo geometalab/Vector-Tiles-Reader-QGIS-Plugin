@@ -129,7 +129,6 @@ class VtrPlugin:
         else:
             self.progress_dialog = ProgressDialog(self.iface.mainWindow())
             self.server_dialog.close()
-
         self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
 
     def _on_open_mbtiles(self, path):
@@ -148,10 +147,12 @@ class VtrPlugin:
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
         manual_zoom = options.manual_zoom()
+        cartographic_ordering = options.cartographic_ordering()
 
         debug("Load: {}", path)
         reader = self._create_reader(path)
         if reader:
+            reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
                 zoom = reader.source.max_zoom()
                 if manual_zoom is not None:

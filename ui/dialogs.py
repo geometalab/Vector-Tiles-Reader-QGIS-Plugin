@@ -55,6 +55,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
 
+    def cartographic_ordering(self):
+        return self.chkCartographicOrdering.isChecked()
+
     def manual_zoom(self):
         if not self.rbZoomManual.isChecked():
             return None

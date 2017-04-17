@@ -34,16 +34,16 @@ class VtReader:
         3: GeoTypes.POLYGON}
 
     layer_sort_ids = [
+        "place",
+        "housenumber",
+        "water_name",
+        "transportation_name",
         "poi",
         "boundary",
         "transportation",
-        "transportation_name",
-        "housenumber",
         "building",
-        "place",
         "aeroway",
         "park",
-        "water_name",
         "waterway",
         "water",
         "landcover",
@@ -71,6 +71,7 @@ class VtReader:
 
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
+        self.cartographic_ordering_enabled = True
         self.progress_handler = progress_handler
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
@@ -190,10 +191,10 @@ class VtReader:
         base_name = self.source.name()
         group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
 
-        root_group = root.findGroup(group_name)
-        if not root_group:
-            root_group = root.addGroup(group_name)
-        feature_paths = sorted(self.features_by_path.keys(), key=lambda path: VtReader._get_feature_sort_id(path))
+        # root_group = root.findGroup(group_name)
+        # if not root_group:
+        root_group = root.addGroup(group_name)
+        feature_paths = sorted(self.features_by_path.keys(), key=lambda path: self._get_feature_sort_id(path))
         self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
         layers = []
         for index, feature_path in enumerate(feature_paths):
@@ -213,14 +214,14 @@ class VtReader:
                 VtReader._apply_named_style(layer)
                 self._update_progress(progress=index+1)
 
-    @staticmethod
-    def _get_feature_sort_id(feature_path):
+    def _get_feature_sort_id(self, feature_path):
         nodes = feature_path.split(".")
         sort_id = 999
-        for node in nodes:
-            current_node = node.split(VtReader._zoom_level_delimiter)[0]
-            if current_node in VtReader.layer_sort_ids:
-                sort_id = VtReader.layer_sort_ids.index(current_node)
+        if self.cartographic_ordering_enabled:
+            for node in nodes:
+                current_node = node.split(VtReader._zoom_level_delimiter)[0]
+                if current_node in VtReader.layer_sort_ids:
+                    sort_id = VtReader.layer_sort_ids.index(current_node)
         return sort_id
 
     def _get_group_for_path(self, path, root_group):
@@ -434,3 +435,6 @@ class VtReader:
         merc_easting = int(tmp[0] + delta_x / VtReader._extent * coordinates[0])
         merc_northing = int(tmp[1] + delta_y / VtReader._extent * coordinates[1])
         return [merc_easting, merc_northing]
+
+    def enable_cartographic_ordering(self, enabled):
+        self.cartographic_ordering_enabled = enabled
