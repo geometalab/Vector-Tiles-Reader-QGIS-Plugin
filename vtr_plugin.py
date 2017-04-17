@@ -126,7 +126,9 @@ class VtrPlugin:
         self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
 
     def _on_open_mbtiles(self, path):
-        self._load_tiles(path=path, options=self.file_dialog.options)
+        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme="tms")
+        debug("extent: {}", extent)
+        self._load_tiles(path=path, options=self.file_dialog.options, extent_to_load=None)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
