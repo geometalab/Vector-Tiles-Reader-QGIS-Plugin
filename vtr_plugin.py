@@ -163,9 +163,15 @@ class VtrPlugin:
                                   apply_styles=apply_styles,
                                   max_tiles=tile_limit,
                                   extent_to_load=extent_to_load)
+                self.refresh_layers()
+                debug("Loading complete!")
             except RuntimeError:
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
+
+    def refresh_layers(self):
+        for layer in self.iface.mapCanvas().layers():
+            layer.triggerRepaint()
 
     def _create_reader(self, path_or_url):
         # A lazy import is required because the vtreader depends on the external libs
