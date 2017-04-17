@@ -198,13 +198,14 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.cbxConnections.currentIndexChanged['QString'].connect(self._handle_connection_change)
         self.btnCreateConnection.clicked.connect(self._create_connection)
         self.btnConnect.clicked.connect(self._on_connect)
+        self.btnEdit.clicked.connect(self._edit_connection)
         self.btnDelete.clicked.connect(self._delete_connection)
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self._load_connections()
 
     def _load_tiles_for_connection(self):
-        self.on_add.emit(self._get_current_url())
+        self.on_add.emit(self._get_current_connection()[1])
 
     def _load_connections(self):
         settings = self.settings
@@ -213,14 +214,14 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             settings.setArrayIndex(i)
             name = settings.value("name")
             url = settings.value("url")
-            self._add_connection(name, url)
+            self._set_connection_url(name, url)
         settings.endArray()
         self.cbxConnections.addItems(self.connections.keys())
         if len(self.connections) > 0:
             self.cbxConnections.setCurrentIndex(0)
 
     def _add_layer(self):
-        self.on_add.emit(self._get_current_url())
+        self.on_add.emit(self._get_current_connection()[1])
 
     def _delete_connection(self):
         index = self.cbxConnections.currentIndex()
@@ -241,15 +242,17 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             settings.setValue("url", self.connections[key])
         settings.endArray()
 
-    def _add_connection(self, name, url):
+    def _set_connection_url(self, name, url):
         self.connections[name] = url
 
     def _on_connect(self):
-        self.on_connect.emit(self._get_current_url())
+        url = self._get_current_connection()[1]
+        self.on_connect.emit(url)
 
-    def _get_current_url(self):
+    def _get_current_connection(self):
         name = self.cbxConnections.currentText()
-        return self.connections[name]
+        url = self.connections[name]
+        return name, url
 
     def show(self):
         self.exec_()
@@ -269,14 +272,22 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.btnAdd.setEnabled(add_enabled)
         # self.tblLayers.selectionModel().selectionChanged.connect(self._selected_layer_changed)
 
+    def _edit_connection(self):
+        conn = self._get_current_connection()
+        self._create_or_update_connection(name=conn[0], url=conn[1])
+
     def _create_connection(self):
-        dlg = EditServerConnection()
+        self._create_or_update_connection()
+
+    def _create_or_update_connection(self, name=None, url=None):
+        dlg = EditServerConnection(name, url)
         result = dlg.exec_()
         print(result)
         if result == QtGui.QDialog.Accepted:
-            name, url = dlg.get_connection()
-            self._add_connection(name, url)
-            self.cbxConnections.addItem(name)
+            newname, newurl = dlg.get_connection()
+            self._set_connection_url(newname, newurl)
+            if newname != name:
+                self.cbxConnections.addItem(newname)
             self._save_connections()
 
     def _handle_connection_change(self, name):
