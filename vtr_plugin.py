@@ -95,8 +95,8 @@ class VtrPlugin:
     def _on_add_server_layer(self, url):
         assert self.tilejson
         scheme = self.tilejson.scheme()
-        apply_styles = self.server_dialog.apply_styles_enabled()
-        merge_tiles = self.server_dialog.merge_tiles_enabled()
+        apply_styles = self.server_dialog.options.apply_styles_enabled()
+        merge_tiles = self.server_dialog.options.merge_tiles_enabled()
         debug("Add layer: {}", url)
 
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
@@ -115,7 +115,7 @@ class VtrPlugin:
             max_zoom = reader.source.max_zoom()
         else:
             self.file_dialog.clear_path()
-        self.file_dialog.set_zoom(min_zoom, max_zoom)
+        self.file_dialog.options.set_zoom(min_zoom, max_zoom)
 
     def show_about(self):
         AboutDialog().show()
@@ -134,10 +134,10 @@ class VtrPlugin:
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
     def _on_open_mbtiles(self, path):
-        merge_tiles = self.file_dialog.is_merge_tiles_enabled()
-        apply_styles = self.file_dialog.is_apply_styles_enabled()
-        tile_number_limit = self.file_dialog.get_tile_number_limit()
-        manual_zoom = self.file_dialog.get_manual_zoom()
+        merge_tiles = self.file_dialog.options.merge_tiles_enabled()
+        apply_styles = self.file_dialog.options.apply_styles_enabled()
+        tile_number_limit = self.file_dialog.options.tile_number_limit()
+        manual_zoom = self.file_dialog.options.manual_zoom()
         debug("Load mbtiles: apply styles: {}, merge tiles: {}, tilelimit: {}, manual_zoom: {}, path: {}",
               apply_styles, merge_tiles, tile_number_limit, manual_zoom, path)
         self._load_mbtiles(path=path,

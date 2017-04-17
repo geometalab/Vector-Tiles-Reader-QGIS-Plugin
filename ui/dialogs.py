@@ -8,6 +8,8 @@ from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
 import os
 
+from options import Ui_OptionsGroup
+
 
 class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
     def __init__(self):
@@ -26,29 +28,14 @@ class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
         self.exec_()
 
 
-class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
+class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
-    on_valid_file_path_changed = pyqtSignal(str)
-    on_open = pyqtSignal(str)
-
-    def __init__(self, home_directory):
-        QtGui.QDialog.__init__(self)
-        # Set up the user interface from Designer.
-        # After setupUI you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # widgets-and-dialogs-with-auto-connect
-        self.setupUi(self)
-        self.path = None
-        self.home_directory = home_directory
-        self.btnBrowse.clicked.connect(self._open_browser)
-        self.txtPath.textChanged.connect(self._on_path_changed)
-        self.btnOpen.clicked.connect(self._handle_open_click)
-        self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
-        self.rbZoomAuto.setEnabled(False)
-        self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
-        self.lblError.setVisible(False)
+    def __init__(self, target_groupbox):
+        self.setupUi(target_groupbox)
         self.lblZoomRange.setText("")
+        self.rbZoomAuto.setEnabled(False)
+        self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
+        self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom:
@@ -68,6 +55,46 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
 
+    def manual_zoom(self):
+        if not self.rbZoomManual.isChecked():
+            return None
+        return self.zoomSpin.value()
+
+    def tile_number_limit(self):
+        if not self.chkLimitNrOfTiles.isChecked():
+            return None
+        return self.spinNrOfLoadedTiles.value()
+
+    def apply_styles_enabled(self):
+        return self.chkApplyStyles.isChecked()
+
+    def merge_tiles_enabled(self):
+        return self.chkMergeTiles.isChecked()
+
+
+class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
+
+    on_valid_file_path_changed = pyqtSignal(str)
+    on_open = pyqtSignal(str)
+
+    def __init__(self, home_directory):
+        QtGui.QDialog.__init__(self)
+        # Set up the user interface from Designer.
+        # After setupUI you can access any designer object by doing
+        # self.<objectname>, and you can use autoconnect slots - see
+        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
+        # widgets-and-dialogs-with-auto-connect
+        self.setupUi(self)
+
+        self.options = OptionsGroup(self.grpOptions)
+
+        self.path = None
+        self.home_directory = home_directory
+        self.btnBrowse.clicked.connect(self._open_browser)
+        self.txtPath.textChanged.connect(self._on_path_changed)
+        self.btnOpen.clicked.connect(self._handle_open_click)
+        self.lblError.setVisible(False)
+
     def show_error(self, error):
         self.lblError.setText(error)
         self.lblError.setVisible(True)
@@ -79,25 +106,6 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
     def hide_error(self):
         self.lblError.setVisible(False)
-
-    def load_directory_checked(self):
-        return self.rbDirectory.isChecked()
-
-    def get_manual_zoom(self):
-        if not self.rbZoomManual.isChecked():
-            return None
-        return self.zoomSpin.value()
-
-    def get_tile_number_limit(self):
-        if not self.chkLimitNrOfTiles.isChecked():
-            return None
-        return self.spinNrOfLoadedTiles.value()
-
-    def is_apply_styles_enabled(self):
-        return self.chkApplyStyles.isChecked()
-
-    def is_merge_tiles_enabled(self):
-        return self.chkMergeTiles.isChecked()
 
     def _open_browser(self):
         open_path = self.path
@@ -175,6 +183,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
+        self.options = OptionsGroup(self.grpOptions)
         self.settings = QSettings("VtrSettings")
         self.connections = {}
         self.selected_connection = None
@@ -201,21 +210,6 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.cbxConnections.addItems(self.connections.keys())
         if len(self.connections) > 0:
             self.cbxConnections.setCurrentIndex(0)
-
-    def apply_styles_enabled(self):
-        return self.chkApplyStyles.isChecked()
-
-    def merge_tiles_enabled(self):
-        return self.chkMergeTiles.isChecked()
-
-    # def _selected_layer_changed(self):
-    #     layer_id = None
-    #     for index in self.tblLayers.selectionModel().selectedRows():
-    #         layer_id = index.data()
-    #         print("selected: {}".format(layer_id))
-    #         break
-    #     self.btnAdd.setEnabled(layer_id is not None)
-    #     self.selected_layer_id = layer_id
 
     def _add_layer(self):
         self.on_add.emit(self._get_current_url())
