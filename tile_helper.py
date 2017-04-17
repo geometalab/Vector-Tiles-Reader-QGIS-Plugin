@@ -24,6 +24,13 @@ def coordinate_to_tile(zoom, lat, lng):
     return tile
 
 
+def epsg3857_to_wgs84_lonlat(x, y):
+    gm = GlobalMercator()
+    wgs84 = gm.MetersToLatLon(x, y)
+    # change latlon to lonlat
+    return [wgs84[1], wgs84[0]]
+
+
 def get_tile_bounds(zoom, bounds, scheme="xyz"):
     """
      * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples

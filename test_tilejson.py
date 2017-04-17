@@ -1,6 +1,6 @@
 from tile_json import TileJSON
 import pytest
-from tile_helper import get_tile_bounds, coordinate_to_tile
+from tile_helper import get_tile_bounds, coordinate_to_tile, epsg3857_to_wgs84_lonlat
 
 def test_load():
     tj = _get_loaded()
@@ -37,6 +37,7 @@ def test_tile_bounds_world():
     b = tj.bounds_tile(14)
     b_min = b[0]
     b_max = b[1]
+    print b
     assert b
     assert b_min == (-1, -1)
     assert b_max == (16383, 16383)
@@ -45,6 +46,11 @@ def _get_loaded():
     tj = TileJSON("")
     tj.json = _get_test_tilejson()
     return tj
+
+def test_epsg3857towgs84():
+    a = [915107.5592417066, 5977040.352606636]
+    b = epsg3857_to_wgs84_lonlat(a[0], a[1])
+    assert b == [8.220551070801354, 47.21379138314561]
 
 def _get_test_tilejson():
     return {
