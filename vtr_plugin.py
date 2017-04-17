@@ -92,20 +92,6 @@ class VtrPlugin:
             tilejson = None
         self.tilejson = tilejson
 
-    def _on_add_server_layer(self, url):
-        assert self.tilejson
-        scheme = self.tilejson.scheme()
-        apply_styles = self.server_dialog.options.apply_styles_enabled()
-        merge_tiles = self.server_dialog.options.merge_tiles_enabled()
-        debug("Add layer: {}", url)
-
-        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
-        reader = self._create_reader(url)
-        reader.load_tiles(zoom_level=14,
-                          apply_styles=apply_styles,
-                          merge_tiles=merge_tiles,
-                          extent_to_load=extent)
-
     def _update_zoom_from_file(self, path):
         min_zoom = None
         max_zoom = None
@@ -133,42 +119,39 @@ class VtrPlugin:
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
 
+    def _on_add_server_layer(self, url):
+        assert self.tilejson
+        scheme = self.tilejson.scheme()
+        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
+        self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
+
     def _on_open_mbtiles(self, path):
-        merge_tiles = self.file_dialog.options.merge_tiles_enabled()
-        apply_styles = self.file_dialog.options.apply_styles_enabled()
-        tile_number_limit = self.file_dialog.options.tile_number_limit()
-        manual_zoom = self.file_dialog.options.manual_zoom()
-        debug("Load mbtiles: apply styles: {}, merge tiles: {}, tilelimit: {}, manual_zoom: {}, path: {}",
-              apply_styles, merge_tiles, tile_number_limit, manual_zoom, path)
-        self._load_mbtiles(path=path,
-                           apply_styles=apply_styles,
-                           merge_tiles=merge_tiles,
-                           tile_limit=tile_number_limit,
-                           manual_zoom=manual_zoom)
+        self._load_tiles(path=path, options=self.file_dialog.options)
 
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_mbtiles(self, path, apply_styles, merge_tiles, tile_limit, manual_zoom):
-        debug("Load file: {}", path)
+    def _load_tiles(self, path, options, extent_to_load=None):
+        merge_tiles = options.merge_tiles_enabled()
+        apply_styles = options.apply_styles_enabled()
+        tile_limit = options.tile_number_limit()
+        manual_zoom = options.manual_zoom()
+
+        debug("Load: {}", path)
         reader = self._create_reader(path)
         if reader:
             try:
-                is_valid = reader.source.is_mapbox_vector_tile()
-                if is_valid:
-                    zoom = reader.source.max_zoom()
-                    if manual_zoom is not None:
-                        zoom = manual_zoom
-                    reader.load_tiles(zoom_level=zoom,
-                                      load_mask_layer=False,
-                                      merge_tiles=merge_tiles,
-                                      apply_styles=apply_styles,
-                                      max_tiles=tile_limit)
-
-                else:
-                    warn("File is not in Mapbox Vector Tile Format and cannot be loaded.")
+                zoom = reader.source.max_zoom()
+                if manual_zoom is not None:
+                    zoom = manual_zoom
+                reader.load_tiles(zoom_level=zoom,
+                                  load_mask_layer=False,
+                                  merge_tiles=merge_tiles,
+                                  apply_styles=apply_styles,
+                                  max_tiles=tile_limit,
+                                  extent_to_load=extent_to_load)
             except RuntimeError:
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
