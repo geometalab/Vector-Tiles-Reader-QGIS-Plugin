@@ -127,13 +127,15 @@ class MBTilesSource:
             where_clause = "WHERE"
             if zoom_level is not None:
                 where_clause += " zoom_level = {}".format(zoom_level)
+                if bounds:
+                    where_clause += " AND"
             if bounds:
                 col_min = min(bounds[0][0], bounds[1][0])
                 col_max = max(bounds[0][0], bounds[1][0])
                 row_min = min(bounds[0][1], bounds[1][1])
                 row_max = max(bounds[0][1], bounds[1][1])
-                where_clause += " tile_column BETWEEN {} and {}".format(col_min, col_max)
-                where_clause += " and tile_row BETWEEN {} and {}".format(row_min, row_max)
+                where_clause += " tile_column BETWEEN {} AND {}".format(col_min, col_max)
+                where_clause += " and tile_row BETWEEN {} AND {}".format(row_min, row_max)
 
         limit = ""
         if max_tiles is not None:
@@ -143,8 +145,9 @@ class MBTilesSource:
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
-        for row in rows:
-            tile_data_tuples.append(self._create_tile(row))
+        if rows:
+            for row in rows:
+                tile_data_tuples.append(self._create_tile(row))
         return tile_data_tuples
 
     def _create_tile(self, row):
