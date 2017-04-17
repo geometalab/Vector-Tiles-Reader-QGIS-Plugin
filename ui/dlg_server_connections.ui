@@ -211,7 +211,7 @@
    <item row="4" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,0">
      <item alignment="Qt::AlignRight|Qt::AlignVCenter">
-      <widget class="QCheckBox" name="checkBox">
+      <widget class="QCheckBox" name="chkKeepOpen">
        <property name="text">
         <string>Keep dialog open</string>
        </property>

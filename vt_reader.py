@@ -141,6 +141,7 @@ class VtReader:
         total_nr_tiles = len(tiles_with_encoded_data)
         info("Decoding {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Loading tiles...")
+        current_progress = -1
         for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
             tile = tile_data_tuple[0]
             encoded_data = tile_data_tuple[1]
@@ -148,19 +149,24 @@ class VtReader:
             if tile.decoded_data:
                 tiles.append(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))
-            self._update_progress(progress=progress)
-            debug("Progress: {0:.1f}%", progress)
+            if progress != current_progress:
+                current_progress = progress
+                self._update_progress(progress=progress)
+                debug("Progress: {0:.1f}%", progress)
         return tiles
 
     def _process_tiles(self, tiles):
         total_nr_tiles = len(tiles)
         info("Processing {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Processing features...")
+        current_progress = -1
         for index, tile in enumerate(tiles):
             self._write_features(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))
-            self._update_progress(progress=progress)
-            debug("Progress: {0:.1f}%", progress)
+            if progress != current_progress:
+                current_progress = progress
+                self._update_progress(progress=progress)
+                debug("Progress: {0:.1f}%", progress)
 
     def _decode_binary_tile_data(self, data):
         try:
@@ -197,8 +203,9 @@ class VtReader:
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)
-            layers.append(layer)
             self._update_progress(progress=index+1)
+            if apply_styles:
+                layers.append(layer)
 
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")

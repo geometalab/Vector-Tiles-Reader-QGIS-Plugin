@@ -45,6 +45,7 @@ class VtrPlugin:
         self.server_dialog = ServerConnectionDialog()
         self.server_dialog.on_connect.connect(self._on_connect)
         self.server_dialog.on_add.connect(self._on_add_server_layer)
+        self.progress_dialog = None
 
     def initGui(self):
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
@@ -54,7 +55,6 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.add_layer_action)
         self.iface.addLayerMenu().addAction(self.add_layer_action)  # Add action to the menu: Layer->Add Layer
         self.add_menu()
-        self.progress_dialog = ProgressDialog()
         info("Vector Tile Reader Plugin loaded...")
 
     def _on_map_extent_changed(self):
@@ -123,11 +123,19 @@ class VtrPlugin:
         assert self.tilejson
         scheme = self.tilejson.scheme()
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
+        keep_dialog_open = self.server_dialog.keep_dialog_open()
+        if keep_dialog_open:
+            self.progress_dialog = ProgressDialog(self.server_dialog)
+        else:
+            self.progress_dialog = ProgressDialog(self.iface.mainWindow())
+            self.server_dialog.close()
+
         self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
 
     def _on_open_mbtiles(self, path):
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme="tms")
         debug("extent: {}", extent)
+        self.progress_dialog = ProgressDialog(self.iface.mainWindow())
         self._load_tiles(path=path, options=self.file_dialog.options, extent_to_load=None)
 
     def _create_action(self, title, icon, callback):

@@ -246,6 +246,9 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     def show(self):
         self.exec_()
 
+    def keep_dialog_open(self):
+        return self.chkKeepOpen.isChecked()
+
     def set_layers(self, layers):
         model = QStandardItemModel()
         model.setHorizontalHeaderLabels(self._table_headers)
