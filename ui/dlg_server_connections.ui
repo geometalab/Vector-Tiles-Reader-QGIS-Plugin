@@ -209,7 +209,7 @@
     </widget>
    </item>
    <item row="4" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,0">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,0,0">
      <item alignment="Qt::AlignRight|Qt::AlignVCenter">
       <widget class="QCheckBox" name="chkKeepOpen">
        <property name="text">
@@ -243,6 +243,19 @@
        </property>
        <property name="text">
         <string>Close</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnHelp">
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Help</string>
        </property>
       </widget>
      </item>

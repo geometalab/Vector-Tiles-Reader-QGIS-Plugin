@@ -1,3 +1,6 @@
+import os
+import webbrowser
+
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, QSettings
 from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem
@@ -6,10 +9,10 @@ from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
 from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
-import os
-
 from options import Ui_OptionsGroup
 
+
+_HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
 
 class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
     def __init__(self):
@@ -96,6 +99,7 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
         self.btnBrowse.clicked.connect(self._open_browser)
         self.txtPath.textChanged.connect(self._on_path_changed)
         self.btnOpen.clicked.connect(self._handle_open_click)
+        self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.lblError.setVisible(False)
 
     def show_error(self, error):
@@ -196,6 +200,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.btnConnect.clicked.connect(self._on_connect)
         self.btnDelete.clicked.connect(self._delete_connection)
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
+        self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self._load_connections()
 
     def _load_tiles_for_connection(self):

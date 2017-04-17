@@ -125,6 +125,10 @@ class Ui_DlgServerConnections(object):
         self.btnClose.setMinimumSize(QtCore.QSize(80, 0))
         self.btnClose.setObjectName(_fromUtf8("btnClose"))
         self.horizontalLayout.addWidget(self.btnClose)
+        self.btnHelp = QtGui.QPushButton(DlgServerConnections)
+        self.btnHelp.setMinimumSize(QtCore.QSize(80, 0))
+        self.btnHelp.setObjectName(_fromUtf8("btnHelp"))
+        self.horizontalLayout.addWidget(self.btnHelp)
         self.horizontalLayout.setStretch(0, 1)
         self.gridLayout.addLayout(self.horizontalLayout, 4, 0, 1, 1)
         self.gridLayout.setRowStretch(1, 1)
@@ -149,4 +153,5 @@ class Ui_DlgServerConnections(object):
         self.chkKeepOpen.setText(_translate("DlgServerConnections", "Keep dialog open", None))
         self.btnAdd.setText(_translate("DlgServerConnections", "Add", None))
         self.btnClose.setText(_translate("DlgServerConnections", "Close", None))
+        self.btnHelp.setText(_translate("DlgServerConnections", "Help", None))
 
