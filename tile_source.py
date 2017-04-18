@@ -1,7 +1,9 @@
 import os
 import sys
 import sqlite3
+import threading
 import urlparse
+import Queue
 
 from tile_json import TileJSON
 from file_helper import FileHelper
@@ -44,6 +46,7 @@ class ServerSource:
         base_url = self.json.tiles()[0]
         tiles_to_load = get_all_tiles(bounds)
         tile_data_tuples = []
+        urls = []
         for index, t in enumerate(tiles_to_load):
             col = t[0]
             row = t[1]
@@ -51,11 +54,25 @@ class ServerSource:
                 .replace("{z}", str(zoom_level))\
                 .replace("{x}", str(col))\
                 .replace("{y}", str(row))
-            content = FileHelper.load_url(load_url)
-            tile = VectorTile(self.scheme(), zoom_level, col, row)
-            tile_data_tuples.append((tile, content))
+            urls.append((load_url, col, row))
             if max_tiles and index+1 == max_tiles:
                 break
+
+        q = Queue.Queue()
+        threads = [threading.Thread(target=FileHelper.load_url, args=(u[0], None, q, [u[1], u[2]])) for u in urls]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        while not q.empty():
+            r = q.get()
+            content = r[0]
+            col = r[1][0]
+            row = r[1][1]
+            tile = VectorTile(self.scheme(), zoom_level, col, row)
+            tile_data_tuples.append((tile, content))
+
         return tile_data_tuples
 
 

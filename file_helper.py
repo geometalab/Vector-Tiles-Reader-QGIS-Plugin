@@ -45,9 +45,11 @@ class FileHelper:
             pass
 
     @staticmethod
-    def load_url(url, size=None):
+    def load_url(url, size=None, result_queue=None, params=None):
         """
          * Reads the content of the specified url. If the size parameter is set, only so many bytes will be read
+        :param params: This values will be appended to the resulting content
+        :param result_queue: A Queue object to append the resulting content to
         :param url: The url to load 
         :param size: The nr of bytes to read, None if all should be read
         :return: 
@@ -61,6 +63,9 @@ class FileHelper:
             critical("Opening url failed with error code '{}': {}", e.code, url)
         except urllib2.URLError:
             critical("The URL seems to be invalid: {}", url)
+        if result_queue:
+            res = [content, params]
+            result_queue.put(res)
         return content
 
     @staticmethod
