@@ -26,7 +26,6 @@ from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, Server
 import os
 import sys
 import site
-import math
 
 
 class VtrPlugin:
@@ -51,9 +50,7 @@ class VtrPlugin:
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
         self.about_action = self._create_action("About", "", self.show_about)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.addPluginToMenu("&Vector Tiles Reader", self.add_layer_action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.add_layer_action)
-        self.iface.addLayerMenu().addAction(self.add_layer_action)  # Add action to the menu: Layer->Add Layer
+        self.iface.insertAddLayerAction(self.add_layer_action)  # Add action to the menu: Layer->Add Layer
         self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
 
@@ -112,9 +109,8 @@ class VtrPlugin:
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
         self.toolButton.setDefaultAction(open_file_action)
-        # self.toolButton.setDefaultAction(open_server_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
-        self.toolButtonAction = self.iface.addVectorToolBarWidget(self.toolButton)
+        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
 
     def _on_add_server_layer(self, url):
         assert self.tilejson
@@ -205,10 +201,8 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
-        self.iface.removeVectorToolBarIcon(self.toolButtonAction)
-        self.iface.removePluginMenu("&Vector Tiles Reader", self.add_layer_action)
+        self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.add_layer_action)
         self.iface.addLayerMenu().removeAction(self.add_layer_action)
 
     def run(self):
