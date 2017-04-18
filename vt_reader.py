@@ -178,7 +178,7 @@ class VtReader:
                 file_content = data
             decoded_data = mapbox_vector_tile.decode(file_content)
         except:
-            critical("decoding data with mapbox_vector_tile failed", sys.exc_info())
+            critical("decoding data with mapbox_vector_tile failed: {}", sys.exc_info())
             return
         return decoded_data
 

@@ -81,6 +81,7 @@ class VtrPlugin:
         if tilejson.load():
             layers = tilejson.vector_layers()
             self.server_dialog.set_layers(layers)
+            self.server_dialog.options.set_zoom(tilejson.min_zoom(), tilejson.max_zoom())
         else:
             self.server_dialog.set_layers([])
             tilejson = None

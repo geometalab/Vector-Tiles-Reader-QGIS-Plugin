@@ -142,6 +142,9 @@
      <property name="showDropIndicator" stdset="0">
       <bool>false</bool>
      </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
      <property name="selectionMode">
       <enum>QAbstractItemView::NoSelection</enum>
      </property>
@@ -151,6 +154,12 @@
      <property name="sortingEnabled">
       <bool>true</bool>
      </property>
+     <property name="cornerButtonEnabled">
+      <bool>true</bool>
+     </property>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
     </widget>
    </item>
    <item row="2" column="0">
