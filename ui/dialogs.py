@@ -1,6 +1,7 @@
 import os
 import webbrowser
 
+from collections import OrderedDict
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, QSettings
 from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem
@@ -185,7 +186,12 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     on_add = pyqtSignal(str)
 
     _connections_array = "connections"
-    _table_headers = ["ID"]
+    _table_headers = OrderedDict([
+        ("ID", "id"),
+        ("Min. Zoom", "minzoom"),
+        ("Max. Zoom", "maxzoom"),
+        ("Description", "description")
+    ])
 
     def __init__(self):
         QtGui.QDialog.__init__(self)
@@ -202,6 +208,9 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.btnDelete.clicked.connect(self._delete_connection)
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
+        self.model = QStandardItemModel()
+        self.model.setHorizontalHeaderLabels(self._table_headers.keys())
+        self.tblLayers.setModel(self.model)
         self._load_connections()
 
     def _load_tiles_for_connection(self):
@@ -261,13 +270,13 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         return self.chkKeepOpen.isChecked()
 
     def set_layers(self, layers):
-        model = QStandardItemModel()
-        model.setHorizontalHeaderLabels(self._table_headers)
-        for l in layers:
-            item = QStandardItem(l["id"])
-            item.setEditable(False)
-            model.appendRow(item)
-        self.tblLayers.setModel(model)
+        self.model.removeRows(0, len(self.connections))
+        for row_index, layer in enumerate(layers):
+            for header_index, header in enumerate(self._table_headers.keys()):
+                # item = QStandardItem(layer["id"])
+                # item.setEditable(False)
+                self.model.setItem(row_index, header_index, QStandardItem(str(layer[self._table_headers[header]])))
+                # self.model.appendRow(item)
         add_enabled = layers is not None and len(layers) > 0
         self.btnAdd.setEnabled(add_enabled)
         # self.tblLayers.selectionModel().selectionChanged.connect(self._selected_layer_changed)
