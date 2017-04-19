@@ -45,6 +45,8 @@ class VtrPlugin:
         self.server_dialog.on_connect.connect(self._on_connect)
         self.server_dialog.on_add.connect(self._on_add_server_layer)
         self.progress_dialog = None
+        self._current_reader = None
+        self._current_options = None
 
     def initGui(self):
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
@@ -55,15 +57,19 @@ class VtrPlugin:
         info("Vector Tile Reader Plugin loaded...")
 
     def _on_map_extent_changed(self):
-        # b = self._get_visible_extent_as_tile_bounds("xyz")
-        # print(b)
         pass
+        # reader = self._current_reader
+        # if reader is not None:
+        #     scheme = self._current_reader.source.scheme()
+        #     current_extent = self._get_visible_extent_as_tile_bounds(scheme)
+        #     self._load_tiles(reader.source.source(), self._current_options, current_extent, reader)
 
     def _get_visible_extent_as_tile_bounds(self, tilejson_scheme):
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
-        e = map(lambda x: map(float, x.split(" ")), e)
-        min_extent = e[0]
-        max_extent = e[1]
+        new_extent = map(lambda x: map(float, x.split(" ")), e)
+        debug("new: {}", new_extent)
+        min_extent = new_extent[0]
+        max_extent = new_extent[1]
 
         min_proj = epsg3857_to_wgs84_lonlat(min_extent[0], min_extent[1])
         max_proj = epsg3857_to_wgs84_lonlat(max_extent[0], max_extent[1])
@@ -114,6 +120,7 @@ class VtrPlugin:
         self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
 
     def _on_add_server_layer(self, url):
+        debug("add server layer: {}", url)
         assert self.tilejson
         scheme = self.tilejson.scheme()
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
@@ -136,7 +143,7 @@ class VtrPlugin:
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_tiles(self, path, options, extent_to_load=None):
+    def _load_tiles(self, path, options, extent_to_load=None, reader=None):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -144,13 +151,17 @@ class VtrPlugin:
         cartographic_ordering = options.cartographic_ordering()
 
         debug("Load: {}", path)
-        reader = self._create_reader(path)
+        if not reader:
+            reader = self._create_reader(path)
+            self._current_reader = reader
+            self._current_options = options
         if reader:
             reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
                 zoom = reader.source.max_zoom()
                 if manual_zoom is not None:
                     zoom = manual_zoom
+                debug("Current reader: {}", self._current_reader)
                 reader.load_tiles(zoom_level=zoom,
                                   load_mask_layer=False,
                                   merge_tiles=merge_tiles,
@@ -160,6 +171,7 @@ class VtrPlugin:
                 self.refresh_layers()
                 debug("Loading complete!")
             except RuntimeError:
+                self._current_reader = None
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
 

@@ -105,7 +105,8 @@ class VtReader:
         :param max_tiles: The maximum number of tiles to load
         :return: 
         """
-
+        self.features_by_path = {}
+        self.qgis_layer_groups_by_feature_path = {}
         self._update_progress(title="Loading '{}'".format(os.path.basename(self.source.name())))
         self._update_progress(show_dialog=True)
         debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
@@ -129,11 +130,12 @@ class VtReader:
                                                          max_tiles=max_tiles)
                 tile_data_tuples.extend(mask_layer_data)
 
-        tiles = self._decode_all_tiles(tile_data_tuples)
-        self._process_tiles(tiles)
-        self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
-                                          merge_features=merge_tiles,
-                                          apply_styles=apply_styles)
+        if tile_data_tuples and len(tile_data_tuples) > 0:
+            tiles = self._decode_all_tiles(tile_data_tuples)
+            self._process_tiles(tiles)
+            self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
+                                              merge_features=merge_tiles,
+                                              apply_styles=apply_styles)
         self._update_progress(show_dialog=False)
         info("Import complete!")
 

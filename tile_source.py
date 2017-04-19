@@ -23,6 +23,10 @@ class ServerSource:
 
         self.json = TileJSON(url)
         self.json.load()
+        self._loaded_tiles = []
+
+    def source(self):
+        return self.url
 
     def name(self):
         name = self.json.id()
@@ -42,6 +46,12 @@ class ServerSource:
     def scheme(self):
         return self.json.scheme()
 
+    def _add_loaded_tile(self, zoom, col, row):
+        self._loaded_tiles.append((zoom, col, row))
+
+    def is_tile_loaded(self, zoom, col, row):
+        return (zoom, col, row) in self._loaded_tiles
+
     def load_tiles(self, zoom_level, bounds=None, max_tiles=None):
         base_url = self.json.tiles()[0]
         tiles_to_load = get_all_tiles(bounds)
@@ -50,6 +60,10 @@ class ServerSource:
         for index, t in enumerate(tiles_to_load):
             col = t[0]
             row = t[1]
+            if self.is_tile_loaded(zoom_level, col, row):
+                debug("Tile is already loaded")
+                continue
+
             load_url = base_url\
                 .replace("{z}", str(zoom_level))\
                 .replace("{x}", str(col))\
@@ -72,6 +86,7 @@ class ServerSource:
             row = r[1][1]
             tile = VectorTile(self.scheme(), zoom_level, col, row)
             tile_data_tuples.append((tile, content))
+            self._add_loaded_tile(zoom_level, col, row)
 
         return tile_data_tuples
 
@@ -85,7 +100,11 @@ class MBTilesSource:
 
         self.path = path
         self.conn = None
-        self.cached_values = {}
+        self._metadata_cache = {}
+        self._loaded_tiles = []
+
+    def source(self):
+        return self.path
 
     def name(self):
         base_name = os.path.splitext(os.path.basename(self.path))[0]
@@ -136,6 +155,12 @@ class MBTilesSource:
             warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
         return is_mapbox_pbf
 
+    def _add_loaded_tile(self, zoom, col, row):
+        self._loaded_tiles.append((zoom, col, row))
+
+    def is_tile_loaded(self, zoom, col, row):
+        return (zoom, col, row) in self._loaded_tiles
+
     def load_tiles(self, zoom_level, bounds=None, max_tiles=None):
         info("Reading tiles of zoom level {}", zoom_level)
 
@@ -164,7 +189,13 @@ class MBTilesSource:
         rows = self._get_from_db(sql=sql_command)
         if rows:
             for row in rows:
-                tile_data_tuples.append(self._create_tile(row))
+                tile, data = self._create_tile(row)
+                if not self.is_tile_loaded(zoom_level, tile.column, tile.row):
+                    self._add_loaded_tile(zoom_level, tile.column, tile.row)
+                    tile_data_tuples.append((tile, data))
+                    debug("Tile is now loaded: {}", tile)
+                else:
+                    debug("Tile is already loaded: {}", tile)
         return tile_data_tuples
 
     def _create_tile(self, row):
@@ -194,14 +225,14 @@ class MBTilesSource:
         else:
             field_name = "minzoom"
 
-        if field_name not in self.cached_values:
+        if field_name not in self._metadata_cache:
             zoom = self._get_metadata_value(field_name)
             if zoom is None:
                 zoom = self._get_zoom_from_tiles_table(max_zoom=max_zoom)
             if zoom is not None:
                 zoom = int(zoom)
-            self.cached_values[field_name] = zoom
-        return self.cached_values[field_name]
+            self._metadata_cache[field_name] = zoom
+        return self._metadata_cache[field_name]
 
     def _get_zoom_from_tiles_table(self, max_zoom=True):
         if max_zoom:
@@ -216,14 +247,14 @@ class MBTilesSource:
         return self._get_single_value(sql_query=query, field_name="zoom_level")
 
     def _get_metadata_value(self, field_name, default=None):
-        if field_name not in self.cached_values:
+        if field_name not in self._metadata_cache:
             debug("Loading metadata value '{}'", field_name)
             sql = "select value as '{0}' from metadata where name = '{0}'".format(field_name)
             value = self._get_single_value(sql_query=sql, field_name=field_name)
             if default and not value:
                 value = default
-            self.cached_values[field_name] = value
-        return self.cached_values[field_name]
+            self._metadata_cache[field_name] = value
+        return self._metadata_cache[field_name]
 
     def _get_single_value(self, sql_query, field_name):
         """
