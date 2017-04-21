@@ -51,6 +51,7 @@ class Ui_DlgEditServerConnection(object):
         self.txtName.setObjectName(_fromUtf8("txtName"))
         self.verticalLayout_2.addWidget(self.txtName)
         self.txtUrl = QtGui.QLineEdit(self.groupBox)
+        self.txtUrl.setText(_fromUtf8(""))
         self.txtUrl.setPlaceholderText(_fromUtf8(""))
         self.txtUrl.setObjectName(_fromUtf8("txtUrl"))
         self.verticalLayout_2.addWidget(self.txtUrl)
@@ -81,7 +82,7 @@ class Ui_DlgEditServerConnection(object):
         self.groupBox.setTitle(_translate("DlgEditServerConnection", "Connection", None))
         self.label.setText(_translate("DlgEditServerConnection", "Name", None))
         self.label_2.setText(_translate("DlgEditServerConnection", "TileJSON URL", None))
-        self.txtUrl.setText(_translate("DlgEditServerConnection", "http://sample.json", None))
+        self.txtUrl.setToolTip(_translate("DlgEditServerConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
         self.btnSave.setText(_translate("DlgEditServerConnection", "Save", None))
         self.btnCancel.setText(_translate("DlgEditServerConnection", "Cancel", None))
 

@@ -54,8 +54,11 @@
           </item>
           <item>
            <widget class="QLineEdit" name="txtUrl">
+            <property name="toolTip">
+             <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
+            </property>
             <property name="text">
-             <string>http://sample.json</string>
+             <string/>
             </property>
             <property name="placeholderText">
              <string/>
