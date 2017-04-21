@@ -97,7 +97,7 @@ class FileHelper:
     @staticmethod
     def is_gzipped(content):
         result = False
-        if len(content) >= 2:
+        if content and len(content) >= 2:
             gzip_headers = bytearray([0x1f, 0x8b])
             first_two_bytes = bytearray([content[0], content[1]])
             result = FileHelper._are_headers_equal(first_two_bytes, expected_header_bytes=gzip_headers)

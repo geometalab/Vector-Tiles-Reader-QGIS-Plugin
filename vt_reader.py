@@ -189,16 +189,19 @@ class VtReader:
                 debug("Progress: {0:.1f}%", progress)
 
     def _decode_binary_tile_data(self, data):
-        try:
-            is_gzipped = FileHelper.is_gzipped(data)
-            if is_gzipped:
-                file_content = GzipFile('', 'r', 0, StringIO(data)).read()
-            else:
-                file_content = data
-            decoded_data = mapbox_vector_tile.decode(file_content)
-        except:
-            critical("decoding data with mapbox_vector_tile failed: {}", sys.exc_info())
-            return
+        if data:
+            try:
+                is_gzipped = FileHelper.is_gzipped(data)
+                if is_gzipped:
+                    file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+                else:
+                    file_content = data
+                decoded_data = mapbox_vector_tile.decode(file_content)
+            except:
+                critical("Decoding tile-data failed: {}", sys.exc_info())
+        else:
+            decoded_data = None
+            warn("Tried to decode tile-data, but it's empty.")
         return decoded_data
 
     def _create_qgis_layer_hierarchy(self, zoom_level, merge_features, apply_styles):
