@@ -13,12 +13,12 @@ of the License, or (at your option) any later version.
 
 """
 
+from log_helper import debug, info, warn, critical
 from PyQt4.QtCore import QSettings
 from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
-from log_helper import debug, info, warn, critical
 from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat
 from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog

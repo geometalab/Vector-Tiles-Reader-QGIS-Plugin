@@ -1,13 +1,26 @@
 import logging
+import os
 import sys
 import pkgutil
 import importlib
+import tempfile
 
 _DEBUG = "debug"
 _INFO = "info"
 _WARN = "warn"
 _CRITICAL = "critical"
 _qgis_available = None
+
+
+def get_temp_dir(path_extension=None):
+    temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
+    if path_extension:
+        temp_dir = os.path.join(temp_dir, path_extension)
+
+    return temp_dir
+
+logging.basicConfig(filename=get_temp_dir("log.txt"), filemode='a')
+_logger = logging.getLogger("Vector-Tile-Reader")
 
 
 def info(msg, *args):
@@ -31,13 +44,13 @@ def _log_message(msg, level, *args):
         msg = msg.format(*args)
 
         if level == _INFO:
-            logging.info(msg)
+            _logger.info(msg)
         elif level == _WARN:
-            logging.warning(msg)
+            _logger.warning(msg, *args)
         elif level == _CRITICAL:
-            logging.critical(msg)
+            _logger.critical(msg)
         elif level == _DEBUG:
-            logging.debug(msg)
+            _logger.debug(msg)
 
         if level != _INFO:
             print(msg)

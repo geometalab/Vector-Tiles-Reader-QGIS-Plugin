@@ -5,9 +5,9 @@ import threading
 import urlparse
 import Queue
 
+from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
-from log_helper import debug, critical, warn, info
 from tile_helper import VectorTile, get_all_tiles
 
 

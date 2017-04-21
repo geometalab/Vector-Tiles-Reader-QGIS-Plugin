@@ -312,7 +312,6 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             self._save_connections()
 
     def _handle_connection_change(self, name):
-        print("connection changed to: {}".format(name))
         enable = False
         if name in self.connections:
             enable = True

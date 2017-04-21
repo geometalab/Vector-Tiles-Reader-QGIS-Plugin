@@ -3,20 +3,18 @@ import os
 import json
 import numbers
 
+from log_helper import info, warn, critical, debug
 from PyQt4.QtGui import QApplication
-
 from tile_helper import change_scheme
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
 from global_map_tiles import GlobalMercator
-from log_helper import info, warn, critical, debug
 from cStringIO import StringIO
 from gzip import GzipFile
+from tile_source import ServerSource, MBTilesSource
 
 import mapbox_vector_tile
-
-from tile_source import ServerSource, MBTilesSource
 
 
 class _GeoTypes:
