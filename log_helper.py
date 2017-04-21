@@ -19,7 +19,9 @@ def get_temp_dir(path_extension=None):
 
     return temp_dir
 
-logging.basicConfig(filename=get_temp_dir("log.txt"), filemode='a')
+logging.basicConfig(
+    filename=get_temp_dir("log.txt"),
+    format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
 _logger = logging.getLogger("Vector-Tile-Reader")
 
 

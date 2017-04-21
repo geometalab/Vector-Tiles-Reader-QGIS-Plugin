@@ -73,7 +73,10 @@ class ServerSource:
                 break
 
         q = Queue.Queue()
-        threads = [threading.Thread(target=FileHelper.load_url, args=(u[0], None, q, [u[1], u[2]])) for u in urls]
+        threads = [threading.Thread(
+            name="URL-Thread-{}".format(index),
+            target=FileHelper.load_url,
+            args=(u[0], None, q, [u[1], u[2]])) for index, u in enumerate(urls)]
         for thread in threads:
             thread.start()
         for thread in threads:
