@@ -207,6 +207,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
+        self.grpCrs.setVisible(False)
         self.options = OptionsGroup(self.grpOptions)
         self.settings = QSettings("VtrSettings")
         self.connections = {}
