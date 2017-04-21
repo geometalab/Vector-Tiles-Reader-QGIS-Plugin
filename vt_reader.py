@@ -211,8 +211,6 @@ class VtReader:
         base_name = self.source.name()
         group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
 
-        # root_group = root.findGroup(group_name)
-        # if not root_group:
         root_group = root.addGroup(group_name)
         feature_paths = sorted(self.features_by_path.keys(), key=lambda path: self._get_feature_sort_id(path))
         self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
