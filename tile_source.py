@@ -196,9 +196,6 @@ class MBTilesSource:
                 if not self.is_tile_loaded(zoom_level, tile.column, tile.row):
                     self._add_loaded_tile(zoom_level, tile.column, tile.row)
                     tile_data_tuples.append((tile, data))
-                    debug("Tile is now loaded: {}", tile)
-                else:
-                    debug("Tile is already loaded: {}", tile)
         return tile_data_tuples
 
     def _create_tile(self, row):
