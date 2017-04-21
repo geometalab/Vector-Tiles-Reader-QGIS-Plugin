@@ -24,6 +24,14 @@ class ServerSource:
         self.json = TileJSON(url)
         self.json.load()
         self._loaded_tiles = []
+        self._progress_handler = None
+        self._cancelling = False
+
+    def cancel(self):
+        self._cancelling = True
+
+    def set_progress_handler(self, func):
+        self._progress_handler = func
 
     def source(self):
         return self.url
@@ -52,16 +60,17 @@ class ServerSource:
     def is_tile_loaded(self, zoom, col, row):
         return (zoom, col, row) in self._loaded_tiles
 
-    def load_tiles(self, zoom_level, bounds=None, max_tiles=None):
+    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None):
+        self._cancelling = False
         base_url = self.json.tiles()[0]
         tiles_to_load = get_all_tiles(bounds)
         tile_data_tuples = []
         urls = []
+
         for index, t in enumerate(tiles_to_load):
             col = t[0]
             row = t[1]
             if self.is_tile_loaded(zoom_level, col, row):
-                debug("Tile is already loaded")
                 continue
 
             load_url = base_url\
@@ -72,18 +81,14 @@ class ServerSource:
             if max_tiles and index+1 == max_tiles:
                 break
 
-        q = Queue.Queue()
-        threads = [threading.Thread(
-            name="URL-Thread-{}".format(index),
-            target=FileHelper.load_url,
-            args=(u[0], None, q, [u[1], u[2]])) for index, u in enumerate(urls)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        self._progress_handler(msg="Getting {} tiles from source...".format(len(urls)), max_progress=len(urls))
+        queue = Queue.Queue()
 
-        while not q.empty():
-            r = q.get()
+        page_size = 5
+        self._do_paged(page_size, urls, self._load_urls_async, queue, for_each)
+
+        while not queue.empty():
+            r = queue.get()
             content = r[0]
             col = r[1][0]
             row = r[1][1]
@@ -92,6 +97,34 @@ class ServerSource:
             self._add_loaded_tile(zoom_level, col, row)
 
         return tile_data_tuples
+
+    def _load_urls_async(self, page_offset, urls, *args):
+        queue = args[0]
+        for_each = args[1]
+        threads = [threading.Thread(
+            name="URL-Thread-{}".format(index),
+            target=FileHelper.load_url,
+            args=(u[0], None, queue, [u[1], u[2]])) for index, u in enumerate(urls)]
+        for thread in threads:
+            thread.start()
+        for index, thread in enumerate(threads):
+            if for_each:
+                for_each()
+            if self._cancelling:
+                break
+            thread.join()
+            self._progress_handler(progress=page_offset+index+1)
+
+    def _do_paged(self, page_size, all_items, func, *args):
+        page_nr = 0
+        items = []
+        while page_nr == 0 or len(items) > 0:
+            items = all_items[page_nr:page_nr + page_size]
+            if self._cancelling or len(items) == 0:
+                break
+            page_offset = page_nr*page_size
+            func(page_offset, items, *args)
+            page_nr += page_size
 
 
 class MBTilesSource:
@@ -105,6 +138,14 @@ class MBTilesSource:
         self.conn = None
         self._metadata_cache = {}
         self._loaded_tiles = []
+        self._progress_handler = None
+        self._cancelling = False
+
+    def cancel(self):
+        self._cancelling = True
+
+    def set_progress_handler(self, func):
+        self._progress_handler = func
 
     def source(self):
         return self.path
@@ -164,7 +205,8 @@ class MBTilesSource:
     def is_tile_loaded(self, zoom, col, row):
         return (zoom, col, row) in self._loaded_tiles
 
-    def load_tiles(self, zoom_level, bounds=None, max_tiles=None):
+    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None):
+        self._cancelling = False
         info("Reading tiles of zoom level {}", zoom_level)
 
         where_clause = ""
@@ -191,11 +233,17 @@ class MBTilesSource:
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql_command)
         if rows:
-            for row in rows:
+            self._progress_handler(max_progress=len(rows))
+            for index, row in enumerate(rows):
+                if for_each:
+                    for_each()
+                if self._cancelling:
+                    break
                 tile, data = self._create_tile(row)
                 if not self.is_tile_loaded(zoom_level, tile.column, tile.row):
                     self._add_loaded_tile(zoom_level, tile.column, tile.row)
                     tile_data_tuples.append((tile, data))
+                self._progress_handler(progress=index+1)
         return tile_data_tuples
 
     def _create_tile(self, row):

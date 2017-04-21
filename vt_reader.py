@@ -69,6 +69,7 @@ class VtReader:
             self.source = ServerSource(url=path_or_url)
         else:
             self.source = MBTilesSource(path=path_or_url)
+        self.source.set_progress_handler(self._update_progress)
 
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
@@ -99,6 +100,8 @@ class VtReader:
 
     def cancel(self):
         self.cancel_requested = True
+        if self.source:
+            self.source.cancel()
 
     def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None, extent_to_load=None):
         """
@@ -126,14 +129,16 @@ class VtReader:
 
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                   bounds=extent_to_load,
-                                                  max_tiles=max_tiles)
+                                                  max_tiles=max_tiles,
+                                                  for_each=QApplication.processEvents)
 
         if load_mask_layer:
             mask_level = self.source.mask_level()
             if mask_level is not None:
                 mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
                                                          bounds=extent_to_load,
-                                                         max_tiles=max_tiles)
+                                                         max_tiles=max_tiles,
+                                                         for_each=QApplication.processEvents)
                 tile_data_tuples.extend(mask_layer_data)
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
@@ -152,7 +157,7 @@ class VtReader:
         tiles = []
         total_nr_tiles = len(tiles_with_encoded_data)
         info("Decoding {} tiles", total_nr_tiles)
-        self._update_progress(progress=0, max_progress=100, msg="Loading tiles...")
+        self._update_progress(progress=0, max_progress=100, msg="Decoding tiles...")
         current_progress = -1
         for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
             QApplication.processEvents()
