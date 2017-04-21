@@ -67,7 +67,6 @@ class VtrPlugin:
     def _get_visible_extent_as_tile_bounds(self, tilejson_scheme):
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
         new_extent = map(lambda x: map(float, x.split(" ")), e)
-        debug("new: {}", new_extent)
         min_extent = new_extent[0]
         max_extent = new_extent[1]
 
@@ -170,7 +169,6 @@ class VtrPlugin:
                 zoom = reader.source.max_zoom()
                 if manual_zoom is not None:
                     zoom = manual_zoom
-                debug("Current reader: {}", self._current_reader)
                 reader.load_tiles(zoom_level=zoom,
                                   load_mask_layer=False,
                                   merge_tiles=merge_tiles,
