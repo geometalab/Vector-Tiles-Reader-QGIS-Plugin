@@ -155,16 +155,27 @@ class FileConnectionDialog(QtGui.QDialog, Ui_DlgFileConnection):
 
 
 class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
+    on_cancel = pyqtSignal()
+
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
         self.lblMessage.setVisible(False)
+        self.btnCancel.clicked.connect(self._on_cancel)
+
+    def _on_cancel(self):
+        self.btnCancel.setText("Cancelling...")
+        self.btnCancel.setEnabled(False)
+        self.on_cancel.emit()
 
     def set_maximum(self, max):
         self.progressBar.setMaximum(max)
 
     def set_progress(self, value):
         self.progressBar.setValue(value)
+
+    def is_cancelling(self):
+        return self._cancelling
 
     def set_message(self, msg=None):
         self.lblMessage.setText(msg)

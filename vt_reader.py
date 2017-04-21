@@ -2,6 +2,9 @@ import sys
 import os
 import json
 import numbers
+
+from PyQt4.QtGui import QApplication
+
 from tile_helper import change_scheme
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
@@ -75,6 +78,7 @@ class VtReader:
         self.progress_handler = progress_handler
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
+        self.cancel_requested = False
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -95,6 +99,9 @@ class VtReader:
             "crs": crs,
             "features": []}
 
+    def cancel(self):
+        self.cancel_requested = True
+
     def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None, extent_to_load=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
@@ -105,6 +112,7 @@ class VtReader:
         :param max_tiles: The maximum number of tiles to load
         :return: 
         """
+        self.cancel_requested = False
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
         self._update_progress(title="Loading '{}'".format(os.path.basename(self.source.name())))
@@ -137,7 +145,10 @@ class VtReader:
                                               merge_features=merge_tiles,
                                               apply_styles=apply_styles)
         self._update_progress(show_dialog=False)
-        info("Import complete!")
+        if self.cancel_requested:
+            info("Import cancelled")
+        else:
+            info("Import complete")
 
     def _decode_tiles(self, tiles_with_encoded_data):
         tiles = []
@@ -146,6 +157,9 @@ class VtReader:
         self._update_progress(progress=0, max_progress=100, msg="Loading tiles...")
         current_progress = -1
         for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
+            QApplication.processEvents()
+            if self.cancel_requested:
+                break
             tile = tile_data_tuple[0]
             encoded_data = tile_data_tuple[1]
             tile.decoded_data = self._decode_binary_tile_data(encoded_data)
@@ -164,6 +178,9 @@ class VtReader:
         self._update_progress(progress=0, max_progress=100, msg="Processing features...")
         current_progress = -1
         for index, tile in enumerate(tiles):
+            QApplication.processEvents()
+            if self.cancel_requested:
+                break
             self._write_features(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))
             if progress != current_progress:
@@ -200,6 +217,9 @@ class VtReader:
         self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
         layers = []
         for index, feature_path in enumerate(feature_paths):
+            QApplication.processEvents()
+            if self.cancel_requested:
+                break
             target_group, layer_name = self._get_group_for_path(feature_path, root_group)
             feature_collection = self.features_by_path[feature_path]
             file_src = FileHelper.get_unique_geojson_file_name()
@@ -213,6 +233,9 @@ class VtReader:
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
             for index, layer in enumerate(layers):
+                QApplication.processEvents()
+                if self.cancel_requested:
+                    break
                 VtReader._apply_named_style(layer)
                 self._update_progress(progress=index+1)
 

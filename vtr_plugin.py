@@ -126,16 +126,25 @@ class VtrPlugin:
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
         keep_dialog_open = self.server_dialog.keep_dialog_open()
         if keep_dialog_open:
-            self.progress_dialog = ProgressDialog(self.server_dialog)
+            dialog_owner = self.server_dialog
         else:
-            self.progress_dialog = ProgressDialog(self.iface.mainWindow())
+            dialog_owner = self.iface.mainWindow()
             self.server_dialog.close()
+        self._create_progress_dialog(dialog_owner)
         self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
+
+    def _create_progress_dialog(self, owner):
+        self.progress_dialog = ProgressDialog(owner)
+        self.progress_dialog.on_cancel.connect(self._cancel_load)
+
+    def _cancel_load(self):
+        if self._current_reader:
+            self._current_reader.cancel()
 
     def _on_open_mbtiles(self, path):
         # extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme="tms")
         # debug("extent: {}", extent)
-        self.progress_dialog = ProgressDialog(self.iface.mainWindow())
+        self._create_progress_dialog(self.iface.mainWindow())
         self._load_tiles(path=path, options=self.file_dialog.options, extent_to_load=None)
 
     def _create_action(self, title, icon, callback):
@@ -184,7 +193,9 @@ class VtrPlugin:
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface, path_or_url=path_or_url, progress_handler=self.handle_progress_update)
+            reader = VtReader(self.iface,
+                              path_or_url=path_or_url,
+                              progress_handler=self.handle_progress_update)
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
