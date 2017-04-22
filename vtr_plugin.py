@@ -19,7 +19,7 @@ from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
 from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
 
@@ -64,7 +64,7 @@ class VtrPlugin:
         #     current_extent = self._get_visible_extent_as_tile_bounds(scheme)
         #     self._load_tiles(reader.source.source(), self._current_options, current_extent, reader)
 
-    def _get_visible_extent_as_tile_bounds(self, tilejson_scheme):
+    def _get_visible_extent_as_tile_bounds(self, tilejson_scheme, zoom):
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
         new_extent = map(lambda x: map(float, x.split(" ")), e)
         min_extent = new_extent[0]
@@ -76,7 +76,7 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile = get_tile_bounds(14, bounds=bounds, scheme=tilejson_scheme)
+        tile = get_tile_bounds(zoom, bounds=bounds, scheme=tilejson_scheme)
         return tile
 
     def _on_connect(self, url):
@@ -124,7 +124,13 @@ class VtrPlugin:
         scheme = self.tilejson.scheme()
         crs_string = self.tilejson.crs()
         self._init_qgis_map(crs_string)
-        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
+        max_zoom = self.tilejson.max_zoom()
+        if not max_zoom:
+            max_zoom = 14
+        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=max_zoom)
+        if not self.tilejson.is_within_bounds(zoom=max_zoom, extent=extent):
+            self._set_qgis_extent(self.tilejson)
+
         keep_dialog_open = self.server_dialog.keep_dialog_open()
         if keep_dialog_open:
             dialog_owner = self.server_dialog
@@ -133,6 +139,20 @@ class VtrPlugin:
             self.server_dialog.close()
         self._create_progress_dialog(dialog_owner)
         self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
+
+    def _set_qgis_extent(self, tilejson):
+        """
+         * Sets the current extent of the QGIS map canvas to the center of the specified TileJSON
+        :param tilejson: 
+        :return: 
+        """
+        center_tile = tilejson.center_tile()
+        scheme = tilejson.scheme()
+        max_zoom = tilejson.max_zoom()
+        center_latlon = tile_to_latlon(max_zoom, center_tile[0], center_tile[1], scheme=scheme)
+        map_pos = QgsPoint(center_latlon[0], center_latlon[1])
+        rect = QgsRectangle(map_pos, map_pos)
+        self.iface.mapCanvas().setExtent(rect)
 
     def _init_qgis_map(self, crs_string):
         crs = QgsCoordinateReferenceSystem(crs_string)
@@ -149,8 +169,6 @@ class VtrPlugin:
             self._current_reader.cancel()
 
     def _on_open_mbtiles(self, path):
-        # extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme="tms")
-        # debug("extent: {}", extent)
         self._create_progress_dialog(self.iface.mainWindow())
         self._load_tiles(path=path, options=self.file_dialog.options, extent_to_load=None)
 

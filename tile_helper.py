@@ -17,6 +17,13 @@ class VectorTile:
 
 
 def coordinate_to_tile(zoom, lat, lng):
+    if not zoom:
+        raise RuntimeError("zoom is required")
+    if not lat:
+        raise RuntimeError("latitude is required")
+    if not lng:
+        raise RuntimeError("Longitude is required")
+
     gm = GlobalMercator()
     m = gm.LatLonToMeters(lat, lng)
     t = gm.MetersToTile(m[0], m[1], zoom)
@@ -29,6 +36,22 @@ def epsg3857_to_wgs84_lonlat(x, y):
     wgs84 = gm.MetersToLatLon(x, y)
     # change latlon to lonlat
     return [wgs84[1], wgs84[0]]
+
+
+def tile_to_latlon(zoom, x, y, scheme="tms"):
+    """
+     * Returns the tile extent in ESPG:3857 coordinates
+    :param zoom: 
+    :param x: 
+    :param y: 
+    :param scheme: 
+    :return: 
+    """
+
+    gm = GlobalMercator()
+    if scheme != "tms":
+        y = change_scheme(zoom, y)
+    return gm.TileBounds(x, y, zoom)
 
 
 def get_tile_bounds(zoom, bounds, scheme="xyz"):

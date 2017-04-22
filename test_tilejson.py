@@ -1,6 +1,6 @@
 from tile_json import TileJSON
 import pytest
-from tile_helper import get_tile_bounds, coordinate_to_tile, epsg3857_to_wgs84_lonlat
+from tile_helper import get_tile_bounds, coordinate_to_tile, epsg3857_to_wgs84_lonlat, tile_to_latlon
 
 def test_load():
     tj = _get_loaded()
@@ -11,6 +11,10 @@ def test_bounds():
     b = tj.bounds_longlat()
     assert b
     assert len(b) == 4
+
+def test_tile_to_latlon():
+    latlon = tile_to_latlon(14, 8568, 5747, scheme="xyz")
+    assert latlon == (919690.3243272416, 5977987.108127065, 922136.3092323653, 5980433.093032189)
 
 def test_manual_bounds_xyz():
     # boundary for mbtiles zurich 4 tiles in bottom left corner
@@ -42,9 +46,36 @@ def test_tile_bounds_world():
     assert b_min == (-1, -1)
     assert b_max == (16383, 16383)
 
-def _get_loaded():
+def test_is_within_bounds():
+    tj = _get_loaded()
+    assert tj.is_within_bounds(14, [(8191, 8191), (8192, 8192)])
+
+def test_center_tile():
+    json = {
+        "center": [8.27187, 47.22550, 14],
+        "scheme": "xyz"
+    }
+    tj = _get_loaded(json)
+    center = tj.center_tile()
+    print center
+    assert center == (8568, 5747)
+
+def test_center_tile_from_bounds():
+    json = {
+        "maxzoom": 14,
+        "bounds": [8.27187, 47.22550, 8.30261, 47.22183],
+        "scheme": "xyz"
+    }
+    tj = _get_loaded(json)
+    center = tj.center_tile()
+    assert center == (8568, 5747)
+
+def _get_loaded(json=None):
     tj = TileJSON("")
-    tj.json = _get_test_tilejson()
+    if json:
+        tj.json = json
+    else:
+        tj.json = _get_test_tilejson()
     return tj
 
 def test_epsg3857towgs84():
