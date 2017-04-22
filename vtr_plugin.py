@@ -122,6 +122,8 @@ class VtrPlugin:
         debug("add server layer: {}", url)
         assert self.tilejson
         scheme = self.tilejson.scheme()
+        crs_string = self.tilejson.crs()
+        self._init_qgis_map(crs_string)
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme)
         keep_dialog_open = self.server_dialog.keep_dialog_open()
         if keep_dialog_open:
@@ -131,6 +133,12 @@ class VtrPlugin:
             self.server_dialog.close()
         self._create_progress_dialog(dialog_owner)
         self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
+
+    def _init_qgis_map(self, crs_string):
+        crs = QgsCoordinateReferenceSystem(crs_string)
+        if not crs.isValid():
+            crs = QgsCoordinateReferenceSystem("EPSG:3857")
+        self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
 
     def _create_progress_dialog(self, owner):
         self.progress_dialog = ProgressDialog(owner)

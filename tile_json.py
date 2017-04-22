@@ -42,6 +42,7 @@ class TileJSON:
         :param manual_bounds: 
         :return:         """
 
+        #todo: return named dict instead with x_min, x_max, y_min, y_max
         bounds = self.bounds_longlat()
         scheme = self.scheme()
         return get_tile_bounds(zoom, bounds, scheme)
@@ -49,6 +50,12 @@ class TileJSON:
     def vector_layers(self):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
         return layers
+
+    def crs(self):
+        crs = self._get_value("crs")
+        if not crs:
+            crs = self._get_value("srs")
+        return crs
 
     def scheme(self, default="xyz"):
         scheme = self._get_value("scheme")
