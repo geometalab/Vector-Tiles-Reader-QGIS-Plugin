@@ -10,6 +10,7 @@ from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
 from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
+from dlg_tile_reloading import Ui_DlgTileReloading
 from options import Ui_OptionsGroup
 
 
@@ -58,6 +59,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         if min_zoom or max_zoom:
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
+
+    def auto_load_tiles(self):
+        return self.chkAutoLoadTiles.isChecked()
 
     def cartographic_ordering(self):
         return self.chkCartographicOrdering.isChecked()
@@ -162,6 +166,7 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
         self.setupUi(self)
         self.lblMessage.setVisible(False)
         self.btnCancel.clicked.connect(self._on_cancel)
+        self._is_loading = False
 
     def _on_cancel(self):
         self.btnCancel.setText("Cancelling...")
@@ -177,6 +182,9 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
     def is_cancelling(self):
         return self._cancelling
 
+    def is_loading(self):
+        return self._is_loading
+
     def set_message(self, msg=None):
         self.lblMessage.setText(msg)
         if msg:
@@ -185,10 +193,37 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
             self.lblMessage.setVisible(False)
 
     def open(self):
+        self._is_loading = True
         self.show()
 
     def hide(self):
+        self._is_loading = False
         self.close()
+
+
+class TilesReloadingDialog(QtGui.QDialog, Ui_DlgTileReloading):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.setupUi(self)
+        self.always_accept = False
+        self.always_deny = False
+
+    def do_not_show_again(self):
+        return self.chkDoNotShowAgain.isChecked()
+
+    def reload_tiles(self):
+        if self.always_accept:
+            return True
+        elif self.always_deny:
+            return False
+
+        result = self.exec_()
+        if result == QtGui.QDialog.Accepted:
+            self.always_accept = self.do_not_show_again()
+            return True
+        else:
+            self.always_deny = self.do_not_show_again()
+            return False
 
 
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
@@ -285,13 +320,9 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.model.removeRows(0, len(self.connections))
         for row_index, layer in enumerate(layers):
             for header_index, header in enumerate(self._table_headers.keys()):
-                # item = QStandardItem(layer["id"])
-                # item.setEditable(False)
                 self.model.setItem(row_index, header_index, QStandardItem(str(layer[self._table_headers[header]])))
-                # self.model.appendRow(item)
         add_enabled = layers is not None and len(layers) > 0
         self.btnAdd.setEnabled(add_enabled)
-        # self.tblLayers.selectionModel().selectionChanged.connect(self._selected_layer_changed)
 
     def _edit_connection(self):
         conn = self._get_current_connection()
@@ -303,7 +334,6 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
     def _create_or_update_connection(self, name=None, url=None):
         dlg = EditServerConnection(name, url)
         result = dlg.exec_()
-        print(result)
         if result == QtGui.QDialog.Accepted:
             newname, newurl = dlg.get_connection()
             self._set_connection_url(newname, newurl)

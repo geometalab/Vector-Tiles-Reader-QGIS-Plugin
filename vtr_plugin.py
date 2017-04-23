@@ -21,7 +21,7 @@ from qgis.core import *
 from file_helper import FileHelper
 from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
 from tile_json import TileJSON
-from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog
+from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog, TilesReloadingDialog
 
 import os
 import sys
@@ -34,9 +34,8 @@ class VtrPlugin:
     add_layer_action = None
 
     def __init__(self, iface):
-        self._add_path_to_dependencies_to_syspath()
         self.iface = iface
-        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
+        self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
         self.file_dialog.on_open.connect(self._on_open_mbtiles)
@@ -45,8 +44,10 @@ class VtrPlugin:
         self.server_dialog.on_connect.connect(self._on_connect)
         self.server_dialog.on_add.connect(self._on_add_server_layer)
         self.progress_dialog = None
+        self.reload_dialog = None
         self._current_reader = None
         self._current_options = None
+        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
 
     def initGui(self):
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
@@ -58,6 +59,10 @@ class VtrPlugin:
 
     def _on_map_extent_changed(self):
         pass
+        # is_loading = self.progress_dialog and self.progress_dialog.is_loading()
+        # if not is_loading and self.reload_dialog:
+        #     should_reload = self.reload_dialog.reload_tiles()
+        #     debug("Reload tiles: {}", should_reload)
         # reader = self._current_reader
         # if reader is not None:
         #     scheme = self._current_reader.source.scheme()
@@ -189,6 +194,10 @@ class VtrPlugin:
             reader = self._create_reader(path)
             self._current_reader = reader
             self._current_options = options
+            if options.auto_load_tiles():
+                self.reload_dialog = TilesReloadingDialog()
+            else:
+                self.reload_dialog = None
         if reader:
             reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
