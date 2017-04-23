@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>391</width>
-    <height>202</height>
+    <height>225</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -23,46 +23,30 @@
    <string>Options</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkMergeTiles">
+   <item row="3" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkAutoLoadTiles">
      <property name="text">
-      <string>Merge Tiles (disable for performance)</string>
+      <string>Automaticallyy load tiles for visible area</string>
      </property>
      <property name="checked">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>20</height>
-      </size>
+   <item row="7" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkApplyStyles">
+     <property name="toolTip">
+      <string>Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)</string>
      </property>
      <property name="text">
-      <string>Zoom</string>
+      <string>Apply predefined OpenMapTiles style</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="4" column="1">
     <widget class="QRadioButton" name="rbZoomMax">
      <property name="text">
       <string>Max. Zoom</string>
@@ -121,23 +105,26 @@
      </item>
     </layout>
    </item>
-   <item row="7" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkApplyStyles">
-     <property name="toolTip">
-      <string>Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)</string>
-     </property>
+   <item row="0" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkMergeTiles">
      <property name="text">
-      <string>Apply predefined OpenMapTiles style</string>
+      <string>Merge Tiles (disable for performance)</string>
      </property>
      <property name="checked">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
-    <widget class="QRadioButton" name="rbZoomAuto">
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>20</height>
+      </size>
+     </property>
      <property name="text">
-      <string>Auto (scale-dependent)</string>
+      <string>Zoom</string>
      </property>
     </widget>
    </item>
@@ -184,6 +171,22 @@
       </spacer>
      </item>
     </layout>
+   </item>
+   <item row="6" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
    </item>
    <item row="2" column="0" colspan="2">
     <widget class="QCheckBox" name="chkCartographicOrdering">

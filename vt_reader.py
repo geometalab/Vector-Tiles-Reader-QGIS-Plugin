@@ -116,8 +116,7 @@ class VtReader:
         self.cancel_requested = False
         self.features_by_path = {}
         self.qgis_layer_groups_by_feature_path = {}
-        self._update_progress(title="Loading '{}'".format(os.path.basename(self.source.name())))
-        self._update_progress(show_dialog=True)
+        self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
         debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
 
         min_zoom = self.source.min_zoom()
