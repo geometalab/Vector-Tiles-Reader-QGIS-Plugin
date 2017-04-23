@@ -1,4 +1,5 @@
 from global_map_tiles import GlobalMercator
+from osgeo import osr
 import math
 
 
@@ -16,7 +17,7 @@ class VectorTile:
         return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)
 
 
-def coordinate_to_tile(zoom, lat, lng):
+def coordinate_to_tile(zoom, lat, lng, crs=4326):
     if not zoom:
         raise RuntimeError("zoom is required")
     if not lat:
@@ -24,9 +25,21 @@ def coordinate_to_tile(zoom, lat, lng):
     if not lng:
         raise RuntimeError("Longitude is required")
 
+    src = osr.SpatialReference()
+    tgt = osr.SpatialReference()
+    src.ImportFromEPSG(crs)
+    tgt.ImportFromEPSG(4326)
+    transform = osr.CoordinateTransformation(src, tgt)
+    coords = transform.TransformPoint(lng, lat)
+    lng = coords[0]
+    lat = coords[1]
+
     gm = GlobalMercator()
     m = gm.LatLonToMeters(lat, lng)
     t = gm.MetersToTile(m[0], m[1], zoom)
+
+    # todo: use 'change_scheme' method instead
+    # todo: clarify on when to change the tile scheme
     tile = gm.GoogleTile(t[0], t[1], zoom)
     return tile
 

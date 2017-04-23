@@ -19,7 +19,7 @@ from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, coordinate_to_tile
 from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog, TilesReloadingDialog
 
@@ -48,6 +48,8 @@ class VtrPlugin:
         self._current_reader = None
         self._current_options = None
         self._connect_to_extent_changed()
+        # todo: remove after testing
+        # print coordinate_to_tile(14, 230848.66, 662509.94, 21781)
 
     def initGui(self):
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
