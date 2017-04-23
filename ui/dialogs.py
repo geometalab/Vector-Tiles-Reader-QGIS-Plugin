@@ -38,7 +38,6 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     def __init__(self, target_groupbox):
         self.setupUi(target_groupbox)
         self.lblZoomRange.setText("")
-        self.rbZoomAuto.setEnabled(False)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
 
