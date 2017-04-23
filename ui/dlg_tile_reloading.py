@@ -25,18 +25,21 @@ except AttributeError:
 class Ui_DlgTileReloading(object):
     def setupUi(self, DlgTileReloading):
         DlgTileReloading.setObjectName(_fromUtf8("DlgTileReloading"))
-        DlgTileReloading.resize(400, 100)
+        DlgTileReloading.resize(400, 118)
         self.gridLayout = QtGui.QGridLayout(DlgTileReloading)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.chkDoNotShowAgain = QtGui.QCheckBox(DlgTileReloading)
         self.chkDoNotShowAgain.setObjectName(_fromUtf8("chkDoNotShowAgain"))
-        self.horizontalLayout.addWidget(self.chkDoNotShowAgain, QtCore.Qt.AlignRight)
+        self.horizontalLayout.addWidget(self.chkDoNotShowAgain, QtCore.Qt.AlignLeft)
         self.btnOk = QtGui.QPushButton(DlgTileReloading)
+        self.btnOk.setMinimumSize(QtCore.QSize(0, 0))
+        self.btnOk.setMaximumSize(QtCore.QSize(70, 16777215))
         self.btnOk.setObjectName(_fromUtf8("btnOk"))
         self.horizontalLayout.addWidget(self.btnOk, QtCore.Qt.AlignRight)
         self.btnCancel = QtGui.QPushButton(DlgTileReloading)
+        self.btnCancel.setMaximumSize(QtCore.QSize(70, 16777215))
         self.btnCancel.setObjectName(_fromUtf8("btnCancel"))
         self.horizontalLayout.addWidget(self.btnCancel, QtCore.Qt.AlignRight)
         self.horizontalLayout.setStretch(0, 1)
@@ -56,7 +59,9 @@ class Ui_DlgTileReloading(object):
     def retranslateUi(self, DlgTileReloading):
         DlgTileReloading.setWindowTitle(_translate("DlgTileReloading", "Tile Reloading", None))
         self.chkDoNotShowAgain.setText(_translate("DlgTileReloading", "Do not show again", None))
-        self.btnOk.setText(_translate("DlgTileReloading", "OK", None))
-        self.btnCancel.setText(_translate("DlgTileReloading", "Cancel", None))
-        self.label.setText(_translate("DlgTileReloading", "Warning: New tiles will be loaded for the newly visible extent. Depending on the current map scale, this may take a while. You will still be able to cancel the loading process manually.", None))
+        self.btnOk.setText(_translate("DlgTileReloading", "Yes", None))
+        self.btnCancel.setText(_translate("DlgTileReloading", "No", None))
+        self.label.setText(_translate("DlgTileReloading", "Warning: New tiles will be loaded for the newly visible extent. Depending on the current map scale, this may take a while. You will still be able to cancel the loading process manually.\n"
+"\n"
+"Do you want to continue?", None))
 

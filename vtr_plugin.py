@@ -47,7 +47,7 @@ class VtrPlugin:
         self.reload_dialog = None
         self._current_reader = None
         self._current_options = None
-        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
+        self._connect_to_extent_changed()
 
     def initGui(self):
         self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
@@ -57,17 +57,23 @@ class VtrPlugin:
         self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
 
+    def _connect_to_extent_changed(self):
+        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
+
     def _on_map_extent_changed(self):
-        pass
-        # is_loading = self.progress_dialog and self.progress_dialog.is_loading()
-        # if not is_loading and self.reload_dialog:
-        #     should_reload = self.reload_dialog.reload_tiles()
-        #     debug("Reload tiles: {}", should_reload)
-        # reader = self._current_reader
-        # if reader is not None:
-        #     scheme = self._current_reader.source.scheme()
-        #     current_extent = self._get_visible_extent_as_tile_bounds(scheme)
-        #     self._load_tiles(reader.source.source(), self._current_options, current_extent, reader)
+        self.iface.mapCanvas().extentsChanged.disconnect()
+        is_loading = self.progress_dialog and self.progress_dialog.is_loading()
+        if not is_loading and self.reload_dialog:
+            should_reload = self.reload_dialog.reload_tiles()
+            debug("Reload tiles: {}", should_reload)
+            if should_reload:
+                reader = self._current_reader
+                if reader is not None:
+                    scheme = self._current_reader.source.scheme()
+                    # todo: replace hardcoded zoom_level 14
+                    current_extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=14)
+                    self._load_tiles(reader.source.source(), self._current_options, current_extent, reader, override_limit=True)
+        self._connect_to_extent_changed()
 
     def _get_visible_extent_as_tile_bounds(self, tilejson_scheme, zoom):
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
@@ -182,10 +188,12 @@ class VtrPlugin:
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_tiles(self, path, options, extent_to_load=None, reader=None):
+    def _load_tiles(self, path, options, extent_to_load=None, reader=None, override_limit=False):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
+        if override_limit:
+            tile_limit = None
         manual_zoom = options.manual_zoom()
         cartographic_ordering = options.cartographic_ordering()
 
@@ -258,6 +266,10 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
+        try:
+            self.iface.mapCanvas().extentsChanged.disconnect()
+        except:
+            warn("Disconnectin failed: {}", sys.exc_info())
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.about_action)
         self.iface.addLayerMenu().removeAction(self.add_layer_action)

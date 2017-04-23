@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>100</height>
+    <height>118</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0">
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,0">
-     <item alignment="Qt::AlignRight">
+     <item alignment="Qt::AlignLeft">
       <widget class="QCheckBox" name="chkDoNotShowAgain">
        <property name="text">
         <string>Do not show again</string>
@@ -25,15 +25,33 @@
      </item>
      <item alignment="Qt::AlignRight">
       <widget class="QPushButton" name="btnOk">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>70</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
-        <string>OK</string>
+        <string>Yes</string>
        </property>
       </widget>
      </item>
      <item alignment="Qt::AlignRight">
       <widget class="QPushButton" name="btnCancel">
+       <property name="maximumSize">
+        <size>
+         <width>70</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
-        <string>Cancel</string>
+        <string>No</string>
        </property>
       </widget>
      </item>
@@ -42,7 +60,9 @@
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Warning: New tiles will be loaded for the newly visible extent. Depending on the current map scale, this may take a while. You will still be able to cancel the loading process manually.</string>
+      <string>Warning: New tiles will be loaded for the newly visible extent. Depending on the current map scale, this may take a while. You will still be able to cancel the loading process manually.
+
+Do you want to continue?</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
