@@ -17,7 +17,10 @@
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
-  <renderer-v2 forceraster="0" symbollevels="0" type="singleSymbol" enableorderby="0">
+  <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
+    <rules key="{3f8e7fe2-a8a7-473f-8d97-9c2980423bbc}">
+      <rule scalemaxdenom="10000" key="{55e5dc0b-de66-4950-b166-e6d4cb0049f4}" symbol="0" scalemindenom="1"/>
+    </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="0">
         <layer pass="0" class="FontMarker" locked="0">
@@ -45,8 +48,6 @@
         </layer>
       </symbol>
     </symbols>
-    <rotation/>
-    <sizescale scalemethod="diameter"/>
   </renderer-v2>
   <labeling type="simple"/>
   <customproperties>
