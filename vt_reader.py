@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import sys
 import os
 import json
@@ -216,11 +213,12 @@ class VtReader:
         info("Processing {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Processing features...")
         current_progress = -1
+        poi_names = []
         for index, tile in enumerate(tiles):
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            self._create_geojson(tile)
+            self._create_geojson(tile, poi_names)
             progress = int(100.0 / total_nr_tiles * (index + 1))
             if progress != current_progress:
                 current_progress = progress
@@ -289,7 +287,6 @@ class VtReader:
     def _get_feature_sort_id(self, feature_path):
         nodes = feature_path.split(".")
         sort_id = 999
-
         if self.cartographic_ordering_enabled:
             path = feature_path.split(VtReader._zoom_level_delimiter)[0]
             if path in VtReader.layer_sort_ids:
@@ -371,7 +368,7 @@ class VtReader:
 
         return layer
 
-    def _create_geojson(self, tile):
+    def _create_geojson(self, tile, poi_names):
         """
          * Transforms all features of the specified tile into GeoJSON and writes it into the dictionary
         :param tile:
@@ -381,6 +378,14 @@ class VtReader:
         for layer_name in tile.decoded_data:
             tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
+                if "name" in feature["properties"]:
+                    name = feature["properties"]["name"]
+                    if name in poi_names:
+                        # continue
+                        pass
+                    else:
+                        poi_names.append(name)
+
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
                 if geojson_feature:
                     feature_path = VtReader._get_feature_path(layer_name, geojson_feature, tile.zoom_level)
@@ -431,7 +436,9 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        coordinates = VtReader._map_coordinates_recursive(coordinates=coordinates, func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
+        coordinates = VtReader._map_coordinates_recursive(
+            coordinates=coordinates,
+            func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
 
         if geo_type == GeoTypes.POINT:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
