@@ -141,11 +141,14 @@ class VtReader:
                 tile_data_tuples.extend(mask_layer_data)
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
-            tiles = self._decode_tiles(tile_data_tuples)
-            self._process_tiles(tiles)
-            self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
-                                              merge_features=merge_tiles,
-                                              apply_styles=apply_styles)
+            if not self.cancel_requested:
+                tiles = self._decode_tiles(tile_data_tuples)
+            if not self.cancel_requested:
+                self._process_tiles(tiles)
+            if not self.cancel_requested:
+                self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
+                                                  merge_features=merge_tiles,
+                                                  apply_styles=apply_styles)
         self._update_progress(show_dialog=False)
         if self.cancel_requested:
             info("Import cancelled")
