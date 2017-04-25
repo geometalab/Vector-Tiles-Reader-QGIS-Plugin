@@ -22,7 +22,7 @@
       <symbol alpha="1" clip_to_extent="1" type="fill" name="0">
         <layer pass="0" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="color" v="240,240,216,255"/>
+          <prop k="color" v="255,214,209,255"/>
           <prop k="joinstyle" v="bevel"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -179,17 +179,16 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
-    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/university.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
   <layerTransparency>0</layerTransparency>
-  <displayfield>class</displayfield>
+  <displayfield>_row</displayfield>
   <label>0</label>
   <labelattributes>
-    <label fieldname="" text="Beschriftung"/>
+    <label fieldname="" text="Label"/>
     <family fieldname="" name="MS Shell Dlg 2"/>
     <size fieldname="" units="pt" value="12"/>
     <bold fieldname="" on="0"/>
@@ -211,7 +210,6 @@
   <SingleCategoryDiagramRenderer diagramType="Histogram" sizeLegend="0" attributeLegend="1">
     <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" sizeScale="0,0,0,0,0,0" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" lineSizeScale="0,0,0,0,0,0" sizeType="MM" lineSizeType="MM" minScaleDenominator="inf">
       <fontProperties description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0" style=""/>
-      <attribute field="" color="#000000" label=""/>
     </DiagramCategory>
     <symbol alpha="1" clip_to_extent="1" type="marker" name="sizeSymbol">
       <layer pass="0" class="SimpleMarker" locked="0">
@@ -248,14 +246,14 @@
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
-  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="-2147483648">
+  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="1778289376">
     <columns>
-      <column width="-1" hidden="0" type="field" name="class"/>
-      <column width="-1" hidden="1" type="actions"/>
       <column width="-1" hidden="0" type="field" name="_row"/>
       <column width="-1" hidden="0" type="field" name="_featureNr"/>
       <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
+      <column width="-1" hidden="0" type="field" name="class"/>
       <column width="-1" hidden="0" type="field" name="_col"/>
+      <column width="-1" hidden="1" type="actions"/>
     </columns>
   </attributetableconfig>
   <editform></editform>
