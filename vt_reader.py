@@ -42,6 +42,12 @@ class VtReader:
         "poi",
         "boundary",
         "transportation",
+        "transportation.primary",
+        "transportation.tertiary",
+        "transportation.minor",
+        "transportation.service",
+        "transportation.path",
+        "transportation.track",
         "building",
         "aeroway",
         "park",
@@ -75,7 +81,7 @@ class VtReader:
         self.iface = iface
         self.cartographic_ordering_enabled = True
         self.progress_handler = progress_handler
-        self.features_by_path = {}
+        self.feature_collections_by_layer_path = {}
         self.qgis_layer_groups_by_feature_path = {}
         self.cancel_requested = False
 
@@ -114,7 +120,7 @@ class VtReader:
         :return: 
         """
         self.cancel_requested = False
-        self.features_by_path = {}
+        self.feature_collections_by_layer_path = {}
         self.qgis_layer_groups_by_feature_path = {}
         self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
         debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
@@ -219,19 +225,19 @@ class VtReader:
         group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
 
         root_group = root.addGroup(group_name)
-        feature_paths = sorted(self.features_by_path.keys(), key=lambda path: self._get_feature_sort_id(path))
+        feature_paths = sorted(self.feature_collections_by_layer_path.keys(), key=lambda path: self._get_feature_sort_id(path))
         self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
         layers = []
-        for index, feature_path in enumerate(feature_paths):
+        for index, layer_path in enumerate(feature_paths):
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            target_group, layer_name = self._get_group_for_path(feature_path, root_group)
-            feature_collection = self.features_by_path[feature_path]
+            target_group, layer_name = self._get_group_for_path(layer_path, root_group)
+            feature_collection = self.feature_collections_by_layer_path[layer_path]
             file_src = FileHelper.get_unique_geojson_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_src, layer_name, target_group, feature_path, merge_features)
+            layer = self._add_vector_layer(file_src, layer_name, target_group, layer_path, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
                 layers.append(layer)
@@ -248,11 +254,17 @@ class VtReader:
     def _get_feature_sort_id(self, feature_path):
         nodes = feature_path.split(".")
         sort_id = 999
+
         if self.cartographic_ordering_enabled:
-            for node in nodes:
-                current_node = node.split(VtReader._zoom_level_delimiter)[0]
-                if current_node in VtReader.layer_sort_ids:
-                    sort_id = VtReader.layer_sort_ids.index(current_node)
+            path = feature_path.split(VtReader._zoom_level_delimiter)[0]
+            if path in VtReader.layer_sort_ids:
+                sort_id = VtReader.layer_sort_ids.index(path)
+            else:
+                for node in nodes:
+                    current_node = node.split(VtReader._zoom_level_delimiter)[0]
+                    if current_node in VtReader.layer_sort_ids:
+                        sort_id = VtReader.layer_sort_ids.index(current_node)
+
         return sort_id
 
     def _get_group_for_path(self, path, root_group):
@@ -284,6 +296,7 @@ class VtReader:
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
         :param layer: 
+        :param layer_path: e.g. 'transportation.service' or 'transportation_name.path'
         :return: 
         """
         try:
@@ -327,10 +340,10 @@ class VtReader:
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
                 if geojson_feature:
                     feature_path = VtReader._get_feature_path(layer_name, geojson_feature, tile.zoom_level)
-                    if feature_path not in self.features_by_path:
-                        self.features_by_path[feature_path] = VtReader._get_empty_feature_collection()
+                    if feature_path not in self.feature_collections_by_layer_path:
+                        self.feature_collections_by_layer_path[feature_path] = VtReader._get_empty_feature_collection()
 
-                    self.features_by_path[feature_path]["features"].append(geojson_feature)
+                    self.feature_collections_by_layer_path[feature_path]["features"].append(geojson_feature)
 
                     geotypes_to_dissolve = [GeoTypes.POLYGON, GeoTypes.LINE_STRING]
                     if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:
