@@ -127,7 +127,7 @@ class VtrPlugin:
         self.popupMenu.addAction(open_server_action)
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(open_file_action)
+        self.toolButton.setDefaultAction(open_server_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
 
