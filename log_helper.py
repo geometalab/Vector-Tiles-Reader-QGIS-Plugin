@@ -4,6 +4,9 @@ import sys
 import pkgutil
 import importlib
 import tempfile
+import re
+
+_KEY_REGEX = re.compile(r"(\?|&)key=[^?&]*")
 
 _DEBUG = "debug"
 _INFO = "info"
@@ -44,6 +47,7 @@ def debug(msg, *args):
 def _log_message(msg, level, *args):
     try:
         msg = msg.format(*args)
+        msg = _KEY_REGEX.sub("", msg)
 
         if level == _INFO:
             _logger.info(msg)
