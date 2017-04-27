@@ -39,10 +39,20 @@ class VtReader:
         "housenumber",
         "water_name",
         "transportation_name",
+        "transportation_name.rail",
+        "transportation_name.primary",
+        "transportation_name.secondary",
+        "transportation_name.tertiary",
+        "transportation_name.minor",
+        "transportation_name.service",
+        "transportation_name.path",
+        "transportation_name.track",
         "poi",
         "boundary",
         "transportation",
+        "transportation.rail",
         "transportation.primary",
+        "transportation.secondary",
         "transportation.tertiary",
         "transportation.minor",
         "transportation.service",
@@ -240,15 +250,17 @@ class VtReader:
             layer = self._add_vector_layer(file_src, layer_name, target_group, layer_path, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
-                layers.append(layer)
+                layers.append((layer_path, layer))
 
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
-            for index, layer in enumerate(layers):
+            for index, layer_path_tuple in enumerate(layers):
                 QApplication.processEvents()
                 if self.cancel_requested:
                     break
-                VtReader._apply_named_style(layer)
+                path = layer_path_tuple[0]
+                layer = layer_path_tuple[1]
+                VtReader._apply_named_style(path, layer)
                 self._update_progress(progress=index+1)
 
     def _get_feature_sort_id(self, feature_path):
@@ -292,7 +304,7 @@ class VtReader:
         return current_group, target_layer_name
 
     @staticmethod
-    def _apply_named_style(layer):
+    def _apply_named_style(layer_path, layer):
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
         :param layer: 
@@ -300,14 +312,17 @@ class VtReader:
         :return: 
         """
         try:
-            name = layer.name().split(VtReader._zoom_level_delimiter)[0]
-            style_name = "{}.qml".format(name)
-            style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
-            if os.path.isfile(style_path):
-                res = layer.loadNamedStyle(style_path)
-                if res[1]:  # Style loaded
-                    layer.setCustomProperty("layerStyle", style_path)
-                    debug("Style successfully applied: {}", style_name)
+            parts = [layer_path.split(VtReader._zoom_level_delimiter)[0]]
+            parts.extend(parts[0].split("."))
+            for p in parts:
+                style_name = "{}.qml".format(p)
+                style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
+                if os.path.isfile(style_path):
+                    res = layer.loadNamedStyle(style_path)
+                    if res[1]:  # Style loaded
+                        layer.setCustomProperty("layerStyle", style_path)
+                        debug("Style successfully applied: {}", style_name)
+                        break
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
