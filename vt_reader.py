@@ -8,7 +8,7 @@ from PyQt4.QtGui import QApplication
 from tile_helper import change_scheme
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
-from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry
+from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from global_map_tiles import GlobalMercator
 from cStringIO import StringIO
 from gzip import GzipFile
@@ -324,6 +324,7 @@ class VtReader:
 
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
+        QgsExpressionContextUtils.setLayerVariable(layer, "vector_tile_source", self.source.name())
 
         return layer
 
