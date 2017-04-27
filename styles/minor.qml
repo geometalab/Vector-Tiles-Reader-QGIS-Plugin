@@ -30,7 +30,7 @@
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
         <layer pass="0" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="flat"/>
+          <prop k="capstyle" v="round"/>
           <prop k="customdash" v="5;2"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MapUnit"/>
@@ -47,7 +47,7 @@
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
         <layer pass="3" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="flat"/>
+          <prop k="capstyle" v="round"/>
           <prop k="customdash" v="5;2"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MapUnit"/>

@@ -1,13 +1,25 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.4" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="1" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="1" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
+    <edittype widgetv2type="TextEdit" name="oneway">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
     <edittype widgetv2type="TextEdit" name="ramp">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="class">
+    <edittype widgetv2type="TextEdit" name="_zoomLevel">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="oneway">
+    <edittype widgetv2type="TextEdit" name="_row">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="_col">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="_featureNr">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="class">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
@@ -15,15 +27,15 @@
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
         <layer pass="0" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="flat"/>
+          <prop k="capstyle" v="round"/>
           <prop k="customdash" v="5;2"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MapUnit"/>
           <prop k="draw_inside_polygon" v="0"/>
           <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="100,100,100,255"/>
+          <prop k="line_color" v="145,154,63,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="7.1"/>
+          <prop k="line_width" v="20"/>
           <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -32,15 +44,15 @@
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
         <layer pass="4" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="flat"/>
+          <prop k="capstyle" v="round"/>
           <prop k="customdash" v="5;2"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MapUnit"/>
           <prop k="draw_inside_polygon" v="0"/>
           <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="255,252,221,255"/>
+          <prop k="line_color" v="247,250,191,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="5.5"/>
+          <prop k="line_width" v="18"/>
           <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -50,6 +62,8 @@
         </layer>
       </symbol>
     </symbols>
+    <rotation/>
+    <sizescale scalemethod="diameter"/>
   </renderer-v2>
   <labeling type="simple"/>
   <customproperties>
@@ -254,19 +268,27 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="ramp" index="0" name=""/>
-    <alias field="class" index="1" name=""/>
-    <alias field="oneway" index="2" name=""/>
+    <alias field="oneway" index="0" name=""/>
+    <alias field="ramp" index="1" name=""/>
+    <alias field="_zoomLevel" index="2" name=""/>
+    <alias field="_row" index="3" name=""/>
+    <alias field="_col" index="4" name=""/>
+    <alias field="_featureNr" index="5" name=""/>
+    <alias field="class" index="6" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
-  <attributeactions default="0"/>
+  <attributeactions default="-1"/>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
       <column width="-1" hidden="0" type="field" name="ramp"/>
       <column width="-1" hidden="0" type="field" name="class"/>
       <column width="-1" hidden="0" type="field" name="oneway"/>
       <column width="-1" hidden="1" type="actions"/>
+      <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
+      <column width="-1" hidden="0" type="field" name="_row"/>
+      <column width="-1" hidden="0" type="field" name="_col"/>
+      <column width="-1" hidden="0" type="field" name="_featureNr"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -298,9 +320,14 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="ramp" expression=""/>
-    <default field="class" expression=""/>
     <default field="oneway" expression=""/>
+    <default field="ramp" expression=""/>
+    <default field="_zoomLevel" expression=""/>
+    <default field="_row" expression=""/>
+    <default field="_col" expression=""/>
+    <default field="_featureNr" expression=""/>
+    <default field="class" expression=""/>
   </defaults>
+  <previewExpression></previewExpression>
   <layerGeometryType>1</layerGeometryType>
 </qgis>

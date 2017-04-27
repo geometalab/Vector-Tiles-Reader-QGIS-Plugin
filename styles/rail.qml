@@ -1,7 +1,7 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="brunnel">
+    <edittype widgetv2type="TextEdit" name="service">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="_col">
@@ -25,11 +25,11 @@
     <edittype widgetv2type="TextEdit" name="class">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="service">
+    <edittype widgetv2type="TextEdit" name="brunnel">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
-  <renderer-v2 forceraster="0" symbollevels="0" type="singleSymbol" enableorderby="0">
+  <renderer-v2 forceraster="0" symbollevels="1" type="singleSymbol" enableorderby="0">
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
         <layer pass="0" class="SimpleLine" locked="0">
@@ -41,7 +41,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="120,120,120,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="12"/>
+          <prop k="line_width" v="4"/>
           <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -49,7 +49,7 @@
           <prop k="use_custom_dash" v="0"/>
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
-        <layer pass="0" class="SimpleLine" locked="0">
+        <layer pass="1" class="SimpleLine" locked="0">
           <prop k="capstyle" v="square"/>
           <prop k="customdash" v="1.5;3"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -58,7 +58,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="255,255,255,255"/>
           <prop k="line_style" v="dot"/>
-          <prop k="line_width" v="10"/>
+          <prop k="line_width" v="3"/>
           <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -272,7 +272,7 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform></annotationform>
   <aliases>
-    <alias field="brunnel" index="0" name=""/>
+    <alias field="service" index="0" name=""/>
     <alias field="_col" index="1" name=""/>
     <alias field="ramp" index="2" name=""/>
     <alias field="_zoomLevel" index="3" name=""/>
@@ -280,7 +280,7 @@
     <alias field="oneway" index="5" name=""/>
     <alias field="_featureNr" index="6" name=""/>
     <alias field="class" index="7" name=""/>
-    <alias field="service" index="8" name=""/>
+    <alias field="brunnel" index="8" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -328,7 +328,7 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="brunnel" expression=""/>
+    <default field="service" expression=""/>
     <default field="_col" expression=""/>
     <default field="ramp" expression=""/>
     <default field="_zoomLevel" expression=""/>
@@ -336,7 +336,7 @@ def my_form_open(dialog, layer, feature):
     <default field="oneway" expression=""/>
     <default field="_featureNr" expression=""/>
     <default field="class" expression=""/>
-    <default field="service" expression=""/>
+    <default field="brunnel" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
   <layerGeometryType>1</layerGeometryType>
