@@ -1,7 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import sys
 import os
 import json
 import numbers
+import math
 
 from log_helper import info, warn, critical, debug
 from PyQt4.QtGui import QApplication
@@ -94,6 +98,7 @@ class VtReader:
         self.feature_collections_by_layer_path = {}
         self.qgis_layer_groups_by_layer_path = {}
         self.cancel_requested = False
+        self._loaded_pois_by_id = {}
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -213,12 +218,11 @@ class VtReader:
         info("Processing {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Processing features...")
         current_progress = -1
-        poi_names = []
         for index, tile in enumerate(tiles):
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            self._create_geojson(tile, poi_names)
+            self._create_geojson(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))
             if progress != current_progress:
                 current_progress = progress
@@ -368,7 +372,7 @@ class VtReader:
 
         return layer
 
-    def _create_geojson(self, tile, poi_names):
+    def _create_geojson(self, tile):
         """
          * Transforms all features of the specified tile into GeoJSON and writes it into the dictionary
         :param tile:
@@ -378,13 +382,8 @@ class VtReader:
         for layer_name in tile.decoded_data:
             tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
-                if "name" in feature["properties"]:
-                    name = feature["properties"]["name"]
-                    if name in poi_names:
-                        # continue
-                        pass
-                    else:
-                        poi_names.append(name)
+                if self._is_feature_already_loaded(feature, tile):
+                    continue
 
                 geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
                 if geojson_feature:
@@ -454,6 +453,53 @@ class VtReader:
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
         return feature_json, geo_type
+
+    def _is_feature_already_loaded(self, feature, tile):
+        """
+         * Returns true if the same feature has already been loaded
+         * If the feature has not been loaded, it is marked as loaded by calling this function
+         * A feature is identified by the tuple: (feature_name, feature_class, feature_subclass)
+         * A feature is only loaded if the same feature identifier doesn't occur on the same or a neighbouring tile
+        :param feature: 
+        :param tile: 
+        :return: 
+        """
+        geo_type = VtReader.geo_types[feature["type"]]
+        is_poi = geo_type == GeoTypes.POINT
+
+        is_loaded = False
+        if is_poi and VtReader._get_feature_name(feature):
+            feature_id = VtReader._get_feature_id(feature)
+            if feature_id in self._loaded_pois_by_id:
+                locations = self._loaded_pois_by_id[feature_id]
+                for loc in locations:
+                    distance_x = math.fabs(loc["col"] - tile.column)
+                    distance_y = math.fabs(loc["row"] - tile.row)
+                    distance_threshold = 2
+                    is_loaded = distance_x <= distance_threshold and distance_y <= distance_threshold
+                    if is_loaded:
+                        break
+            if not is_loaded:
+                if feature_id not in self._loaded_pois_by_id:
+                    self._loaded_pois_by_id[feature_id] = []
+                self._loaded_pois_by_id[feature_id].append({'col': tile.column, 'row': tile.row})
+
+        return is_loaded
+
+    @staticmethod
+    def _get_feature_id(feature):
+        name = VtReader._get_feature_name(feature)
+        feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
+        feature_id = (name, feature_class, feature_subclass)
+        return feature_id
+
+    @staticmethod
+    def _get_feature_name(feature):
+        name = None
+        properties = feature["properties"]
+        if "name" in properties:
+            name = properties["name"]
+        return name
 
     @staticmethod
     def _get_is_multi(geo_type, coordinates):
