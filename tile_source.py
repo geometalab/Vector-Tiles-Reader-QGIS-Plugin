@@ -36,8 +36,13 @@ class ServerSource:
     def source(self):
         return self.url
 
+    def attribution(self):
+        return self.json.attribution()
+
     def name(self):
-        name = self.json.id()
+        name = self.json.name()
+        if not name:
+            name = self.json.id()
         if not name:
             name = urlparse.urlsplit(self.url)[1]
         return name

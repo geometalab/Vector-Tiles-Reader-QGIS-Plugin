@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import sys
 import os
 import json
@@ -360,6 +363,10 @@ class VtReader:
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
         QgsExpressionContextUtils.setLayerVariable(layer, "vector_tile_source", self.source.name())
+
+        if self.source.name().lower().index("openmaptiles") != -1:
+            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
+            layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 
         return layer
 

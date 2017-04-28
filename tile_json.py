@@ -62,6 +62,9 @@ class TileJSON:
                 center = (center_x, center_y)
         return center
 
+    def attribution(self):
+        return self._get_value("attribution")
+
     def center_longlat(self):
         return self._get_value("center")
 
@@ -102,6 +105,9 @@ class TileJSON:
     def tiles(self):
         tiles = self._get_value("tiles", is_array=True, is_required=True)
         return tiles
+
+    def name(self):
+        return self._get_value("name")
 
     def id(self):
         return self._get_value("id")
