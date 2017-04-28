@@ -363,6 +363,7 @@ class VtReader:
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
         QgsExpressionContextUtils.setLayerVariable(layer, "vector_tile_source", self.source.name())
+        layer.setCustomProperty("vector_tile_source", self.source.name())
 
         if self.source.name() and "openmaptiles" in self.source.name().lower():
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
