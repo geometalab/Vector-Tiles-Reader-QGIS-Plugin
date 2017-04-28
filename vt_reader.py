@@ -364,7 +364,7 @@ class VtReader:
         layer_target_group.addLayer(layer)
         QgsExpressionContextUtils.setLayerVariable(layer, "vector_tile_source", self.source.name())
 
-        if self.source.name().lower().index("openmaptiles") != -1:
+        if self.source.name() and "openmaptiles" in self.source.name().lower():
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 
