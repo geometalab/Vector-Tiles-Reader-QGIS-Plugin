@@ -1,5 +1,6 @@
 import os
 import webbrowser
+import csv
 
 from collections import OrderedDict
 from PyQt4 import QtGui
@@ -15,6 +16,7 @@ from options import Ui_OptionsGroup
 
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
+
 
 class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
     def __init__(self):
@@ -258,6 +260,8 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.btnEdit.clicked.connect(self._edit_connection)
         self.btnDelete.clicked.connect(self._delete_connection)
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
+        self.btnSave.clicked.connect(self._export_connections)
+        self.btnLoad.clicked.connect(self._import_connections)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(self._table_headers.keys())
@@ -267,6 +271,25 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
 
     def _load_tiles_for_connection(self):
         self.on_add.emit(self._get_current_connection()[1])
+
+    def _export_connections(self):
+        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
+        if file_name:
+            with open(file_name, 'w') as csvfile:
+                fieldnames = ['name', 'url']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for name in self.connections:
+                    writer.writerow({'name': name, 'url': self.connections[name]})
+
+    def _import_connections(self):
+        file_name = QFileDialog.getOpenFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
+        if file_name:
+            with open(file_name, 'r') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    self._set_connection_url(row['name'], row['url'])
+            self._add_loaded_connections()
 
     def _load_connections(self):
         settings = self.settings
@@ -283,7 +306,11 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             if name not in self.connections:
                 url = self._predefined_connections[name]
                 self._set_connection_url(name, url)
-        self.cbxConnections.addItems(self.connections.keys())
+
+        for name in self.connections:
+            is_already_added = self.cbxConnections.findText(name) != -1
+            if not is_already_added:
+                self.cbxConnections.addItem(name)
         if len(self.connections) > 0:
             self.cbxConnections.setCurrentIndex(0)
 
