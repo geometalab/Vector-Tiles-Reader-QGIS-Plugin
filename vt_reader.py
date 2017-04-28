@@ -92,7 +92,7 @@ class VtReader:
         self.cartographic_ordering_enabled = True
         self.progress_handler = progress_handler
         self.feature_collections_by_layer_path = {}
-        self.qgis_layer_groups_by_feature_path = {}
+        self.qgis_layer_groups_by_layer_path = {}
         self.cancel_requested = False
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
@@ -104,6 +104,7 @@ class VtReader:
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
+        # todo: when improving CRS handling: the correct CRS of the source has to be set here
         crs = {
             "type": "name",
             "properties": {
@@ -115,6 +116,10 @@ class VtReader:
             "features": []}
 
     def cancel(self):
+        """
+         * Cancels the loading process.
+        :return: 
+        """
         self.cancel_requested = True
         if self.source:
             self.source.cancel()
@@ -131,7 +136,7 @@ class VtReader:
         """
         self.cancel_requested = False
         self.feature_collections_by_layer_path = {}
-        self.qgis_layer_groups_by_feature_path = {}
+        self.qgis_layer_groups_by_layer_path = {}
         self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
         debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
 
@@ -172,6 +177,11 @@ class VtReader:
             info("Import complete")
 
     def _decode_tiles(self, tiles_with_encoded_data):
+        """
+         * Decodes the PBF data from all the specified tiles and reports the progress
+        :param tiles_with_encoded_data: 
+        :return: 
+        """
         tiles = []
         total_nr_tiles = len(tiles_with_encoded_data)
         info("Decoding {} tiles", total_nr_tiles)
@@ -194,6 +204,11 @@ class VtReader:
         return tiles
 
     def _process_tiles(self, tiles):
+        """
+         * Creates GeoJSON for all the specified tiles and reports the progress
+        :param tiles: 
+        :return: 
+        """
         total_nr_tiles = len(tiles)
         info("Processing {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Processing features...")
@@ -202,7 +217,7 @@ class VtReader:
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            self._write_features(tile)
+            self._create_geojson(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))
             if progress != current_progress:
                 current_progress = progress
@@ -210,6 +225,11 @@ class VtReader:
                 debug("Progress: {0:.1f}%", progress)
 
     def _decode_binary_tile_data(self, data):
+        """
+         * Decodes the (gzipped) PBF that has been read from the tile source.
+        :param data: 
+        :return: 
+        """
         if data:
             try:
                 is_gzipped = FileHelper.is_gzipped(data)
@@ -298,9 +318,9 @@ class VtReader:
             if is_last:
                 break
             current_path += "." + name
-            if current_path not in self.qgis_layer_groups_by_feature_path:
-                self.qgis_layer_groups_by_feature_path[current_path] = current_group.addGroup(name)
-            current_group = self.qgis_layer_groups_by_feature_path[current_path]
+            if current_path not in self.qgis_layer_groups_by_layer_path:
+                self.qgis_layer_groups_by_layer_path[current_path] = current_group.addGroup(name)
+            current_group = self.qgis_layer_groups_by_layer_path[current_path]
         return current_group, target_layer_name
 
     @staticmethod
@@ -343,7 +363,7 @@ class VtReader:
 
         return layer
 
-    def _write_features(self, tile):
+    def _create_geojson(self, tile):
         """
          * Transforms all features of the specified tile into GeoJSON and writes it into the dictionary
         :param tile:
