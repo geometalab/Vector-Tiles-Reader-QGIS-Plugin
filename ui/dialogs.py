@@ -238,6 +238,11 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         ("Description", "description")
     ])
 
+    _OMT = "OpenMapTiles.com (FreeTilehosting.com)"
+
+    _predefined_connections = {_OMT: "http://free.tilehosting.com/data/v3.json?key={token}"}
+    _tokens = {_OMT: "6irhAXGgsi8TrIDL0211"}
+
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
@@ -258,6 +263,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.model.setHorizontalHeaderLabels(self._table_headers.keys())
         self.tblLayers.setModel(self.model)
         self._load_connections()
+        self._add_loaded_connections()
 
     def _load_tiles_for_connection(self):
         self.on_add.emit(self._get_current_connection()[1])
@@ -271,6 +277,12 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             url = settings.value("url")
             self._set_connection_url(name, url)
         settings.endArray()
+
+    def _add_loaded_connections(self):
+        for index, name in enumerate(self._predefined_connections.keys()):
+            if name not in self.connections:
+                url = self._predefined_connections[name]
+                self._set_connection_url(name, url)
         self.cbxConnections.addItems(self.connections.keys())
         if len(self.connections) > 0:
             self.cbxConnections.setCurrentIndex(0)
@@ -301,12 +313,15 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.connections[name] = url
 
     def _on_connect(self):
-        url = self._get_current_connection()[1]
+        conn = self._get_current_connection()
+        url = conn[1]
         self.on_connect.emit(url)
 
     def _get_current_connection(self):
         name = self.cbxConnections.currentText()
         url = self.connections[name]
+        if name in self._predefined_connections:
+            url = url.replace("{token}", self._tokens[name])
         return name, url
 
     def show(self):
@@ -341,12 +356,14 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             self._save_connections()
 
     def _handle_connection_change(self, name):
-        enable = False
+        enable_connect = False
+        enable_edit = False
         if name in self.connections:
-            enable = True
-        self.btnConnect.setEnabled(enable)
-        self.btnEdit.setEnabled(enable)
-        self.btnDelete.setEnabled(enable)
+            enable_connect = True
+            enable_edit = name not in self._predefined_connections
+        self.btnConnect.setEnabled(enable_connect)
+        self.btnEdit.setEnabled(enable_edit)
+        self.btnDelete.setEnabled(enable_edit)
 
 
 class EditServerConnection(QtGui.QDialog, Ui_DlgEditServerConnection):
