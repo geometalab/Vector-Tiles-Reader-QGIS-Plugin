@@ -412,8 +412,8 @@
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
         <layer pass="1" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="flat"/>
-          <prop k="customdash" v="1.5;3"/>
+          <prop k="capstyle" v="square"/>
+          <prop k="customdash" v="4;10"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MapUnit"/>
           <prop k="draw_inside_polygon" v="0"/>
