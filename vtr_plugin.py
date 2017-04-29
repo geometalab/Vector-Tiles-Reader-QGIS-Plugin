@@ -52,11 +52,20 @@ class VtrPlugin:
         # print coordinate_to_tile(14, 230848.66, 662509.94, 21781)
 
     def initGui(self):
-        self.add_layer_action = self._create_action("Add Vector Tiles Layer...", "icon.png", self.run)
+        self.popupMenu = QMenu(self.iface.mainWindow())
+        self.open_server_action = self._create_action("Add Vector Tiles Server Layer...", "server.svg", self.server_dialog.show)
+        self.open_file_action = self._create_action("Add Vector Tiles Layer...", "folder.svg", self.file_dialog.show)
+        self.iface.insertAddLayerAction(self.open_file_action)  # Add action to the menu: Layer->Add Layer
+        self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
+        self.popupMenu.addAction(self.open_file_action)
+        self.popupMenu.addAction(self.open_server_action)
+        self.toolButton = QToolButton()
+        self.toolButton.setMenu(self.popupMenu)
+        self.toolButton.setDefaultAction(self.open_server_action)
+        self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
+        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
         self.about_action = self._create_action("About", "", self.show_about)
         self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.insertAddLayerAction(self.add_layer_action)  # Add action to the menu: Layer->Add Layer
-        self.add_menu()
         info("Vector Tile Reader Plugin loaded...")
 
     def _connect_to_extent_changed(self):
@@ -118,18 +127,6 @@ class VtrPlugin:
 
     def show_about(self):
         AboutDialog().show()
-
-    def add_menu(self):
-        self.popupMenu = QMenu(self.iface.mainWindow())
-        open_file_action = self._create_action("Add Vector Tile Layer...", "icon.png", self.file_dialog.show)
-        open_server_action = self._create_action("Add Vector Tile Server Layer...", "server.svg", self.server_dialog.show)
-        self.popupMenu.addAction(self._create_action("Add Vector Tile Layer...", "folder.svg", self.file_dialog.show))
-        self.popupMenu.addAction(open_server_action)
-        self.toolButton = QToolButton()
-        self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(open_server_action)
-        self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
-        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
 
     def _on_add_server_layer(self, url):
         debug("add server layer: {}", url)
@@ -274,7 +271,5 @@ class VtrPlugin:
             warn("Disconnectin failed: {}", sys.exc_info())
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.addLayerMenu().removeAction(self.add_layer_action)
-
-    def run(self):
-        self.file_dialog.show()
+        self.iface.addLayerMenu().removeAction(self.open_file_action)
+        self.iface.addLayerMenu().removeAction(self.open_server_action)

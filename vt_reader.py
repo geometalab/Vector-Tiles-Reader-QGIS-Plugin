@@ -99,6 +99,7 @@ class VtReader:
         self.qgis_layer_groups_by_layer_path = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
+        self.total_feature_count = 0
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -311,20 +312,9 @@ class VtReader:
          >> The last element in the path will be used as name for the vector layer, the other elements will be used to create the group hierarchy
          >> Example: The path 'zurich.poi.police' will create two groups 'zurich' and 'poi' (if not already existing) and 'police' will be returned as name for the layer to create
         """
-
         group_names = path.split(".")
         current_group = root_group
-        current_path = ""
-        target_layer_name = ""
-        for index, name in enumerate(group_names):
-            target_layer_name = name
-            is_last = index == len(group_names) - 1
-            if is_last:
-                break
-            current_path += "." + name
-            if current_path not in self.qgis_layer_groups_by_layer_path:
-                self.qgis_layer_groups_by_layer_path[current_path] = current_group.addGroup(name)
-            current_group = self.qgis_layer_groups_by_layer_path[current_path]
+        target_layer_name = group_names[0]
         return current_group, target_layer_name
 
     @staticmethod
@@ -384,9 +374,9 @@ class VtReader:
                 if self._is_feature_already_loaded(feature, tile):
                     continue
 
-                geojson_feature, geo_type = VtReader._create_geojson_feature(feature, tile)
+                geojson_feature, geo_type = self._create_geojson_feature(feature, tile)
                 if geojson_feature:
-                    feature_path = VtReader._get_feature_path(layer_name, geojson_feature, tile.zoom_level)
+                    feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
                     if feature_path not in self.feature_collections_by_layer_path:
                         self.feature_collections_by_layer_path[feature_path] = VtReader._get_empty_feature_collection()
 
@@ -411,22 +401,7 @@ class VtReader:
             assert feature_class, "A feature with a subclass should also have a class"
         return feature_class, feature_subclass
 
-    @staticmethod
-    def _get_feature_path(layer_name, feature, zoom_level):
-        feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
-        feature_path = layer_name
-        if feature_class:
-            feature_path += "." + feature_class
-            if feature_subclass:
-                feature_path += "." + feature_subclass
-
-        feature_path += "{}{}".format(VtReader._zoom_level_delimiter, zoom_level)
-        return feature_path
-
-    total_feature_count = 0
-
-    @staticmethod
-    def _create_geojson_feature(feature, tile):
+    def _create_geojson_feature(self, feature, tile):
         """
         Creates a proper GeoJSON feature for the specified feature
         """
@@ -444,10 +419,10 @@ class VtReader:
 
         properties = feature["properties"]
         properties["_zoomLevel"] = tile.zoom_level
-        properties["_featureNr"] = VtReader.total_feature_count
+        properties["_featureNr"] = self.total_feature_count
         properties["_col"] = tile.column
         properties["_row"] = tile.row
-        VtReader.total_feature_count += 1
+        self.total_feature_count += 1
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
