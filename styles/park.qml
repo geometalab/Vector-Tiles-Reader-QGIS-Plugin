@@ -17,53 +17,43 @@
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
-  <renderer-v2 forceraster="0" symbollevels="0" type="singleSymbol" enableorderby="1">
+  <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
+    <rules key="{7475292c-d4ad-4b27-bf16-270df19767f4}">
+      <rule filter="&quot;class&quot; = 'national_park'" key="{2064de5b-1aea-4f63-bdf4-96c1d6ec6639}" symbol="0" label="national_park"/>
+      <rule filter="&quot;class&quot; = 'nature_reserve'" key="{555d298d-efd8-44e6-854e-3920b76b3cfe}" symbol="1" label="nature_reserve"/>
+    </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="0">
         <layer pass="0" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="color" v="187,187,204,255"/>
+          <prop k="color" v="173,209,158,255"/>
           <prop k="joinstyle" v="bevel"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="outline_color" v="0,0,0,255"/>
+          <prop k="outline_color" v="175,179,138,255"/>
+          <prop k="outline_style" v="solid"/>
+          <prop k="outline_width" v="0.26"/>
+          <prop k="outline_width_unit" v="MM"/>
+          <prop k="style" v="solid"/>
+        </layer>
+      </symbol>
+      <symbol alpha="1" clip_to_extent="1" type="fill" name="1">
+        <layer pass="0" class="SimpleFill" locked="0">
+          <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="color" v="173,209,158,255"/>
+          <prop k="joinstyle" v="bevel"/>
+          <prop k="offset" v="0,0"/>
+          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit" v="MM"/>
+          <prop k="outline_color" v="175,179,138,255"/>
           <prop k="outline_style" v="no"/>
           <prop k="outline_width" v="0.26"/>
           <prop k="outline_width_unit" v="MM"/>
           <prop k="style" v="solid"/>
         </layer>
-        <layer pass="0" class="CentroidFill" locked="0">
-          <prop k="point_on_all_parts" v="1"/>
-          <prop k="point_on_surface" v="0"/>
-          <symbol alpha="1" clip_to_extent="1" type="marker" name="@0@1">
-            <layer pass="0" class="SvgMarker" locked="0">
-              <prop k="angle" v="0"/>
-              <prop k="color" v="255,0,0,255"/>
-              <prop k="horizontal_anchor_point" v="1"/>
-              <prop k="name" v="C:/Users/Martin/Downloads/Helipad.svg"/>
-              <prop k="offset" v="0,0"/>
-              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-              <prop k="offset_unit" v="MM"/>
-              <prop k="outline_color" v="0,0,0,255"/>
-              <prop k="outline_width" v="0"/>
-              <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
-              <prop k="outline_width_unit" v="MM"/>
-              <prop k="scale_method" v="diameter"/>
-              <prop k="size" v="10"/>
-              <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
-              <prop k="size_unit" v="MapUnit"/>
-              <prop k="vertical_anchor_point" v="1"/>
-            </layer>
-          </symbol>
-        </layer>
       </symbol>
     </symbols>
-    <rotation/>
-    <sizescale scalemethod="diameter"/>
-    <orderby>
-      <orderByClause asc="0" nullsFirst="1">distance(  $geometry,  translate(    @map_extent_center,    1000 * @map_extent_width * cos( radians( @qgis_25d_angle + 180 ) ),    1000 * @map_extent_width * sin( radians( @qgis_25d_angle + 180 ) )  ))</orderByClause>
-    </orderby>
   </renderer-v2>
   <labeling type="simple"/>
   <customproperties>
@@ -206,14 +196,9 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
-    <property key="variableNames">
-      <value>qgis_25d_angle</value>
-      <value>qgis_25d_height</value>
-    </property>
-    <property key="variableValues">
-      <value>70</value>
-      <value>10</value>
-    </property>
+    <property key="variableNames"/>
+    <property key="variableValues"/>
+    <property key="vector_tile_source" value="http://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
@@ -279,7 +264,7 @@
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
-  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="1">
+  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="876164408">
     <columns>
       <column width="-1" hidden="0" type="field" name="_row"/>
       <column width="-1" hidden="0" type="field" name="_featureNr"/>
