@@ -18,6 +18,12 @@ class FileHelper:
         return os.path.abspath(os.path.dirname(__file__))
 
     @staticmethod
+    def get_styles():
+        folder = os.path.join(FileHelper.get_plugin_directory(), "styles")
+        styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+        return styles
+
+    @staticmethod
     def get_home_directory():
         return os.path.expanduser("~")
 

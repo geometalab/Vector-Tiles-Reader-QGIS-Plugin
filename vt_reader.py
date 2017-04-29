@@ -75,6 +75,8 @@ class VtReader:
     _layers_to_dissolve = []
     _zoom_level_delimiter = "*"
 
+    _styles = FileHelper.get_styles()
+
     def __init__(self, iface, path_or_url, progress_handler):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
@@ -261,22 +263,23 @@ class VtReader:
         group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
 
         root_group = root.addGroup(group_name)
-        feature_paths = sorted(self.feature_collections_by_layer_path.keys(), key=lambda path: self._get_feature_sort_id(path))
-        self._update_progress(progress=0, max_progress=len(feature_paths), msg="Creating layers...")
+        layer_paths = sorted(self.feature_collections_by_layer_path.keys(), key=lambda path_and_type: self._get_feature_sort_id(path_and_type[0]))
+        self._update_progress(progress=0, max_progress=len(layer_paths), msg="Creating layers...")
         layers = []
-        for index, layer_path in enumerate(feature_paths):
+        for index, layer_path_and_type in enumerate(layer_paths):
+            layer_path = layer_path_and_type[0]
             QApplication.processEvents()
             if self.cancel_requested:
                 break
             target_group, layer_name = self._get_group_for_path(layer_path, root_group)
-            feature_collection = self.feature_collections_by_layer_path[layer_path]
+            feature_collection = self.feature_collections_by_layer_path[layer_path_and_type]
             file_src = FileHelper.get_unique_geojson_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
             layer = self._add_vector_layer(file_src, layer_name, target_group, layer_path, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
-                layers.append((layer_path, layer))
+                layers.append((layer_path_and_type, layer))
 
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
@@ -284,9 +287,10 @@ class VtReader:
                 QApplication.processEvents()
                 if self.cancel_requested:
                     break
-                path = layer_path_tuple[0]
+                path_and_type = layer_path_tuple[0]
+                geo_type = path_and_type[1]
                 layer = layer_path_tuple[1]
-                VtReader._apply_named_style(path, layer)
+                VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=index+1)
 
     def _get_feature_sort_id(self, feature_path):
@@ -310,7 +314,8 @@ class VtReader:
          >> If the group not already exists, it will be created
          >> The path has to be delimited by '.'
          >> The last element in the path will be used as name for the vector layer, the other elements will be used to create the group hierarchy
-         >> Example: The path 'zurich.poi.police' will create two groups 'zurich' and 'poi' (if not already existing) and 'police' will be returned as name for the layer to create
+         >> Example: The path 'zurich.poi.police' will create two groups 'zurich' and 'poi' (if not already existing) 
+         >> 'police' will be returned as name for the layer to create
         """
         group_names = path.split(".")
         current_group = root_group
@@ -318,7 +323,7 @@ class VtReader:
         return current_group, target_layer_name
 
     @staticmethod
-    def _apply_named_style(layer_path, layer):
+    def _apply_named_style(layer, geo_type):
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
         :param layer: 
@@ -326,17 +331,21 @@ class VtReader:
         :return: 
         """
         try:
-            parts = [layer_path.split(VtReader._zoom_level_delimiter)[0]]
-            parts.extend(parts[0].split("."))
-            for p in parts:
+            name = layer.name().split(VtReader._zoom_level_delimiter)[0]
+            styles = [
+                "{}.{}".format(name, geo_type),
+                name
+            ]
+            for p in styles:
                 style_name = "{}.qml".format(p)
-                style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
-                if os.path.isfile(style_path):
+                if style_name in VtReader._styles:
+                    style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
                         layer.setCustomProperty("layerStyle", style_path)
-                        debug("Style successfully applied: {}", style_name)
-                        break
+                        if layer.customProperty("layerStyle") == style_path:
+                            debug("Style successfully applied: {}", style_name)
+                            break
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
@@ -377,10 +386,11 @@ class VtReader:
                 geojson_feature, geo_type = self._create_geojson_feature(feature, tile)
                 if geojson_feature:
                     feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
-                    if feature_path not in self.feature_collections_by_layer_path:
-                        self.feature_collections_by_layer_path[feature_path] = VtReader._get_empty_feature_collection()
+                    path_and_type = (feature_path, geo_type.lower())
+                    if path_and_type not in self.feature_collections_by_layer_path:
+                        self.feature_collections_by_layer_path[path_and_type] = VtReader._get_empty_feature_collection()
 
-                    self.feature_collections_by_layer_path[feature_path]["features"].append(geojson_feature)
+                    self.feature_collections_by_layer_path[path_and_type]["features"].append(geojson_feature)
 
                     geotypes_to_dissolve = [GeoTypes.POLYGON, GeoTypes.LINE_STRING]
                     if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:
@@ -422,6 +432,7 @@ class VtReader:
         properties["_featureNr"] = self.total_feature_count
         properties["_col"] = tile.column
         properties["_row"] = tile.row
+        properties["_geotype"] = geo_type.lower()
         self.total_feature_count += 1
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)

@@ -1,6 +1,9 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
+    <edittype widgetv2type="TextEdit" name="_geotype">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
     <edittype widgetv2type="TextEdit" name="brunnel">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
@@ -138,19 +141,19 @@
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="11">
         <layer pass="0" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="square"/>
+          <prop k="capstyle" v="round"/>
           <prop k="customdash" v="5;2"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="customdash_unit" v="MM"/>
           <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="bevel"/>
-          <prop k="line_color" v="235,242,152,255"/>
+          <prop k="joinstyle" v="round"/>
+          <prop k="line_color" v="0,0,0,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.26"/>
-          <prop k="line_width_unit" v="MM"/>
+          <prop k="line_width" v="1.26"/>
+          <prop k="line_width_unit" v="MapUnit"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
+          <prop k="offset_unit" v="MapUnit"/>
           <prop k="use_custom_dash" v="0"/>
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
@@ -630,15 +633,16 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform></annotationform>
   <aliases>
-    <alias field="brunnel" index="0" name=""/>
-    <alias field="_col" index="1" name=""/>
-    <alias field="ramp" index="2" name=""/>
-    <alias field="_zoomLevel" index="3" name=""/>
-    <alias field="_row" index="4" name=""/>
-    <alias field="oneway" index="5" name=""/>
-    <alias field="_featureNr" index="6" name=""/>
-    <alias field="class" index="7" name=""/>
-    <alias field="service" index="8" name=""/>
+    <alias field="_geotype" index="0" name=""/>
+    <alias field="brunnel" index="1" name=""/>
+    <alias field="_col" index="2" name=""/>
+    <alias field="ramp" index="3" name=""/>
+    <alias field="_zoomLevel" index="4" name=""/>
+    <alias field="_row" index="5" name=""/>
+    <alias field="oneway" index="6" name=""/>
+    <alias field="_featureNr" index="7" name=""/>
+    <alias field="class" index="8" name=""/>
+    <alias field="service" index="9" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -655,6 +659,7 @@
       <column width="-1" hidden="0" type="field" name="_featureNr"/>
       <column width="-1" hidden="0" type="field" name="brunnel"/>
       <column width="-1" hidden="0" type="field" name="service"/>
+      <column width="-1" hidden="0" type="field" name="_geotype"/>
     </columns>
   </attributetableconfig>
   <editform></editform>
@@ -686,6 +691,7 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
+    <default field="_geotype" expression=""/>
     <default field="brunnel" expression=""/>
     <default field="_col" expression=""/>
     <default field="ramp" expression=""/>
