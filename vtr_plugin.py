@@ -19,7 +19,7 @@ from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, coordinate_to_tile
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
 from tile_json import TileJSON
 from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog, TilesReloadingDialog
 
@@ -48,8 +48,6 @@ class VtrPlugin:
         self._current_reader = None
         self._current_options = None
         self._connect_to_extent_changed()
-        # todo: remove after testing
-        # print coordinate_to_tile(14, 230848.66, 662509.94, 21781)
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -98,7 +96,7 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile = get_tile_bounds(zoom, bounds=bounds, scheme=tilejson_scheme)
+        tile = get_tile_bounds(zoom, bounds=bounds, scheme=tilejson_scheme, crs="EPSG:4326")
         return tile
 
     def _on_connect(self, url):

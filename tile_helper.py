@@ -17,7 +17,15 @@ class VectorTile:
         return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)
 
 
-def coordinate_to_tile(zoom, lat, lng, crs=4326):
+def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
+    """
+     * Returns the tile-xy from the specified lat/long coordinates
+    :param zoom: 
+    :param lat: 
+    :param lng: 
+    :param source_crs: 
+    :return: 
+    """
     if not zoom:
         raise RuntimeError("zoom is required")
     if not lat:
@@ -25,23 +33,29 @@ def coordinate_to_tile(zoom, lat, lng, crs=4326):
     if not lng:
         raise RuntimeError("Longitude is required")
 
+    if str(source_crs).startswith("EPSG:"):
+        source_crs = int(source_crs.replace("EPSG:", ""))
+
+    m = convert_coordinate(source_crs, 3857, lat, lng)
+    gm = GlobalMercator()
+    tile = gm.MetersToTile(m[0], m[1], zoom)
+
+    if scheme != "tms":
+        y = change_scheme(zoom, tile[1])
+        tile = (tile[0], y)
+    return tile
+
+
+def convert_coordinate(source_crs, target_crs, lat, lng):
     src = osr.SpatialReference()
     tgt = osr.SpatialReference()
-    src.ImportFromEPSG(crs)
-    tgt.ImportFromEPSG(4326)
+    print("convert from: {} to {}".format(source_crs, target_crs))
+    # src.SetFromUserInput(source_crs)
+    # tgt.SetFromUserInput(target_crs)
+    src.ImportFromEPSG(source_crs)
+    tgt.ImportFromEPSG(target_crs)
     transform = osr.CoordinateTransformation(src, tgt)
-    coords = transform.TransformPoint(lng, lat)
-    lng = coords[0]
-    lat = coords[1]
-
-    gm = GlobalMercator()
-    m = gm.LatLonToMeters(lat, lng)
-    t = gm.MetersToTile(m[0], m[1], zoom)
-
-    # todo: use 'change_scheme' method instead
-    # todo: clarify on when to change the tile scheme
-    tile = gm.GoogleTile(t[0], t[1], zoom)
-    return tile
+    return transform.TransformPoint(lng, lat)
 
 
 def epsg3857_to_wgs84_lonlat(x, y):
@@ -67,7 +81,7 @@ def tile_to_latlon(zoom, x, y, scheme="tms"):
     return gm.TileBounds(x, y, zoom)
 
 
-def get_tile_bounds(zoom, bounds, scheme="xyz"):
+def get_tile_bounds(zoom, bounds, crs, scheme="xyz"):
     """
      * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param scheme: 
@@ -85,13 +99,8 @@ def get_tile_bounds(zoom, bounds, scheme="xyz"):
         lng_max = bounds[2]
         lat_max = bounds[3]
 
-        xy_min = coordinate_to_tile(zoom, lat_max, lng_min)
-        xy_max = coordinate_to_tile(zoom, lat_min, lng_max)
-
-        is_tms_scheme = scheme == "tms"
-        if is_tms_scheme:
-            xy_min = (xy_min[0], change_scheme(zoom, xy_min[1]))
-            xy_max = (xy_max[0], change_scheme(zoom, xy_max[1]))
+        xy_min = coordinate_to_tile(zoom, lat_max, lng_min, crs, scheme)
+        xy_max = coordinate_to_tile(zoom, lat_min, lng_max, crs, scheme)
 
         tiles = [xy_min, xy_max]
     return tiles

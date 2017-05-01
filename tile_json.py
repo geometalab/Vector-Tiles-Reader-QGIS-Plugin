@@ -4,6 +4,7 @@ from log_helper import critical, debug
 from tile_helper import get_tile_bounds, coordinate_to_tile
 from file_helper import FileHelper
 
+
 class TileJSON:
     """
      * Wrapper for TileJSON v2.2.0
@@ -49,7 +50,7 @@ class TileJSON:
             lng = center[0]
             lat = center[1]
             zoom = center[2]
-            center = coordinate_to_tile(zoom, lat, lng)
+            center = coordinate_to_tile(zoom, lat, lng, self.crs(), self.scheme())
         else:
             center = self.bounds_tile(self.max_zoom())
             if center:
@@ -57,8 +58,8 @@ class TileJSON:
                 min_y = center[0][1]
                 max_x = center[1][0]
                 max_y = center[1][1]
-                center_x = int((min_x + max_x)/2)
-                center_y = int((min_y + max_y)/2)
+                center_x = int((min_x + max_x) / 2)
+                center_y = int((min_y + max_y) / 2)
                 center = (center_x, center_y)
         return center
 
@@ -81,19 +82,22 @@ class TileJSON:
         :param manual_bounds: 
         :return:         """
 
-        #todo: return named dict instead with x_min, x_max, y_min, y_max
+        # todo: return named dict instead with x_min, x_max, y_min, y_max
         bounds = self.bounds_longlat()
         scheme = self.scheme()
-        return get_tile_bounds(zoom, bounds, scheme)
+        crs = self.crs()
+        return get_tile_bounds(zoom, bounds, crs, scheme)
 
     def vector_layers(self):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
         return layers
 
-    def crs(self):
+    def crs(self, default="EPSG:3857"):
         crs = self._get_value("crs")
         if not crs:
             crs = self._get_value("srs")
+        if not crs:
+            crs = default
         return crs
 
     def scheme(self, default="xyz"):
@@ -143,7 +147,8 @@ class TileJSON:
                 result = []
                 result.extend(self.json[field_name])
                 if is_required and len(result) == 0:
-                    raise RuntimeError("The field '{}' is required but is empty. At least one entry is expected.".format(field_name))
+                    raise RuntimeError(
+                        "The field '{}' is required but is empty. At least one entry is expected.".format(field_name))
             else:
                 result = self.json[field_name]
         return result
