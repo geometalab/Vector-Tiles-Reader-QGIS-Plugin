@@ -26,20 +26,16 @@ def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     :param source_crs: 
     :return: 
     """
-    if not zoom:
+    if zoom is None:
         raise RuntimeError("zoom is required")
-    if not lat:
+    if lat is None:
         raise RuntimeError("latitude is required")
-    if not lng:
+    if lng is None:
         raise RuntimeError("Longitude is required")
-
-    if str(source_crs).startswith("EPSG:"):
-        source_crs = int(source_crs.replace("EPSG:", ""))
 
     m = convert_coordinate(source_crs, 3857, lat, lng)
     gm = GlobalMercator()
     tile = gm.MetersToTile(m[0], m[1], zoom)
-
     if scheme != "tms":
         y = change_scheme(zoom, tile[1])
         tile = (tile[0], y)
@@ -47,6 +43,9 @@ def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
 
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
+    source_crs = get_code_from_epsg(source_crs)
+    target_crs = get_code_from_epsg(target_crs)
+
     src = osr.SpatialReference()
     tgt = osr.SpatialReference()
     print("convert from: {} to {}".format(source_crs, target_crs))
@@ -56,6 +55,13 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
     tgt.ImportFromEPSG(target_crs)
     transform = osr.CoordinateTransformation(src, tgt)
     return transform.TransformPoint(lng, lat)
+
+
+def get_code_from_epsg(epsg_string):
+    code = str(epsg_string).upper()
+    if code.startswith("EPSG:"):
+        code = code.replace("EPSG:", "")
+    return int(code)
 
 
 def epsg3857_to_wgs84_lonlat(x, y):
