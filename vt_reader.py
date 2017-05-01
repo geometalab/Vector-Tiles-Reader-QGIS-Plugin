@@ -38,6 +38,16 @@ class VtReader:
         2: GeoTypes.LINE_STRING,
         3: GeoTypes.POLYGON}
 
+    labelled_pois = [
+        "restaurant", 
+        "cafe",
+        "bar", 
+        "school",
+        "park",
+        "attraction",
+        "college"
+    ]
+
     layer_sort_ids = [
         "place",
         "housenumber",
@@ -407,21 +417,38 @@ class VtReader:
             coordinates=coordinates,
             func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
 
-        if geo_type == GeoTypes.POINT:
-            # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
-            coordinates = coordinates[0]
-
         properties = feature["properties"]
         properties["_zoomLevel"] = tile.zoom_level
         properties["_featureNr"] = self.total_feature_count
         properties["_col"] = tile.column
         properties["_row"] = tile.row
         properties["_geotype"] = geo_type.lower()
+
+        if geo_type == GeoTypes.POINT:
+            # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
+            feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
+            coordinates = coordinates[0]
+            has_icon, icon_path = self._get_icon_path(feature)
+            properties["_svgPath"] = icon_path
+            properties["_hasIcon"] = has_icon
+            properties["_showLabel"] = feature_class in self.labelled_pois
+
         self.total_feature_count += 1
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
         return feature_json, geo_type
+
+    def _get_icon_path(self, feature):
+        feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
+        root_path = os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
+        path = os.path.join(root_path, "{}.svg".format(feature_class))
+        sub_path = os.path.join(root_path, "{}.{}.svg".format(feature_class, feature_subclass))
+        if os.path.isfile(sub_path):
+            return True, sub_path
+        if os.path.isfile(path):
+            return True, path
+        return False, os.path.join(root_path, "unknown.svg")
 
     def _is_feature_already_loaded(self, feature, tile):
         """

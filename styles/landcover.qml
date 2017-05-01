@@ -37,7 +37,7 @@
       <rule filter="&quot;class&quot; = 'wood'" key="{f975f850-1b0a-4664-812c-b971c92f647e}" symbol="9" label="forest"/>
       <rule filter="&quot;class&quot; = 'village_green'" key="{e5ff6367-d66f-4f83-890c-8b3c6a663cd6}" symbol="10" label="village_green"/>
       <rule filter="&quot;class&quot; = 'recreation_ground'" key="{ec51e137-83e6-4185-a1f9-868d687fd235}" symbol="11" label="recreation_ground"/>
-      <rule filter="&quot;class&quot; = 'park'" key="{28c20e04-8ee6-4131-adef-4dacb9a545f7}" symbol="12" label="park"/>
+      <rule filter="&quot;class&quot; = 'park' or (&quot;class&quot; = 'grass' and &quot;subclass&quot; = 'park')" key="{28c20e04-8ee6-4131-adef-4dacb9a545f7}" symbol="12" label="park"/>
       <rule filter="&quot;class&quot; = 'wetland'" key="{e26b2ee3-2d54-4f39-8748-db28adc32a96}" symbol="13" label="wetland"/>
       <rule filter="&quot;class&quot; = 'bog'" key="{4cba037c-9ae5-411e-bcd5-1140f0fba210}" symbol="14" label="bog"/>
       <rule filter="&quot;class&quot; = 'swamp'" key="{a93fa5b5-128d-4c4a-972e-b1696f0e731e}" symbol="15" label="swamp"/>
@@ -655,7 +655,7 @@
     <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/landcover.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
-    <property key="vector_tile_source" value="C:/Users/Martin/Downloads/zurich_switzerland.mbtiles"/>
+    <property key="vector_tile_source" value="http://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
@@ -711,7 +711,7 @@
     </symbol>
   </SingleCategoryDiagramRenderer>
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
-  <annotationform></annotationform>
+  <annotationform>.</annotationform>
   <aliases>
     <alias field="_geotype" index="0" name=""/>
     <alias field="subclass" index="1" name=""/>
@@ -736,10 +736,10 @@
       <column width="-1" hidden="0" type="field" name="_geotype"/>
     </columns>
   </attributetableconfig>
-  <editform></editform>
+  <editform>.</editform>
   <editforminit/>
   <editforminitcodesource>0</editforminitcodesource>
-  <editforminitfilepath></editforminitfilepath>
+  <editforminitfilepath>.</editforminitfilepath>
   <editforminitcode><![CDATA[# -*- coding: utf-8 -*-
 """
 QGIS forms can have a Python function that is called when the form is
