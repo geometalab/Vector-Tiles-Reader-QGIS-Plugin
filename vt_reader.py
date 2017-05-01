@@ -444,11 +444,15 @@ class VtReader:
         root_path = os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
         path = os.path.join(root_path, "{}.svg".format(feature_class))
         sub_path = os.path.join(root_path, "{}.{}.svg".format(feature_class, feature_subclass))
+        has_icon = False
+        icon_path = os.path.join(root_path, "unknown.svg")
         if os.path.isfile(sub_path):
-            return True, sub_path
-        if os.path.isfile(path):
-            return True, path
-        return False, os.path.join(root_path, "unknown.svg")
+            has_icon = True
+            icon_path = sub_path
+        elif os.path.isfile(path):
+            has_icon = True
+            icon_path = path
+        return has_icon, icon_path
 
     def _is_feature_already_loaded(self, feature, tile):
         """
