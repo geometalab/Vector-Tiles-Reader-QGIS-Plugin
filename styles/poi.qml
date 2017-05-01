@@ -48,10 +48,11 @@
     <rules key="{3debb892-8979-4989-bfc2-849898d70b70}">
       <rule scalemaxdenom="5000" filter="&quot;_hasIcon&quot;" key="{9a206b37-c46e-44cb-a197-1add34e06533}" symbol="0" scalemindenom="1000" label="poi"/>
       <rule scalemaxdenom="5000" filter="not &quot;_hasIcon&quot;" key="{94d47a71-9c4e-4162-9a3c-e1416586078f}" symbol="1" scalemindenom="1000" label="no icon"/>
+      <rule scalemaxdenom="10000" filter="&quot;_hasIcon&quot;" key="{601d5c70-50f4-429b-aad9-f72be9b8fbcd}" symbol="2" scalemindenom="5000" label="poi"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="0">
-        <layer pass="0" class="SvgMarker" locked="0">
+        <layer pass="1" class="SvgMarker" locked="0">
           <prop k="angle" v="0"/>
           <prop k="color" v="0,0,0,255"/>
           <prop k="horizontal_anchor_point" v="1"/>
@@ -98,11 +99,35 @@
           <prop k="vertical_anchor_point" v="1"/>
         </layer>
       </symbol>
+      <symbol alpha="1" clip_to_extent="1" type="marker" name="2">
+        <layer pass="1" class="SvgMarker" locked="0">
+          <prop k="angle" v="0"/>
+          <prop k="color" v="0,0,0,255"/>
+          <prop k="horizontal_anchor_point" v="1"/>
+          <prop k="name" v="D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/restaurant.svg"/>
+          <prop k="name_dd_active" v="1"/>
+          <prop k="name_dd_expression" v="concat('D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/', &quot;class&quot;, '.svg')"/>
+          <prop k="name_dd_field" v="_svgPath"/>
+          <prop k="name_dd_useexpr" v="0"/>
+          <prop k="offset" v="0,0"/>
+          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit" v="Pixel"/>
+          <prop k="outline_color" v="255,255,255,255"/>
+          <prop k="outline_width" v="0"/>
+          <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="outline_width_unit" v="Pixel"/>
+          <prop k="scale_method" v="diameter"/>
+          <prop k="size" v="10"/>
+          <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="size_unit" v="Pixel"/>
+          <prop k="vertical_anchor_point" v="1"/>
+        </layer>
+      </symbol>
     </symbols>
   </renderer-v2>
   <labeling type="rule-based">
-    <rules key="{f1f6f52c-bf1b-4cd3-90f3-19776bc2bf5f}">
-      <rule description="labelled" filter=" &quot;_showLabel&quot; " key="{b73eb2af-3eca-4a41-9338-38e5d698d63a}">
+    <rules key="{e51956b0-b647-4444-9989-884268b36381}">
+      <rule description="labelled" filter=" &quot;_showLabel&quot; " key="{8c89170d-6719-4ada-b191-8e285cceaf76}">
         <settings>
           <text-style fontItalic="0" fontFamily="MS Shell Dlg 2" fontLetterSpacing="0" fontUnderline="0" fontWeight="50" fontStrikeout="0" textTransp="0" previewBkgrdColor="#ffffff" fontCapitals="0" textColor="115,74,8,255" fontSizeInMapUnits="0" isExpression="1" blendMode="0" fontSizeMapUnitScale="0,0,0,0,0,0" fontSize="7.25" fieldName="if (length(&quot;name_en&quot;) > 0, &quot;name_en&quot;, &quot;name_de&quot;)" namedStyle="Normal" fontWordSpacing="0" useSubstitutions="0">
             <substitutions/>
