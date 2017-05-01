@@ -4,6 +4,9 @@
     <edittype widgetv2type="TextEdit" name="_geotype">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
+    <edittype widgetv2type="TextEdit" name="_showLabel">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
     <edittype widgetv2type="TextEdit" name="_svgPath">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
@@ -11,6 +14,9 @@
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="_row">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="_hasIcon">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="_col">
@@ -36,13 +42,13 @@
     <property key="labeling/bufferColorB" value="255"/>
     <property key="labeling/bufferColorG" value="255"/>
     <property key="labeling/bufferColorR" value="255"/>
-    <property key="labeling/bufferDraw" value="false"/>
+    <property key="labeling/bufferDraw" value="true"/>
     <property key="labeling/bufferJoinStyle" value="128"/>
     <property key="labeling/bufferNoFill" value="false"/>
-    <property key="labeling/bufferSize" value="1"/>
+    <property key="labeling/bufferSize" value="0.3"/>
     <property key="labeling/bufferSizeInMapUnits" value="false"/>
     <property key="labeling/bufferSizeMapUnitScale" value="0,0,0,0,0,0"/>
-    <property key="labeling/bufferTransp" value="0"/>
+    <property key="labeling/bufferTransp" value="47"/>
     <property key="labeling/centroidInside" value="false"/>
     <property key="labeling/centroidWhole" value="false"/>
     <property key="labeling/decimals" value="3"/>
@@ -61,7 +67,7 @@
     <property key="labeling/fontLimitPixelSize" value="false"/>
     <property key="labeling/fontMaxPixelSize" value="10000"/>
     <property key="labeling/fontMinPixelSize" value="3"/>
-    <property key="labeling/fontSize" value="6.25"/>
+    <property key="labeling/fontSize" value="7"/>
     <property key="labeling/fontSizeInMapUnits" value="false"/>
     <property key="labeling/fontSizeMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/fontStrikeout" value="false"/>
@@ -155,9 +161,9 @@
     <property key="labeling/shapeType" value="0"/>
     <property key="labeling/substitutions" value="&lt;substitutions/>"/>
     <property key="labeling/textColorA" value="255"/>
-    <property key="labeling/textColorB" value="8"/>
-    <property key="labeling/textColorG" value="74"/>
-    <property key="labeling/textColorR" value="115"/>
+    <property key="labeling/textColorB" value="127"/>
+    <property key="labeling/textColorG" value="127"/>
+    <property key="labeling/textColorR" value="127"/>
     <property key="labeling/textTransp" value="0"/>
     <property key="labeling/upsidedownLabels" value="0"/>
     <property key="labeling/useSubstitutions" value="false"/>
@@ -227,12 +233,14 @@
   <annotationform>.</annotationform>
   <aliases>
     <alias field="_geotype" index="0" name=""/>
-    <alias field="_svgPath" index="1" name=""/>
-    <alias field="_zoomLevel" index="2" name=""/>
-    <alias field="_row" index="3" name=""/>
-    <alias field="_col" index="4" name=""/>
-    <alias field="_featureNr" index="5" name=""/>
-    <alias field="housenumber" index="6" name=""/>
+    <alias field="_showLabel" index="1" name=""/>
+    <alias field="_svgPath" index="2" name=""/>
+    <alias field="_zoomLevel" index="3" name=""/>
+    <alias field="_row" index="4" name=""/>
+    <alias field="_hasIcon" index="5" name=""/>
+    <alias field="_col" index="6" name=""/>
+    <alias field="_featureNr" index="7" name=""/>
+    <alias field="housenumber" index="8" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -247,6 +255,8 @@
       <column width="-1" hidden="1" type="actions"/>
       <column width="-1" hidden="0" type="field" name="_geotype"/>
       <column width="-1" hidden="0" type="field" name="_svgPath"/>
+      <column width="-1" hidden="0" type="field" name="_showLabel"/>
+      <column width="-1" hidden="0" type="field" name="_hasIcon"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -279,9 +289,11 @@ def my_form_open(dialog, layer, feature):
   </conditionalstyles>
   <defaults>
     <default field="_geotype" expression=""/>
+    <default field="_showLabel" expression=""/>
     <default field="_svgPath" expression=""/>
     <default field="_zoomLevel" expression=""/>
     <default field="_row" expression=""/>
+    <default field="_hasIcon" expression=""/>
     <default field="_col" expression=""/>
     <default field="_featureNr" expression=""/>
     <default field="housenumber" expression=""/>

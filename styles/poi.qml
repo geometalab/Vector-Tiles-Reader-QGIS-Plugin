@@ -68,7 +68,7 @@
           <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="outline_width_unit" v="Pixel"/>
           <prop k="scale_method" v="diameter"/>
-          <prop k="size" v="16"/>
+          <prop k="size" v="15"/>
           <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="size_unit" v="Pixel"/>
           <prop k="vertical_anchor_point" v="1"/>
@@ -92,7 +92,7 @@
           <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="outline_width_unit" v="Pixel"/>
           <prop k="scale_method" v="diameter"/>
-          <prop k="size" v="8"/>
+          <prop k="size" v="7"/>
           <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="size_unit" v="Pixel"/>
           <prop k="vertical_anchor_point" v="1"/>
@@ -101,8 +101,8 @@
     </symbols>
   </renderer-v2>
   <labeling type="rule-based">
-    <rules key="{c9212b73-9da7-42f7-a918-64fe779acb1f}">
-      <rule description="labelled" filter=" &quot;_showLabel&quot; " key="{3b835275-f133-4704-a465-f0b79ca0926d}">
+    <rules key="{f1f6f52c-bf1b-4cd3-90f3-19776bc2bf5f}">
+      <rule description="labelled" filter=" &quot;_showLabel&quot; " key="{b73eb2af-3eca-4a41-9338-38e5d698d63a}">
         <settings>
           <text-style fontItalic="0" fontFamily="MS Shell Dlg 2" fontLetterSpacing="0" fontUnderline="0" fontWeight="50" fontStrikeout="0" textTransp="0" previewBkgrdColor="#ffffff" fontCapitals="0" textColor="115,74,8,255" fontSizeInMapUnits="0" isExpression="1" blendMode="0" fontSizeMapUnitScale="0,0,0,0,0,0" fontSize="7.25" fieldName="if (length(&quot;name_en&quot;) > 0, &quot;name_en&quot;, &quot;name_de&quot;)" namedStyle="Normal" fontWordSpacing="0" useSubstitutions="0">
             <substitutions/>
