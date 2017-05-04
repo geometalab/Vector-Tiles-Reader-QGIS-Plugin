@@ -361,7 +361,12 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.model.removeRows(0, len(self.connections))
         for row_index, layer in enumerate(layers):
             for header_index, header in enumerate(self._table_headers.keys()):
-                self.model.setItem(row_index, header_index, QStandardItem(str(layer[self._table_headers[header]])))
+                header_value = self._table_headers[header]
+                if header_value in layer:
+                    value = str(layer[header_value])
+                else:
+                    value = "-"
+                self.model.setItem(row_index, header_index, QStandardItem(value))
         add_enabled = layers is not None and len(layers) > 0
         self.btnAdd.setEnabled(add_enabled)
 

@@ -10,6 +10,7 @@ class TileJSON:
      * Wrapper for TileJSON v2.2.0
      * https://github.com/mapbox/tilejson-spec/tree/master/2.2.0
     """
+
     def __init__(self, url):
         self.url = url
         self.json = None
@@ -129,12 +130,16 @@ class TileJSON:
 
     def is_within_bounds(self, zoom, extent):
         bounds = self.bounds_tile(zoom)
-        x_min_within = extent[0][0] >= bounds[0][0]
-        y_min_within = extent[0][1] >= bounds[0][1]
-        x_max_within = extent[1][0] <= bounds[1][0]
-        y_max_within = extent[1][1] <= bounds[1][1]
-        is_within = x_min_within and y_min_within and x_max_within and y_max_within
-        debug("Extent {} is within bounds {}", extent, bounds)
+        is_within = True
+        if bounds:
+            x_min_within = extent[0][0] >= bounds[0][0]
+            y_min_within = extent[0][1] >= bounds[0][1]
+            x_max_within = extent[1][0] <= bounds[1][0]
+            y_max_within = extent[1][1] <= bounds[1][1]
+            is_within = x_min_within and y_min_within and x_max_within and y_max_within
+            debug("Extent {} is within bounds {}: {}", extent, bounds, is_within)
+        else:
+            debug("Assuming extent is within bounds")
         return is_within
 
     def _get_value(self, field_name, is_array=False, is_required=False):
