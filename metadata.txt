@@ -18,6 +18,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---0.7.1---
+    * Bugfixes
     ---0.7.0---
     * Predefined server connection included
     * Loading performance improved
