@@ -132,11 +132,14 @@ class VtrPlugin:
         scheme = self.tilejson.scheme()
         crs_string = self.tilejson.crs()
         self._init_qgis_map(crs_string)
-        max_zoom = self.tilejson.max_zoom()
-        if not max_zoom:
-            max_zoom = 14
-        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=max_zoom)
-        if not self.tilejson.is_within_bounds(zoom=max_zoom, extent=extent):
+        zoom = self.tilejson.max_zoom()
+        if zoom is None:
+            zoom = 14
+        manual_zoom = self.server_dialog.options.manual_zoom()
+        if manual_zoom is not None:
+            zoom = manual_zoom
+        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=zoom)
+        if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
             pass  # todo: something's wrong here. probably a CRS mismatch between _get_visible_extent and tilejson
             # print "not in bounds"
             # self._set_qgis_extent(self.tilejson)

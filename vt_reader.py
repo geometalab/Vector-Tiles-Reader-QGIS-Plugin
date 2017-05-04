@@ -140,7 +140,6 @@ class VtReader:
         self.feature_collections_by_layer_path = {}
         self.qgis_layer_groups_by_layer_path = {}
         self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
-        debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
 
         min_zoom = self.source.min_zoom()
         max_zoom = self.source.max_zoom()
@@ -149,6 +148,8 @@ class VtReader:
         if max_zoom is not None and zoom_level > max_zoom:
             zoom_level = max_zoom
 
+        debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
+        debug("Load extent: {}", extent_to_load)
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                   bounds=extent_to_load,
                                                   max_tiles=max_tiles,
