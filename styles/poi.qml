@@ -1,28 +1,19 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="0" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.4" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="0" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="name">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="_geotype">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_svgPath">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_zoomLevel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="subclass">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="name_de">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="rank">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="_hasIcon">
+    <edittype widgetv2type="TextEdit" name="_zoomLevel">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="_symbol">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="subclass">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="_col">
@@ -31,24 +22,23 @@
     <edittype widgetv2type="TextEdit" name="_featureNr">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="name_en">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_showLabel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="class">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="_row">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
+    <edittype widgetv2type="TextEdit" name="name">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="name_en">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
   </edittypes>
   <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
     <rules key="{3debb892-8979-4989-bfc2-849898d70b70}">
-      <rule scalemaxdenom="5000" filter="&quot;_hasIcon&quot;" key="{9a206b37-c46e-44cb-a197-1add34e06533}" symbol="0" scalemindenom="1000" label="poi"/>
-      <rule scalemaxdenom="5000" filter="not &quot;_hasIcon&quot;" key="{94d47a71-9c4e-4162-9a3c-e1416586078f}" symbol="1" scalemindenom="1000" label="no icon"/>
-      <rule scalemaxdenom="10000" filter="&quot;_hasIcon&quot;" key="{601d5c70-50f4-429b-aad9-f72be9b8fbcd}" symbol="2" scalemindenom="5000" label="poi"/>
+      <rule scalemaxdenom="5000" key="{9a206b37-c46e-44cb-a197-1add34e06533}" symbol="0" scalemindenom="1000" label="poi"/>
+      <rule scalemaxdenom="10000" key="{601d5c70-50f4-429b-aad9-f72be9b8fbcd}" symbol="1" scalemindenom="5000" label="poi"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="0">
@@ -56,11 +46,11 @@
           <prop k="angle" v="0"/>
           <prop k="color" v="0,0,0,255"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="name" v="D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/restaurant.svg"/>
+          <prop k="name" v=""/>
           <prop k="name_dd_active" v="1"/>
-          <prop k="name_dd_expression" v="concat('D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/', &quot;class&quot;, '.svg')"/>
-          <prop k="name_dd_field" v="_svgPath"/>
-          <prop k="name_dd_useexpr" v="0"/>
+          <prop k="name_dd_expression" v="&quot;_symbol&quot;"/>
+          <prop k="name_dd_field" v="_symbol"/>
+          <prop k="name_dd_useexpr" v="1"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="Pixel"/>
@@ -76,39 +66,15 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="1">
-        <layer pass="0" class="SvgMarker" locked="0">
-          <prop k="angle" v="0"/>
-          <prop k="color" v="0,0,0,255"/>
-          <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="name" v="D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/restaurant.svg"/>
-          <prop k="name_dd_active" v="1"/>
-          <prop k="name_dd_expression" v="concat('D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/', &quot;class&quot;, '.svg')"/>
-          <prop k="name_dd_field" v="_svgPath"/>
-          <prop k="name_dd_useexpr" v="0"/>
-          <prop k="offset" v="0,0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="Pixel"/>
-          <prop k="outline_color" v="255,255,255,255"/>
-          <prop k="outline_width" v="0"/>
-          <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="outline_width_unit" v="Pixel"/>
-          <prop k="scale_method" v="diameter"/>
-          <prop k="size" v="7"/>
-          <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="size_unit" v="Pixel"/>
-          <prop k="vertical_anchor_point" v="1"/>
-        </layer>
-      </symbol>
-      <symbol alpha="1" clip_to_extent="1" type="marker" name="2">
         <layer pass="1" class="SvgMarker" locked="0">
           <prop k="angle" v="0"/>
           <prop k="color" v="0,0,0,255"/>
           <prop k="horizontal_anchor_point" v="1"/>
-          <prop k="name" v="D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/restaurant.svg"/>
+          <prop k="name" v=""/>
           <prop k="name_dd_active" v="1"/>
-          <prop k="name_dd_expression" v="concat('D:/DEV/Vector-Tiles-Reader-QGIS-Plugin/styles/icons/', &quot;class&quot;, '.svg')"/>
+          <prop k="name_dd_expression" v="&quot;_symbol&quot;"/>
           <prop k="name_dd_field" v="_svgPath"/>
-          <prop k="name_dd_useexpr" v="0"/>
+          <prop k="name_dd_useexpr" v="1"/>
           <prop k="offset" v="0,0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="Pixel"/>
@@ -126,8 +92,8 @@
     </symbols>
   </renderer-v2>
   <labeling type="rule-based">
-    <rules key="{e51956b0-b647-4444-9989-884268b36381}">
-      <rule description="labelled" filter=" &quot;_showLabel&quot; " key="{8c89170d-6719-4ada-b191-8e285cceaf76}">
+    <rules key="{d9fa6ff3-1048-45d1-b7f1-993fd2da84bd}">
+      <rule description="labelled" filter="&quot;class&quot; in (&#xd;&#xa;'restaurant', &#xd;&#xa;'cafe',&#xd;&#xa;'bar', &#xd;&#xa;'school',&#xd;&#xa;'park',&#xd;&#xa;'attraction',&#xd;&#xa;'college')" key="{0aacbaed-5f5b-41af-9449-d9761a00dc7d}">
         <settings>
           <text-style fontItalic="0" fontFamily="MS Shell Dlg 2" fontLetterSpacing="0" fontUnderline="0" fontWeight="50" fontStrikeout="0" textTransp="0" previewBkgrdColor="#ffffff" fontCapitals="0" textColor="115,74,8,255" fontSizeInMapUnits="0" isExpression="1" blendMode="0" fontSizeMapUnitScale="0,0,0,0,0,0" fontSize="7.25" fieldName="if (length(&quot;name_en&quot;) > 0, &quot;name_en&quot;, &quot;name_de&quot;)" namedStyle="Normal" fontWordSpacing="0" useSubstitutions="0">
             <substitutions/>
@@ -282,10 +248,10 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
-    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/poi.qml"/>
+    <property key="layerStyle" value="C:\Users\boosm\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/poi.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
-    <property key="vector_tile_source" value="http://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
+    <property key="vector_tile_source" value="C:/DEV/Vector-Tiles-Reader-QGIS-Plugin/sample_data/koh-samui_thailand.mbtiles"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
@@ -343,20 +309,17 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="name" index="0" name=""/>
-    <alias field="_geotype" index="1" name=""/>
-    <alias field="_svgPath" index="2" name=""/>
-    <alias field="_zoomLevel" index="3" name=""/>
+    <alias field="_geotype" index="0" name=""/>
+    <alias field="rank" index="1" name=""/>
+    <alias field="_zoomLevel" index="2" name=""/>
+    <alias field="_symbol" index="3" name=""/>
     <alias field="subclass" index="4" name=""/>
-    <alias field="name_de" index="5" name=""/>
-    <alias field="rank" index="6" name=""/>
-    <alias field="_hasIcon" index="7" name=""/>
-    <alias field="_col" index="8" name=""/>
-    <alias field="_featureNr" index="9" name=""/>
+    <alias field="_col" index="5" name=""/>
+    <alias field="_featureNr" index="6" name=""/>
+    <alias field="class" index="7" name=""/>
+    <alias field="_row" index="8" name=""/>
+    <alias field="name" index="9" name=""/>
     <alias field="name_en" index="10" name=""/>
-    <alias field="_showLabel" index="11" name=""/>
-    <alias field="class" index="12" name=""/>
-    <alias field="_row" index="13" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -367,7 +330,6 @@
       <column width="-1" hidden="0" type="field" name="_geotype"/>
       <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
       <column width="-1" hidden="0" type="field" name="subclass"/>
-      <column width="-1" hidden="0" type="field" name="name_de"/>
       <column width="-1" hidden="0" type="field" name="rank"/>
       <column width="-1" hidden="0" type="field" name="_col"/>
       <column width="-1" hidden="0" type="field" name="_featureNr"/>
@@ -375,9 +337,7 @@
       <column width="-1" hidden="0" type="field" name="class"/>
       <column width="-1" hidden="0" type="field" name="_row"/>
       <column width="-1" hidden="1" type="actions"/>
-      <column width="-1" hidden="0" type="field" name="_svgPath"/>
-      <column width="-1" hidden="0" type="field" name="_showLabel"/>
-      <column width="-1" hidden="0" type="field" name="_hasIcon"/>
+      <column width="-1" hidden="0" type="field" name="_symbol"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -409,21 +369,17 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="name" expression=""/>
     <default field="_geotype" expression=""/>
-    <default field="_svgPath" expression=""/>
-    <default field="_zoomLevel" expression=""/>
-    <default field="subclass" expression=""/>
-    <default field="name_de" expression=""/>
     <default field="rank" expression=""/>
-    <default field="_hasIcon" expression=""/>
+    <default field="_zoomLevel" expression=""/>
+    <default field="_symbol" expression=""/>
+    <default field="subclass" expression=""/>
     <default field="_col" expression=""/>
     <default field="_featureNr" expression=""/>
-    <default field="name_en" expression=""/>
-    <default field="_showLabel" expression=""/>
     <default field="class" expression=""/>
     <default field="_row" expression=""/>
+    <default field="name" expression=""/>
+    <default field="name_en" expression=""/>
   </defaults>
-  <previewExpression></previewExpression>
   <layerGeometryType>0</layerGeometryType>
 </qgis>

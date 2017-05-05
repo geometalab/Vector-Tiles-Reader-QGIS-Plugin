@@ -38,16 +38,6 @@ class VtReader:
         2: GeoTypes.LINE_STRING,
         3: GeoTypes.POLYGON}
 
-    labelled_pois = [
-        "restaurant", 
-        "cafe",
-        "bar", 
-        "school",
-        "park",
-        "attraction",
-        "college"
-    ]
-
     layer_sort_ids = [
         "place",
         "housenumber",
@@ -429,10 +419,7 @@ class VtReader:
             # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
             feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
             coordinates = coordinates[0]
-            has_icon, icon_path = self._get_icon_path(feature)
-            properties["_svgPath"] = icon_path
-            properties["_hasIcon"] = has_icon
-            properties["_showLabel"] = feature_class in self.labelled_pois
+            properties["_symbol"] = self._get_icon_path(feature)
 
         self.total_feature_count += 1
 
@@ -443,17 +430,14 @@ class VtReader:
     def _get_icon_path(self, feature):
         feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
         root_path = os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
-        path = os.path.join(root_path, "{}.svg".format(feature_class))
-        sub_path = os.path.join(root_path, "{}.{}.svg".format(feature_class, feature_subclass))
-        has_icon = False
-        icon_path = os.path.join(root_path, "unknown.svg")
-        if os.path.isfile(sub_path):
-            has_icon = True
-            icon_path = sub_path
-        elif os.path.isfile(path):
-            has_icon = True
-            icon_path = path
-        return has_icon, icon_path
+        class_icon = "{}.svg".format(feature_class)
+        class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
+        icon_path = "poi.svg"
+        if os.path.isfile(os.path.join(root_path, class_subclass_icon)):
+            icon_path = class_subclass_icon
+        elif os.path.isfile(os.path.join(root_path, class_icon)):
+            icon_path = class_icon
+        return icon_path
 
     def _is_feature_already_loaded(self, feature, tile):
         """

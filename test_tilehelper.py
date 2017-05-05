@@ -23,10 +23,10 @@ def test_convertcoordinate_bottomright():
     assert r == (16383, 16383)
 
 
-# def test_convertcoordinate_second():
-#     r = coordinate_to_tile(14, lat=85.05, lng=-180, source_crs="epsg:4326", scheme="xyz")
-#     print "r: ", r
-#     assert r == [0, 0]
+def test_convertcoordinate_second():
+    r = coordinate_to_tile(1, lat=85.05, lng=-180, source_crs="epsg:4326", scheme="xyz")
+    print "r: ", r
+    assert r == [0, 0]
 
 # def test_gettilebounds():
 #     b = get_tile_bounds(14, [-180, -85.0511, 180, 85.0511], "EPSG:3857", "xyz")
