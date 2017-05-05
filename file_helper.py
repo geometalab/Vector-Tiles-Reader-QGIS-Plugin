@@ -24,6 +24,10 @@ class FileHelper:
         return styles
 
     @staticmethod
+    def get_icons_directory():
+        return os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
+
+    @staticmethod
     def get_home_directory():
         return os.path.expanduser("~")
 

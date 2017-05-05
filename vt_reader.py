@@ -418,7 +418,7 @@ class VtReader:
 
     def _get_icon_path(self, feature):
         feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
-        root_path = os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
+        root_path = FileHelper.get_icons_directory()
         class_icon = "{}.svg".format(feature_class)
         class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
         icon_path = "poi.svg"

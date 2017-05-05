@@ -48,6 +48,14 @@ class VtrPlugin:
         self._current_reader = None
         self._current_options = None
         self._connect_to_extent_changed()
+        self._add_path_to_icons()
+
+    def _add_path_to_icons(self):
+        icons_directory = FileHelper.get_icons_directory()
+        current_paths = QgsApplication.svgPaths()
+        if icons_directory not in current_paths:
+            current_paths.append(icons_directory)
+            QgsApplication.setDefaultSvgPaths(current_paths)
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
