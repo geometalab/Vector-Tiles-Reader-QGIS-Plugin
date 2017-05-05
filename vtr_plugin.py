@@ -60,18 +60,16 @@ class VtrPlugin:
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_server_action = self._create_action("Add Vector Tiles Server Layer...", "server.svg", self.server_dialog.show)
-        self.open_file_action = self._create_action("Add Vector Tiles Layer...", "folder.svg", self.file_dialog.show)
-        self.iface.insertAddLayerAction(self.open_file_action)  # Add action to the menu: Layer->Add Layer
         self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
-        self.popupMenu.addAction(self.open_file_action)
         self.popupMenu.addAction(self.open_server_action)
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
         self.toolButton.setDefaultAction(self.open_server_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
-        self.about_action = self._create_action("About", "", self.show_about)
-        self.iface.addPluginToMenu("&Vector Tiles Reader", self.about_action)
+        self.about_action = self._create_action("About", "info.svg", self.show_about)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_server_action)
         info("Vector Tile Reader Plugin loaded...")
 
     def _connect_to_extent_changed(self):
@@ -281,6 +279,6 @@ class VtrPlugin:
         except:
             warn("Disconnectin failed: {}", sys.exc_info())
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
-        self.iface.removePluginMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.addLayerMenu().removeAction(self.open_file_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_server_action)
         self.iface.addLayerMenu().removeAction(self.open_server_action)

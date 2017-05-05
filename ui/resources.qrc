@@ -5,5 +5,6 @@
 	<file alias="delete.svg">../icons/delete.svg</file> 
 	<file alias="folder.svg">../icons/folder.svg</file> 
 	<file alias="server.svg">../icons/server.svg</file> 
+	<file alias="info.svg">../icons/info.svg</file> 
   </qresource> 
 </RCC>
