@@ -6,68 +6,90 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>520</width>
-    <height>132</height>
+    <width>562</width>
+    <height>174</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Edit Connection</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
+  <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1">
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Connection</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
+     <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
+      <item row="3" column="0">
+       <widget class="QLabel" name="lblSource">
+        <property name="text">
+         <string>Path</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Name</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>TileJSON URL</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <property name="leftMargin">
-           <number>10</number>
-          </property>
-          <item>
-           <widget class="QLineEdit" name="txtName">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="txtUrl">
-            <property name="toolTip">
-             <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="placeholderText">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Type</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Name</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QRadioButton" name="rbServer">
+        <property name="text">
+         <string>Tile Server</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="txtName">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="txtUrl">
+        <property name="toolTip">
+         <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="placeholderText">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QRadioButton" name="rbFile">
+        <property name="text">
+         <string>File</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QPushButton" name="btnBrowse">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -146,4 +168,7 @@
    </hints>
   </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>

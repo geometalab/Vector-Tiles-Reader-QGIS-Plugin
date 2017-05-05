@@ -19,7 +19,7 @@ class VectorTile:
 
 def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     """
-     * Returns the tile-xy from the specified lat/long coordinates
+     * Returns the tile-xy from the specified WGS84 lat/long coordinates
     :param zoom: 
     :param lat: 
     :param lng: 

@@ -37,16 +37,14 @@ class VtrPlugin:
         self.iface = iface
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.file_dialog = FileConnectionDialog(FileHelper.get_home_directory())
-        self.file_dialog.on_open.connect(self._on_open_mbtiles)
-        self.file_dialog.on_valid_file_path_changed.connect(self._update_zoom_from_file)
         self.server_dialog = ServerConnectionDialog()
         self.server_dialog.on_connect.connect(self._on_connect)
-        self.server_dialog.on_add.connect(self._on_add_server_layer)
+        self.server_dialog.on_add.connect(self._on_add_layer)
         self.progress_dialog = None
         self.reload_dialog = None
         self._current_reader = None
         self._current_options = None
+        self.reader = None
         self._connect_to_extent_changed()
         self._add_path_to_icons()
 
@@ -105,48 +103,35 @@ class VtrPlugin:
         tile = get_tile_bounds(zoom, bounds=bounds, scheme=tilejson_scheme, crs="EPSG:4326")
         return tile
 
-    def _on_connect(self, url):
-        debug("Connect to url: {}", url)
-        self.url = url
-        tilejson = TileJSON(url)
-        if tilejson.load():
-            layers = tilejson.vector_layers()
+    def _on_connect(self, path_or_url):
+        debug("Connect to path_or_url: {}", path_or_url)
+
+        reader = self._create_reader(path_or_url)
+        self.reader = reader
+        if reader:
+            layers = reader.source.vector_layers()
             self.server_dialog.set_layers(layers)
-            self.server_dialog.options.set_zoom(tilejson.min_zoom(), tilejson.max_zoom())
+            self.server_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
         else:
             self.server_dialog.set_layers([])
-            tilejson = None
-        self.tilejson = tilejson
-
-    def _update_zoom_from_file(self, path):
-        min_zoom = None
-        max_zoom = None
-        reader = self._create_reader(path)
-        if reader:
-            min_zoom = reader.source.min_zoom()
-            max_zoom = reader.source.max_zoom()
-        else:
-            self.file_dialog.clear_path()
-        self.file_dialog.options.set_zoom(min_zoom, max_zoom)
 
     def show_about(self):
         AboutDialog().show()
 
-    def _on_add_server_layer(self, url):
-        debug("add server layer: {}", url)
-        assert self.tilejson
-        scheme = self.tilejson.scheme()
-        crs_string = self.tilejson.crs()
+    def _on_add_layer(self, path_or_url):
+        debug("add layer: {}", path_or_url)
+        scheme = self.reader.source.scheme()
+        crs_string = self.reader.source.crs()
         self._init_qgis_map(crs_string)
-        zoom = self.tilejson.max_zoom()
+        zoom = self.reader.source.max_zoom()
         if zoom is None:
             zoom = 14
         manual_zoom = self.server_dialog.options.manual_zoom()
         if manual_zoom is not None:
             zoom = manual_zoom
         extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=zoom)
-        if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
-            pass  # todo: something's wrong here. probably a CRS mismatch between _get_visible_extent and tilejson
+        # if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
+        #     pass  # todo: something's wrong here. probably a CRS mismatch between _get_visible_extent and tilejson
             # print "not in bounds"
             # self._set_qgis_extent(self.tilejson)
 
@@ -157,7 +142,7 @@ class VtrPlugin:
             dialog_owner = self.iface.mainWindow()
             self.server_dialog.close()
         self._create_progress_dialog(dialog_owner)
-        self._load_tiles(path=url, options=self.server_dialog.options, extent_to_load=extent)
+        self._load_tiles(path=path_or_url, options=self.server_dialog.options, extent_to_load=extent)
 
     def _set_qgis_extent(self, tilejson):
         """

@@ -4,12 +4,15 @@ import sqlite3
 import threading
 import urlparse
 import Queue
+import json
 
 from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
 from tile_helper import VectorTile, get_all_tiles
 
+
+_DEFAULT_CRS = "EPSG:3857"
 
 class ServerSource:
     def __init__(self, url):
@@ -39,6 +42,9 @@ class ServerSource:
     def attribution(self):
         return self.json.attribution()
 
+    def vector_layers(self):
+        return self.json.vector_layers()
+
     def name(self):
         name = self.json.name()
         if not name:
@@ -58,6 +64,12 @@ class ServerSource:
 
     def scheme(self):
         return self.json.scheme()
+
+    def bounds_tile(self, zoom):
+        return self.json.bounds_tile(zoom)
+
+    def crs(self):
+        return self.json.crs()
 
     def _add_loaded_tile(self, zoom, col, row):
         self._loaded_tiles.append((zoom, col, row))
@@ -154,6 +166,16 @@ class MBTilesSource:
 
     def source(self):
         return self.path
+
+    def crs(self):
+        return self._get_metadata_value("crs", _DEFAULT_CRS)
+
+    def vector_layers(self):
+        data = self._get_metadata_value("json")
+        layers = []
+        if data:
+            layers = json.loads(data)["vector_layers"]
+        return layers
 
     def name(self):
         base_name = os.path.splitext(os.path.basename(self.path))[0]

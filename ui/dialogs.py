@@ -399,15 +399,34 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
 
 
 class EditServerConnection(QtGui.QDialog, Ui_DlgEditServerConnection):
-    def __init__(self, name=None, url=None):
+    def __init__(self, name=None, path_or_url=None):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self.txtName.textChanged.connect(self._update_save_btn_state)
         self.txtUrl.textChanged.connect(self._update_save_btn_state)
+        self.rbServer.toggled.connect(self._on_type_change)
+        self.btnBrowse.clicked.connect(self._select_file_path)
+        self.open_path = path_or_url
         if name:
             self.txtName.setText(name)
-        if url:
-            self.txtUrl.setText(url)
+        if path_or_url:
+            self.txtUrl.setText(path_or_url)
+            if path_or_url.lower().startswith("http://") or path_or_url.lower().startswith("https://"):
+                self.rbServer.setChecked(True)
+
+    def _select_file_path(self):
+        open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.open_path, "Mapbox Tiles (*.mbtiles)")
+        if open_file_name:
+            self.open_path = open_file_name
+            self.txtUrl.setText(open_file_name)
+
+    def _on_type_change(self):
+        if self.rbServer.isChecked():
+            self.lblSource.setText("TileJSON URL")
+            self.btnBrowse.setVisible(False)
+        else:
+            self.lblSource.setText("Path")
+            self.btnBrowse.setVisible(True)
 
     def _update_save_btn_state(self):
         enable = False
