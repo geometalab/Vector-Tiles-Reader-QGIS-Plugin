@@ -85,7 +85,6 @@ class VtReader:
         self.qgis_layer_groups_by_layer_path = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
-        self.total_feature_count = 0
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -409,19 +408,9 @@ class VtReader:
             func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
 
         properties = feature["properties"]
-        properties["_zoomLevel"] = tile.zoom_level
-        properties["_featureNr"] = self.total_feature_count
-        properties["_col"] = tile.column
-        properties["_row"] = tile.row
-        properties["_geotype"] = geo_type.lower()
-
         if geo_type == GeoTypes.POINT:
-            # Due to mercator_geometrys nature, the point will be displayed in a List "[[]]", remove the outer bracket.
-            feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_icon_path(feature)
-
-        self.total_feature_count += 1
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
