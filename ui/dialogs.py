@@ -358,7 +358,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         return self.chkKeepOpen.isChecked()
 
     def set_layers(self, layers):
-        self.model.removeRows(0, len(self.connections))
+        self.model.removeRows(0, self.model.rowCount())
         for row_index, layer in enumerate(layers):
             for header_index, header in enumerate(self._table_headers.keys()):
                 header_value = self._table_headers[header]
@@ -388,6 +388,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
             self._save_connections()
 
     def _handle_connection_change(self, name):
+        self.set_layers([])
         enable_connect = False
         enable_edit = False
         if name in self.connections:
