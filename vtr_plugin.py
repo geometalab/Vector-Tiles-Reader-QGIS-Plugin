@@ -228,10 +228,11 @@ class VtrPlugin:
         * Shows a message in QGIS that the nr of tiles has been restricted by the tile limit set in the options
         :return: 
         """
-        self.iface.messageBar().pushMessage(
-            "Only {} tiles were loaded according to the limit in the options".format(limit),
-            level=QgsMessageBar.WARNING,
-            duration=5)
+        if limit:
+            self.iface.messageBar().pushMessage(
+                "Only {} tiles were loaded according to the limit in the options".format(limit),
+                level=QgsMessageBar.WARNING,
+                duration=5)
 
     def _create_reader(self, path_or_url):
         # A lazy import is required because the vtreader depends on the external libs
