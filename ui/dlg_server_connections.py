@@ -141,8 +141,8 @@ class Ui_DlgServerConnections(object):
         QtCore.QMetaObject.connectSlotsByName(DlgServerConnections)
 
     def retranslateUi(self, DlgServerConnections):
-        DlgServerConnections.setWindowTitle(_translate("DlgServerConnections", "Add Layer(s) from a Vector Tile Server", None))
-        self.groupBox.setTitle(_translate("DlgServerConnections", "Server connections", None))
+        DlgServerConnections.setWindowTitle(_translate("DlgServerConnections", "Add Layer(s) from a Vector Tile Source", None))
+        self.groupBox.setTitle(_translate("DlgServerConnections", "Connections", None))
         self.btnConnect.setText(_translate("DlgServerConnections", "Connect", None))
         self.btnCreateConnection.setText(_translate("DlgServerConnections", "New", None))
         self.btnEdit.setText(_translate("DlgServerConnections", "Edit", None))

@@ -115,7 +115,8 @@ class VtReader:
         if self.source:
             self.source.cancel()
 
-    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None, extent_to_load=None):
+    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
+                   extent_to_load=None, limit_reacher_handler=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
@@ -123,6 +124,8 @@ class VtReader:
         :param merge_tiles: If True neighbouring tiles and features will be merged
         :param apply_styles: If True the default styles will be applied
         :param max_tiles: The maximum number of tiles to load
+        :param extent_to_load: 
+        :param limit_reacher_handler: 
         :return: 
         """
         self.cancel_requested = False
@@ -142,7 +145,8 @@ class VtReader:
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                   bounds=extent_to_load,
                                                   max_tiles=max_tiles,
-                                                  for_each=QApplication.processEvents)
+                                                  for_each=QApplication.processEvents,
+                                                  limit_reacher_handler=limit_reacher_handler)
 
         if load_mask_layer:
             mask_level = self.source.mask_level()

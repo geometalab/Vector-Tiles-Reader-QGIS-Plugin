@@ -17,11 +17,11 @@ from log_helper import debug, info, warn, critical
 from PyQt4.QtCore import QSettings
 from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
 from qgis.core import *
+from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
 from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
-from tile_json import TileJSON
-from ui.dialogs import FileConnectionDialog, AboutDialog, ProgressDialog, ServerConnectionDialog, TilesReloadingDialog
+from ui.dialogs import AboutDialog, ProgressDialog, ServerConnectionDialog, TilesReloadingDialog
 
 import os
 import sys
@@ -57,7 +57,7 @@ class VtrPlugin:
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_server_action = self._create_action("Add Vector Tiles Server Layer...", "server.svg", self.server_dialog.show)
+        self.open_server_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.server_dialog.show)
         self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_server_action)
         self.toolButton = QToolButton()
@@ -210,7 +210,8 @@ class VtrPlugin:
                                   merge_tiles=merge_tiles,
                                   apply_styles=apply_styles,
                                   max_tiles=tile_limit,
-                                  extent_to_load=extent_to_load)
+                                  extent_to_load=extent_to_load,
+                                  limit_reacher_handler=lambda: self._show_limit_exceeded_message(tile_limit))
                 self.refresh_layers()
                 debug("Loading complete!")
             except RuntimeError:
@@ -221,6 +222,16 @@ class VtrPlugin:
     def refresh_layers(self):
         for layer in self.iface.mapCanvas().layers():
             layer.triggerRepaint()
+
+    def _show_limit_exceeded_message(self, limit):
+        """
+        * Shows a message in QGIS that the nr of tiles has been restricted by the tile limit set in the options
+        :return: 
+        """
+        self.iface.messageBar().pushMessage(
+            "Only {} tiles were loaded according to the limit in the options".format(limit),
+            level=QgsMessageBar.WARNING,
+            duration=5)
 
     def _create_reader(self, path_or_url):
         # A lazy import is required because the vtreader depends on the external libs

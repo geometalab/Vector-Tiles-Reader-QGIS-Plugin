@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Add Layer(s) from a Vector Tile Server</string>
+   <string>Add Layer(s) from a Vector Tile Source</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>true</bool>
@@ -32,7 +32,7 @@
       </size>
      </property>
      <property name="title">
-      <string>Server connections</string>
+      <string>Connections</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">

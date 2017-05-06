@@ -26,7 +26,6 @@ class ServerSource:
 
         self.json = TileJSON(url)
         self.json.load()
-        self._loaded_tiles = []
         self._progress_handler = None
         self._cancelling = False
 
@@ -71,32 +70,36 @@ class ServerSource:
     def crs(self):
         return self.json.crs()
 
-    def _add_loaded_tile(self, zoom, col, row):
-        self._loaded_tiles.append((zoom, col, row))
+    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None, limit_reacher_handler=None):
+        """
+         * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
+        :param zoom_level: The zoom level which will be loaded
+        :param bounds: If set, only tiles inside this tile boundary will be loaded
+        :param max_tiles: The maximum number of tiles to be loaded
+        :param for_each: A function which will be called for every row
+        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
+        :return: 
+        """
 
-    def is_tile_loaded(self, zoom, col, row):
-        return (zoom, col, row) in self._loaded_tiles
-
-    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None):
         self._cancelling = False
         base_url = self.json.tiles()[0]
         tiles_to_load = get_all_tiles(bounds)
         tile_data_tuples = []
         urls = []
 
-        for index, t in enumerate(tiles_to_load):
+        if len(tiles_to_load) > max_tiles:
+            tiles_to_load = tiles_to_load[:max_tiles]
+            if limit_reacher_handler:
+                limit_reacher_handler()
+
+        for t in tiles_to_load:
             col = t[0]
             row = t[1]
-            if self.is_tile_loaded(zoom_level, col, row):
-                continue
-
             load_url = base_url\
                 .replace("{z}", str(zoom_level))\
                 .replace("{x}", str(col))\
                 .replace("{y}", str(row))
             urls.append((load_url, col, row))
-            if max_tiles and index+1 == max_tiles:
-                break
 
         self._progress_handler(msg="Getting {} tiles from source...".format(len(urls)), max_progress=len(urls))
         queue = Queue.Queue()
@@ -111,7 +114,6 @@ class ServerSource:
             row = r[1][1]
             tile = VectorTile(self.scheme(), zoom_level, col, row)
             tile_data_tuples.append((tile, content))
-            self._add_loaded_tile(zoom_level, col, row)
 
         return tile_data_tuples
 
@@ -154,7 +156,6 @@ class MBTilesSource:
         self.path = path
         self.conn = None
         self._metadata_cache = {}
-        self._loaded_tiles = []
         self._progress_handler = None
         self._cancelling = False
 
@@ -226,16 +227,63 @@ class MBTilesSource:
             warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
         return is_mapbox_pbf
 
-    def _add_loaded_tile(self, zoom, col, row):
-        self._loaded_tiles.append((zoom, col, row))
+    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None, limit_reacher_handler=None):
+        """
+         * Loads the tiles for the specified zoom_level and bounds from the mbtiles file this source has been created with
+        :param zoom_level: The zoom level which will be loaded
+        :param bounds: If set, only tiles inside this tile boundary will be loaded
+        :param max_tiles: The maximum number of tiles to be loaded
+        :param for_each: A function which will be called for every row
+        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
+        :return: 
+        """
 
-    def is_tile_loaded(self, zoom, col, row):
-        return (zoom, col, row) in self._loaded_tiles
-
-    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None):
         self._cancelling = False
         info("Reading tiles of zoom level {}", zoom_level)
 
+        where_clause = self._get_where_clause(bounds, zoom_level)
+        limit_clause = self._get_limit_clause(max_tiles)
+
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};"
+        sql = sql_command.format(where_clause, limit_clause)
+
+        tile_data_tuples = []
+        rows = self._get_from_db(sql=sql)
+        if not rows or len(rows) == 0:
+            # execute the query again, without a tile_boundary
+            where_clause = self._get_where_clause(bounds=None, zoom_level=zoom_level)
+            sql = sql_command.format(where_clause, limit_clause)
+            rows = self._get_from_db(sql=sql)
+
+        if rows:
+            if len(rows) > max_tiles:
+                rows = rows[:max_tiles]
+                if limit_reacher_handler:
+                    limit_reacher_handler()
+            self._progress_handler(max_progress=len(rows))
+            for index, row in enumerate(rows):
+                if for_each:
+                    for_each()
+                if self._cancelling:
+                    break
+                tile, data = self._create_tile(row)
+                tile_data_tuples.append((tile, data))
+                self._progress_handler(progress=index+1)
+        return tile_data_tuples
+
+    @staticmethod
+    def _get_limit_clause(max_tiles):
+        limit = ""
+        if max_tiles is not None:
+            """
+            +1 is added to max_tiles to easily detect if the number of rows is greater than the limit, so that a
+            message can be shown to the user.
+            """
+            limit = "LIMIT {}".format(max_tiles + 1)
+        return limit
+
+    @staticmethod
+    def _get_where_clause(bounds, zoom_level):
         where_clause = ""
         if zoom_level is not None or bounds:
             where_clause = "WHERE"
@@ -250,28 +298,7 @@ class MBTilesSource:
                 row_max = max(bounds[0][1], bounds[1][1])
                 where_clause += " tile_column BETWEEN {} AND {}".format(col_min, col_max)
                 where_clause += " and tile_row BETWEEN {} AND {}".format(row_min, row_max)
-
-        limit = ""
-        if max_tiles is not None:
-            limit = "LIMIT {}".format(max_tiles)
-
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};".format(where_clause, limit)
-
-        tile_data_tuples = []
-        rows = self._get_from_db(sql=sql_command)
-        if rows:
-            self._progress_handler(max_progress=len(rows))
-            for index, row in enumerate(rows):
-                if for_each:
-                    for_each()
-                if self._cancelling:
-                    break
-                tile, data = self._create_tile(row)
-                if not self.is_tile_loaded(zoom_level, tile.column, tile.row):
-                    self._add_loaded_tile(zoom_level, tile.column, tile.row)
-                    tile_data_tuples.append((tile, data))
-                self._progress_handler(progress=index+1)
-        return tile_data_tuples
+        return where_clause
 
     def _create_tile(self, row):
         zoom_level = row["zoom_level"]
