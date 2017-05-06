@@ -148,6 +148,9 @@ class ServerSource:
 
 class MBTilesSource:
     def __init__(self, path):
+        if not os.path.isfile(path):
+            raise RuntimeError("The file does not exist: {}".format(path))
+
         is_sqlite_db = FileHelper.is_sqlite_db(path)
         if not is_sqlite_db:
             raise RuntimeError(
