@@ -49,7 +49,7 @@ Copy cloned folder or create symlink to:
 
 To create the symlink open a command prompt as Administrator and run:
 
-**mklink /D "%userprofile%/.qgis2/python/plugins/Vector-Tiles-Reader-QGIS-Plugin" X:\{YourPathToTheCloned}\Vector-Tiles-Reader-QGIS-Plugin**
+**mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" X:\{YourPathToTheCloned}\vector_tiles_reader**
 
 ### Ubuntu
 The script install.sh creates a symlink from the current directory to the qgis plugins directory
