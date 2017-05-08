@@ -7,7 +7,7 @@ import json
 import numbers
 import math
 
-from log_helper import info, warn, critical, debug
+from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
 from tile_helper import change_scheme
 from feature_helper import FeatureMerger
@@ -354,7 +354,11 @@ class VtReader:
         layer_target_group.addLayer(layer)
         layer.setCustomProperty("vector_tile_source", self.source.source())
 
+        layer.setShortName(layer_name)
+        layer.setDataUrl(self.source.source())
+
         if self.source.name() and "openmaptiles" in self.source.name().lower():
+            layer.setDataUrl(remove_key(self.source.source()))
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 

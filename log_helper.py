@@ -15,6 +15,10 @@ _CRITICAL = "critical"
 _qgis_available = None
 
 
+def remove_key(text):
+    return _KEY_REGEX.sub("", text)
+
+
 def get_temp_dir(path_extension=None):
     temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
     if path_extension:
@@ -46,8 +50,7 @@ def debug(msg, *args):
 
 def _log_message(msg, level, *args):
     try:
-        msg = msg.format(*args)
-        msg = _KEY_REGEX.sub("", msg)
+        msg = remove_key(msg.format(*args))
 
         if level == _INFO:
             _logger.info(msg)
