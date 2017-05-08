@@ -12,6 +12,7 @@ out.txt
 deprecated/
 data/*
 .vscode/*
+ui/*.pyc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
