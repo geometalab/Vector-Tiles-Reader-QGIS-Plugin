@@ -3,7 +3,7 @@ import glob
 import uuid
 import urllib2
 import tempfile
-from log_helper import critical
+from log_helper import critical, warn
 
 
 class FileHelper:
@@ -40,19 +40,19 @@ class FileHelper:
         return temp_dir
 
     @staticmethod
-    def clear_temp_dir():
+    def clear_cache():
         """
          * Removes all files from the temp_dir
         """
-        temp_dir = FileHelper.get_temp_dir()
+        temp_dir = os.path.join(FileHelper.get_temp_dir(), FileHelper.geojson_folder)
         if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+            return
         files = glob.glob(os.path.join(temp_dir, "*"))
-        try:
-            for f in files:
-                os.remove(f)
-        except:
-            pass
+        for f in files:
+            try:
+                    os.remove(f)
+            except:
+                warn("File could not be deleted: {}", f)
 
     @staticmethod
     def load_url(url, size=None, result_queue=None, params=None):
