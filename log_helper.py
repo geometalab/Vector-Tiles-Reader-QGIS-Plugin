@@ -26,11 +26,11 @@ def get_temp_dir(path_extension=None):
 
     return temp_dir
 
-log_path = get_temp_dir("log.txt")
-if not os.path.isfile(log_path):
-    open(log_path, 'a').close()
 
 try:
+    log_path = get_temp_dir("log.txt")
+    if not os.path.isfile(log_path):
+        open(log_path, 'a').close()
     logging.basicConfig(
         filename=log_path,
         format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
