@@ -89,6 +89,12 @@ class FileHelper:
             os.makedirs(path)
 
     @staticmethod
+    def get_geojson_file_name(name):
+        path = os.path.join(FileHelper.get_temp_dir(), FileHelper.geojson_folder)
+        name_with_extension = "{}.{}".format(name, "geojson")
+        return os.path.join(path, name_with_extension)
+
+    @staticmethod
     def get_unique_geojson_file_name():
         path = os.path.join(FileHelper.get_temp_dir(), FileHelper.geojson_folder)
         unique_name = "{}.{}".format(uuid.uuid4(), "geojson")

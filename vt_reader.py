@@ -266,6 +266,9 @@ class VtReader:
                 group = root_group.addGroup(layer_name)
             self._qgis_layer_groups_by_name[layer_name] = group
 
+    def _get_geojson_filename(self, layer_name, geo_type, zoom_level):
+        return "{}.{}.{}.{}".format(self.source.name(), layer_name, geo_type, zoom_level)
+
     def _create_qgis_layers(self, merge_features, apply_styles):
         """
          * Creates a hierarchy of groups and layers in qgis
@@ -278,18 +281,20 @@ class VtReader:
         layers = []
         for index, layer_name_and_type in enumerate(self.feature_collections_by_layer_path):
             layer_name_and_zoom = layer_name_and_type[0]
+            geo_type = layer_name_and_type[1]
             layer_name = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[0]
             zoom_level = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[1]
-            print "path: ", layer_name
             QApplication.processEvents()
             if self.cancel_requested:
                 break
             target_group = self._qgis_layer_groups_by_name[layer_name]
             feature_collection = self.feature_collections_by_layer_path[layer_name_and_type]
-            file_src = FileHelper.get_unique_geojson_file_name()
-            with open(file_src, "w") as f:
+
+            file_name = self._get_geojson_filename(layer_name, geo_type, zoom_level)
+            file_path = FileHelper.get_geojson_file_name(file_name)
+            with open(file_path, "w") as f:
                 json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_src, layer_name, zoom_level, target_group, merge_features)
+            layer = self._add_vector_layer(file_path, layer_name, zoom_level, target_group, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
                 layers.append((layer_name_and_type, layer))
