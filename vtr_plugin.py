@@ -15,7 +15,7 @@ of the License, or (at your option) any later version.
 
 from log_helper import debug, info, warn, critical
 from PyQt4.QtCore import QSettings
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox
+from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
@@ -189,6 +189,9 @@ class VtrPlugin:
         manual_zoom = options.manual_zoom()
         cartographic_ordering = options.cartographic_ordering()
 
+        if apply_styles:
+            self._set_background_color()
+
         debug("Load: {}", path)
         if not reader:
             reader = self._create_reader(path)
@@ -218,6 +221,16 @@ class VtrPlugin:
                 self._current_reader = None
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
+
+    def _set_background_color(self):
+        myColor = QColor("#F2EFE9")
+        # Write it to the project (will still need to be saved!)
+        QgsProject.instance().writeEntry("Gui", "/CanvasColorRedPart", myColor.red())
+        QgsProject.instance().writeEntry("Gui", "/CanvasColorGreenPart", myColor.green())
+        QgsProject.instance().writeEntry("Gui", "/CanvasColorBluePart", myColor.blue())
+        # And apply for the current session
+        self.iface.mapCanvas().setCanvasColor(myColor)
+        self.iface.mapCanvas().refresh()
 
     def refresh_layers(self):
         for layer in self.iface.mapCanvas().layers():
