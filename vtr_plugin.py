@@ -48,7 +48,7 @@ class VtrPlugin:
         self._connect_to_extent_changed()
         self._add_path_to_icons()
         self._current_source_path = None
-        self._current_layer_filter = None
+        self._current_layer_filter = []
 
     def _add_path_to_icons(self):
         icons_directory = FileHelper.get_icons_directory()
@@ -60,7 +60,7 @@ class VtrPlugin:
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_server_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.server_dialog.show)
-        self.reload_action = self._create_action("Reload", "reload.svg", self._reload_tiles)
+        self.reload_action = self._create_action("Reload", "reload.svg", self._reload_tiles, False)
         self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_server_action)
         self.popupMenu.addAction(self.reload_action)
@@ -79,6 +79,7 @@ class VtrPlugin:
 
     def _reload_tiles(self):
         if self._current_source_path:
+            self._create_progress_dialog(self.iface.mainWindow())
             scheme = self.reader.source.scheme()
             zoom = self._get_current_zoom()
             extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
@@ -118,8 +119,10 @@ class VtrPlugin:
         tile = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
         return tile
 
-    def _on_connect(self, path_or_url):
+    def _on_connect(self, connection_name, path_or_url):
         debug("Connect to path_or_url: {}", path_or_url)
+
+        self.reload_action.setText("Reload ({})".format(connection_name))
 
         reader = self._create_reader(path_or_url)
         self.reader = reader
@@ -127,17 +130,20 @@ class VtrPlugin:
             layers = reader.source.vector_layers()
             self.server_dialog.set_layers(layers)
             self.server_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
+            self.reload_action.setEnabled(True)
+            self.reload_action.setText("Reload ({})".format(connection_name))
+            self._current_source_path = path_or_url
         else:
             self.server_dialog.set_layers([])
+            self.reload_action.setEnabled(False)
+            self.reload_action.setText("Reload")
+            self._current_source_path = None
 
     def show_about(self):
         AboutDialog().show()
 
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
-
-        self._current_source_path = path_or_url
-        self._current_layer_filter = selected_layers
 
         crs_string = self.reader.source.crs()
         self._init_qgis_map(crs_string)
@@ -161,6 +167,8 @@ class VtrPlugin:
                          options=self.server_dialog.options,
                          layers_to_load=selected_layers,
                          extent_to_load=extent)
+        self._current_source_path = path_or_url
+        self._current_layer_filter = selected_layers
 
     def _get_current_zoom(self):
         zoom = self.reader.source.max_zoom()
@@ -199,9 +207,10 @@ class VtrPlugin:
         if self._current_reader:
             self._current_reader.cancel()
 
-    def _create_action(self, title, icon, callback):
+    def _create_action(self, title, icon, callback, is_enabled=True):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
+        new_action.setEnabled(is_enabled)
         return new_action
 
     def _load_tiles(self, path, options, layers_to_load, extent_to_load=None, reader=None, ignore_limit=False):
