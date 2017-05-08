@@ -91,7 +91,7 @@ class VtReader:
             self.progress_handler(title, progress, max_progress, msg, show_dialog)
 
     @staticmethod
-    def _get_empty_feature_collection():
+    def _get_empty_feature_collection(epsg_id=3857):
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
@@ -99,7 +99,7 @@ class VtReader:
         crs = {
             "type": "name",
             "properties": {
-                    "name": "urn:ogc:def:crs:EPSG::3857"}}
+                    "name": "urn:ogc:def:crs:EPSG::{}".format(epsg_id)}}
 
         return {
             "type": "FeatureCollection",
