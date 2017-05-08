@@ -119,7 +119,6 @@ class VtrPlugin:
         AboutDialog().show()
 
     def _on_add_layer(self, path_or_url, selected_layers):
-        print "selected layers: ", selected_layers
         debug("add layer: {}", path_or_url)
         scheme = self.reader.source.scheme()
         crs_string = self.reader.source.crs()
