@@ -82,7 +82,7 @@ class VtReader:
         self.cartographic_ordering_enabled = True
         self.progress_handler = progress_handler
         self.feature_collections_by_layer_path = {}
-        self.qgis_layer_groups_by_layer_path = {}
+        self._qgis_layer_groups_by_name = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
 
@@ -130,7 +130,7 @@ class VtReader:
         """
         self.cancel_requested = False
         self.feature_collections_by_layer_path = {}
-        self.qgis_layer_groups_by_layer_path = {}
+        self._qgis_layer_groups_by_name = {}
         self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
 
         min_zoom = self.source.min_zoom()
@@ -163,9 +163,8 @@ class VtReader:
             if not self.cancel_requested:
                 self._process_tiles(tiles)
             if not self.cancel_requested:
-                self._create_qgis_layer_hierarchy(zoom_level=zoom_level,
-                                                  merge_features=merge_tiles,
-                                                  apply_styles=apply_styles)
+                self._create_qgis_layers(merge_features=merge_tiles,
+                                         apply_styles=apply_styles)
         self._update_progress(show_dialog=False)
         if self.cancel_requested:
             info("Import cancelled")
@@ -241,33 +240,58 @@ class VtReader:
             warn("Tried to decode tile-data, but it's empty.")
         return decoded_data
 
-    def _create_qgis_layer_hierarchy(self, zoom_level, merge_features, apply_styles):
+    def _get_layer_sort_id(self, layer):
+        sort_id = 999
+        if layer in self.layer_sort_ids:
+            sort_id = self.layer_sort_ids.index(layer)
+        return sort_id
+
+    def _assure_qgis_groups_exist(self):
+        """
+         * Createss a group for each layer that is given by the layer source scheme
+         >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
+         >> TileJSON: value 'vector_layers'
+        :return: 
+        """
+
+        root = QgsProject.instance().layerTreeRoot()
+        root_group = root.findGroup(self.source.name())
+        if not root_group:
+            root_group = root.addGroup(self.source.name())
+        layers = map(lambda l: l["id"], self.source.vector_layers())
+        layers = sorted(layers, key=lambda x: self._get_layer_sort_id(x))
+        for index, layer_name in enumerate(layers):
+            group = root_group.findGroup(layer_name)
+            if not group:
+                group = root_group.addGroup(layer_name)
+            self._qgis_layer_groups_by_name[layer_name] = group
+
+    def _create_qgis_layers(self, merge_features, apply_styles):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
         debug("Creating hierarchy in QGIS")
-        root = QgsProject.instance().layerTreeRoot()
-        base_name = self.source.name()
-        group_name = "{}{}{}".format(base_name, self._zoom_level_delimiter, zoom_level)
 
-        root_group = root.addGroup(group_name)
-        layer_paths = sorted(self.feature_collections_by_layer_path.keys(), key=lambda path_and_type: self._get_feature_sort_id(path_and_type[0]))
-        self._update_progress(progress=0, max_progress=len(layer_paths), msg="Creating layers...")
+        self._assure_qgis_groups_exist()
+
+        self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_path), msg="Creating layers...")
         layers = []
-        for index, layer_path_and_type in enumerate(layer_paths):
-            layer_path = layer_path_and_type[0]
+        for index, layer_name_and_type in enumerate(self.feature_collections_by_layer_path):
+            layer_name_and_zoom = layer_name_and_type[0]
+            layer_name = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[0]
+            print "path: ", layer_name
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            target_group, layer_name = self._get_group_for_path(layer_path, root_group)
-            feature_collection = self.feature_collections_by_layer_path[layer_path_and_type]
+            target_group = self._qgis_layer_groups_by_name[layer_name]
+            feature_collection = self.feature_collections_by_layer_path[layer_name_and_type]
             file_src = FileHelper.get_unique_geojson_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_src, layer_name, target_group, layer_path, merge_features)
+            layer = self._add_vector_layer(file_src, layer_name, target_group, layer_name, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
-                layers.append((layer_path_and_type, layer))
+                layers.append((layer_name_and_type, layer))
 
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
@@ -280,35 +304,6 @@ class VtReader:
                 layer = layer_path_tuple[1]
                 VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=index+1)
-
-    def _get_feature_sort_id(self, feature_path):
-        nodes = feature_path.split(".")
-        sort_id = 999
-        if self.cartographic_ordering_enabled:
-            path = feature_path.split(VtReader._zoom_level_delimiter)[0]
-            if path in VtReader.layer_sort_ids:
-                sort_id = VtReader.layer_sort_ids.index(path)
-            else:
-                for node in nodes:
-                    current_node = node.split(VtReader._zoom_level_delimiter)[0]
-                    if current_node in VtReader.layer_sort_ids:
-                        sort_id = VtReader.layer_sort_ids.index(current_node)
-
-        return sort_id
-
-    def _get_group_for_path(self, path, root_group):
-        """
-         * Returns the group for the specified path
-         >> If the group not already exists, it will be created
-         >> The path has to be delimited by '.'
-         >> The last element in the path will be used as name for the vector layer, the other elements will be used to create the group hierarchy
-         >> Example: The path 'zurich.poi.police' will create two groups 'zurich' and 'poi' (if not already existing) 
-         >> 'police' will be returned as name for the layer to create
-        """
-        group_names = path.split(".")
-        current_group = root_group
-        target_layer_name = group_names[0]
-        return current_group, target_layer_name
 
     @staticmethod
     def _apply_named_style(layer, geo_type):
