@@ -102,6 +102,7 @@ class VtReader:
                     "name": "urn:ogc:def:crs:EPSG::{}".format(epsg_id)}}
 
         return {
+            "tiles": [],
             "type": "FeatureCollection",
             "crs": crs,
             "features": []}
@@ -290,13 +291,27 @@ class VtReader:
             if self.cancel_requested:
                 break
             target_group = self._qgis_layer_groups_by_name[layer_name]
-            feature_collection = self.feature_collections_by_layer_path[layer_name_and_type]
+            feature_collections_by_tile_coord = self.feature_collections_by_layer_path[layer_name_and_type]
 
             file_name = self._get_geojson_filename(layer_name, geo_type, zoom_level)
             file_path = FileHelper.get_geojson_file_name(file_name)
-            with open(file_path, "w") as f:
-                json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_path, layer_name, zoom_level, target_group, merge_features)
+
+            layer = None
+            if os.path.isfile(file_path):
+                # file exists already. add the features of the collection to the existing collection
+                # get the layer from qgis and update its source
+                layer = self._get_layer_by_source(layer_name_and_zoom, file_path)
+                if layer:
+                    self._update_layer_source(file_path, feature_collections_by_tile_coord)
+                    layer.reload()
+
+            if not layer:
+                complete_collection = self._get_empty_feature_collection()
+                self._merge_feature_collections(current_feature_collection=complete_collection,
+                                                feature_collections_by_tile_coord=feature_collections_by_tile_coord)
+                with open(file_path, "w") as f:
+                    json.dump(complete_collection, f)
+                layer = self._add_vector_layer(file_path, layer_name, zoom_level, target_group, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
                 layers.append((layer_name_and_type, layer))
@@ -312,6 +327,34 @@ class VtReader:
                 layer = layer_path_tuple[1]
                 VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=index+1)
+
+    @staticmethod
+    def _update_layer_source(layer_source, feature_collections_by_tile_coord):
+        debug("Updating layer source: {}", layer_source)
+        with open(layer_source, "r") as f:
+            current_feature_collection = json.load(f)
+            VtReader._merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord)
+        if current_feature_collection:
+            with open(layer_source, "w") as f:
+                json.dump(current_feature_collection, f)
+
+    @staticmethod
+    def _merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord):
+        for tile_coord in feature_collections_by_tile_coord:
+            if tile_coord not in current_feature_collection["tiles"]:
+                feature_collection = feature_collections_by_tile_coord[tile_coord]
+                current_feature_collection["tiles"].extend(feature_collection["tiles"])
+                current_feature_collection["features"].extend(feature_collection["features"])
+
+    @staticmethod
+    def _get_layer_by_source(layer_name, layer_source_file):
+        matching_layer = None
+        layers = QgsMapLayerRegistry.instance().mapLayersByName(layer_name)
+        for l in layers:
+            if l.source() == layer_source_file:
+                matching_layer = l
+                break
+        return matching_layer
 
     @staticmethod
     def _apply_named_style(layer, geo_type):
@@ -388,9 +431,15 @@ class VtReader:
                     feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
                     path_and_type = (feature_path, geo_type.lower())
                     if path_and_type not in self.feature_collections_by_layer_path:
-                        self.feature_collections_by_layer_path[path_and_type] = VtReader._get_empty_feature_collection()
+                        self.feature_collections_by_layer_path[path_and_type] = {}
+                    collection_dict = self.feature_collections_by_layer_path[path_and_type]
+                    if tile.id() not in collection_dict:
+                        collection_dict[tile.id()] = VtReader._get_empty_feature_collection()
+                    collection = collection_dict[tile.id()]
 
-                    self.feature_collections_by_layer_path[path_and_type]["features"].append(geojson_feature)
+                    collection["features"].append(geojson_feature)
+                    if tile.id() not in collection["tiles"]:
+                        collection["tiles"].append(tile.id())
 
                     geotypes_to_dissolve = [GeoTypes.POLYGON, GeoTypes.LINE_STRING]
                     if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:

@@ -82,7 +82,11 @@ class VtrPlugin:
             scheme = self.reader.source.scheme()
             zoom = self._get_current_zoom()
             extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
-            self._load_tiles(self._current_source_path, self.server_dialog.options, self._current_layer_filter, extent)
+            self._load_tiles(path=self._current_source_path,
+                             options=self.server_dialog.options,
+                             layers_to_load=self._current_layer_filter,
+                             extent_to_load=extent,
+                             ignore_limit=True)
 
     def _on_map_extent_changed(self):
         self.iface.mapCanvas().extentsChanged.disconnect()
@@ -96,7 +100,7 @@ class VtrPlugin:
                     scheme = self._current_reader.source.scheme()
                     # todo: replace hardcoded zoom_level 14
                     current_extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=14)
-                    self._load_tiles(reader.source.source(), self._current_options, current_extent, reader, override_limit=True)
+                    self._load_tiles(reader.source.source(), self._current_options, current_extent, reader, ignore_limit=True)
         self._connect_to_extent_changed()
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
@@ -128,8 +132,6 @@ class VtrPlugin:
 
     def show_about(self):
         AboutDialog().show()
-
-
 
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
@@ -202,11 +204,11 @@ class VtrPlugin:
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_tiles(self, path, options, layers_to_load, extent_to_load=None, reader=None, override_limit=False):
+    def _load_tiles(self, path, options, layers_to_load, extent_to_load=None, reader=None, ignore_limit=False):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
-        if override_limit:
+        if ignore_limit:
             tile_limit = None
         manual_zoom = options.manual_zoom()
         cartographic_ordering = options.cartographic_ordering()

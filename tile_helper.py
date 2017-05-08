@@ -16,6 +16,9 @@ class VectorTile:
     def __str__(self):
         return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)
 
+    def id(self):
+        return "{};{}".format(self.column, self.row)
+
 
 def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     """
