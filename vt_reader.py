@@ -115,11 +115,13 @@ class VtReader:
         if self.source:
             self.source.cancel()
 
-    def load_tiles(self, zoom_level, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
+    def load_tiles(self, zoom_level, layer_filter, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
                    extent_to_load=None, limit_reacher_handler=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
+        :param layer_filter: A list of layers. If any layers are set, only these will be loaded. If the list is empty,
+            all available layers will be loaded
         :param load_mask_layer: If True the mask layer will also be loaded
         :param merge_tiles: If True neighbouring tiles and features will be merged
         :param apply_styles: If True the default styles will be applied
@@ -161,7 +163,7 @@ class VtReader:
             if not self.cancel_requested:
                 tiles = self._decode_tiles(tile_data_tuples)
             if not self.cancel_requested:
-                self._process_tiles(tiles)
+                self._process_tiles(tiles, layer_filter)
             if not self.cancel_requested:
                 self._create_qgis_layers(merge_features=merge_tiles,
                                          apply_styles=apply_styles)
@@ -198,7 +200,7 @@ class VtReader:
                 debug("Progress: {0:.1f}%", progress)
         return tiles
 
-    def _process_tiles(self, tiles):
+    def _process_tiles(self, tiles, layer_filter):
         """
          * Creates GeoJSON for all the specified tiles and reports the progress
         :param tiles: 
@@ -212,7 +214,7 @@ class VtReader:
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            self._create_geojson(tile)
+            self._create_geojson(tile, layer_filter)
             progress = int(100.0 / total_nr_tiles * (index + 1))
             if progress != current_progress:
                 current_progress = progress
@@ -364,7 +366,7 @@ class VtReader:
 
         return layer
 
-    def _create_geojson(self, tile):
+    def _create_geojson(self, tile, layer_filter):
         """
          * Transforms all features of the specified tile into GeoJSON and writes it into the dictionary
         :param tile:
@@ -372,6 +374,10 @@ class VtReader:
         """
         # iterate through all the features of the data and build proper gejson conform objects.
         for layer_name in tile.decoded_data:
+            if layer_filter and len(layer_filter) > 0:
+                if layer_name not in layer_filter:
+                    continue
+
             tile_features = tile.decoded_data[layer_name]["features"]
             for index, feature in enumerate(tile_features):
                 if self._is_feature_already_loaded(feature, tile):

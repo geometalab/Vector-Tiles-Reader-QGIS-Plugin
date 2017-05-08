@@ -230,7 +230,7 @@ class TilesReloadingDialog(QtGui.QDialog, Ui_DlgTileReloading):
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
 
     on_connect = pyqtSignal(str)
-    on_add = pyqtSignal(str)
+    on_add = pyqtSignal(str, list)
 
     _connections_array = "connections"
     _table_headers = OrderedDict([
@@ -270,7 +270,9 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self._add_loaded_connections()
 
     def _load_tiles_for_connection(self):
-        self.on_add.emit(self._get_current_connection()[1])
+        indexes = self.tblLayers.selectionModel().selectedRows()
+        selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
+        self.on_add.emit(self._get_current_connection()[1], selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -313,9 +315,6 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
                 self.cbxConnections.addItem(name)
         if len(self.connections) > 0:
             self.cbxConnections.setCurrentIndex(0)
-
-    def _add_layer(self):
-        self.on_add.emit(self._get_current_connection()[1])
 
     def _delete_connection(self):
         index = self.cbxConnections.currentIndex()

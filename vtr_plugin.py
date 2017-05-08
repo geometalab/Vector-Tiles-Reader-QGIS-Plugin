@@ -118,7 +118,8 @@ class VtrPlugin:
     def show_about(self):
         AboutDialog().show()
 
-    def _on_add_layer(self, path_or_url):
+    def _on_add_layer(self, path_or_url, selected_layers):
+        print "selected layers: ", selected_layers
         debug("add layer: {}", path_or_url)
         scheme = self.reader.source.scheme()
         crs_string = self.reader.source.crs()
@@ -142,7 +143,10 @@ class VtrPlugin:
             dialog_owner = self.iface.mainWindow()
             self.server_dialog.close()
         self._create_progress_dialog(dialog_owner)
-        self._load_tiles(path=path_or_url, options=self.server_dialog.options, extent_to_load=extent)
+        self._load_tiles(path=path_or_url,
+                         options=self.server_dialog.options,
+                         layers_to_load=selected_layers,
+                         extent_to_load=extent)
 
     def _set_qgis_extent(self, tilejson):
         """
@@ -172,16 +176,12 @@ class VtrPlugin:
         if self._current_reader:
             self._current_reader.cancel()
 
-    def _on_open_mbtiles(self, path):
-        self._create_progress_dialog(self.iface.mainWindow())
-        self._load_tiles(path=path, options=self.file_dialog.options, extent_to_load=None)
-
     def _create_action(self, title, icon, callback):
         new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
         return new_action
 
-    def _load_tiles(self, path, options, extent_to_load=None, reader=None, override_limit=False):
+    def _load_tiles(self, path, options, layers_to_load, extent_to_load=None, reader=None, override_limit=False):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -206,6 +206,7 @@ class VtrPlugin:
                 if manual_zoom is not None:
                     zoom = manual_zoom
                 reader.load_tiles(zoom_level=zoom,
+                                  layer_filter=layers_to_load,
                                   load_mask_layer=False,
                                   merge_tiles=merge_tiles,
                                   apply_styles=apply_styles,
