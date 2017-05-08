@@ -279,6 +279,7 @@ class VtReader:
         for index, layer_name_and_type in enumerate(self.feature_collections_by_layer_path):
             layer_name_and_zoom = layer_name_and_type[0]
             layer_name = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[0]
+            zoom_level = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[1]
             print "path: ", layer_name
             QApplication.processEvents()
             if self.cancel_requested:
@@ -288,7 +289,7 @@ class VtReader:
             file_src = FileHelper.get_unique_geojson_file_name()
             with open(file_src, "w") as f:
                 json.dump(feature_collection, f)
-            layer = self._add_vector_layer(file_src, layer_name, target_group, layer_name, merge_features)
+            layer = self._add_vector_layer(file_src, layer_name, zoom_level, target_group, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
                 layers.append((layer_name_and_type, layer))
@@ -332,16 +333,17 @@ class VtReader:
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _add_vector_layer(self, json_src, layer_name, layer_target_group, feature_path, merge_features):
+    def _add_vector_layer(self, json_src, layer_name, zoom_level, layer_target_group, merge_features):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
-        layer = QgsVectorLayer(json_src, layer_name, "ogr")
-        if merge_features and feature_path in self._layers_to_dissolve:
+        layer_with_zoom = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, zoom_level)
+        layer = QgsVectorLayer(json_src, layer_with_zoom, "ogr")
+
+        if merge_features and layer_name in self._layers_to_dissolve:
             layer = FeatureMerger().merge_features(layer)
-            layer.setName(layer_name)
 
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
