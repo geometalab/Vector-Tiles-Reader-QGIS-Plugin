@@ -6,5 +6,6 @@
 	<file alias="folder.svg">../icons/folder.svg</file> 
 	<file alias="server.svg">../icons/server.svg</file> 
 	<file alias="info.svg">../icons/info.svg</file> 
-  </qresource> 
+	<file alias="reload.svg">../icons/reload.svg</file>
+  </qresource>
 </RCC>

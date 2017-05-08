@@ -60,7 +60,7 @@ class VtrPlugin:
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_server_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.server_dialog.show)
-        self.reload_action = self._create_action("Reload", "", self._reload_tiles)
+        self.reload_action = self._create_action("Reload", "reload.svg", self._reload_tiles)
         self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_server_action)
         self.popupMenu.addAction(self.reload_action)
