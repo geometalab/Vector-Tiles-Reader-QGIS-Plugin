@@ -47,6 +47,8 @@ class VtrPlugin:
         self.reader = None
         self._connect_to_extent_changed()
         self._add_path_to_icons()
+        self._current_source_path = None
+        self._current_layer_filter = None
 
     def _add_path_to_icons(self):
         icons_directory = FileHelper.get_icons_directory()
@@ -58,8 +60,10 @@ class VtrPlugin:
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_server_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.server_dialog.show)
+        self.reload_action = self._create_action("Reload", "", self._reload_tiles)
         self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_server_action)
+        self.popupMenu.addAction(self.reload_action)
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
         self.toolButton.setDefaultAction(self.open_server_action)
@@ -73,6 +77,13 @@ class VtrPlugin:
     def _connect_to_extent_changed(self):
         self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
 
+    def _reload_tiles(self):
+        if self._current_source_path:
+            scheme = self.reader.source.scheme()
+            zoom = self._get_current_zoom()
+            extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+            self._load_tiles(self._current_source_path, self.server_dialog.options, self._current_layer_filter, extent)
+
     def _on_map_extent_changed(self):
         self.iface.mapCanvas().extentsChanged.disconnect()
         is_loading = self.progress_dialog and self.progress_dialog.is_loading()
@@ -84,11 +95,11 @@ class VtrPlugin:
                 if reader is not None:
                     scheme = self._current_reader.source.scheme()
                     # todo: replace hardcoded zoom_level 14
-                    current_extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=14)
+                    current_extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=14)
                     self._load_tiles(reader.source.source(), self._current_options, current_extent, reader, override_limit=True)
         self._connect_to_extent_changed()
 
-    def _get_visible_extent_as_tile_bounds(self, tilejson_scheme, zoom):
+    def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
         new_extent = map(lambda x: map(float, x.split(" ")), e)
         min_extent = new_extent[0]
@@ -100,7 +111,7 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile = get_tile_bounds(zoom, bounds=bounds, scheme=tilejson_scheme, crs="EPSG:4326")
+        tile = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
         return tile
 
     def _on_connect(self, path_or_url):
@@ -118,18 +129,20 @@ class VtrPlugin:
     def show_about(self):
         AboutDialog().show()
 
+
+
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
-        scheme = self.reader.source.scheme()
+
+        self._current_source_path = path_or_url
+        self._current_layer_filter = selected_layers
+
         crs_string = self.reader.source.crs()
         self._init_qgis_map(crs_string)
-        zoom = self.reader.source.max_zoom()
-        if zoom is None:
-            zoom = 14
-        manual_zoom = self.server_dialog.options.manual_zoom()
-        if manual_zoom is not None:
-            zoom = manual_zoom
-        extent = self._get_visible_extent_as_tile_bounds(tilejson_scheme=scheme, zoom=zoom)
+
+        scheme = self.reader.source.scheme()
+        zoom = self._get_current_zoom()
+        extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
         # if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
         #     pass  # todo: something's wrong here. probably a CRS mismatch between _get_visible_extent and tilejson
             # print "not in bounds"
@@ -146,6 +159,15 @@ class VtrPlugin:
                          options=self.server_dialog.options,
                          layers_to_load=selected_layers,
                          extent_to_load=extent)
+
+    def _get_current_zoom(self):
+        zoom = self.reader.source.max_zoom()
+        if zoom is None:
+            zoom = 14
+        manual_zoom = self.server_dialog.options.manual_zoom()
+        if manual_zoom is not None:
+            zoom = manual_zoom
+        return zoom
 
     def _set_qgis_extent(self, tilejson):
         """
