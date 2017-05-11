@@ -190,7 +190,9 @@ class MBTilesSource:
         data = self._get_metadata_value("json")
         layers = []
         if data:
-            layers = json.loads(data)["vector_layers"]
+            json_data = json.loads(data)
+            if "vector_layers" in json_data:
+                layers = json_data["vector_layers"]
         return layers
 
     def name(self):
