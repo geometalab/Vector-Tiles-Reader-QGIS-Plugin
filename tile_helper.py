@@ -51,7 +51,6 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
 
     src = osr.SpatialReference()
     tgt = osr.SpatialReference()
-    print("convert from: {} to {}".format(source_crs, target_crs))
     # src.SetFromUserInput(source_crs)
     # tgt.SetFromUserInput(target_crs)
     src.ImportFromEPSG(source_crs)

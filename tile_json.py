@@ -28,7 +28,6 @@ class TileJSON:
             else:
                 debug("Loading TileJSON failed")
         except:
-            print("error")
             critical("Loading TileJSON failed ({}): {}", self.url, sys.exc_info())
         return success
 
