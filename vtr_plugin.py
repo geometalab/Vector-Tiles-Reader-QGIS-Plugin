@@ -37,7 +37,7 @@ class VtrPlugin:
         self.iface = iface
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.server_dialog = ServerConnectionDialog()
+        self.server_dialog = ServerConnectionDialog(FileHelper.get_sample_data_directory())
         self.server_dialog.on_connect.connect(self._on_connect)
         self.server_dialog.on_add.connect(self._on_add_layer)
         self.progress_dialog = None

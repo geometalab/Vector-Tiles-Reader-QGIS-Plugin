@@ -28,6 +28,10 @@ class FileHelper:
         return os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
 
     @staticmethod
+    def get_sample_data_directory():
+        return os.path.join(FileHelper.get_plugin_directory(), "sample_data")
+
+    @staticmethod
     def get_home_directory():
         return os.path.expanduser("~")
 
