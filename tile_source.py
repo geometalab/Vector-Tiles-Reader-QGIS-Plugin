@@ -19,6 +19,10 @@ class ServerSource:
         if not url:
             raise RuntimeError("URL is required")
 
+        valid, error = FileHelper.url_exists(url)
+        if not valid:
+            raise RuntimeError(error)
+
         self.url = url
         is_web_source = url.lower().startswith("http://") or url.lower().startswith("https://")
         if not is_web_source:
@@ -28,6 +32,14 @@ class ServerSource:
         self.json.load()
         self._progress_handler = None
         self._cancelling = False
+
+    def _validate_url(self, url):
+        try:
+            urllib2.urlopen('http://www.example.com/some_page')
+        except urllib2.HTTPError, e:
+            print(e.code)
+        except urllib2.URLError, e:
+            print(e.args)
 
     def cancel(self):
         self._cancelling = True

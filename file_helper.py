@@ -14,6 +14,21 @@ class FileHelper:
         pass
 
     @staticmethod
+    def url_exists(url):
+        result = False
+        error = None
+        try:
+            urllib2.urlopen(url)
+            result = True
+        except urllib2.HTTPError, e:
+            error = "Connection failed (status {}): {}".format(e.code, e.msg)
+            warn(error)
+        except urllib2.URLError, e:
+            error = "Connection failed: {}".format(e.message)
+            warn(error)
+        return result, error
+
+    @staticmethod
     def get_plugin_directory():
         return os.path.abspath(os.path.dirname(__file__))
 
