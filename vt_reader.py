@@ -151,6 +151,8 @@ class VtReader:
                                                   max_tiles=max_tiles,
                                                   for_each=QApplication.processEvents,
                                                   limit_reacher_handler=limit_reacher_handler)
+        if not tile_data_tuples or len(tile_data_tuples) == 0:
+            QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
 
         if load_mask_layer:
             mask_level = self.source.mask_level()
@@ -169,8 +171,7 @@ class VtReader:
             if not self.cancel_requested:
                 self._create_qgis_layers(merge_features=merge_tiles,
                                          apply_styles=apply_styles)
-        elif not self.cancel_requested and tile_data_tuples and len(tile_data_tuples) == 0:
-            QMessageBox.info(None, "No tiles found", "What a pity, no tiles could be found.")
+
         self._update_progress(show_dialog=False)
         if self.cancel_requested:
             info("Import cancelled")
