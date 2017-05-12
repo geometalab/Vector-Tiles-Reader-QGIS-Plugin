@@ -1,28 +1,7 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="0" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="_geotype">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_showLabel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_svgPath">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_zoomLevel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_row">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_hasIcon">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_col">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_featureNr">
+    <edittype widgetv2type="TextEdit" name="_symbol">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="housenumber">
@@ -107,7 +86,7 @@
     <property key="labeling/repeatDistanceUnit" value="1"/>
     <property key="labeling/reverseDirectionSymbol" value="false"/>
     <property key="labeling/rightDirectionSymbol" value=">"/>
-    <property key="labeling/scaleMax" value="5000"/>
+    <property key="labeling/scaleMax" value="5001"/>
     <property key="labeling/scaleMin" value="1"/>
     <property key="labeling/scaleVisibility" value="true"/>
     <property key="labeling/shadowBlendMode" value="6"/>
@@ -161,9 +140,9 @@
     <property key="labeling/shapeType" value="0"/>
     <property key="labeling/substitutions" value="&lt;substitutions/>"/>
     <property key="labeling/textColorA" value="255"/>
-    <property key="labeling/textColorB" value="127"/>
-    <property key="labeling/textColorG" value="127"/>
-    <property key="labeling/textColorR" value="127"/>
+    <property key="labeling/textColorB" value="0"/>
+    <property key="labeling/textColorG" value="0"/>
+    <property key="labeling/textColorR" value="0"/>
     <property key="labeling/textTransp" value="0"/>
     <property key="labeling/upsidedownLabels" value="0"/>
     <property key="labeling/useSubstitutions" value="false"/>
@@ -232,31 +211,17 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="_geotype" index="0" name=""/>
-    <alias field="_showLabel" index="1" name=""/>
-    <alias field="_svgPath" index="2" name=""/>
-    <alias field="_zoomLevel" index="3" name=""/>
-    <alias field="_row" index="4" name=""/>
-    <alias field="_hasIcon" index="5" name=""/>
-    <alias field="_col" index="6" name=""/>
-    <alias field="_featureNr" index="7" name=""/>
-    <alias field="housenumber" index="8" name=""/>
+    <alias field="_symbol" index="0" name=""/>
+    <alias field="housenumber" index="1" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
-      <column width="-1" hidden="0" type="field" name="_featureNr"/>
-      <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
       <column width="-1" hidden="0" type="field" name="housenumber"/>
-      <column width="-1" hidden="0" type="field" name="_row"/>
-      <column width="-1" hidden="0" type="field" name="_col"/>
       <column width="-1" hidden="1" type="actions"/>
-      <column width="-1" hidden="0" type="field" name="_geotype"/>
-      <column width="-1" hidden="0" type="field" name="_svgPath"/>
-      <column width="-1" hidden="0" type="field" name="_showLabel"/>
-      <column width="-1" hidden="0" type="field" name="_hasIcon"/>
+      <column width="-1" hidden="0" type="field" name="_symbol"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -288,14 +253,7 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="_geotype" expression=""/>
-    <default field="_showLabel" expression=""/>
-    <default field="_svgPath" expression=""/>
-    <default field="_zoomLevel" expression=""/>
-    <default field="_row" expression=""/>
-    <default field="_hasIcon" expression=""/>
-    <default field="_col" expression=""/>
-    <default field="_featureNr" expression=""/>
+    <default field="_symbol" expression=""/>
     <default field="housenumber" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
