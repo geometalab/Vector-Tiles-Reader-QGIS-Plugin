@@ -18,7 +18,9 @@ class FileHelper:
         result = False
         error = None
         try:
-            urllib2.urlopen(url)
+            req = urllib2.Request(url, headers={'User-Agent': "Magic Browser"})
+            response = urllib2.urlopen(req)
+            response.read(1)
             result = True
         except urllib2.HTTPError, e:
             error = "Connection failed (status {}): {}".format(e.code, e.msg)

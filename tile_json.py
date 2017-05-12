@@ -27,6 +27,8 @@ class TileJSON:
                 success = True
             else:
                 debug("Loading TileJSON failed")
+                self.json = {}
+                raise RuntimeError("TileJSON could not be loaded.")
         except:
             critical("Loading TileJSON failed ({}): {}", self.url, sys.exc_info())
         return success
@@ -142,7 +144,7 @@ class TileJSON:
         return is_within
 
     def _get_value(self, field_name, is_array=False, is_required=False):
-        if is_required and not field_name in self.json:
+        if not self.json or (is_required and field_name not in self.json):
             raise RuntimeError("The field '{}' is required but not found. This is invalid TileJSON.".format(field_name))
 
         result = None

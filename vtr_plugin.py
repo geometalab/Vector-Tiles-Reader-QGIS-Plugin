@@ -124,20 +124,23 @@ class VtrPlugin:
 
         self.reload_action.setText("Reload ({})".format(connection_name))
 
-        reader = self._create_reader(path_or_url)
-        self.reader = reader
-        if reader:
-            layers = reader.source.vector_layers()
-            self.server_dialog.set_layers(layers)
-            self.server_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
-            self.reload_action.setEnabled(True)
-            self.reload_action.setText("Reload ({})".format(connection_name))
-            self._current_source_path = path_or_url
-        else:
-            self.server_dialog.set_layers([])
-            self.reload_action.setEnabled(False)
-            self.reload_action.setText("Reload")
-            self._current_source_path = None
+        try:
+            reader = self._create_reader(path_or_url)
+            self.reader = reader
+            if reader:
+                layers = reader.source.vector_layers()
+                self.server_dialog.set_layers(layers)
+                self.server_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
+                self.reload_action.setEnabled(True)
+                self.reload_action.setText("Reload ({})".format(connection_name))
+                self._current_source_path = path_or_url
+            else:
+                self.server_dialog.set_layers([])
+                self.reload_action.setEnabled(False)
+                self.reload_action.setText("Reload")
+                self._current_source_path = None
+        except:
+            QMessageBox.critical(None, "Unexpected Error", "An unexpected error occured. {}".format(str(sys.exc_info()[1])))
 
     def show_about(self):
         AboutDialog().show()
