@@ -82,7 +82,7 @@ class ServerSource:
     def crs(self):
         return self.json.crs()
 
-    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
         """
          * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
         :param zoom_level: The zoom level which will be loaded
@@ -95,7 +95,6 @@ class ServerSource:
 
         self._cancelling = False
         base_url = self.json.tiles()[0]
-        tiles_to_load = get_all_tiles(bounds)
         tile_data_tuples = []
         urls = []
 
@@ -244,7 +243,7 @@ class MBTilesSource:
             warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
         return is_mapbox_pbf
 
-    def load_tiles(self, zoom_level, bounds=None, max_tiles=None, for_each=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
         """
          * Loads the tiles for the specified zoom_level and bounds from the mbtiles file this source has been created with
         :param zoom_level: The zoom level which will be loaded
@@ -258,7 +257,7 @@ class MBTilesSource:
         self._cancelling = False
         info("Reading tiles of zoom level {}", zoom_level)
 
-        where_clause = self._get_where_clause(bounds, zoom_level)
+        where_clause = self._get_where_clause(tiles_to_load, zoom_level)
         limit_clause = self._get_limit_clause(max_tiles)
 
         sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};"
@@ -268,7 +267,7 @@ class MBTilesSource:
         rows = self._get_from_db(sql=sql)
         if not rows or len(rows) == 0:
             # execute the query again, without a tile_boundary
-            where_clause = self._get_where_clause(bounds=None, zoom_level=zoom_level)
+            where_clause = self._get_where_clause(tiles_to_load=None, zoom_level=zoom_level)
             sql = sql_command.format(where_clause, limit_clause)
             rows = self._get_from_db(sql=sql)
 
@@ -300,21 +299,18 @@ class MBTilesSource:
         return limit
 
     @staticmethod
-    def _get_where_clause(bounds, zoom_level):
+    def _get_where_clause(tiles_to_load, zoom_level):
         where_clause = ""
-        if zoom_level is not None or bounds:
+        if zoom_level is not None or tiles_to_load:
             where_clause = "WHERE"
             if zoom_level is not None:
                 where_clause += " zoom_level = {}".format(zoom_level)
-                if bounds:
+                if tiles_to_load:
                     where_clause += " AND"
-            if bounds:
-                col_min = min(bounds[0][0], bounds[1][0])
-                col_max = max(bounds[0][0], bounds[1][0])
-                row_min = min(bounds[0][1], bounds[1][1])
-                row_max = max(bounds[0][1], bounds[1][1])
-                where_clause += " tile_column BETWEEN {} AND {}".format(col_min, col_max)
-                where_clause += " and tile_row BETWEEN {} AND {}".format(row_min, row_max)
+            if tiles_to_load:
+                tile_coords = str(map(lambda x: "{};{}".format(x[0], x[1]), tiles_to_load)).replace("[", "").replace(
+                    "]", "")
+                where_clause += " tile_column || \";\" || tile_row IN ({})".format(tile_coords)
         return where_clause
 
     def _create_tile(self, row):

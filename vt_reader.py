@@ -9,7 +9,7 @@ import math
 
 from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
-from tile_helper import change_scheme
+from tile_helper import change_scheme, get_all_tiles
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
@@ -117,6 +117,9 @@ class VtReader:
         if self.source:
             self.source.cancel()
 
+    def _get_tile_cache_name(self, zoom_level, col, row):
+        return "{}.{}.{}.{}.bin".format(self.source.name(), zoom_level, col, row)
+
     def load_tiles(self, zoom_level, layer_filter, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
                    extent_to_load=None, limit_reacher_handler=None):
         """
@@ -144,14 +147,25 @@ class VtReader:
         if max_zoom is not None and zoom_level > max_zoom:
             zoom_level = max_zoom
 
+        tiles_to_load = []
+        tiles = []
+        for t in get_all_tiles(extent_to_load):
+            file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
+            tile = FileHelper.get_cached_tile(file_name)
+            if tile and tile.decoded_data:
+                debug("Cache hit: {}", tile)
+                tiles.append(tile)
+            else:
+                tiles_to_load.append(t)
+
         debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
         debug("Load extent: {}", extent_to_load)
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
-                                                  bounds=extent_to_load,
+                                                  tiles_to_load=tiles_to_load,
                                                   max_tiles=max_tiles,
                                                   for_each=QApplication.processEvents,
                                                   limit_reacher_handler=limit_reacher_handler)
-        if not tile_data_tuples or len(tile_data_tuples) == 0:
+        if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
             QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
 
         if load_mask_layer:
@@ -165,7 +179,9 @@ class VtReader:
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
             if not self.cancel_requested:
-                tiles = self._decode_tiles(tile_data_tuples)
+                decoded_tiles = self._decode_tiles(tile_data_tuples)
+                tiles.extend(decoded_tiles)
+        if len(tiles) > 0:
             if not self.cancel_requested:
                 self._process_tiles(tiles, layer_filter)
             if not self.cancel_requested:
@@ -181,6 +197,7 @@ class VtReader:
     def _decode_tiles(self, tiles_with_encoded_data):
         """
          * Decodes the PBF data from all the specified tiles and reports the progress
+         * If a tile is loaded from the cache, the decoded_data is already set and doesn't have to be encoded
         :param tiles_with_encoded_data: 
         :return: 
         """
@@ -194,8 +211,18 @@ class VtReader:
             if self.cancel_requested:
                 break
             tile = tile_data_tuple[0]
+            if tile.decoded_data:
+                raise RuntimeError("Tile is already encoded: {}", tile)
+
             encoded_data = tile_data_tuple[1]
-            tile.decoded_data = self._decode_binary_tile_data(encoded_data)
+
+            cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
+            cached_tile = FileHelper.get_cached_tile(cache_file_name)
+            if cached_tile:
+                tile = cached_tile
+            else:
+                tile.decoded_data = self._decode_binary_tile_data(encoded_data)
+                FileHelper.cache_tile(tile, cache_file_name)
             if tile.decoded_data:
                 tiles.append(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))

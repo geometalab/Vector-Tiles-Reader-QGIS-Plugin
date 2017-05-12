@@ -3,12 +3,16 @@ import glob
 import uuid
 import urllib2
 import tempfile
-from log_helper import critical, warn
+import sys
+import cPickle as pickle
+import time
+from log_helper import critical, warn, debug
 
 
 class FileHelper:
 
     geojson_folder = "geojson"
+    max_cache_age_minutes = 1440  # 24 hours
 
     def __init__(self):
         pass
@@ -45,6 +49,40 @@ class FileHelper:
         return os.path.join(FileHelper.get_plugin_directory(), "styles", "icons")
 
     @staticmethod
+    def get_cache_directory():
+        return FileHelper.get_temp_dir("cache")
+
+    @staticmethod
+    def get_cached_tile(file_name):
+        file_path = os.path.join(FileHelper.get_cache_directory(), file_name)
+        tile = None
+        try:
+            if os.path.exists(file_path):
+                age_in_seconds = int(time.time()) - os.path.getmtime(file_path)
+                print("File age: {}, {}".format(age_in_seconds, file_path))
+                is_deprecated = age_in_seconds > FileHelper.max_cache_age_minutes * 60
+                if is_deprecated:
+                    os.remove(file_path)
+                else:
+                    with open(file_path, 'rb') as f:
+                        tile = pickle.load(f)
+        except:
+            debug("Error while reading cache entry {}: {}", file_name, sys.exc_info()[1])
+        return tile
+
+    @staticmethod
+    def cache_tile(tile, file_name):
+        if not tile.decoded_data:
+            raise RuntimeError("only decoded tiles can be cached")
+
+        file_path = os.path.join(FileHelper.get_cache_directory(), file_name)
+        try:
+            with open(file_path, 'wb') as f:
+                pickle.dump(tile, f, pickle.HIGHEST_PROTOCOL)
+        except:
+            debug("Error while writing tile '{}' to cache", str(tile))
+
+    @staticmethod
     def get_sample_data_directory():
         return os.path.join(FileHelper.get_plugin_directory(), "sample_data")
 
@@ -71,7 +109,7 @@ class FileHelper:
         files = glob.glob(os.path.join(temp_dir, "*"))
         for f in files:
             try:
-                    os.remove(f)
+                os.remove(f)
             except:
                 warn("File could not be deleted: {}", f)
 
@@ -103,6 +141,7 @@ class FileHelper:
     def assure_temp_dirs_exist():
         FileHelper._assure_dir_exists(FileHelper.get_temp_dir())
         FileHelper._assure_dir_exists(FileHelper.get_temp_dir(FileHelper.geojson_folder))
+        FileHelper._assure_dir_exists(FileHelper.get_cache_directory())
 
     @staticmethod
     def _assure_dir_exists(path):
