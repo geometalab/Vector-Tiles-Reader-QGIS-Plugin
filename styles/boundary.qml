@@ -10,20 +10,12 @@
     <edittype widgetv2type="TextEdit" name="maritime">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="_zoomLevel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_row">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_col">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_featureNr">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
   </edittypes>
-  <renderer-v2 forceraster="0" symbollevels="0" type="singleSymbol" enableorderby="0">
+  <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
+    <rules key="{8a3dc031-ce3a-4883-92e3-52346763f0fb}">
+      <rule scalemaxdenom="5000" key="{e793c175-3d82-4392-ad12-ba8d1d928583}" symbol="0" scalemindenom="1000"/>
+      <rule scalemaxdenom="100000" key="{eea8dc11-97f5-4b2d-b29a-27cf41c2a351}" symbol="1" scalemindenom="5001"/>
+    </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
         <layer pass="0" class="SimpleLine" locked="1">
@@ -44,9 +36,26 @@
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
       </symbol>
+      <symbol alpha="1" clip_to_extent="1" type="line" name="1">
+        <layer pass="0" class="SimpleLine" locked="1">
+          <prop k="capstyle" v="round"/>
+          <prop k="customdash" v="5;2"/>
+          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="customdash_unit" v="MM"/>
+          <prop k="draw_inside_polygon" v="0"/>
+          <prop k="joinstyle" v="round"/>
+          <prop k="line_color" v="177,141,159,255"/>
+          <prop k="line_style" v="dot"/>
+          <prop k="line_width" v="0.25"/>
+          <prop k="line_width_unit" v="MM"/>
+          <prop k="offset" v="0"/>
+          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit" v="MM"/>
+          <prop k="use_custom_dash" v="0"/>
+          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+        </layer>
+      </symbol>
     </symbols>
-    <rotation/>
-    <sizescale scalemethod="diameter"/>
   </renderer-v2>
   <labeling type="simple"/>
   <customproperties>
@@ -189,8 +198,10 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
+    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/boundary.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
+    <property key="vector_tile_source" value="http://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
@@ -220,6 +231,7 @@
   <SingleCategoryDiagramRenderer diagramType="Histogram" sizeLegend="0" attributeLegend="1">
     <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" sizeScale="0,0,0,0,0,0" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" lineSizeScale="0,0,0,0,0,0" sizeType="MM" lineSizeType="MM" minScaleDenominator="inf">
       <fontProperties description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0" style=""/>
+      <attribute field="" color="#000000" label=""/>
     </DiagramCategory>
     <symbol alpha="1" clip_to_extent="1" type="marker" name="sizeSymbol">
       <layer pass="0" class="SimpleMarker" locked="0">
@@ -245,15 +257,11 @@
     </symbol>
   </SingleCategoryDiagramRenderer>
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
-  <annotationform></annotationform>
+  <annotationform>.</annotationform>
   <aliases>
     <alias field="admin_level" index="0" name=""/>
     <alias field="disputed" index="1" name=""/>
     <alias field="maritime" index="2" name=""/>
-    <alias field="_zoomLevel" index="3" name=""/>
-    <alias field="_row" index="4" name=""/>
-    <alias field="_col" index="5" name=""/>
-    <alias field="_featureNr" index="6" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -263,17 +271,13 @@
       <column width="-1" hidden="0" type="field" name="admin_level"/>
       <column width="-1" hidden="0" type="field" name="disputed"/>
       <column width="-1" hidden="0" type="field" name="maritime"/>
-      <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
-      <column width="-1" hidden="0" type="field" name="_row"/>
-      <column width="-1" hidden="0" type="field" name="_col"/>
-      <column width="-1" hidden="0" type="field" name="_featureNr"/>
       <column width="-1" hidden="1" type="actions"/>
     </columns>
   </attributetableconfig>
-  <editform></editform>
+  <editform>.</editform>
   <editforminit/>
   <editforminitcodesource>0</editforminitcodesource>
-  <editforminitfilepath></editforminitfilepath>
+  <editforminitfilepath>.</editforminitfilepath>
   <editforminitcode><![CDATA[# -*- coding: utf-8 -*-
 """
 QGIS forms can have a Python function that is called when the form is
@@ -302,10 +306,6 @@ def my_form_open(dialog, layer, feature):
     <default field="admin_level" expression=""/>
     <default field="disputed" expression=""/>
     <default field="maritime" expression=""/>
-    <default field="_zoomLevel" expression=""/>
-    <default field="_row" expression=""/>
-    <default field="_col" expression=""/>
-    <default field="_featureNr" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
   <layerGeometryType>1</layerGeometryType>
