@@ -197,7 +197,7 @@
    <item row="4" column="0" colspan="2">
     <widget class="QCheckBox" name="chkMergeTiles">
      <property name="text">
-      <string>Merge Tiles (disable for performance)</string>
+      <string>Merge Tiles (slow)</string>
      </property>
      <property name="checked">
       <bool>false</bool>

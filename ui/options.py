@@ -110,5 +110,5 @@ class Ui_OptionsGroup(object):
         self.lblZoomRange.setText(_translate("OptionsGroup", "TextLabel", None))
         self.label_5.setText(_translate("OptionsGroup", "Zoom", None))
         self.chkLimitNrOfTiles.setText(_translate("OptionsGroup", "Limit the number of loaded tiles", None))
-        self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (disable for performance)", None))
+        self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (slow)", None))
 
