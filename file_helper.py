@@ -101,12 +101,12 @@ class FileHelper:
     @staticmethod
     def clear_cache():
         """
-         * Removes all files from the temp_dir
+         * Removes all files from the cache
         """
-        temp_dir = os.path.join(FileHelper.get_temp_dir(), FileHelper.geojson_folder)
-        if not os.path.exists(temp_dir):
+        cache = os.path.join(FileHelper.get_cache_directory())
+        if not os.path.exists(cache):
             return
-        files = glob.glob(os.path.join(temp_dir, "*"))
+        files = glob.glob(os.path.join(cache, "*"))
         for f in files:
             try:
                 os.remove(f)
