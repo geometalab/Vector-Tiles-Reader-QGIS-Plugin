@@ -114,6 +114,21 @@ def get_tile_bounds(zoom, bounds, crs, scheme="xyz"):
     return tiles
 
 
+def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
+    """
+    * Converts tile coordinates from one zoom-level to another
+    :param source_zoom: 
+    :param target_zoom: 
+    :param tile: 
+    :param scheme: 
+    :param crs: 
+    :return: 
+    """
+    lat_lon = tile_to_latlon(source_zoom, tile[0], tile[1], scheme)
+    new_tile = coordinate_to_tile(target_zoom, lat_lon[0], lat_lon[1], crs, scheme)
+    return new_tile
+
+
 def get_all_tiles(bounds):
     nr_tiles_x = int(math.fabs(bounds[1][0] - bounds[0][0]) + 1)
     nr_tiles_y = int(math.fabs(bounds[1][1] - bounds[0][1]) + 1)

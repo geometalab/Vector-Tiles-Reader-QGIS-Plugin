@@ -83,6 +83,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     def merge_tiles_enabled(self):
         return self.chkMergeTiles.isChecked()
 
+    def load_mask_layer_enabled(self):
+        return self.chkLoadMaskLayer.isChecked()
+
 
 class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
     on_cancel = pyqtSignal()

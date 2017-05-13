@@ -9,7 +9,7 @@ import math
 
 from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
-from tile_helper import change_scheme, get_all_tiles
+from tile_helper import change_scheme, get_all_tiles, change_zoom
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
@@ -171,11 +171,18 @@ class VtReader:
         if load_mask_layer:
             mask_level = self.source.mask_level()
             if mask_level is not None:
-                mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
-                                                         bounds=extent_to_load,
-                                                         max_tiles=max_tiles,
-                                                         for_each=QApplication.processEvents)
-                tile_data_tuples.extend(mask_layer_data)
+                try:
+                    mask_level = int(mask_level)
+                    mask_tiles = map(
+                        lambda t: change_zoom(zoom_level, mask_level, t, self.source.scheme(), self.source.crs()),
+                        tiles_to_load)
+                    mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
+                                                             tiles_to_load=mask_tiles,
+                                                             max_tiles=max_tiles,
+                                                             for_each=QApplication.processEvents)
+                    tile_data_tuples.extend(mask_layer_data)
+                except:
+                    critical("Loading mask layer failed: {}", sys.exc_info()[1])
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
             if not self.cancel_requested:

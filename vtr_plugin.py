@@ -221,6 +221,7 @@ class VtrPlugin:
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
+        load_mask_layer = options.load_mask_layer_enabled()
         if ignore_limit:
             tile_limit = None
         manual_zoom = options.manual_zoom()
@@ -246,7 +247,7 @@ class VtrPlugin:
                     zoom = manual_zoom
                 reader.load_tiles(zoom_level=zoom,
                                   layer_filter=layers_to_load,
-                                  load_mask_layer=False,
+                                  load_mask_layer=load_mask_layer,
                                   merge_tiles=merge_tiles,
                                   apply_styles=apply_styles,
                                   max_tiles=tile_limit,
