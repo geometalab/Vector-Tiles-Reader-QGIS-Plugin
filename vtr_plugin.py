@@ -72,6 +72,7 @@ class VtrPlugin:
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_server_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         info("Vector Tile Reader Plugin loaded...")
 
     def _connect_to_extent_changed(self):
@@ -327,4 +328,5 @@ class VtrPlugin:
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_server_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.addLayerMenu().removeAction(self.open_server_action)
