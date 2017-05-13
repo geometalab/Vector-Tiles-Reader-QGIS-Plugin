@@ -7,9 +7,12 @@ _>> This is work in progress! Expected release is around June 2017. <<_
 For more information about the Vector Tiles concept and limitations of the plugin see homepage.
 
 Important web links:
-* __Homepage__       : http://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin
+* __Homepage__ : http://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin
 * Issues tracker : https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
 * Code repository: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin (this webpage)
+
+## User Guide
+A user guide can be found here: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/User-Guide#user-guide
 
 ## License
 
