@@ -125,7 +125,7 @@ def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
     :return: 
     """
     lat_lon = tile_to_latlon(source_zoom, tile[0], tile[1], scheme)
-    new_tile = coordinate_to_tile(target_zoom, lat_lon[0], lat_lon[1], crs, scheme)
+    new_tile = coordinate_to_tile(target_zoom, lat_lon[1], lat_lon[0], crs, scheme)
     return new_tile
 
 
