@@ -211,7 +211,7 @@ class VtrPlugin:
             self._current_reader.cancel()
 
     def _create_action(self, title, icon, callback, is_enabled=True):
-        new_action = QAction(QIcon(':/plugins/vectortilereader/{}'.format(icon)), title, self.iface.mainWindow())
+        new_action = QAction(QIcon(':/plugins/vector_tiles_reader/{}'.format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
         new_action.setEnabled(is_enabled)
         return new_action
