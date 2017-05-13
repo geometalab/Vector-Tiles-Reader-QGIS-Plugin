@@ -1,6 +1,7 @@
 import os
 import webbrowser
 import csv
+import resources_rc  # don't remove this import, otherwise the icons won't be working
 
 from collections import OrderedDict
 from PyQt4 import QtGui
