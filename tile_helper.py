@@ -12,6 +12,7 @@ class VectorTile:
         self.zoom_level = int(zoom_level)
         self.column = int(x)
         self.row = int(y)
+        self.extent = tile_to_latlon(self.zoom_level, self.column, self.row, self.scheme)
     
     def __str__(self):
         return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)

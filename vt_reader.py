@@ -9,12 +9,11 @@ import math
 
 from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
-from tile_helper import change_scheme, get_all_tiles, change_zoom
+from tile_helper import get_all_tiles, change_zoom
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtGui import QMessageBox
-from global_map_tiles import GlobalMercator
 from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource
@@ -502,9 +501,11 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
+        # print "before: ", coordinates
         coordinates = VtReader._map_coordinates_recursive(
             coordinates=coordinates,
             func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
+        # print "after: ", coordinates
 
         properties = feature["properties"]
         if geo_type == GeoTypes.POINT:
@@ -635,19 +636,15 @@ class VtReader:
     @staticmethod
     def _transform_to_epsg3857(coordinates, tile):
         """
-         * Transforms the tile x/y to EPSG:3857 coordinates
-         * Currently works only with the tms scheme
+         * Transforms the coordinates to EPSG:3857 coordinates
         """
 
-        row = tile.row
-        if tile.scheme != "tms":
-            row = change_scheme(tile.zoom_level, row)
+        tile_extent = tile.extent
 
-        tmp = GlobalMercator().TileBounds(tile.column, row, tile.zoom_level)
-        delta_x = tmp[2] - tmp[0]
-        delta_y = tmp[3] - tmp[1]
-        merc_easting = int(tmp[0] + delta_x / VtReader._extent * coordinates[0])
-        merc_northing = int(tmp[1] + delta_y / VtReader._extent * coordinates[1])
+        delta_x = tile_extent[2] - tile_extent[0]
+        delta_y = tile_extent[3] - tile_extent[1]
+        merc_easting = int(tile_extent[0] + delta_x / VtReader._extent * coordinates[0])
+        merc_northing = int(tile_extent[1] + delta_y / VtReader._extent * coordinates[1])
         return [merc_easting, merc_northing]
 
     def enable_cartographic_ordering(self, enabled):
