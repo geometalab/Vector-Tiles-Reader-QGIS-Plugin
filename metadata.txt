@@ -23,6 +23,24 @@ changelog=
     * Loading performance improved
     * Caching implemented
     * Mask layer can be loaded
+    ---0.8.0---
+    * Files connections now be handled with the former server connections dialog
+    * Reload feature added
+    * Bugfixes and stability improvements
+    ---0.7.1---
+    * Bugfixes
+    ---0.7.0---
+    * Predefined server connection included
+    * Loading performance improved
+    * Styling improved
+    ---0.6.1---
+    * Server connections improved
+    ---0.6.0---
+    * Server connections CRS handling improved
+    ---0.5.0---
+    * Stability improved
+    * Server connections added
+    * Loading of tiles can be cancelled
 
 # Tags are comma separated with spaces allowed
 tags=vector tile, mbtiles, vector
