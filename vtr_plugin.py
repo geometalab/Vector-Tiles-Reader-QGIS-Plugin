@@ -60,6 +60,7 @@ class VtrPlugin:
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.connections_dialog.show)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
+        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
         self.popupMenu.addAction(self.reload_action)
@@ -72,6 +73,7 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         info("Vector Tile Reader Plugin loaded...")
 
     def _reload_tiles(self):
@@ -306,4 +308,5 @@ class VtrPlugin:
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)
