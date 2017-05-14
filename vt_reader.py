@@ -38,7 +38,7 @@ class VtReader:
         2: GeoTypes.LINE_STRING,
         3: GeoTypes.POLYGON}
 
-    layer_sort_ids = [
+    cartographic_layer_ordering = [
         "place",
         "housenumber",
         "water_name",
@@ -55,7 +55,7 @@ class VtReader:
         "landuse"
     ]
 
-    _extent = 4096
+    _extent = 4096  # this applies always for Mapbox tiles (see: https://github.com/tilezen/mapbox-vector-tile)
     _layers_to_dissolve = []
     _zoom_level_delimiter = "*"
 
@@ -157,8 +157,7 @@ class VtReader:
             else:
                 tiles_to_load.append(t)
 
-        debug("Loading zoom level '{}' of: {}", zoom_level, self.source.name())
-        debug("Load extent: {}", extent_to_load)
+        debug("Loading extent {} for zoom level '{}' of: {}", zoom_level, self.source.name())
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                   tiles_to_load=tiles_to_load,
                                                   max_tiles=max_tiles,
@@ -276,10 +275,18 @@ class VtReader:
             warn("Tried to decode tile-data, but it's empty.")
         return decoded_data
 
-    def _get_layer_sort_id(self, layer):
+    def _get_cartographic_layer_sort_id(self, layer_name):
+        """
+         * Returns the cartographic sort id for the specified layer.
+         * This sort id is the position of the layer in the cartographic_layer_ordering collection.
+         * If the layer isn't present in the collection, the sort id wil be 999 and therefore the layer will be added at the bottom.
+        :param layer_name: 
+        :return: 
+        """
+
         sort_id = 999
-        if layer in self.layer_sort_ids:
-            sort_id = self.layer_sort_ids.index(layer)
+        if layer_name in self.cartographic_layer_ordering:
+            sort_id = self.cartographic_layer_ordering.index(layer_name)
         return sort_id
 
     def _assure_qgis_groups_exist(self):
@@ -295,7 +302,7 @@ class VtReader:
         if not root_group:
             root_group = root.addGroup(self.source.name())
         layers = map(lambda l: l["id"], self.source.vector_layers())
-        layers = sorted(layers, key=lambda x: self._get_layer_sort_id(x))
+        layers = sorted(layers, key=lambda x: self._get_cartographic_layer_sort_id(x))
         for index, layer_name in enumerate(layers):
             group = root_group.findGroup(layer_name)
             if not group:
@@ -344,7 +351,7 @@ class VtReader:
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
                     json.dump(complete_collection, f)
-                layer = self._add_vector_layer(file_path, layer_name, zoom_level, target_group, merge_features)
+                layer = self._add_vector_layer_to_qgis(file_path, layer_name, zoom_level, target_group, merge_features)
             self._update_progress(progress=index+1)
             if apply_styles:
                 layers.append((layer_name_and_type, layer))
@@ -363,7 +370,12 @@ class VtReader:
 
     @staticmethod
     def _update_layer_source(layer_source, feature_collections_by_tile_coord):
-        debug("Updating layer source: {}", layer_source)
+        """
+         * Updates the layers GeoJSON source file
+        :param layer_source: 
+        :param feature_collections_by_tile_coord: 
+        :return: 
+        """
         with open(layer_source, "r") as f:
             current_feature_collection = json.load(f)
             VtReader._merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord)
@@ -373,6 +385,13 @@ class VtReader:
 
     @staticmethod
     def _merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord):
+        """
+         * Merges the features of multiple tiles into the current_feature_collection if not already present.
+        :param current_feature_collection: 
+        :param feature_collections_by_tile_coord: 
+        :return: 
+        """
+
         for tile_coord in feature_collections_by_tile_coord:
             if tile_coord not in current_feature_collection["tiles"]:
                 feature_collection = feature_collections_by_tile_coord[tile_coord]
@@ -381,6 +400,13 @@ class VtReader:
 
     @staticmethod
     def _get_layer_by_source(layer_name, layer_source_file):
+        """
+         * Returns the layer from QGIS whose name and layer_source matches the specified parameters
+        :param layer_name: 
+        :param layer_source_file: 
+        :return: 
+        """
+
         matching_layer = None
         layers = QgsMapLayerRegistry.instance().mapLayersByName(layer_name)
         for l in layers:
@@ -416,7 +442,7 @@ class VtReader:
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _add_vector_layer(self, json_src, layer_name, zoom_level, layer_target_group, merge_features):
+    def _add_vector_layer_to_qgis(self, json_src, layer_name, zoom_level, layer_target_group, merge_features):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
@@ -444,11 +470,11 @@ class VtReader:
 
     def _create_geojson(self, tile, layer_filter):
         """
-         * Transforms all features of the specified tile into GeoJSON and writes it into the dictionary
+         * Transforms all features of the specified tile into GeoJSON
+         * The resulting GeoJSON feature will be applied to the features of the corresponding GeoJSON FeatureCollection
         :param tile:
         :return:
         """
-        # iterate through all the features of the data and build proper gejson conform objects.
         for layer_name in tile.decoded_data:
             if layer_filter and len(layer_filter) > 0:
                 if layer_name not in layer_filter:
@@ -495,38 +521,43 @@ class VtReader:
 
     def _create_geojson_feature(self, feature, tile):
         """
-        Creates a proper GeoJSON feature for the specified feature
+        Creates a GeoJSON feature for the specified feature
         """
 
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        # print "before: ", coordinates
         coordinates = VtReader._map_coordinates_recursive(
             coordinates=coordinates,
-            func=lambda coords: VtReader._transform_to_epsg3857(coords, tile))
-        # print "after: ", coordinates
+            func=lambda coords: VtReader._get_absolute_coordinates(coords, tile))
 
         properties = feature["properties"]
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
-            properties["_symbol"] = self._get_icon_path(feature)
+            properties["_symbol"] = self._get_poi_icon(feature)
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
         return feature_json, geo_type
 
-    def _get_icon_path(self, feature):
+    def _get_poi_icon(self, feature):
+        """
+         * Returns the name of the svg icon that will be applied in QGIS.
+         * The resulting icon is determined based on class and subclass of the specified feature.
+        :param feature: 
+        :return: 
+        """
+
         feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
         root_path = FileHelper.get_icons_directory()
         class_icon = "{}.svg".format(feature_class)
         class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
-        icon_path = "poi.svg"
+        icon_name = "poi.svg"
         if os.path.isfile(os.path.join(root_path, class_subclass_icon)):
-            icon_path = class_subclass_icon
+            icon_name = class_subclass_icon
         elif os.path.isfile(os.path.join(root_path, class_icon)):
-            icon_path = class_icon
-        return icon_path
+            icon_name = class_icon
+        return icon_name
 
     def _is_feature_already_loaded(self, feature, tile):
         """
@@ -542,8 +573,8 @@ class VtReader:
         is_poi = geo_type == GeoTypes.POINT
 
         is_loaded = False
-        if is_poi and VtReader._get_feature_name(feature):
-            feature_id = VtReader._get_feature_id(feature)
+        if is_poi and VtReader._feature_name(feature):
+            feature_id = VtReader._feature_id(feature)
             if feature_id in self._loaded_pois_by_id:
                 locations = self._loaded_pois_by_id[feature_id]
                 for loc in locations:
@@ -561,14 +592,19 @@ class VtReader:
         return is_loaded
 
     @staticmethod
-    def _get_feature_id(feature):
-        name = VtReader._get_feature_name(feature)
+    def _feature_id(feature):
+        name = VtReader._feature_name(feature)
         feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
         feature_id = (name, feature_class, feature_subclass)
         return feature_id
 
     @staticmethod
-    def _get_feature_name(feature):
+    def _feature_name(feature):
+        """
+        * Returns the 'name' property of the feature
+        :param feature: 
+        :return: 
+        """
         name = None
         properties = feature["properties"]
         if "name" in properties:
@@ -576,7 +612,14 @@ class VtReader:
         return name
 
     @staticmethod
-    def _get_is_multi(geo_type, coordinates):
+    def _is_multi(geo_type, coordinates):
+        """
+        * Returns true, if the specified coordinates belong to a Multi geometry (e.g. MultiPolygon or MultiLineString)
+        :param geo_type: 
+        :param coordinates: 
+        :return: 
+        """
+
         if geo_type == GeoTypes.POINT:
             is_single = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
             return not is_single
@@ -592,6 +635,15 @@ class VtReader:
 
     @staticmethod
     def get_array_depth(arr, depth):
+        """
+        * Returns the depth of an array.
+          >> Example: arr=[1,2,3], depth=0, then the resulting depth will be 0
+          >> Example: arr=[[1,2], [3,4]], depth=0, then the resulting depth will be 1
+        :param arr: 
+        :param depth: 
+        :return: 
+        """
+
         if all(isinstance(c, numbers.Real) for c in arr[0]):
             return depth
         else:
@@ -600,8 +652,15 @@ class VtReader:
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
+        """
+        * Returns a JSON object that represents a GeoJSON feature
+        :param geo_type: 
+        :param coordinates: 
+        :param properties: 
+        :return: 
+        """
 
-        is_multi = VtReader._get_is_multi(geo_type, coordinates)
+        is_multi = VtReader._is_multi(geo_type, coordinates)
 
         type_string = geo_type
         if is_multi:
@@ -634,9 +693,10 @@ class VtReader:
         return tmp
 
     @staticmethod
-    def _transform_to_epsg3857(coordinates, tile):
+    def _get_absolute_coordinates(coordinates, tile):
         """
-         * Transforms the coordinates to EPSG:3857 coordinates
+         * The coordinates of a geometry, are relative to the tile the feature is located on.
+         * Due to this, we've to get the absolute coordinates of the geometry.
         """
 
         tile_extent = tile.extent
