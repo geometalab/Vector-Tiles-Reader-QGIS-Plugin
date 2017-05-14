@@ -168,7 +168,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         ("Description", "description")
     ])
 
-    _OMT = "OpenMapTiles.com (FreeTilehosting.com)"
+    _OMT = "OpenMapTiles.com"
 
     _predefined_connections = {_OMT: "http://free.tilehosting.com/data/v3.json?key={token}"}
     _tokens = {_OMT: "6irhAXGgsi8TrIDL0211"}

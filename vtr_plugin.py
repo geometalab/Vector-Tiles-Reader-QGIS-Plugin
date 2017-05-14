@@ -31,6 +31,7 @@ import site
 class VtrPlugin:
     _dialog = None
     _model = None
+    _reload_button_text = "Load features overlapping the view extent"
     add_layer_action = None
 
     def __init__(self, iface):
@@ -60,7 +61,7 @@ class VtrPlugin:
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_server_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.server_dialog.show)
-        self.reload_action = self._create_action("Reload", "reload.svg", self._reload_tiles, False)
+        self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
         self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_server_action)
         self.popupMenu.addAction(self.reload_action)
@@ -123,7 +124,7 @@ class VtrPlugin:
     def _on_connect(self, connection_name, path_or_url):
         debug("Connect to path_or_url: {}", path_or_url)
 
-        self.reload_action.setText("Reload ({})".format(connection_name))
+        self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
 
         try:
             reader = self._create_reader(path_or_url)
@@ -133,12 +134,11 @@ class VtrPlugin:
                 self.server_dialog.set_layers(layers)
                 self.server_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
                 self.reload_action.setEnabled(True)
-                self.reload_action.setText("Reload ({})".format(connection_name))
                 self._current_source_path = path_or_url
             else:
                 self.server_dialog.set_layers([])
                 self.reload_action.setEnabled(False)
-                self.reload_action.setText("Reload")
+                self.reload_action.setText(self._reload_button_text)
                 self._current_source_path = None
         except:
             QMessageBox.critical(None, "Unexpected Error", "An unexpected error occured. {}".format(str(sys.exc_info()[1])))
