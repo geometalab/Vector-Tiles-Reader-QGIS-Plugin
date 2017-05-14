@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'dlg_edit_server_connection.ui'
+# Form implementation generated from reading ui file 'dlg_edit_connection.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -22,13 +22,13 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
-class Ui_DlgEditServerConnection(object):
-    def setupUi(self, DlgEditServerConnection):
-        DlgEditServerConnection.setObjectName(_fromUtf8("DlgEditServerConnection"))
-        DlgEditServerConnection.resize(562, 174)
-        self.verticalLayout_3 = QtGui.QVBoxLayout(DlgEditServerConnection)
+class Ui_DlgEditConnection(object):
+    def setupUi(self, DlgEditConnection):
+        DlgEditConnection.setObjectName(_fromUtf8("DlgEditConnection"))
+        DlgEditConnection.resize(562, 177)
+        self.verticalLayout_3 = QtGui.QVBoxLayout(DlgEditConnection)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
-        self.groupBox = QtGui.QGroupBox(DlgEditServerConnection)
+        self.groupBox = QtGui.QGroupBox(DlgEditConnection)
         self.groupBox.setObjectName(_fromUtf8("groupBox"))
         self.gridLayout = QtGui.QGridLayout(self.groupBox)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
@@ -43,7 +43,7 @@ class Ui_DlgEditServerConnection(object):
         self.gridLayout.addWidget(self.label, 2, 0, 1, 1)
         self.rbServer = QtGui.QRadioButton(self.groupBox)
         self.rbServer.setObjectName(_fromUtf8("rbServer"))
-        self.buttonGroup = QtGui.QButtonGroup(DlgEditServerConnection)
+        self.buttonGroup = QtGui.QButtonGroup(DlgEditConnection)
         self.buttonGroup.setObjectName(_fromUtf8("buttonGroup"))
         self.buttonGroup.addButton(self.rbServer)
         self.gridLayout.addWidget(self.rbServer, 1, 1, 1, 1)
@@ -70,32 +70,32 @@ class Ui_DlgEditServerConnection(object):
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
-        self.btnSave = QtGui.QPushButton(DlgEditServerConnection)
+        self.btnSave = QtGui.QPushButton(DlgEditConnection)
         self.btnSave.setEnabled(False)
         self.btnSave.setCheckable(False)
         self.btnSave.setObjectName(_fromUtf8("btnSave"))
         self.horizontalLayout.addWidget(self.btnSave)
-        self.btnCancel = QtGui.QPushButton(DlgEditServerConnection)
+        self.btnCancel = QtGui.QPushButton(DlgEditConnection)
         self.btnCancel.setObjectName(_fromUtf8("btnCancel"))
         self.horizontalLayout.addWidget(self.btnCancel)
         self.verticalLayout_3.addLayout(self.horizontalLayout)
         self.verticalLayout_3.setStretch(1, 1)
 
-        self.retranslateUi(DlgEditServerConnection)
-        QtCore.QObject.connect(self.btnCancel, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditServerConnection.reject)
-        QtCore.QObject.connect(self.btnSave, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditServerConnection.accept)
-        QtCore.QMetaObject.connectSlotsByName(DlgEditServerConnection)
+        self.retranslateUi(DlgEditConnection)
+        QtCore.QObject.connect(self.btnCancel, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditConnection.reject)
+        QtCore.QObject.connect(self.btnSave, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditConnection.accept)
+        QtCore.QMetaObject.connectSlotsByName(DlgEditConnection)
 
-    def retranslateUi(self, DlgEditServerConnection):
-        DlgEditServerConnection.setWindowTitle(_translate("DlgEditServerConnection", "Edit Connection", None))
-        self.groupBox.setTitle(_translate("DlgEditServerConnection", "Connection", None))
-        self.lblSource.setText(_translate("DlgEditServerConnection", "Path", None))
-        self.label_3.setText(_translate("DlgEditServerConnection", "Type", None))
-        self.label.setText(_translate("DlgEditServerConnection", "Name", None))
-        self.rbServer.setText(_translate("DlgEditServerConnection", "Tile Server", None))
-        self.txtUrl.setToolTip(_translate("DlgEditServerConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
-        self.rbFile.setText(_translate("DlgEditServerConnection", "File", None))
-        self.btnBrowse.setText(_translate("DlgEditServerConnection", "Browse", None))
-        self.btnSave.setText(_translate("DlgEditServerConnection", "Save", None))
-        self.btnCancel.setText(_translate("DlgEditServerConnection", "Cancel", None))
+    def retranslateUi(self, DlgEditConnection):
+        DlgEditConnection.setWindowTitle(_translate("DlgEditConnection", "Edit Connection", None))
+        self.groupBox.setTitle(_translate("DlgEditConnection", "Connection", None))
+        self.lblSource.setText(_translate("DlgEditConnection", "Path", None))
+        self.label_3.setText(_translate("DlgEditConnection", "Type", None))
+        self.label.setText(_translate("DlgEditConnection", "Name", None))
+        self.rbServer.setText(_translate("DlgEditConnection", "Tile Server", None))
+        self.txtUrl.setToolTip(_translate("DlgEditConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
+        self.rbFile.setText(_translate("DlgEditConnection", "File", None))
+        self.btnBrowse.setText(_translate("DlgEditConnection", "Browse", None))
+        self.btnSave.setText(_translate("DlgEditConnection", "Save", None))
+        self.btnCancel.setText(_translate("DlgEditConnection", "Cancel", None))
 

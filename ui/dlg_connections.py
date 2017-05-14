@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'dlg_server_connections.ui'
+# Form implementation generated from reading ui file 'dlg_connections.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -22,14 +22,14 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
-class Ui_DlgServerConnections(object):
-    def setupUi(self, DlgServerConnections):
-        DlgServerConnections.setObjectName(_fromUtf8("DlgServerConnections"))
-        DlgServerConnections.resize(690, 487)
-        DlgServerConnections.setSizeGripEnabled(True)
-        self.gridLayout = QtGui.QGridLayout(DlgServerConnections)
+class Ui_DlgConnections(object):
+    def setupUi(self, DlgConnections):
+        DlgConnections.setObjectName(_fromUtf8("DlgConnections"))
+        DlgConnections.resize(690, 487)
+        DlgConnections.setSizeGripEnabled(True)
+        self.gridLayout = QtGui.QGridLayout(DlgConnections)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-        self.groupBox = QtGui.QGroupBox(DlgServerConnections)
+        self.groupBox = QtGui.QGroupBox(DlgConnections)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -78,7 +78,7 @@ class Ui_DlgServerConnections(object):
         self.horizontalLayout_3.addWidget(self.btnSave)
         self.gridLayout_2.addLayout(self.horizontalLayout_3, 1, 0, 1, 1)
         self.gridLayout.addWidget(self.groupBox, 0, 0, 1, 1)
-        self.tblLayers = QtGui.QTableView(DlgServerConnections)
+        self.tblLayers = QtGui.QTableView(DlgConnections)
         self.tblLayers.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tblLayers.setProperty("showDropIndicator", False)
         self.tblLayers.setAlternatingRowColors(True)
@@ -89,11 +89,11 @@ class Ui_DlgServerConnections(object):
         self.tblLayers.setObjectName(_fromUtf8("tblLayers"))
         self.tblLayers.verticalHeader().setVisible(False)
         self.gridLayout.addWidget(self.tblLayers, 1, 0, 1, 1)
-        self.grpOptions = QtGui.QGroupBox(DlgServerConnections)
+        self.grpOptions = QtGui.QGroupBox(DlgConnections)
         self.grpOptions.setMinimumSize(QtCore.QSize(0, 190))
         self.grpOptions.setObjectName(_fromUtf8("grpOptions"))
         self.gridLayout.addWidget(self.grpOptions, 2, 0, 1, 1)
-        self.grpCrs = QtGui.QGroupBox(DlgServerConnections)
+        self.grpCrs = QtGui.QGroupBox(DlgConnections)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -117,19 +117,19 @@ class Ui_DlgServerConnections(object):
         self.gridLayout.addWidget(self.grpCrs, 3, 0, 1, 1)
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.chkKeepOpen = QtGui.QCheckBox(DlgServerConnections)
+        self.chkKeepOpen = QtGui.QCheckBox(DlgConnections)
         self.chkKeepOpen.setObjectName(_fromUtf8("chkKeepOpen"))
         self.horizontalLayout.addWidget(self.chkKeepOpen, QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
-        self.btnAdd = QtGui.QPushButton(DlgServerConnections)
+        self.btnAdd = QtGui.QPushButton(DlgConnections)
         self.btnAdd.setEnabled(False)
         self.btnAdd.setMinimumSize(QtCore.QSize(80, 0))
         self.btnAdd.setObjectName(_fromUtf8("btnAdd"))
         self.horizontalLayout.addWidget(self.btnAdd)
-        self.btnClose = QtGui.QPushButton(DlgServerConnections)
+        self.btnClose = QtGui.QPushButton(DlgConnections)
         self.btnClose.setMinimumSize(QtCore.QSize(80, 0))
         self.btnClose.setObjectName(_fromUtf8("btnClose"))
         self.horizontalLayout.addWidget(self.btnClose)
-        self.btnHelp = QtGui.QPushButton(DlgServerConnections)
+        self.btnHelp = QtGui.QPushButton(DlgConnections)
         self.btnHelp.setMinimumSize(QtCore.QSize(80, 0))
         self.btnHelp.setObjectName(_fromUtf8("btnHelp"))
         self.horizontalLayout.addWidget(self.btnHelp)
@@ -137,25 +137,25 @@ class Ui_DlgServerConnections(object):
         self.gridLayout.addLayout(self.horizontalLayout, 4, 0, 1, 1)
         self.gridLayout.setRowStretch(1, 1)
 
-        self.retranslateUi(DlgServerConnections)
-        QtCore.QObject.connect(self.btnClose, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgServerConnections.reject)
-        QtCore.QMetaObject.connectSlotsByName(DlgServerConnections)
+        self.retranslateUi(DlgConnections)
+        QtCore.QObject.connect(self.btnClose, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgConnections.reject)
+        QtCore.QMetaObject.connectSlotsByName(DlgConnections)
 
-    def retranslateUi(self, DlgServerConnections):
-        DlgServerConnections.setWindowTitle(_translate("DlgServerConnections", "Add Layer(s) from a Vector Tile Source", None))
-        self.groupBox.setTitle(_translate("DlgServerConnections", "Connections", None))
-        self.btnConnect.setText(_translate("DlgServerConnections", "Connect", None))
-        self.btnCreateConnection.setText(_translate("DlgServerConnections", "New", None))
-        self.btnEdit.setText(_translate("DlgServerConnections", "Edit", None))
-        self.btnDelete.setText(_translate("DlgServerConnections", "Delete", None))
-        self.btnLoad.setText(_translate("DlgServerConnections", "Load", None))
-        self.btnSave.setText(_translate("DlgServerConnections", "Save", None))
-        self.grpOptions.setTitle(_translate("DlgServerConnections", "Options", None))
-        self.grpCrs.setTitle(_translate("DlgServerConnections", "Coordinate reference system", None))
-        self.btnChangeCrs.setText(_translate("DlgServerConnections", "Change", None))
-        self.lblCrs.setText(_translate("DlgServerConnections", "not implemented", None))
-        self.chkKeepOpen.setText(_translate("DlgServerConnections", "Keep dialog open", None))
-        self.btnAdd.setText(_translate("DlgServerConnections", "Add", None))
-        self.btnClose.setText(_translate("DlgServerConnections", "Close", None))
-        self.btnHelp.setText(_translate("DlgServerConnections", "Help", None))
+    def retranslateUi(self, DlgConnections):
+        DlgConnections.setWindowTitle(_translate("DlgConnections", "Add Layer(s) from a Vector Tile Source", None))
+        self.groupBox.setTitle(_translate("DlgConnections", "Connections", None))
+        self.btnConnect.setText(_translate("DlgConnections", "Connect", None))
+        self.btnCreateConnection.setText(_translate("DlgConnections", "New", None))
+        self.btnEdit.setText(_translate("DlgConnections", "Edit", None))
+        self.btnDelete.setText(_translate("DlgConnections", "Delete", None))
+        self.btnLoad.setText(_translate("DlgConnections", "Load", None))
+        self.btnSave.setText(_translate("DlgConnections", "Save", None))
+        self.grpOptions.setTitle(_translate("DlgConnections", "Options", None))
+        self.grpCrs.setTitle(_translate("DlgConnections", "Coordinate reference system", None))
+        self.btnChangeCrs.setText(_translate("DlgConnections", "Change", None))
+        self.lblCrs.setText(_translate("DlgConnections", "not implemented", None))
+        self.chkKeepOpen.setText(_translate("DlgConnections", "Keep dialog open", None))
+        self.btnAdd.setText(_translate("DlgConnections", "Add", None))
+        self.btnClose.setText(_translate("DlgConnections", "Close", None))
+        self.btnHelp.setText(_translate("DlgConnections", "Help", None))
 

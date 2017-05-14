@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DlgServerConnections</class>
- <widget class="QDialog" name="DlgServerConnections">
+ <class>DlgConnections</class>
+ <widget class="QDialog" name="DlgConnections">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -280,7 +280,7 @@
   <connection>
    <sender>btnClose</sender>
    <signal>clicked()</signal>
-   <receiver>DlgServerConnections</receiver>
+   <receiver>DlgConnections</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

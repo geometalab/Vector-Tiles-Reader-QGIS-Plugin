@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DlgEditServerConnection</class>
- <widget class="QDialog" name="DlgEditServerConnection">
+ <class>DlgEditConnection</class>
+ <widget class="QDialog" name="DlgEditConnection">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>562</width>
-    <height>174</height>
+    <height>177</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -138,7 +138,7 @@
   <connection>
    <sender>btnCancel</sender>
    <signal>clicked()</signal>
-   <receiver>DlgEditServerConnection</receiver>
+   <receiver>DlgEditConnection</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -154,7 +154,7 @@
   <connection>
    <sender>btnSave</sender>
    <signal>clicked()</signal>
-   <receiver>DlgEditServerConnection</receiver>
+   <receiver>DlgEditConnection</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">

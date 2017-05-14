@@ -21,7 +21,7 @@ from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
 from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
-from ui.dialogs import AboutDialog, ProgressDialog, ServerConnectionDialog
+from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
 import os
 import sys
@@ -38,9 +38,9 @@ class VtrPlugin:
         self.iface = iface
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.server_dialog = ServerConnectionDialog(FileHelper.get_sample_data_directory())
-        self.server_dialog.on_connect.connect(self._on_connect)
-        self.server_dialog.on_add.connect(self._on_add_layer)
+        self.connections_dialog = ConnectionsDialog(FileHelper.get_sample_data_directory())
+        self.connections_dialog.on_connect.connect(self._on_connect)
+        self.connections_dialog.on_add.connect(self._on_add_layer)
         self.progress_dialog = None
         self._current_reader = None
         self._current_options = None
@@ -58,19 +58,19 @@ class VtrPlugin:
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_server_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.server_dialog.show)
+        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.connections_dialog.show)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
-        self.iface.insertAddLayerAction(self.open_server_action)  # Add action to the menu: Layer->Add Layer
-        self.popupMenu.addAction(self.open_server_action)
+        self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
+        self.popupMenu.addAction(self.open_connections_action)
         self.popupMenu.addAction(self.reload_action)
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(self.open_server_action)
+        self.toolButton.setDefaultAction(self.open_connections_action)
         self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_server_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         info("Vector Tile Reader Plugin loaded...")
 
@@ -81,7 +81,7 @@ class VtrPlugin:
             zoom = self._get_current_zoom()
             extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             self._load_tiles(path=self._current_source_path,
-                             options=self.server_dialog.options,
+                             options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              extent_to_load=extent,
                              ignore_limit=True)
@@ -111,12 +111,12 @@ class VtrPlugin:
             self.reader = reader
             if reader:
                 layers = reader.source.vector_layers()
-                self.server_dialog.set_layers(layers)
-                self.server_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
+                self.connections_dialog.set_layers(layers)
+                self.connections_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
                 self.reload_action.setEnabled(True)
                 self._current_source_path = path_or_url
             else:
-                self.server_dialog.set_layers([])
+                self.connections_dialog.set_layers([])
                 self.reload_action.setEnabled(False)
                 self.reload_action.setText(self._reload_button_text)
                 self._current_source_path = None
@@ -140,15 +140,15 @@ class VtrPlugin:
             # print "not in bounds"
             # self._set_qgis_extent(self.tilejson)
 
-        keep_dialog_open = self.server_dialog.keep_dialog_open()
+        keep_dialog_open = self.connections_dialog.keep_dialog_open()
         if keep_dialog_open:
-            dialog_owner = self.server_dialog
+            dialog_owner = self.connections_dialog
         else:
             dialog_owner = self.iface.mainWindow()
-            self.server_dialog.close()
+            self.connections_dialog.close()
         self._create_progress_dialog(dialog_owner)
         self._load_tiles(path=path_or_url,
-                         options=self.server_dialog.options,
+                         options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
                          extent_to_load=extent)
         self._current_source_path = path_or_url
@@ -158,7 +158,7 @@ class VtrPlugin:
         zoom = self.reader.source.max_zoom()
         if zoom is None:
             zoom = 14
-        manual_zoom = self.server_dialog.options.manual_zoom()
+        manual_zoom = self.connections_dialog.options.manual_zoom()
         if manual_zoom is not None:
             zoom = manual_zoom
         return zoom
@@ -304,6 +304,6 @@ class VtrPlugin:
             warn("Disconnectin failed: {}", sys.exc_info())
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_server_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
-        self.iface.addLayerMenu().removeAction(self.open_server_action)
+        self.iface.addLayerMenu().removeAction(self.open_connections_action)

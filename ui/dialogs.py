@@ -7,8 +7,8 @@ from collections import OrderedDict
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, QSettings
 from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem
-from dlg_server_connections import Ui_DlgServerConnections
-from dlg_edit_server_connection import Ui_DlgEditServerConnection
+from dlg_connections import Ui_DlgConnections
+from dlg_edit_connection import Ui_DlgEditConnection
 from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
 from options import Ui_OptionsGroup
@@ -126,7 +126,7 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
         self.close()
 
 
-class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
+class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(str, str)
     on_add = pyqtSignal(str, list)
@@ -167,7 +167,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.tblLayers.setModel(self.model)
         self._load_connections()
         self._add_loaded_connections()
-        self.edit_connection_dialog = EditServerConnection(default_directory=default_browse_directory)
+        self.edit_connection_dialog = EditConnectionDialog(default_directory=default_browse_directory)
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
@@ -300,7 +300,7 @@ class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
         self.btnDelete.setEnabled(enable_edit)
 
 
-class EditServerConnection(QtGui.QDialog, Ui_DlgEditServerConnection):
+class EditConnectionDialog(QtGui.QDialog, Ui_DlgEditConnection):
     def __init__(self, default_directory):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
