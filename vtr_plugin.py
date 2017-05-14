@@ -21,7 +21,7 @@ from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
 from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
-from ui.dialogs import AboutDialog, ProgressDialog, ServerConnectionDialog, TilesReloadingDialog
+from ui.dialogs import AboutDialog, ProgressDialog, ServerConnectionDialog
 
 import os
 import sys
@@ -42,11 +42,9 @@ class VtrPlugin:
         self.server_dialog.on_connect.connect(self._on_connect)
         self.server_dialog.on_add.connect(self._on_add_layer)
         self.progress_dialog = None
-        self.reload_dialog = None
         self._current_reader = None
         self._current_options = None
         self.reader = None
-        self._connect_to_extent_changed()
         self._add_path_to_icons()
         self._current_source_path = None
         self._current_layer_filter = []
@@ -76,9 +74,6 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         info("Vector Tile Reader Plugin loaded...")
 
-    def _connect_to_extent_changed(self):
-        self.iface.mapCanvas().extentsChanged.connect(self._on_map_extent_changed)
-
     def _reload_tiles(self):
         if self._current_source_path:
             self._create_progress_dialog(self.iface.mainWindow())
@@ -90,21 +85,6 @@ class VtrPlugin:
                              layers_to_load=self._current_layer_filter,
                              extent_to_load=extent,
                              ignore_limit=True)
-
-    def _on_map_extent_changed(self):
-        self.iface.mapCanvas().extentsChanged.disconnect()
-        is_loading = self.progress_dialog and self.progress_dialog.is_loading()
-        if not is_loading and self.reload_dialog:
-            should_reload = self.reload_dialog.reload_tiles()
-            debug("Reload tiles: {}", should_reload)
-            if should_reload:
-                reader = self._current_reader
-                if reader is not None:
-                    scheme = self._current_reader.source.scheme()
-                    # todo: replace hardcoded zoom_level 14
-                    current_extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=14)
-                    self._load_tiles(reader.source.source(), self._current_options, current_extent, reader, ignore_limit=True)
-        self._connect_to_extent_changed()
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
         e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
@@ -235,10 +215,6 @@ class VtrPlugin:
             reader = self._create_reader(path)
             self._current_reader = reader
             self._current_options = options
-            if options.auto_load_tiles():
-                self.reload_dialog = TilesReloadingDialog()
-            else:
-                self.reload_dialog = None
         if reader:
             reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:

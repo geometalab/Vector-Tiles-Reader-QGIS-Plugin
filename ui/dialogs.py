@@ -11,7 +11,6 @@ from dlg_server_connections import Ui_DlgServerConnections
 from dlg_edit_server_connection import Ui_DlgEditServerConnection
 from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
-from dlg_tile_reloading import Ui_DlgTileReloading
 from options import Ui_OptionsGroup
 
 
@@ -60,9 +59,6 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         if min_zoom or max_zoom:
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
-
-    def auto_load_tiles(self):
-        return self.chkAutoLoadTiles.isChecked()
 
     def cartographic_ordering(self):
         return self.chkCartographicOrdering.isChecked()
@@ -128,31 +124,6 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
     def hide(self):
         self._is_loading = False
         self.close()
-
-
-class TilesReloadingDialog(QtGui.QDialog, Ui_DlgTileReloading):
-    def __init__(self):
-        QtGui.QDialog.__init__(self)
-        self.setupUi(self)
-        self.always_accept = False
-        self.always_deny = False
-
-    def do_not_show_again(self):
-        return self.chkDoNotShowAgain.isChecked()
-
-    def reload_tiles(self):
-        if self.always_accept:
-            return True
-        elif self.always_deny:
-            return False
-
-        result = self.exec_()
-        if result == QtGui.QDialog.Accepted:
-            self.always_accept = self.do_not_show_again()
-            return True
-        else:
-            self.always_deny = self.do_not_show_again()
-            return False
 
 
 class ServerConnectionDialog(QtGui.QDialog, Ui_DlgServerConnections):
