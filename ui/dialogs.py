@@ -141,7 +141,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     _OMT = "OpenMapTiles.com"
 
-    _predefined_connections = {_OMT: "http://free.tilehosting.com/data/v3.json?key={token}"}
+    _predefined_connections = {_OMT: "https://free.tilehosting.com/data/v3.json?key={token}"}
     _tokens = {_OMT: "6irhAXGgsi8TrIDL0211"}
 
     def __init__(self, default_browse_directory):
@@ -206,9 +206,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     def _add_loaded_connections(self):
         for index, name in enumerate(self._predefined_connections.keys()):
-            if name not in self.connections:
-                url = self._predefined_connections[name]
-                self._set_connection_url(name, url)
+            url = self._predefined_connections[name]
+            self._set_connection_url(name, url)
 
         for name in self.connections:
             is_already_added = self.cbxConnections.findText(name) != -1
