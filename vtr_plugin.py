@@ -300,10 +300,6 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
-        try:
-            self.iface.mapCanvas().extentsChanged.disconnect()
-        except:
-            warn("Disconnectin failed: {}", sys.exc_info())
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
