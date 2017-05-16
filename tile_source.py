@@ -32,14 +32,6 @@ class ServerSource:
         self._progress_handler = None
         self._cancelling = False
 
-    def _validate_url(self, url):
-        try:
-            urllib2.urlopen('http://www.example.com/some_page')
-        except urllib2.HTTPError, e:
-            print(e.code)
-        except urllib2.URLError, e:
-            print(e.args)
-
     def cancel(self):
         self._cancelling = True
 

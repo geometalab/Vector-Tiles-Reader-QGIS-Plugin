@@ -19,7 +19,7 @@ class TileJSON:
         debug("Loading TileJSON")
         success = False
         try:
-            data = FileHelper.load_url(self.url)
+            status, data = FileHelper.load_url(self.url)
             self.json = json.loads(data)
             if self.json:
                 debug("TileJSON loaded")

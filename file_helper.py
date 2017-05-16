@@ -1,7 +1,6 @@
 import os
 import glob
 import uuid
-import urllib2
 import tempfile
 import sys
 import cPickle as pickle
@@ -24,19 +23,12 @@ class FileHelper:
 
     @staticmethod
     def url_exists(url):
-        result = False
+        status, data = FileHelper.load_url(url)
+        result = status == 200
         error = None
-        try:
-            req = urllib2.Request(url, headers={'User-Agent': "Magic Browser"})
-            response = urllib2.urlopen(req)
-            response.read(1)
-            result = True
-        except urllib2.HTTPError, e:
-            error = "Connection failed (status {}): {}".format(e.code, e.msg)
-            warn(error)
-        except urllib2.URLError, e:
-            error = "Connection failed: {}".format(e.message)
-            warn(error)
+        if status != 200:
+            error = data
+
         return result, error
 
     @staticmethod
@@ -131,10 +123,16 @@ class FileHelper:
         while not reply.isFinished():
             QApplication.processEvents()
 
-        # httpStatusCode = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
-        # print "status: ", httpStatusCode
-        content = reply.readAll().data()
-        return content
+        http_status_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        if http_status_code == 200:
+            content = reply.readAll().data()
+        else:
+            if http_status_code is None:
+                content = "Request failed: {}".format(reply.errorString())
+            else:
+                content = "Request failed: HTTP status {}".format(http_status_code)
+            warn(content)
+        return http_status_code, content
 
     @staticmethod
     def assure_temp_dirs_exist():
