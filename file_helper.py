@@ -1,12 +1,16 @@
 import os
 import glob
 import uuid
-import urllib2
 import tempfile
 import sys
 import cPickle as pickle
 import time
 from log_helper import critical, warn, debug
+from qgis.core import QgsNetworkAccessManager
+
+from PyQt4.QtGui import QApplication
+from PyQt4.QtCore import QUrl
+from PyQt4.QtNetwork import QNetworkRequest
 
 
 class FileHelper:
@@ -19,19 +23,12 @@ class FileHelper:
 
     @staticmethod
     def url_exists(url):
-        result = False
+        status, data = FileHelper.load_url(url)
+        result = status == 200
         error = None
-        try:
-            req = urllib2.Request(url, headers={'User-Agent': "Magic Browser"})
-            response = urllib2.urlopen(req)
-            response.read(1)
-            result = True
-        except urllib2.HTTPError, e:
-            error = "Connection failed (status {}): {}".format(e.code, e.msg)
-            warn(error)
-        except urllib2.URLError, e:
-            error = "Connection failed: {}".format(e.message)
-            warn(error)
+        if status != 200:
+            error = data
+
         return result, error
 
     @staticmethod
@@ -59,7 +56,6 @@ class FileHelper:
         try:
             if os.path.exists(file_path):
                 age_in_seconds = int(time.time()) - os.path.getmtime(file_path)
-                print("File age: {}, {}".format(age_in_seconds, file_path))
                 is_deprecated = age_in_seconds > FileHelper.max_cache_age_minutes * 60
                 if is_deprecated:
                     os.remove(file_path)
@@ -114,28 +110,29 @@ class FileHelper:
                 warn("File could not be deleted: {}", f)
 
     @staticmethod
-    def load_url(url, size=None, result_queue=None, params=None):
-        """
-         * Reads the content of the specified url. If the size parameter is set, only so many bytes will be read
-        :param params: This values will be appended to the resulting content
-        :param result_queue: A Queue object to append the resulting content to
-        :param url: The url to load 
-        :param size: The nr of bytes to read, None if all should be read
-        :return: 
-        """
-        req = urllib2.Request(url, headers={'User-Agent': "Magic Browser"})
-        content = None
-        try:
-            response = urllib2.urlopen(req)
-            content = response.read(size)
-        except urllib2.HTTPError as e:
-            critical("Opening url failed with error code '{}': {}", e.code, url)
-        except urllib2.URLError:
-            critical("The URL seems to be invalid: {}", url)
-        if result_queue:
-            res = [content, params]
-            result_queue.put(res)
-        return content
+    def load_url_async(url):
+        m = QgsNetworkAccessManager.instance()
+        req = QNetworkRequest(QUrl(url))
+        req.setRawHeader('User-Agent', 'Magic Browser')
+        reply = m.get(req)
+        return reply
+
+    @staticmethod
+    def load_url(url):
+        reply = FileHelper.load_url_async(url)
+        while not reply.isFinished():
+            QApplication.processEvents()
+
+        http_status_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        if http_status_code == 200:
+            content = reply.readAll().data()
+        else:
+            if http_status_code is None:
+                content = "Request failed: {}".format(reply.errorString())
+            else:
+                content = "Request failed: HTTP status {}".format(http_status_code)
+            warn(content)
+        return http_status_code, content
 
     @staticmethod
     def assure_temp_dirs_exist():

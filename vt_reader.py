@@ -149,6 +149,9 @@ class VtReader:
         tiles_to_load = []
         tiles = []
         for t in get_all_tiles(extent_to_load):
+            if self.cancel_requested:
+                break
+
             file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
             tile = FileHelper.get_cached_tile(file_name)
             if tile and tile.decoded_data:

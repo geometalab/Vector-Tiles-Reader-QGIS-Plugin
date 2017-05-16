@@ -1,15 +1,14 @@
 import os
 import sys
 import sqlite3
-import threading
 import urlparse
-import Queue
 import json
 
+from PyQt4.QtGui import QApplication
 from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
-from tile_helper import VectorTile, get_all_tiles
+from tile_helper import VectorTile
 
 
 _DEFAULT_CRS = "EPSG:3857"
@@ -32,14 +31,6 @@ class ServerSource:
         self.json.load()
         self._progress_handler = None
         self._cancelling = False
-
-    def _validate_url(self, url):
-        try:
-            urllib2.urlopen('http://www.example.com/some_page')
-        except urllib2.HTTPError, e:
-            print(e.code)
-        except urllib2.URLError, e:
-            print(e.args)
 
     def cancel(self):
         self._cancelling = True
@@ -113,13 +104,12 @@ class ServerSource:
             urls.append((load_url, col, row))
 
         self._progress_handler(msg="Getting {} tiles from source...".format(len(urls)), max_progress=len(urls))
-        queue = Queue.Queue()
 
         page_size = 5
-        self._do_paged(page_size, urls, self._load_urls_async, queue, for_each)
+        results = []
+        self._do_paged(page_size, urls, results, self._load_urls_async, for_each)
 
-        while not queue.empty():
-            r = queue.get()
+        for r in results:
             content = r[0]
             col = r[1][0]
             row = r[1][1]
@@ -128,24 +118,31 @@ class ServerSource:
 
         return tile_data_tuples
 
-    def _load_urls_async(self, page_offset, urls, *args):
-        queue = args[0]
-        for_each = args[1]
-        threads = [threading.Thread(
-            name="URL-Thread-{}".format(index),
-            target=FileHelper.load_url,
-            args=(u[0], None, queue, [u[1], u[2]])) for index, u in enumerate(urls)]
-        for thread in threads:
-            thread.start()
-        for index, thread in enumerate(threads):
-            if for_each:
-                for_each()
-            if self._cancelling:
-                break
-            thread.join()
-            self._progress_handler(progress=page_offset+index+1)
+    def _load_urls_async(self, page_offset, urls_with_col_and_row, *args):
+        for_each = args[0]
 
-    def _do_paged(self, page_size, all_items, func, *args):
+        replies = map(lambda url: (FileHelper.load_url_async(url[0]), (url[1], url[2])), urls_with_col_and_row)
+        all_finished = False
+        nr_finished_before = 0
+        while not all_finished and not self._cancelling:
+            QApplication.processEvents()
+            nr_finished = sum(map(lambda r: r[0].isFinished(), replies), 0)
+            if nr_finished != nr_finished_before:
+                for_each()
+                self._progress_handler(progress=page_offset + nr_finished)
+            all_finished = nr_finished == len(replies)
+
+        results = []
+        for r in replies:
+            reply = r[0]
+            content = reply.readAll().data()
+            reply.deleteLater()
+            tile_coord = r[1]
+            results.append((content, tile_coord))
+
+        return results
+
+    def _do_paged(self, page_size, all_items, result_set, func, *args):
         page_nr = 0
         items = []
         while page_nr == 0 or len(items) > 0:
@@ -153,7 +150,8 @@ class ServerSource:
             if self._cancelling or len(items) == 0:
                 break
             page_offset = page_nr*page_size
-            func(page_offset, items, *args)
+            results = func(page_offset, items, *args)
+            result_set.extend(results)
             page_nr += page_size
 
 
