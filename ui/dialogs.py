@@ -41,6 +41,36 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.lblZoomRange.setText("")
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
+        self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
+        self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
+        self._reset_to_basemap_defaults()
+
+    def _reset_to_basemap_defaults(self):
+        self._set_settings(auto_zoom=True,
+                           tile_limit=100,
+                           styles_enabled=True,
+                           merging_enabled=False,
+                           load_mask_layer=False,
+                           cartographic_ordering=True)
+
+    def _reset_to_inspection_defaults(self):
+        self._set_settings(auto_zoom=True,
+                           tile_limit=10,
+                           styles_enabled=False,
+                           merging_enabled=True,
+                           load_mask_layer=False,
+                           cartographic_ordering=False)
+
+    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, load_mask_layer, cartographic_ordering):
+        self.rbZoomMax.setChecked(auto_zoom)
+        tile_limit_enabled = tile_limit is not None
+        self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
+        if tile_limit_enabled:
+            self.spinNrOfLoadedTiles.setValue(tile_limit)
+        self.chkApplyStyles.setChecked(styles_enabled)
+        self.chkMergeTiles.setChecked(merging_enabled)
+        self.chkLoadMaskLayer.setChecked(load_mask_layer)
+        self.chkCartographicOrdering.setChecked(cartographic_ordering)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom:
