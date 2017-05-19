@@ -18,6 +18,9 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---0.11.0---
+    * Buttons added to reset options to predefined defaults
+    * Bug in feature merging fixed
     ---0.10.0---
     * Plugin uses QGIS proxies if configured
     * Bugfixes
