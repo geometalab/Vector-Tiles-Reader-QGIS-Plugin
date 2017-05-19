@@ -355,9 +355,9 @@ class VtReader:
                 with open(file_path, "w") as f:
                     json.dump(complete_collection, f)
                 layer = self._add_vector_layer_to_qgis(file_path, layer_name, zoom_level, target_group, merge_features)
+                if apply_styles:
+                    layers.append((layer_name_and_type, layer))
             self._update_progress(progress=index+1)
-            if apply_styles:
-                layers.append((layer_name_and_type, layer))
 
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
