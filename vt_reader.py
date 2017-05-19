@@ -155,7 +155,7 @@ class VtReader:
             file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
             tile = FileHelper.get_cached_tile(file_name)
             if tile and tile.decoded_data:
-                debug("Cache hit: {}", tile)
+                # debug("Cache hit: {}", tile)
                 tiles.append(tile)
             else:
                 tiles_to_load.append(t)
