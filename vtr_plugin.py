@@ -183,7 +183,7 @@ class VtrPlugin:
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-        self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
+        self.iface.mapCanvas().mapSettings().setDestinationCrs(crs)
 
     def _create_progress_dialog(self, owner):
         self.progress_dialog = ProgressDialog(owner)
