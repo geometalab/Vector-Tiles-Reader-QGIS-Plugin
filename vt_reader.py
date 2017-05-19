@@ -354,7 +354,7 @@ class VtReader:
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
                     json.dump(complete_collection, f)
-                layer = self._add_vector_layer_to_qgis(file_path, layer_name, zoom_level, target_group, merge_features)
+                layer = self._add_vector_layer_to_qgis(file_path, layer_name, zoom_level, target_group, merge_features, geo_type)
                 if apply_styles:
                     layers.append((layer_name_and_type, layer))
             self._update_progress(progress=index+1)
@@ -445,7 +445,7 @@ class VtReader:
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _add_vector_layer_to_qgis(self, json_src, layer_name, zoom_level, layer_target_group, merge_features):
+    def _add_vector_layer_to_qgis(self, json_src, layer_name, zoom_level, layer_target_group, merge_features, geo_type):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
@@ -454,8 +454,9 @@ class VtReader:
         layer_with_zoom = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, zoom_level)
         layer = QgsVectorLayer(json_src, layer_with_zoom, "ogr")
 
-        if merge_features and layer_name in self._layers_to_dissolve:
+        if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
             layer = FeatureMerger().merge_features(layer)
+            layer.setName(layer_name)
 
         QgsMapLayerRegistry.instance().addMapLayer(layer, False)
         layer_target_group.addLayer(layer)
@@ -491,7 +492,7 @@ class VtReader:
                 geojson_feature, geo_type = self._create_geojson_feature(feature, tile)
                 if geojson_feature:
                     feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
-                    path_and_type = (feature_path, geo_type.lower())
+                    path_and_type = (feature_path, geo_type)
                     if path_and_type not in self.feature_collections_by_layer_path:
                         self.feature_collections_by_layer_path[path_and_type] = {}
                     collection_dict = self.feature_collections_by_layer_path[path_and_type]
