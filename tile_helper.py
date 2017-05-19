@@ -1,6 +1,7 @@
 from global_map_tiles import GlobalMercator
 from osgeo import osr
 import math
+from PyQt4.QtGui import QApplication
 
 
 class VectorTile:
@@ -44,7 +45,6 @@ def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
         y = change_scheme(zoom, tile[1])
         tile = (tile[0], y)
     return tile
-
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
@@ -130,11 +130,15 @@ def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
     return new_tile
 
 
-def get_all_tiles(bounds):
+def get_all_tiles(bounds, is_cancel_requested_handler):
     nr_tiles_x = int(math.fabs(bounds[1][0] - bounds[0][0]) + 1)
     nr_tiles_y = int(math.fabs(bounds[1][1] - bounds[0][1]) + 1)
+
     tiles = []
     for x in range(nr_tiles_x):
+        QApplication.processEvents()
+        if is_cancel_requested_handler():
+            break
         for y in range(nr_tiles_y):
             col = x + bounds[0][0]
             row = y + bounds[0][1]

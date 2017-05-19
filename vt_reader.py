@@ -146,9 +146,10 @@ class VtReader:
         if max_zoom is not None and zoom_level > max_zoom:
             zoom_level = max_zoom
 
+        all_tiles = get_all_tiles(extent_to_load, lambda: self.cancel_requested)
         tiles_to_load = []
         tiles = []
-        for t in get_all_tiles(extent_to_load):
+        for t in all_tiles:
             if self.cancel_requested:
                 break
 
@@ -173,7 +174,7 @@ class VtReader:
             if mask_level is not None and mask_level != zoom_level:
                 mask_tiles = map(
                     lambda t: change_zoom(zoom_level, int(mask_level), t, self.source.scheme(), self.source.crs()),
-                    get_all_tiles(extent_to_load))
+                    all_tiles)
                 mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
                                                          tiles_to_load=mask_tiles,
                                                          max_tiles=max_tiles,
