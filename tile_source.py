@@ -3,13 +3,12 @@ import sys
 import sqlite3
 import urlparse
 import json
-import operator
 
 from PyQt4.QtGui import QApplication
 from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
-from tile_helper import VectorTile
+from tile_helper import VectorTile, get_tiles_from_center
 
 
 _DEFAULT_CRS = "EPSG:3857"
@@ -74,51 +73,6 @@ class ServerSource:
     def crs(self):
         return self.json.crs()
 
-    _UP = 0
-    _RIGHT = 1
-    _DOWN = 2
-    _LEFT = 3
-
-    _directions = {
-        _UP: (0, -1),
-        _RIGHT: (1, 0),
-        _DOWN: (0,1),
-        _LEFT: (-1, 0)}
-
-    def _get_tiles_from_center(self, nr_of_tiles, available_tiles):
-        if nr_of_tiles >= len(available_tiles):
-            return available_tiles
-
-        min_x = min(map(lambda t: t[0], available_tiles))
-        min_y = min(map(lambda t: t[1], available_tiles))
-        max_x = max(map(lambda t: t[0], available_tiles))
-        max_y = max(map(lambda t: t[1], available_tiles))
-
-        center_tile_offset = (int(round((max_x-min_x)/2)), int(round((max_y-min_y)/2)))
-        center_tile = self._sum_tiles((min_x, min_y), center_tile_offset)
-        selected_tiles = [center_tile]
-        current_tile = center_tile
-        nr_of_steps = 0
-        current_direction = 0
-        while len(selected_tiles) < nr_of_tiles:
-            #  always after two direction changes, the step length has to be increased by one
-            if current_direction % 2 == 0:
-                nr_of_steps += 1
-
-            #  go nr_of_steps steps into the current direction
-            for s in xrange(nr_of_steps):
-                current_tile = self._sum_tiles(current_tile, self._directions[current_direction])
-                if current_tile in available_tiles:
-                    selected_tiles.append(current_tile)
-                    if len(selected_tiles) >= nr_of_tiles:
-                        break
-            current_direction = (current_direction + 1) % 4
-        return selected_tiles
-
-    @staticmethod
-    def _sum_tiles(first_tile, second_tile):
-        return tuple(map(operator.add, first_tile, second_tile))
-
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
         """
          * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
@@ -136,7 +90,7 @@ class ServerSource:
         urls = []
 
         if len(tiles_to_load) > max_tiles:
-            tiles_to_load = self._get_tiles_from_center(max_tiles, tiles_to_load)
+            tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load)
             if limit_reacher_handler:
                 limit_reacher_handler()
 
@@ -287,8 +241,6 @@ class MBTilesSource:
             warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
         return is_mapbox_pbf
 
-
-
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
         """
          * Loads the tiles for the specified zoom_level and bounds from the mbtiles file this source has been created with
@@ -303,48 +255,40 @@ class MBTilesSource:
         self._cancelling = False
         info("Reading tiles of zoom level {}", zoom_level)
 
-        print "tiles to load: ", tiles_to_load
+        if max_tiles:
+            center_tiles = get_tiles_from_center(max_tiles, tiles_to_load)
+        else:
+            center_tiles = tiles_to_load
+        where_clause = self._get_where_clause(tiles_to_load=center_tiles, zoom_level=zoom_level)
 
-        where_clause = self._get_where_clause(tiles_to_load, zoom_level)
-        limit_clause = self._get_limit_clause(max_tiles)
-
-        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {} {};"
-        sql = sql_command.format(where_clause, limit_clause)
+        sql_command = "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles {};"
+        sql = sql_command.format(where_clause)
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql)
-        if not rows or len(rows) == 0:
-            # execute the query again, without a tile_boundary
+        no_tiles_in_current_extent = not rows or len(rows) == 0
+        if no_tiles_in_current_extent:
             where_clause = self._get_where_clause(tiles_to_load=None, zoom_level=zoom_level)
-            sql = sql_command.format(where_clause, limit_clause)
+            sql = sql_command.format(where_clause)
             rows = self._get_from_db(sql=sql)
 
         if rows:
-            if len(rows) > max_tiles:
-                rows = rows[:max_tiles]
-                if limit_reacher_handler:
-                    limit_reacher_handler()
+            if max_tiles and len(rows) > max_tiles:
+                if no_tiles_in_current_extent:
+                    rows = rows[:max_tiles]
+                if no_tiles_in_current_extent:
+                    if limit_reacher_handler:
+                        limit_reacher_handler()
             self._progress_handler(max_progress=len(rows))
             for index, row in enumerate(rows):
                 if for_each:
                     for_each()
-                if self._cancelling:
+                if self._cancelling or (max_tiles and len(tile_data_tuples) >= max_tiles):
                     break
                 tile, data = self._create_tile(row)
                 tile_data_tuples.append((tile, data))
                 self._progress_handler(progress=index+1)
         return tile_data_tuples
-
-    @staticmethod
-    def _get_limit_clause(max_tiles):
-        limit = ""
-        if max_tiles is not None:
-            """
-            +1 is added to max_tiles to easily detect if the number of rows is greater than the limit, so that a
-            message can be shown to the user.
-            """
-            limit = "LIMIT {}".format(max_tiles + 1)
-        return limit
 
     @staticmethod
     def _get_where_clause(tiles_to_load, zoom_level):

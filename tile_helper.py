@@ -1,6 +1,7 @@
 from global_map_tiles import GlobalMercator
 from osgeo import osr
 import math
+import operator
 from PyQt4.QtGui import QApplication
 
 
@@ -20,6 +21,9 @@ class VectorTile:
 
     def id(self):
         return "{};{}".format(self.column, self.row)
+
+    def coord(self):
+        return self.column, self.row
 
 
 def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
@@ -45,6 +49,7 @@ def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
         y = change_scheme(zoom, tile[1])
         tile = (tile[0], y)
     return tile
+
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
@@ -134,14 +139,17 @@ def get_all_tiles(bounds, is_cancel_requested_handler):
     nr_tiles_x = int(math.fabs(bounds[1][0] - bounds[0][0]) + 1)
     nr_tiles_y = int(math.fabs(bounds[1][1] - bounds[0][1]) + 1)
 
+    min_x = min(bounds[0][0], bounds[1][0])
+    min_y = min(bounds[0][1], bounds[1][1])
+
     tiles = []
     for x in range(nr_tiles_x):
         QApplication.processEvents()
         if is_cancel_requested_handler():
             break
         for y in range(nr_tiles_y):
-            col = x + bounds[0][0]
-            row = y + bounds[0][1]
+            col = x + min_x
+            row = y + min_y
             tiles.append((col, row))
     return tiles
 
@@ -154,3 +162,49 @@ def change_scheme(zoom, y):
     :return: 
     """
     return (2 ** zoom) - y - 1
+
+_UP = 0
+_RIGHT = 1
+_DOWN = 2
+_LEFT = 3
+
+_directions = {
+    _UP: (0, -1),
+    _RIGHT: (1, 0),
+    _DOWN: (0,1),
+    _LEFT: (-1, 0)}
+
+
+def get_tiles_from_center(nr_of_tiles, available_tiles):
+    if nr_of_tiles >= len(available_tiles):
+        return available_tiles
+
+    min_x = min(map(lambda t: t[0], available_tiles))
+    min_y = min(map(lambda t: t[1], available_tiles))
+    max_x = max(map(lambda t: t[0], available_tiles))
+    max_y = max(map(lambda t: t[1], available_tiles))
+
+    center_tile_offset = (int(round((max_x-min_x)/2)), int(round((max_y-min_y)/2)))
+    center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
+    selected_tiles = [center_tile]
+    current_tile = center_tile
+    nr_of_steps = 0
+    current_direction = 0
+    while len(selected_tiles) < nr_of_tiles:
+        #  always after two direction changes, the step length has to be increased by one
+        if current_direction % 2 == 0:
+            nr_of_steps += 1
+
+        #  go nr_of_steps steps into the current direction
+        for s in xrange(nr_of_steps):
+            current_tile = _sum_tiles(current_tile, _directions[current_direction])
+            if current_tile in available_tiles:
+                selected_tiles.append(current_tile)
+                if len(selected_tiles) >= nr_of_tiles:
+                    break
+        current_direction = (current_direction + 1) % 4
+    return selected_tiles
+
+
+def _sum_tiles(first_tile, second_tile):
+    return tuple(map(operator.add, first_tile, second_tile))
