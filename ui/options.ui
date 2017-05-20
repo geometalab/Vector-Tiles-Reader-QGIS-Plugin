@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>706</width>
-    <height>584</height>
+    <width>561</width>
+    <height>256</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -81,8 +81,11 @@
      </item>
      <item row="1" column="0">
       <widget class="QCheckBox" name="chkLimitNrOfTiles">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this option is enabled, only the specified number of tiles will be loaded from the selected source. &lt;/p&gt;&lt;p&gt;Cached tiles are not affected by this limit. Therefore, there may be more tiles visible when loading is complete.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
-        <string>Limit the number of loaded tiles</string>
+        <string>Loaded tile limit</string>
        </property>
        <property name="checked">
         <bool>true</bool>

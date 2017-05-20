@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_OptionsGroup(object):
     def setupUi(self, OptionsGroup):
         OptionsGroup.setObjectName(_fromUtf8("OptionsGroup"))
-        OptionsGroup.resize(706, 584)
+        OptionsGroup.resize(561, 256)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -113,7 +113,8 @@ class Ui_OptionsGroup(object):
         OptionsGroup.setTitle(_translate("OptionsGroup", "Options", None))
         self.chkCartographicOrdering.setToolTip(_translate("OptionsGroup", "Use ordering according to cartographic element types (label, points, lines, areas) instead of original ordering from the tile source", None))
         self.chkCartographicOrdering.setText(_translate("OptionsGroup", "Cartographic layer ordering", None))
-        self.chkLimitNrOfTiles.setText(_translate("OptionsGroup", "Limit the number of loaded tiles", None))
+        self.chkLimitNrOfTiles.setToolTip(_translate("OptionsGroup", "<html><head/><body><p>If this option is enabled, only the specified number of tiles will be loaded from the selected source. </p><p>Cached tiles are not affected by this limit. Therefore, there may be more tiles visible when loading is complete.</p></body></html>", None))
+        self.chkLimitNrOfTiles.setText(_translate("OptionsGroup", "Loaded tile limit", None))
         self.chkLoadMaskLayer.setText(_translate("OptionsGroup", "Load mask layer", None))
         self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (slow)", None))
         self.rbZoomMax.setText(_translate("OptionsGroup", "Max. Zoom", None))
