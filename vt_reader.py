@@ -233,7 +233,6 @@ class VtReader:
             if progress != current_progress:
                 current_progress = progress
                 self._update_progress(progress=progress)
-                debug("Progress: {0:.1f}%", progress)
         return tiles
 
     def _process_tiles(self, tiles, layer_filter):
@@ -255,7 +254,6 @@ class VtReader:
             if progress != current_progress:
                 current_progress = progress
                 self._update_progress(progress=progress)
-                debug("Progress: {0:.1f}%", progress)
 
     def _decode_binary_tile_data(self, data):
         """
