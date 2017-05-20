@@ -54,14 +54,10 @@ class TileJSON:
             zoom = center[2]
             center = coordinate_to_tile(zoom, lat, lng, self.crs(), self.scheme())
         else:
-            center = self.bounds_tile(self.max_zoom())
-            if center:
-                min_x = center[0][0]
-                min_y = center[0][1]
-                max_x = center[1][0]
-                max_y = center[1][1]
-                center_x = int((min_x + max_x) / 2)
-                center_y = int((min_y + max_y) / 2)
+            bounds = self.bounds_tile(self.max_zoom())
+            if bounds:
+                center_x = int((bounds["x_min"] + bounds["x_max"]) / 2)
+                center_y = int((bounds["y_min"] + bounds["y_max"]) / 2)
                 center = (center_x, center_y)
         return center
 
@@ -83,8 +79,6 @@ class TileJSON:
         :param zoom: 
         :param manual_bounds: 
         :return:         """
-
-        # todo: return named dict instead with x_min, x_max, y_min, y_max
         bounds = self.bounds_longlat()
         scheme = self.scheme()
         crs = self.crs()

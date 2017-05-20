@@ -1,8 +1,8 @@
 from global_map_tiles import GlobalMercator
 from osgeo import osr
-import math
 import operator
 from PyQt4.QtGui import QApplication
+from log_helper import warn
 
 
 class VectorTile:
@@ -105,8 +105,10 @@ def get_tile_bounds(zoom, bounds, crs, scheme="xyz"):
     """
     if scheme not in ["xyz", "tms"]:
         raise RuntimeError("Scheme not supported: {}".format(scheme))
+    if not bounds:
+        warn("Bounds is not available")
 
-    tiles = None
+    tile_bounds = None
     if bounds:
         lng_min = bounds[0]
         lat_min = bounds[1]
@@ -116,8 +118,20 @@ def get_tile_bounds(zoom, bounds, crs, scheme="xyz"):
         xy_min = coordinate_to_tile(zoom, lat_max, lng_min, crs, scheme)
         xy_max = coordinate_to_tile(zoom, lat_min, lng_max, crs, scheme)
 
-        tiles = [xy_min, xy_max]
-    return tiles
+        x_min = min(xy_min[0], xy_max[0])
+        x_max = max(xy_min[0], xy_max[0])
+        y_min = min(xy_min[1], xy_max[1])
+        y_max = max(xy_min[1], xy_max[1])
+
+        tile_bounds = {
+            "x_min": x_min,
+            "x_max": x_max,
+            "y_min": y_min,
+            "y_max": y_max,
+            "width": x_max-x_min+1,
+            "height": y_max-y_min+1
+        }
+    return tile_bounds
 
 
 def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
@@ -136,20 +150,15 @@ def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
 
 
 def get_all_tiles(bounds, is_cancel_requested_handler):
-    nr_tiles_x = int(math.fabs(bounds[1][0] - bounds[0][0]) + 1)
-    nr_tiles_y = int(math.fabs(bounds[1][1] - bounds[0][1]) + 1)
-
-    min_x = min(bounds[0][0], bounds[1][0])
-    min_y = min(bounds[0][1], bounds[1][1])
-
+    print "get all tiles: ", bounds
     tiles = []
-    for x in range(nr_tiles_x):
+    for x in range(bounds["width"]):
         QApplication.processEvents()
         if is_cancel_requested_handler():
             break
-        for y in range(nr_tiles_y):
-            col = x + min_x
-            row = y + min_y
+        for y in range(bounds["height"]):
+            col = x + bounds["x_min"]
+            row = y + bounds["y_min"]
             tiles.append((col, row))
     return tiles
 

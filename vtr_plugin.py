@@ -85,7 +85,7 @@ class VtrPlugin:
             self._load_tiles(path=self._current_source_path,
                              options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
-                             extent_to_load=extent,
+                             bounds=extent,
                              ignore_limit=True)
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
@@ -100,8 +100,8 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
-        return tile
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
+        return tile_bounds
 
     def _on_connect(self, connection_name, path_or_url):
         debug("Connect to path_or_url: {}", path_or_url)
@@ -152,7 +152,7 @@ class VtrPlugin:
         self._load_tiles(path=path_or_url,
                          options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
-                         extent_to_load=extent)
+                         bounds=extent)
         self._current_source_path = path_or_url
         self._current_layer_filter = selected_layers
 
@@ -199,7 +199,7 @@ class VtrPlugin:
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _load_tiles(self, path, options, layers_to_load, extent_to_load=None, reader=None, ignore_limit=False):
+    def _load_tiles(self, path, options, layers_to_load, bounds=None, reader=None, ignore_limit=False):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -229,7 +229,7 @@ class VtrPlugin:
                                   merge_tiles=merge_tiles,
                                   apply_styles=apply_styles,
                                   max_tiles=tile_limit,
-                                  extent_to_load=extent_to_load,
+                                  bounds=bounds,
                                   limit_reacher_handler=lambda: self._show_limit_exceeded_message(tile_limit))
                 self.refresh_layers()
                 debug("Loading complete!")
