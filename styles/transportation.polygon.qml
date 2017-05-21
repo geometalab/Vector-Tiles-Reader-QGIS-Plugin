@@ -1,28 +1,13 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="_geotype">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="oneway">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="ramp">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="_zoomLevel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_row">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_col">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_featureNr">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="class">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="oneway">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
@@ -190,7 +175,7 @@
     <property key="labeling/zIndex" value="0"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
-    <property key="vector_tile_source" value="http://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
+    <property key="vector_tile_source" value="https://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
@@ -247,27 +232,17 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform></annotationform>
   <aliases>
-    <alias field="_geotype" index="0" name=""/>
-    <alias field="oneway" index="1" name=""/>
-    <alias field="ramp" index="2" name=""/>
-    <alias field="_zoomLevel" index="3" name=""/>
-    <alias field="_row" index="4" name=""/>
-    <alias field="_col" index="5" name=""/>
-    <alias field="_featureNr" index="6" name=""/>
-    <alias field="class" index="7" name=""/>
+    <alias field="ramp" index="0" name=""/>
+    <alias field="class" index="1" name=""/>
+    <alias field="oneway" index="2" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="1456587648">
     <columns>
-      <column width="-1" hidden="0" type="field" name="_geotype"/>
       <column width="-1" hidden="0" type="field" name="oneway"/>
       <column width="-1" hidden="0" type="field" name="ramp"/>
-      <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
-      <column width="-1" hidden="0" type="field" name="_row"/>
-      <column width="-1" hidden="0" type="field" name="_col"/>
-      <column width="-1" hidden="0" type="field" name="_featureNr"/>
       <column width="-1" hidden="0" type="field" name="class"/>
       <column width="-1" hidden="1" type="actions"/>
     </columns>
@@ -301,14 +276,9 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="_geotype" expression=""/>
-    <default field="oneway" expression=""/>
     <default field="ramp" expression=""/>
-    <default field="_zoomLevel" expression=""/>
-    <default field="_row" expression=""/>
-    <default field="_col" expression=""/>
-    <default field="_featureNr" expression=""/>
     <default field="class" expression=""/>
+    <default field="oneway" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
   <layerGeometryType>2</layerGeometryType>

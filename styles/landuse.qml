@@ -1,19 +1,7 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="_row">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_featureNr">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_zoomLevel">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="class">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="_col">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
@@ -51,7 +39,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="1">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="240,240,216,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -66,7 +54,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="10">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="242,218,217,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -81,7 +69,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="11">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="235,219,232,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -96,7 +84,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="12">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="255,214,209,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -111,7 +99,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="13">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="217,208,201,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -126,7 +114,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="2">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="240,240,216,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -141,7 +129,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="3">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="224,223,223,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -156,7 +144,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="4">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="240,240,216,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -171,7 +159,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="5">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="224,223,223,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -186,7 +174,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="6">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="240,240,216,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -201,7 +189,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="7">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="235,219,232,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -216,7 +204,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="8">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="170,203,175,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -231,7 +219,7 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="fill" name="9">
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="231,180,172,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -244,7 +232,7 @@
           <prop k="outline_width_unit" v="MM"/>
           <prop k="style" v="solid"/>
         </layer>
-        <layer pass="0" class="SimpleFill" locked="0">
+        <layer pass="1" class="SimpleFill" locked="0">
           <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="color" v="233,157,153,255"/>
           <prop k="joinstyle" v="bevel"/>
@@ -401,9 +389,10 @@
     <property key="labeling/xOffset" value="0"/>
     <property key="labeling/yOffset" value="0"/>
     <property key="labeling/zIndex" value="0"/>
+    <property key="layerStyle" value="C:\Users\Martin\.qgis2\python\plugins\Vector-Tiles-Reader-QGIS-Plugin\styles/landuse.qml"/>
     <property key="variableNames"/>
     <property key="variableValues"/>
-    <property key="vector_tile_source" value="http://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
+    <property key="vector_tile_source" value="https://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"/>
   </customproperties>
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
@@ -433,6 +422,7 @@
   <SingleCategoryDiagramRenderer diagramType="Histogram" sizeLegend="0" attributeLegend="1">
     <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" sizeScale="0,0,0,0,0,0" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" lineSizeScale="0,0,0,0,0,0" sizeType="MM" lineSizeType="MM" minScaleDenominator="inf">
       <fontProperties description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0" style=""/>
+      <attribute field="" color="#000000" label=""/>
     </DiagramCategory>
     <symbol alpha="1" clip_to_extent="1" type="marker" name="sizeSymbol">
       <layer pass="0" class="SimpleMarker" locked="0">
@@ -460,11 +450,7 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform></annotationform>
   <aliases>
-    <alias field="_row" index="0" name=""/>
-    <alias field="_featureNr" index="1" name=""/>
-    <alias field="_zoomLevel" index="2" name=""/>
-    <alias field="class" index="3" name=""/>
-    <alias field="_col" index="4" name=""/>
+    <alias field="class" index="0" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -473,10 +459,6 @@
     <columns>
       <column width="-1" hidden="0" type="field" name="class"/>
       <column width="-1" hidden="1" type="actions"/>
-      <column width="-1" hidden="0" type="field" name="_row"/>
-      <column width="-1" hidden="0" type="field" name="_featureNr"/>
-      <column width="-1" hidden="0" type="field" name="_zoomLevel"/>
-      <column width="-1" hidden="0" type="field" name="_col"/>
     </columns>
   </attributetableconfig>
   <editform></editform>
@@ -508,11 +490,7 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="_row" expression=""/>
-    <default field="_featureNr" expression=""/>
-    <default field="_zoomLevel" expression=""/>
     <default field="class" expression=""/>
-    <default field="_col" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
   <layerGeometryType>2</layerGeometryType>

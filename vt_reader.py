@@ -426,13 +426,13 @@ class VtReader:
         :return: 
         """
         try:
-            name = layer.name().split(VtReader._zoom_level_delimiter)[0]
+            name = layer.name().split(VtReader._zoom_level_delimiter)[0].lower()
             styles = [
-                "{}.{}".format(name, geo_type),
+                "{}.{}".format(name, geo_type.lower()),
                 name
             ]
             for p in styles:
-                style_name = "{}.qml".format(p)
+                style_name = "{}.qml".format(p).lower()
                 if style_name in VtReader._styles:
                     style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
                     res = layer.loadNamedStyle(style_path)
