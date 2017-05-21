@@ -150,7 +150,6 @@ def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
 
 
 def get_all_tiles(bounds, is_cancel_requested_handler):
-    print "get all tiles: ", bounds
     tiles = []
     for x in range(bounds["width"]):
         QApplication.processEvents()
