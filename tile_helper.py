@@ -184,7 +184,7 @@ _directions = {
 
 
 def get_tiles_from_center(nr_of_tiles, available_tiles):
-    if nr_of_tiles >= len(available_tiles):
+    if not nr_of_tiles or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles
 
     min_x = min(map(lambda t: t[0], available_tiles))

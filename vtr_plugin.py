@@ -81,11 +81,11 @@ class VtrPlugin:
             self._create_progress_dialog(self.iface.mainWindow())
             scheme = self.reader.source.scheme()
             zoom = self._get_current_zoom()
-            extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+            bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             self._load_tiles(path=self._current_source_path,
                              options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
-                             bounds=extent,
+                             bounds=bounds,
                              ignore_limit=True)
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
