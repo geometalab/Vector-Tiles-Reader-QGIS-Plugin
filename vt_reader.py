@@ -40,6 +40,7 @@ class VtReader:
 
     cartographic_layer_ordering = [
         "place",
+        "mountain_peak",
         "housenumber",
         "water_name",
         "transportation_name",
