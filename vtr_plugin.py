@@ -41,6 +41,7 @@ class VtrPlugin:
         self.connections_dialog = ConnectionsDialog(FileHelper.get_sample_data_directory())
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
+        self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
         self.progress_dialog = None
         self._current_reader = None
         self._current_options = None
@@ -58,7 +59,7 @@ class VtrPlugin:
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self.connections_dialog.show)
+        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
@@ -75,6 +76,16 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         info("Vector Tile Reader Plugin loaded...")
+
+    def _update_nr_of_tiles(self):
+        zoom = self._get_current_zoom()
+        bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
+        nr_of_tiles = bounds["width"] * bounds["height"]
+        self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
+
+    def _show_connections_dialog(self):
+        self._update_nr_of_tiles()
+        self.connections_dialog.show()
 
     def _reload_tiles(self):
         if self._current_source_path:
@@ -157,7 +168,9 @@ class VtrPlugin:
         self._current_layer_filter = selected_layers
 
     def _get_current_zoom(self):
-        zoom = self.reader.source.max_zoom()
+        zoom = 14
+        if self.reader:
+            zoom = self.reader.source.max_zoom()
         if zoom is None:
             zoom = 14
         manual_zoom = self.connections_dialog.options.manual_zoom()

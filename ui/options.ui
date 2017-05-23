@@ -53,10 +53,36 @@
     </widget>
    </item>
    <item row="1" column="0" colspan="2">
-    <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,0,0">
+    <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,0,0,0">
      <property name="horizontalSpacing">
       <number>6</number>
      </property>
+     <item row="1" column="3">
+      <spacer name="horizontalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="1" column="0">
+      <widget class="QCheckBox" name="chkLimitNrOfTiles">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this option is enabled, only the specified number of tiles will be loaded from the selected source. &lt;/p&gt;&lt;p&gt;Cached tiles are not affected by this limit. Therefore, there may be more tiles visible when loading is complete.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Loaded tile limit</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
      <item row="1" column="1" alignment="Qt::AlignLeft|Qt::AlignVCenter">
       <widget class="QSpinBox" name="spinNrOfLoadedTiles">
        <property name="enabled">
@@ -79,31 +105,12 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QCheckBox" name="chkLimitNrOfTiles">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this option is enabled, only the specified number of tiles will be loaded from the selected source. &lt;/p&gt;&lt;p&gt;Cached tiles are not affected by this limit. Therefore, there may be more tiles visible when loading is complete.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
+     <item row="1" column="2">
+      <widget class="QLabel" name="lblNumberTilesInCurrentExtent">
        <property name="text">
-        <string>Loaded tile limit</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
+        <string>(Current extent: n tiles)</string>
        </property>
       </widget>
-     </item>
-     <item row="1" column="2">
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>

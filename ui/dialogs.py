@@ -36,14 +36,32 @@ class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
 
 class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
-    def __init__(self, target_groupbox):
+    on_zoom_change = pyqtSignal()
+
+    def __init__(self, target_groupbox, zoom_change_handler):
+        self._zoom_change_handler = zoom_change_handler
         self.setupUi(target_groupbox)
         self.lblZoomRange.setText("")
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
-        self.rbZoomManual.toggled.connect(lambda enabled: self.zoomSpin.setEnabled(enabled))
+        self.rbZoomManual.toggled.connect(self._on_manual_zoom_selected)
+        self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
+        self.zoomSpin.valueChanged.connect(self._on_zoom_change)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self._reset_to_basemap_defaults()
+
+    def _on_manual_zoom_selected(self, enabled):
+        self.zoomSpin.setEnabled(enabled)
+        self._zoom_change_handler()
+
+    def _on_zoom_change(self):
+        self._zoom_change_handler()
+
+    def _on_max_zoom_selected(self, enabled):
+        self._zoom_change_handler()
+
+    def set_nr_of_tiles(self, nr_tiles):
+        self.lblNumberTilesInCurrentExtent.setText("(Current extent: {} tiles)".format(nr_tiles))
 
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True,
@@ -160,6 +178,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(str, str)
     on_add = pyqtSignal(str, list)
+    on_connection_change = pyqtSignal()
+    on_zoom_change = pyqtSignal()
 
     _connections_array = "connections"
     _table_headers = OrderedDict([
@@ -178,7 +198,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self.grpCrs.setVisible(False)
-        self.options = OptionsGroup(self.grpOptions)
+        self.options = OptionsGroup(self.grpOptions, self._on_zoom_change)
+        # self.options.on_zoom_change.connect(self._on_zoom_change)
         self.settings = QSettings("VtrSettings")
         self.connections = {}
         self.selected_connection = None
@@ -198,6 +219,12 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self._load_connections()
         self._add_loaded_connections()
         self.edit_connection_dialog = EditConnectionDialog(default_directory=default_browse_directory)
+
+    def _on_zoom_change(self):
+        self.on_zoom_change.emit()
+
+    def set_nr_of_tiles(self, nr_tiles):
+        self.options.set_nr_of_tiles(nr_tiles)
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
@@ -327,6 +354,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.btnConnect.setEnabled(enable_connect)
         self.btnEdit.setEnabled(enable_edit)
         self.btnDelete.setEnabled(enable_edit)
+        self.on_connection_change.emit()
 
 
 class EditConnectionDialog(QtGui.QDialog, Ui_DlgEditConnection):
