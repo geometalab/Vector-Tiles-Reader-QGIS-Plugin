@@ -262,6 +262,7 @@ class VtReader:
         :param data: 
         :return: 
         """
+        decoded_data = None
         if data:
             try:
                 is_gzipped = FileHelper.is_gzipped(data)

@@ -69,7 +69,7 @@ class FileHelper:
     @staticmethod
     def cache_tile(tile, file_name):
         if not tile.decoded_data:
-            raise RuntimeError("only decoded tiles can be cached")
+            warn("Trying to cache a tile without data: {}", tile)
 
         file_path = os.path.join(FileHelper.get_cache_directory(), file_name)
         try:
