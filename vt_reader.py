@@ -18,6 +18,8 @@ from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource
 
+from mp_helper import decode_tile
+
 import multiprocessing as mp
 # from multiprocessing import Pool as ThreadPool
 
@@ -33,6 +35,22 @@ class _GeoTypes:
     POLYGON = "Polygon"
 
 GeoTypes = _GeoTypes()
+
+
+
+
+def _decode_tile(tile_data_tuple):
+    print tile_data_tuple
+    a = 3+2
+    return 1
+    # tile = tile_data_tuple[0]
+    # if tile.decoded_data:
+    #     raise RuntimeError("Tile is already encoded: {}", tile)
+    #
+    # encoded_data = tile_data_tuple[1]
+    #
+    # tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
+    # return tile
 
 
 class VtReader:
@@ -216,17 +234,31 @@ class VtReader:
         current_progress = -1
 
         # OSGeo4W does not bundle python in exec_prefix for python
-        # path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-        # print path
-        # mp.set_executable(path)
-        # sys.argv = [None]
+        path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+        print path
+        mp.set_executable(path)
+        sys.argv = [None]
+
+        # for t in tiles_with_encoded_data:
+        #     print str(t[1])
+        #
+        # all_proccesses = map(lambda t: mp.Process(target=_decode_tile, args=(str("hello"),)), tiles_with_encoded_data)
+
+        # p = mp.Process(target=_decode_tile, args=(tile_data,))
+        # for p in all_proccesses:
+        #     p.start()
+        #
+        # for p in all_proccesses:
+        #     p.join()
+
+        # data = map(lambda t: t[1], tiles_with_encoded_data)
 
         print "creating thread pool"
-        pool = mp.Pool(1)
+        pool = mp.Pool(4)
         print "thread pool created"
-        tiles = pool.map(self._decode_tile, tiles_with_encoded_data)
+        tiles = pool.map(decode_tile, tiles_with_encoded_data)
         print "all mapped"
-        pool.close()
+        # pool.close()
         print "pool closed"
 
         # for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
@@ -242,15 +274,6 @@ class VtReader:
         #         self._update_progress(progress=progress)
         return tiles
 
-    def _decode_tile(self, tile_data_tuple):
-        tile = tile_data_tuple[0]
-        if tile.decoded_data:
-            raise RuntimeError("Tile is already encoded: {}", tile)
-
-        encoded_data = tile_data_tuple[1]
-
-        tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
-        return tile
 
     # def _decode_tiles(self, tiles_with_encoded_data):
     #     """
