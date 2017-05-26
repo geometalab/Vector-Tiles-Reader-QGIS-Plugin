@@ -203,8 +203,8 @@ class VtReader:
         """
          * Decodes the PBF data from all the specified tiles and reports the progress
          * If a tile is loaded from the cache, the decoded_data is already set and doesn't have to be encoded
-        :param tiles_with_encoded_data: 
-        :return: 
+        :param tiles_with_encoded_data:
+        :return:
         """
         tiles = []
         total_nr_tiles = len(tiles_with_encoded_data)
@@ -215,19 +215,7 @@ class VtReader:
             QApplication.processEvents()
             if self.cancel_requested:
                 break
-            tile = tile_data_tuple[0]
-            if tile.decoded_data:
-                raise RuntimeError("Tile is already encoded: {}", tile)
-
-            encoded_data = tile_data_tuple[1]
-
-            cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
-            cached_tile = FileHelper.get_cached_tile(cache_file_name)
-            if cached_tile:
-                tile = cached_tile
-            else:
-                tile.decoded_data = self._decode_binary_tile_data(encoded_data)
-                FileHelper.cache_tile(tile, cache_file_name)
+            tile = self._decode_tile(tile_data_tuple)
             if tile.decoded_data:
                 tiles.append(tile)
             progress = int(100.0 / total_nr_tiles * (index + 1))
@@ -235,6 +223,22 @@ class VtReader:
                 current_progress = progress
                 self._update_progress(progress=progress)
         return tiles
+
+    def _decode_tile(self, tile_data_tuple):
+        tile = tile_data_tuple[0]
+        if tile.decoded_data:
+            raise RuntimeError("Tile is already encoded: {}", tile)
+
+        encoded_data = tile_data_tuple[1]
+
+        cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
+        cached_tile = FileHelper.get_cached_tile(cache_file_name)
+        if cached_tile:
+            tile = cached_tile
+        else:
+            tile.decoded_data = self._decode_binary_tile_data(encoded_data)
+            FileHelper.cache_tile(tile, cache_file_name)
+        return tile
 
     def _process_tiles(self, tiles, layer_filter):
         """
@@ -353,7 +357,7 @@ class VtReader:
                 self._merge_feature_collections(current_feature_collection=complete_collection,
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
-                    json.dump(complete_collection, f)
+                    f.write(json.dumps(complete_collection))
                 layer = self._add_vector_layer_to_qgis(file_path, layer_name, zoom_level, target_group, merge_features, geo_type)
                 if apply_styles:
                     layers.append((layer_name_and_type, layer))
