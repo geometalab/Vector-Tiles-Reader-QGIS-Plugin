@@ -22,14 +22,14 @@ from mp_helper import decode_tile
 
 import multiprocessing as mp
 import mapbox_vector_tile
+import platform
 
-
-# todo: execute this code only on windows systems
-# OSGeo4W does not bundle python in exec_prefix for python
-path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-# print path
-mp.set_executable(path)
-sys.argv = [None]
+if platform.system() == "Windows":
+    # OSGeo4W does not bundle python in exec_prefix for python
+    path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+    # print path
+    mp.set_executable(path)
+    sys.argv = [None]
 
 
 class _GeoTypes:
