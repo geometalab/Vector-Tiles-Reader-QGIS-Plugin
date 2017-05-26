@@ -21,9 +21,15 @@ from tile_source import ServerSource, MBTilesSource
 from mp_helper import decode_tile
 
 import multiprocessing as mp
-# from multiprocessing import Pool as ThreadPool
-
 import mapbox_vector_tile
+
+
+# todo: execute this code only on windows systems
+# OSGeo4W does not bundle python in exec_prefix for python
+path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+# print path
+mp.set_executable(path)
+sys.argv = [None]
 
 
 class _GeoTypes:
@@ -35,22 +41,6 @@ class _GeoTypes:
     POLYGON = "Polygon"
 
 GeoTypes = _GeoTypes()
-
-
-
-
-def _decode_tile(tile_data_tuple):
-    print tile_data_tuple
-    a = 3+2
-    return 1
-    # tile = tile_data_tuple[0]
-    # if tile.decoded_data:
-    #     raise RuntimeError("Tile is already encoded: {}", tile)
-    #
-    # encoded_data = tile_data_tuple[1]
-    #
-    # tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
-    # return tile
 
 
 class VtReader:
@@ -227,94 +217,31 @@ class VtReader:
         :param tiles_with_encoded_data:
         :return:
         """
-        tiles = []
         total_nr_tiles = len(tiles_with_encoded_data)
         info("Decoding {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Decoding tiles...")
-        current_progress = -1
 
-        # OSGeo4W does not bundle python in exec_prefix for python
-        path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-        print path
-        mp.set_executable(path)
-        sys.argv = [None]
+        nr_processors = 4
+        try:
+            nr_processors = mp.cpu_count()
+        except NotImplementedError:
+            info("CPU count cannot be retrieved. Falling back to default = 4")
 
-        # for t in tiles_with_encoded_data:
-        #     print str(t[1])
-        #
-        # all_proccesses = map(lambda t: mp.Process(target=_decode_tile, args=(str("hello"),)), tiles_with_encoded_data)
+        pool = mp.Pool(nr_processors)
+        tiles = []
+        rs = pool.map_async(decode_tile, tiles_with_encoded_data, callback=tiles.extend)
+        pool.close()
+        current_progress = 0
+        while not rs.ready() and not self.cancel_requested:
+            QApplication.processEvents()
+            remaining = rs._number_left
+            index = total_nr_tiles - remaining
+            progress = int(100.0 / total_nr_tiles * (index + 1))
+            if progress != current_progress:
+                current_progress = progress
+                self._update_progress(progress=progress)
 
-        # p = mp.Process(target=_decode_tile, args=(tile_data,))
-        # for p in all_proccesses:
-        #     p.start()
-        #
-        # for p in all_proccesses:
-        #     p.join()
-
-        # data = map(lambda t: t[1], tiles_with_encoded_data)
-
-        print "creating thread pool"
-        pool = mp.Pool(4)
-        print "thread pool created"
-        tiles = pool.map(decode_tile, tiles_with_encoded_data)
-        print "all mapped"
-        # pool.close()
-        print "pool closed"
-
-        # for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
-        #     QApplication.processEvents()
-        #     if self.cancel_requested:
-        #         break
-        #     tile = self._decode_tile(tile_data_tuple)
-        #     if tile.decoded_data:
-        #         tiles.append(tile)
-        #     progress = int(100.0 / total_nr_tiles * (index + 1))
-        #     if progress != current_progress:
-        #         current_progress = progress
-        #         self._update_progress(progress=progress)
         return tiles
-
-
-    # def _decode_tiles(self, tiles_with_encoded_data):
-    #     """
-    #      * Decodes the PBF data from all the specified tiles and reports the progress
-    #      * If a tile is loaded from the cache, the decoded_data is already set and doesn't have to be encoded
-    #     :param tiles_with_encoded_data:
-    #     :return:
-    #     """
-    #     tiles = []
-    #     total_nr_tiles = len(tiles_with_encoded_data)
-    #     info("Decoding {} tiles", total_nr_tiles)
-    #     self._update_progress(progress=0, max_progress=100, msg="Decoding tiles...")
-    #     current_progress = -1
-    #     for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
-    #         QApplication.processEvents()
-    #         if self.cancel_requested:
-    #             break
-    #         tile = self._decode_tile(tile_data_tuple)
-    #         if tile.decoded_data:
-    #             tiles.append(tile)
-    #         progress = int(100.0 / total_nr_tiles * (index + 1))
-    #         if progress != current_progress:
-    #             current_progress = progress
-    #             self._update_progress(progress=progress)
-    #     return tiles
-
-    # def _decode_tile(self, tile_data_tuple):
-    #     tile = tile_data_tuple[0]
-    #     if tile.decoded_data:
-    #         raise RuntimeError("Tile is already encoded: {}", tile)
-    #
-    #     encoded_data = tile_data_tuple[1]
-    #
-    #     cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
-    #     cached_tile = FileHelper.get_cached_tile(cache_file_name)
-    #     if cached_tile:
-    #         tile = cached_tile
-    #     else:
-    #         tile.decoded_data = self._decode_binary_tile_data(encoded_data)
-    #         FileHelper.cache_tile(tile, cache_file_name)
-    #     return tile
 
     def _process_tiles(self, tiles, layer_filter):
         """
@@ -565,24 +492,25 @@ class VtReader:
                     continue
 
             tile_features = tile.decoded_data[layer_name]["features"]
+            tile_id = tile.id()
+            feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
             for index, feature in enumerate(tile_features):
-                if self._is_feature_already_loaded(feature, tile):
+                if self._is_duplicate_feature(feature, tile):
                     continue
 
                 geojson_feature, geo_type = self._create_geojson_feature(feature, tile)
                 if geojson_feature:
-                    feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
                     path_and_type = (feature_path, geo_type)
                     if path_and_type not in self.feature_collections_by_layer_path:
                         self.feature_collections_by_layer_path[path_and_type] = {}
                     collection_dict = self.feature_collections_by_layer_path[path_and_type]
-                    if tile.id() not in collection_dict:
-                        collection_dict[tile.id()] = VtReader._get_empty_feature_collection()
-                    collection = collection_dict[tile.id()]
+                    if tile_id not in collection_dict:
+                        collection_dict[tile_id] = VtReader._get_empty_feature_collection()
+                    collection = collection_dict[tile_id]
 
                     collection["features"].append(geojson_feature)
-                    if tile.id() not in collection["tiles"]:
-                        collection["tiles"].append(tile.id())
+                    if tile_id not in collection["tiles"]:
+                        collection["tiles"].append(tile_id)
 
                     geotypes_to_dissolve = [GeoTypes.POLYGON, GeoTypes.LINE_STRING]
                     if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:
@@ -643,7 +571,7 @@ class VtReader:
             icon_name = class_icon
         return icon_name
 
-    def _is_feature_already_loaded(self, feature, tile):
+    def _is_duplicate_feature(self, feature, tile):
         """
          * Returns true if the same feature has already been loaded
          * If the feature has not been loaded, it is marked as loaded by calling this function
