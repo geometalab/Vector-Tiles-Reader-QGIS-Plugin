@@ -18,6 +18,9 @@ from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource
 
+import multiprocessing as mp
+# from multiprocessing import Pool as ThreadPool
+
 import mapbox_vector_tile
 
 
@@ -211,17 +214,32 @@ class VtReader:
         info("Decoding {} tiles", total_nr_tiles)
         self._update_progress(progress=0, max_progress=100, msg="Decoding tiles...")
         current_progress = -1
-        for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
-            QApplication.processEvents()
-            if self.cancel_requested:
-                break
-            tile = self._decode_tile(tile_data_tuple)
-            if tile.decoded_data:
-                tiles.append(tile)
-            progress = int(100.0 / total_nr_tiles * (index + 1))
-            if progress != current_progress:
-                current_progress = progress
-                self._update_progress(progress=progress)
+
+        # OSGeo4W does not bundle python in exec_prefix for python
+        # path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+        # print path
+        # mp.set_executable(path)
+        # sys.argv = [None]
+
+        print "creating thread pool"
+        pool = mp.Pool(1)
+        print "thread pool created"
+        tiles = pool.map(self._decode_tile, tiles_with_encoded_data)
+        print "all mapped"
+        pool.close()
+        print "pool closed"
+
+        # for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
+        #     QApplication.processEvents()
+        #     if self.cancel_requested:
+        #         break
+        #     tile = self._decode_tile(tile_data_tuple)
+        #     if tile.decoded_data:
+        #         tiles.append(tile)
+        #     progress = int(100.0 / total_nr_tiles * (index + 1))
+        #     if progress != current_progress:
+        #         current_progress = progress
+        #         self._update_progress(progress=progress)
         return tiles
 
     def _decode_tile(self, tile_data_tuple):
@@ -231,14 +249,49 @@ class VtReader:
 
         encoded_data = tile_data_tuple[1]
 
-        cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
-        cached_tile = FileHelper.get_cached_tile(cache_file_name)
-        if cached_tile:
-            tile = cached_tile
-        else:
-            tile.decoded_data = self._decode_binary_tile_data(encoded_data)
-            FileHelper.cache_tile(tile, cache_file_name)
+        tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
         return tile
+
+    # def _decode_tiles(self, tiles_with_encoded_data):
+    #     """
+    #      * Decodes the PBF data from all the specified tiles and reports the progress
+    #      * If a tile is loaded from the cache, the decoded_data is already set and doesn't have to be encoded
+    #     :param tiles_with_encoded_data:
+    #     :return:
+    #     """
+    #     tiles = []
+    #     total_nr_tiles = len(tiles_with_encoded_data)
+    #     info("Decoding {} tiles", total_nr_tiles)
+    #     self._update_progress(progress=0, max_progress=100, msg="Decoding tiles...")
+    #     current_progress = -1
+    #     for index, tile_data_tuple in enumerate(tiles_with_encoded_data):
+    #         QApplication.processEvents()
+    #         if self.cancel_requested:
+    #             break
+    #         tile = self._decode_tile(tile_data_tuple)
+    #         if tile.decoded_data:
+    #             tiles.append(tile)
+    #         progress = int(100.0 / total_nr_tiles * (index + 1))
+    #         if progress != current_progress:
+    #             current_progress = progress
+    #             self._update_progress(progress=progress)
+    #     return tiles
+
+    # def _decode_tile(self, tile_data_tuple):
+    #     tile = tile_data_tuple[0]
+    #     if tile.decoded_data:
+    #         raise RuntimeError("Tile is already encoded: {}", tile)
+    #
+    #     encoded_data = tile_data_tuple[1]
+    #
+    #     cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
+    #     cached_tile = FileHelper.get_cached_tile(cache_file_name)
+    #     if cached_tile:
+    #         tile = cached_tile
+    #     else:
+    #         tile.decoded_data = self._decode_binary_tile_data(encoded_data)
+    #         FileHelper.cache_tile(tile, cache_file_name)
+    #     return tile
 
     def _process_tiles(self, tiles, layer_filter):
         """
