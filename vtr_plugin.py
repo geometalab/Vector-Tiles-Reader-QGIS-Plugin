@@ -20,7 +20,7 @@ from qgis.core import *
 from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, convert_coordinate
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
 import os
@@ -112,6 +112,8 @@ class VtrPlugin:
         bounds.extend(min_proj)
         bounds.extend(max_proj)
         tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
+
+        debug("Current extent: {}", tile_bounds)
         return tile_bounds
 
     def _on_connect(self, connection_name, path_or_url):
@@ -196,7 +198,8 @@ class VtrPlugin:
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-        self.iface.mapCanvas().mapSettings().setDestinationCrs(crs)
+        # self.iface.mapCanvas().mapSettings().setDestinationCrs(crs)
+        self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
 
     def _create_progress_dialog(self, owner):
         self.progress_dialog = ProgressDialog(owner)
