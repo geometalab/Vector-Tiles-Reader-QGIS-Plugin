@@ -9,7 +9,7 @@ import math
 
 from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
-from tile_helper import get_all_tiles, change_zoom
+from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg
 from feature_helper import FeatureMerger
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
@@ -27,7 +27,6 @@ import platform
 if platform.system() == "Windows":
     # OSGeo4W does not bundle python in exec_prefix for python
     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-    # print path
     mp.set_executable(path)
     sys.argv = [None]
 
@@ -102,12 +101,18 @@ class VtReader:
         if self.progress_handler:
             self.progress_handler(title, progress, max_progress, msg, show_dialog)
 
-    @staticmethod
-    def _get_empty_feature_collection(epsg_id=3857):
+    def _get_empty_feature_collection(self):
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
         # todo: when improving CRS handling: the correct CRS of the source has to be set here
+
+        source_crs = self.source.crs()
+        if source_crs:
+            epsg_id = get_code_from_epsg(source_crs)
+        else:
+            epsg_id = 3857
+
         crs = {
             "type": "name",
             "properties": {
@@ -505,7 +510,7 @@ class VtReader:
                         self.feature_collections_by_layer_path[path_and_type] = {}
                     collection_dict = self.feature_collections_by_layer_path[path_and_type]
                     if tile_id not in collection_dict:
-                        collection_dict[tile_id] = VtReader._get_empty_feature_collection()
+                        collection_dict[tile_id] = self._get_empty_feature_collection()
                     collection = collection_dict[tile_id]
 
                     collection["features"].append(geojson_feature)
