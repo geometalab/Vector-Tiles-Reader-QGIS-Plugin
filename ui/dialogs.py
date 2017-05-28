@@ -6,7 +6,7 @@ import resources_rc  # don't remove this import, otherwise the icons won't be wo
 from collections import OrderedDict
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, QSettings
-from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem
+from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem, QApplication
 from dlg_connections import Ui_DlgConnections
 from dlg_edit_connection import Ui_DlgEditConnection
 from dlg_about import Ui_DlgAbout
@@ -17,11 +17,23 @@ from options import Ui_OptionsGroup
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
 
 
+def _update_size(dialog, fix_size=False):
+    screen_resolution = QApplication.desktop().screenGeometry()
+    screen_width, screen_height = screen_resolution.width(), screen_resolution.height()
+    new_width = dialog.width() / 1920 * screen_width
+    new_height = dialog.height() / 1080 * screen_height
+    if fix_size:
+        dialog.setFixedSize(new_width, new_height)
+    else:
+        dialog.setMinimumSize(new_width, new_height)
+
+
 class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self._load_about()
+        _update_size(self)
 
     def _load_about(self):
         about_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "about.html")
@@ -140,6 +152,7 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
         self.lblMessage.setVisible(False)
         self.btnCancel.clicked.connect(self._on_cancel)
         self._is_loading = False
+        _update_size(self)
 
     def _on_cancel(self):
         self.btnCancel.setText("Cancelling...")
@@ -219,6 +232,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self._load_connections()
         self._add_loaded_connections()
         self.edit_connection_dialog = EditConnectionDialog(default_directory=default_browse_directory)
+        _update_size(self)
 
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
@@ -367,6 +381,7 @@ class EditConnectionDialog(QtGui.QDialog, Ui_DlgEditConnection):
         self.btnBrowse.clicked.connect(self._select_file_path)
         self.open_path = None
         self.browse_path = default_directory
+        _update_size(self)
 
     def set_name_and_path(self, name, path_or_url):
         if path_or_url is not None:
