@@ -20,12 +20,13 @@ _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
 def _update_size(dialog, fix_size=False):
     screen_resolution = QApplication.desktop().screenGeometry()
     screen_width, screen_height = screen_resolution.width(), screen_resolution.height()
-    new_width = dialog.width() / 1920 * screen_width
-    new_height = dialog.height() / 1080 * screen_height
-    if fix_size:
-        dialog.setFixedSize(new_width, new_height)
-    else:
-        dialog.setMinimumSize(new_width, new_height)
+    if screen_width > 1920 or screen_height > 1080:
+        new_width = dialog.width() / 1920 * screen_width
+        new_height = dialog.height() / 1080 * screen_height
+        if fix_size:
+            dialog.setFixedSize(new_width, new_height)
+        else:
+            dialog.setMinimumSize(new_width, new_height)
 
 
 class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
