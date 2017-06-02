@@ -1,6 +1,9 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="2.18.6" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="0" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
+    <edittype widgetv2type="TextEdit" name="name">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
     <edittype widgetv2type="TextEdit" name="rank">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
@@ -19,16 +22,14 @@
     <edittype widgetv2type="TextEdit" name="class">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="name">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
   </edittypes>
   <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
     <rules key="{3debb892-8979-4989-bfc2-849898d70b70}">
       <rule scalemaxdenom="5000" filter=" &quot;_symbol&quot; != 'poi.svg'" key="{dbcba705-22ed-48ec-9523-4769796466f0}" symbol="0" scalemindenom="1000" label="poi"/>
-      <rule scalemaxdenom="5000" filter=" &quot;_symbol&quot; = 'poi.svg'" key="{9a206b37-c46e-44cb-a197-1add34e06533}" symbol="1" scalemindenom="1000" label="poi"/>
-      <rule scalemaxdenom="10000" filter=" &quot;_symbol&quot; != 'poi.svg'" key="{45e42188-6e42-4baa-989d-c3762ed18eca}" symbol="2" scalemindenom="5000" label="poi"/>
-      <rule scalemaxdenom="10000" filter=" &quot;_symbol&quot; = 'poi.svg'" key="{601d5c70-50f4-429b-aad9-f72be9b8fbcd}" symbol="3" scalemindenom="5000" label="poi"/>
+      <rule scalemaxdenom="5000" filter=" &quot;_symbol&quot; = 'poi.svg' and &quot;class&quot; not in ('park')" key="{9a206b37-c46e-44cb-a197-1add34e06533}" symbol="1" scalemindenom="1000" label="poi"/>
+      <rule filter=" &quot;class&quot; in ('park')" key="{fe14439b-a2f7-4938-86a0-03cad789ef5d}" symbol="2"/>
+      <rule scalemaxdenom="10000" filter=" &quot;_symbol&quot; != 'poi.svg'" key="{45e42188-6e42-4baa-989d-c3762ed18eca}" symbol="3" scalemindenom="5000" label="poi"/>
+      <rule scalemaxdenom="10000" filter=" &quot;_symbol&quot; = 'poi.svg'" key="{601d5c70-50f4-429b-aad9-f72be9b8fbcd}" symbol="4" scalemindenom="5000" label="poi"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="0">
@@ -80,6 +81,28 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="marker" name="2">
+        <layer pass="0" class="SimpleMarker" locked="0">
+          <prop k="angle" v="0"/>
+          <prop k="color" v="152,44,114,0"/>
+          <prop k="horizontal_anchor_point" v="1"/>
+          <prop k="joinstyle" v="bevel"/>
+          <prop k="name" v="circle"/>
+          <prop k="offset" v="0,0"/>
+          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit" v="MM"/>
+          <prop k="outline_color" v="0,0,0,255"/>
+          <prop k="outline_style" v="no"/>
+          <prop k="outline_width" v="0"/>
+          <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="outline_width_unit" v="MM"/>
+          <prop k="scale_method" v="diameter"/>
+          <prop k="size" v="0"/>
+          <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="size_unit" v="MM"/>
+          <prop k="vertical_anchor_point" v="1"/>
+        </layer>
+      </symbol>
+      <symbol alpha="1" clip_to_extent="1" type="marker" name="3">
         <layer pass="1" class="SvgMarker" locked="0">
           <prop k="angle" v="0"/>
           <prop k="color" v="0,0,0,255"/>
@@ -103,7 +126,7 @@
           <prop k="vertical_anchor_point" v="1"/>
         </layer>
       </symbol>
-      <symbol alpha="1" clip_to_extent="1" type="marker" name="3">
+      <symbol alpha="1" clip_to_extent="1" type="marker" name="4">
         <layer pass="1" class="SvgMarker" locked="0">
           <prop k="angle" v="0"/>
           <prop k="color" v="0,0,0,255"/>
@@ -130,8 +153,8 @@
     </symbols>
   </renderer-v2>
   <labeling type="rule-based">
-    <rules key="{af76821b-238a-4339-998e-b1e0b1096613}">
-      <rule description="labelled" filter="&quot;class&quot; in (&#xd;&#xa;'restaurant', &#xd;&#xa;'cafe',&#xd;&#xa;'bar', &#xd;&#xa;'school',&#xd;&#xa;'park',&#xd;&#xa;'attraction',&#xd;&#xa;'college')" key="{b76df7fe-78e5-4080-90f4-45600d588427}">
+    <rules key="{9eaf801d-eac7-4fb9-9a54-925d895ca287}">
+      <rule description="labelled" filter="&quot;class&quot; in (&#xd;&#xa;'restaurant', &#xd;&#xa;'cafe',&#xd;&#xa;'bar', &#xd;&#xa;'school',&#xd;&#xa;'park',&#xd;&#xa;'attraction',&#xd;&#xa;'college')" key="{6598fc78-175b-499b-920f-d78d85e25834}">
         <settings>
           <text-style fontItalic="0" fontFamily="MS Shell Dlg 2" fontLetterSpacing="0" fontUnderline="0" fontWeight="50" fontStrikeout="0" textTransp="0" previewBkgrdColor="#ffffff" fontCapitals="0" textColor="115,74,8,255" fontSizeInMapUnits="0" isExpression="1" blendMode="0" fontSizeMapUnitScale="0,0,0,0,0,0" fontSize="7.25" fieldName="if (length(&quot;name_en&quot;) > 0, &quot;name_en&quot;, &quot;name_de&quot;)" namedStyle="Normal" fontWordSpacing="0" useSubstitutions="0">
             <substitutions/>
@@ -347,13 +370,13 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="0" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="rank" index="0" name=""/>
-    <alias field="name_de" index="1" name=""/>
-    <alias field="_symbol" index="2" name=""/>
-    <alias field="subclass" index="3" name=""/>
-    <alias field="name_en" index="4" name=""/>
-    <alias field="class" index="5" name=""/>
-    <alias field="name" index="6" name=""/>
+    <alias field="name" index="0" name=""/>
+    <alias field="rank" index="1" name=""/>
+    <alias field="name_de" index="2" name=""/>
+    <alias field="_symbol" index="3" name=""/>
+    <alias field="subclass" index="4" name=""/>
+    <alias field="name_en" index="5" name=""/>
+    <alias field="class" index="6" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -399,13 +422,13 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
+    <default field="name" expression=""/>
     <default field="rank" expression=""/>
     <default field="name_de" expression=""/>
     <default field="_symbol" expression=""/>
     <default field="subclass" expression=""/>
     <default field="name_en" expression=""/>
     <default field="class" expression=""/>
-    <default field="name" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
   <layerGeometryType>0</layerGeometryType>
