@@ -101,7 +101,7 @@ class VtReader:
         if self.progress_handler:
             self.progress_handler(title, progress, max_progress, msg, show_dialog)
 
-    def _get_empty_feature_collection(self):
+    def _get_empty_feature_collection(self, zoom_level):
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
@@ -120,6 +120,8 @@ class VtReader:
 
         return {
             "tiles": [],
+            "source": self.source.name(),
+            "zoom_level": zoom_level,
             "type": "FeatureCollection",
             "crs": crs,
             "features": []}
@@ -134,7 +136,7 @@ class VtReader:
             self.source.cancel()
 
     def _get_tile_cache_name(self, zoom_level, col, row):
-        return "{}.{}.{}.{}.bin".format(self.source.name(), zoom_level, col, row)
+        return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
 
     def load_tiles(self, zoom_level, layer_filter, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
                    bounds=None, limit_reacher_handler=None):
@@ -376,7 +378,7 @@ class VtReader:
                     layer.reload()
 
             if not layer:
-                complete_collection = self._get_empty_feature_collection()
+                complete_collection = self._get_empty_feature_collection(zoom_level)
                 self._merge_feature_collections(current_feature_collection=complete_collection,
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
@@ -525,7 +527,7 @@ class VtReader:
                         self.feature_collections_by_layer_path[path_and_type] = {}
                     collection_dict = self.feature_collections_by_layer_path[path_and_type]
                     if tile_id not in collection_dict:
-                        collection_dict[tile_id] = self._get_empty_feature_collection()
+                        collection_dict[tile_id] = self._get_empty_feature_collection(tile.zoom_level)
                     collection = collection_dict[tile_id]
 
                     collection["features"].append(geojson_feature)
