@@ -81,7 +81,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
                            tile_limit=100,
                            styles_enabled=True,
                            merging_enabled=False,
-                           load_mask_layer=False,
+                           load_mask_layer=True,
                            cartographic_ordering=True)
 
     def _reset_to_inspection_defaults(self):
