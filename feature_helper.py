@@ -33,6 +33,8 @@ class FeatureMerger:
         # Create a dictionary of all features
         feature_dict = {f.id(): f for f in layer.getFeatures()}
 
+        idx = layer.fieldNameIndex('class')
+
         # Build a spatial index
         index = QgsSpatialIndex()
         for f in feature_dict.values():
@@ -42,14 +44,14 @@ class FeatureMerger:
             if f[_DISSOLVE_GROUP_FIELD]:
                 continue
             f[_DISSOLVE_GROUP_FIELD] = str(uuid.uuid4())
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(_DISSOLVE_GROUP_FIELD, index, f, [], feature_dict, feature_handler=lambda feat: layer.updateFeature(feat))
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(_DISSOLVE_GROUP_FIELD, index, f, [], feature_dict, feature_handler=lambda feat: layer.updateFeature(feat), feature_class_attr_index=idx)
             layer.updateFeature(f)
         layer.commitChanges()
         debug('Dissolvement complete: {}', layer.name())
         return
 
     @staticmethod
-    def _assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, f, neighbours, feature_dict, feature_handler):
+    def _assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, f, neighbours, feature_dict, feature_handler, feature_class_attr_index):
         geom = f.geometry()
 
         if geom:
@@ -60,14 +62,14 @@ class FeatureMerger:
         new_neighbours = []
         for intersecting_id in intersecting_ids:
             intersecting_f = feature_dict[intersecting_id]
-            if f != intersecting_f and not intersecting_f.geometry().disjoint(geom):
+            if f != intersecting_f and not intersecting_f.geometry().disjoint(geom) and f.attributes()[feature_class_attr_index] == intersecting_f.attributes()[feature_class_attr_index]:
                 if not intersecting_f[dissolve_gorup_field]:
                     intersecting_f[dissolve_gorup_field] = f[dissolve_gorup_field]
                     new_neighbours.append(intersecting_f)
                     feature_handler(intersecting_f)
 
         for n in new_neighbours:
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, n, neighbours, feature_dict, feature_handler)
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, n, neighbours, feature_dict, feature_handler, feature_class_attr_index)
 
         neighbours.extend(new_neighbours)
         return neighbours
