@@ -229,7 +229,7 @@
      <item>
       <widget class="QPushButton" name="btnResetToBasemapDefaults">
        <property name="text">
-        <string>Reset to Basemap Defaults</string>
+        <string>Reset to Base Map Defaults</string>
        </property>
       </widget>
      </item>

@@ -126,6 +126,6 @@ class Ui_OptionsGroup(object):
         self.chkApplyStyles.setToolTip(_translate("OptionsGroup", "Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)", None))
         self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply predefined OpenMapTiles style", None))
         self.lblZoomRange.setText(_translate("OptionsGroup", "TextLabel", None))
-        self.btnResetToBasemapDefaults.setText(_translate("OptionsGroup", "Reset to Basemap Defaults", None))
+        self.btnResetToBasemapDefaults.setText(_translate("OptionsGroup", "Reset to Base Map Defaults", None))
         self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Reset to Inspection Defaults", None))
 
