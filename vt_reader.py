@@ -192,8 +192,18 @@ class VtReader:
                 mask_tiles = map(
                     lambda t: change_zoom(zoom_level, int(mask_level), t, self.source.scheme(), self.source.crs()),
                     all_tiles)
+
+                mask_tiles_to_load = []
+                for t in mask_tiles:
+                    file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
+                    tile = FileHelper.get_cached_tile(file_name)
+                    if tile and tile.decoded_data:
+                        tiles.append(tile)
+                    else:
+                        mask_tiles_to_load.append(t)
+
                 mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
-                                                         tiles_to_load=mask_tiles,
+                                                         tiles_to_load=mask_tiles_to_load,
                                                          max_tiles=max_tiles,
                                                          for_each=QApplication.processEvents)
                 tile_data_tuples.extend(mask_layer_data)
@@ -245,6 +255,11 @@ class VtReader:
             if progress != current_progress:
                 current_progress = progress
                 self._update_progress(progress=progress)
+
+        for t in tiles:
+            cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
+            if not os.path.isfile(cache_file_name):
+                FileHelper.cache_tile(t, cache_file_name)
 
         return tiles
 
