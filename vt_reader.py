@@ -245,6 +245,8 @@ class VtReader:
         except NotImplementedError:
             info("CPU count cannot be retrieved. Falling back to default = 4")
 
+        tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
+
         pool = mp.Pool(nr_processors)
         tiles = []
         rs = pool.map_async(decode_tile, tiles_with_encoded_data, callback=tiles.extend)
@@ -266,6 +268,20 @@ class VtReader:
 
         return tiles
 
+    def _unzip(self, data):
+        """
+         * If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
+        :param data:
+        :return:
+        """
+
+        is_gzipped = FileHelper.is_gzipped(data)
+        if is_gzipped:
+            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+        else:
+            file_content = data
+        return file_content
+
     def _process_tiles(self, tiles, layer_filter):
         """
          * Creates GeoJSON for all the specified tiles and reports the progress
@@ -285,28 +301,6 @@ class VtReader:
             if progress != current_progress:
                 current_progress = progress
                 self._update_progress(progress=progress)
-
-    def _decode_binary_tile_data(self, data):
-        """
-         * Decodes the (gzipped) PBF that has been read from the tile source.
-        :param data: 
-        :return: 
-        """
-        decoded_data = None
-        if data:
-            try:
-                is_gzipped = FileHelper.is_gzipped(data)
-                if is_gzipped:
-                    file_content = GzipFile('', 'r', 0, StringIO(data)).read()
-                else:
-                    file_content = data
-                decoded_data = mapbox_vector_tile.decode(file_content)
-            except:
-                critical("Decoding tile-data failed: {}", sys.exc_info())
-        else:
-            decoded_data = None
-            warn("Tried to decode tile-data, but it's empty.")
-        return decoded_data
 
     def _get_cartographic_layer_sort_id(self, layer_name):
         """
