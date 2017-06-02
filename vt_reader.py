@@ -101,7 +101,7 @@ class VtReader:
         if self.progress_handler:
             self.progress_handler(title, progress, max_progress, msg, show_dialog)
 
-    def _get_empty_feature_collection(self, zoom_level):
+    def _get_empty_feature_collection(self, zoom_level, layer_name):
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
@@ -121,6 +121,7 @@ class VtReader:
         return {
             "tiles": [],
             "source": self.source.name(),
+            "layer": layer_name,
             "zoom_level": zoom_level,
             "type": "FeatureCollection",
             "crs": crs,
@@ -378,7 +379,7 @@ class VtReader:
                     layer.reload()
 
             if not layer:
-                complete_collection = self._get_empty_feature_collection(zoom_level)
+                complete_collection = self._get_empty_feature_collection(zoom_level, layer_name)
                 self._merge_feature_collections(current_feature_collection=complete_collection,
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
@@ -527,7 +528,7 @@ class VtReader:
                         self.feature_collections_by_layer_path[path_and_type] = {}
                     collection_dict = self.feature_collections_by_layer_path[path_and_type]
                     if tile_id not in collection_dict:
-                        collection_dict[tile_id] = self._get_empty_feature_collection(tile.zoom_level)
+                        collection_dict[tile_id] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
                     collection = collection_dict[tile_id]
 
                     collection["features"].append(geojson_feature)
