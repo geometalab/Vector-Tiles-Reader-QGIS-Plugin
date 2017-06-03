@@ -12,6 +12,7 @@ from log_helper import critical
 from vt_reader import GeoTypes, VtReader
 from global_map_tiles import GlobalMercator
 
+
 class VtWriter:
 
     geo_types = {
@@ -34,6 +35,7 @@ class VtWriter:
         self.max_lon = None
         self.min_lat = None
         self.max_lat = None
+        self.layers_to_export = None
 
     def _get_metadata(self, field):
         return self.metadata[field]
@@ -55,6 +57,7 @@ class VtWriter:
                     tiles = self._load_tiles(tile_names)
                     for t in tiles:
                         self._update_bounds(t)
+                        print "layers to export: ", self.layers_to_export
                         self._save_tile(t)
                     self._save_metadata()
             except:
@@ -99,8 +102,9 @@ class VtWriter:
 
         all_layers = []
         for layer_name in tile.decoded_data:
-            converted_layer = self.convert_layer(layer_name, tile)
-            all_layers.append(converted_layer)
+            if layer_name in self.layers_to_export:
+                converted_layer = self.convert_layer(layer_name, tile)
+                all_layers.append(converted_layer)
 
         encoded_data = mapbox_vector_tile.encode(all_layers)
         out = StringIO()
@@ -132,19 +136,22 @@ class VtWriter:
 
             is_polygon = geom_string == "POLYGON"
             is_multi = VtReader._is_multi(geo_type, geometry)
+            all_geometries = []
             if not is_multi:
                 all_geometries = [geometry]
             else:
-                all_geometries = geometry
+                all_geometries.extend(geometry)
 
             for geom in all_geometries:
                 new_feature = self.create_feature(f, geom, geo_type, is_polygon)
                 try:
+                    single_feature_layer = {"name": "dummy", "features": [new_feature]}
+                    mapbox_vector_tile.encode(single_feature_layer)
                     converted_layer["features"].append(new_feature)
                 except:
-                    print "multi encoding failed: ", new_feature, sys.exc_info()
-                    print "original feature: ", f
-            # break
+                    pass
+                    # print "multi encoding failed: ", new_feature, sys.exc_info()
+                    # print "original feature: ", f
         return converted_layer
 
     def create_feature(self, f, geom, geo_type, is_polygon):
@@ -201,7 +208,12 @@ class VtWriter:
         return conn
 
     def _get_loaded_tile_names(self):
-        all_layers = self.iface.legendInterface().layers()
+        all_layers = self.iface.legendInterface().selectedLayers(True)
+        if len(all_layers) == 0:
+            all_layers = self.iface.legendInterface().layers()
+
+        self.layers_to_export = map(lambda l: l.shortName(), all_layers)
+
         tile_names = set()
         for l in all_layers:
             layer_source = l.source()
