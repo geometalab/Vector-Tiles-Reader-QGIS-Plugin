@@ -113,20 +113,20 @@ class VtWriter:
         # print "nr  features: ", len(layer["features"])
 
         for f in layer["features"]:
-            # print "feature: ", f
-            new_feature = {}
-            for k in f.keys():
-                if k != "geometry":
-                    new_feature[k] = f[k]
-            new_feature["geometry"] = self._convert_geometry(f["type"], f["geometry"])
-            try:
-                single_feature_layer = {"name": "dummy", "features": [new_feature]}
-                encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
-                converted_layer["features"].append(new_feature)
-            except:
-                print "encoding failed: ", new_feature, sys.exc_info()
-                print "original feature: ", f
-            # break
+            for geom in f["geometry"]:
+                new_feature = {}
+                for k in f.keys():
+                    if k != "geometry":
+                        new_feature[k] = f[k]
+                new_feature["geometry"] = self._convert_geometry(f["type"], geom)
+                try:
+                    single_feature_layer = {"name": "dummy", "features": [new_feature]}
+                    encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
+                    converted_layer["features"].append(new_feature)
+                except:
+                    print "encoding failed: ", new_feature, sys.exc_info()
+                    print "original feature: ", f
+                # break
 
         encoded_data = mapbox_vector_tile.encode(converted_layer)
         out = StringIO()
