@@ -19,7 +19,6 @@ from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
-from vt_writer import VtWriter
 from file_helper import FileHelper
 from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, convert_coordinate
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
@@ -92,8 +91,9 @@ class VtrPlugin:
         self.connections_dialog.show()
 
     def _export_tiles(self):
+        from vt_writer import VtWriter
         # file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
-        file_name = "C:\\Users\\Martin\\Downloads\\test.mbtiles"
+        file_name = "C:\\Users\\Martin\\Downloads\\mbtiles\\test.mbtiles"
         if file_name:
             writer = VtWriter(self.iface, file_name)
             writer.export()
