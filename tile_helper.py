@@ -95,7 +95,7 @@ def tile_to_latlon(zoom, x, y, scheme="tms"):
     return gm.TileBounds(x, y, zoom)
 
 
-def get_tile_bounds(zoom, bounds, crs, scheme="xyz"):
+def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
     """
      * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param scheme: 
@@ -115,8 +115,8 @@ def get_tile_bounds(zoom, bounds, crs, scheme="xyz"):
         lng_max = bounds[2]
         lat_max = bounds[3]
 
-        xy_min = coordinate_to_tile(zoom, lat_max, lng_min, crs, scheme)
-        xy_max = coordinate_to_tile(zoom, lat_min, lng_max, crs, scheme)
+        xy_min = coordinate_to_tile(zoom, lat_max, lng_min, source_crs, scheme)
+        xy_max = coordinate_to_tile(zoom, lat_min, lng_max, source_crs, scheme)
 
         x_min = min(xy_min[0], xy_max[0])
         x_max = max(xy_min[0], xy_max[0])

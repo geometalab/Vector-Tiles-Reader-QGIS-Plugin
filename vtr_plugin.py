@@ -122,7 +122,7 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs="EPSG:4326")
 
         debug("Current extent: {}", tile_bounds)
         return tile_bounds
@@ -134,6 +134,9 @@ class VtrPlugin:
 
         try:
             reader = self._create_reader(path_or_url)
+
+            if self.reader:
+                self.reader.source.close_connection()
             self.reader = reader
             if reader:
                 layers = reader.source.vector_layers()
@@ -327,6 +330,9 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
+        if self.reader:
+            self.reader.source.close_connection()
+
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)

@@ -47,6 +47,9 @@ class ServerSource:
     def vector_layers(self):
         return self.json.vector_layers()
 
+    def close_connection(self):
+        pass
+
     def name(self):
         name = self.json.name()
         if not name:
