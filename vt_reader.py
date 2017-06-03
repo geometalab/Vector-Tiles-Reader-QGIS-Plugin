@@ -556,14 +556,16 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        coordinates = VtReader._map_coordinates_recursive(
-            coordinates=coordinates,
-            func=lambda coords: VtReader._get_absolute_coordinates(coords, tile))
-
         properties = feature["properties"]
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
+            if not all(0 <= c <= 4096 for c in coordinates):
+                return None, None
+
+        coordinates = VtReader._map_coordinates_recursive(
+            coordinates=coordinates,
+            func=lambda coords: VtReader._get_absolute_coordinates(coords, tile))
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
@@ -711,14 +713,20 @@ class VtReader:
         """
         Recursively traverses the array of coordinates (depth first) and applies the specified function
         """
+
         tmp = []
-        for coord in coordinates:
-            is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
-            if is_coordinate_tuple:
-                newval = func(coord)
-                tmp.append(newval)
-            else:
-                tmp.append(VtReader._map_coordinates_recursive(coord, func))
+        is_coordinate_tuple = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
+        if is_coordinate_tuple:
+            newval = func(coordinates)
+            tmp.append(newval)
+        else:
+            for coord in coordinates:
+                is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
+                if is_coordinate_tuple:
+                    newval = func(coord)
+                    tmp.append(newval)
+                else:
+                    tmp.append(VtReader._map_coordinates_recursive(coord, func))
         return tmp
 
     @staticmethod
