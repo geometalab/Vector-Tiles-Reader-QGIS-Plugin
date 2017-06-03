@@ -136,27 +136,20 @@ class VtWriter:
             if geo_type == GeoTypes.POINT:
                 geometry = geometry[0]
 
-            is_polygon = is_polygon = geom_string == "POLYGON"
+            is_polygon = geom_string == "POLYGON"
             is_multi = VtReader._is_multi(geo_type, geometry)
             if not is_multi:
-                new_feature = self.create_feature(f, geometry, geo_type, is_polygon, is_multi)
+                all_geometries = [geometry]
+            else:
+                all_geometries = geometry
+
+            for geom in all_geometries:
+                new_feature = self.create_feature(f, geom, geo_type, is_polygon, is_multi)
                 try:
-                    single_feature_layer = {"name": "dummy", "features": [new_feature]}
-                    encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
                     converted_layer["features"].append(new_feature)
                 except:
-                    print "single encoding failed: ", new_feature, sys.exc_info()
+                    print "multi encoding failed: ", new_feature, sys.exc_info()
                     print "original feature: ", f
-            else:
-                for geom in geometry:
-                    new_feature = self.create_feature(f, geom, geo_type, is_polygon, is_multi)
-                    try:
-                        single_feature_layer = {"name": "dummy", "features": [new_feature]}
-                        encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
-                        converted_layer["features"].append(new_feature)
-                    except:
-                        print "multi encoding failed: ", new_feature, sys.exc_info()
-                        print "original feature: ", f
             # break
         return converted_layer
 
