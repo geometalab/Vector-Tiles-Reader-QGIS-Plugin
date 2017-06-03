@@ -56,9 +56,7 @@ class VtWriter:
                     for t in tiles:
                         self._update_bounds(t)
                         self._save_tile(t)
-                        # break
                     self._save_metadata()
-                # self.conn.close()
             except:
                 if self.conn:
                     self.conn.close()
@@ -95,17 +93,14 @@ class VtWriter:
             return current_value
 
     def _save_tile(self, tile):
-        id = str(uuid.uuid4())
+        tile_id = str(uuid.uuid4())
         insert_tile = "INSERT INTO map(tile_id, zoom_level, tile_column, tile_row) VALUES(?,?,?,?)"
-        self.conn.execute(insert_tile, (id, tile.zoom_level, tile.column, tile.row))
-
-        # print "decoded: ", tile.decoded_data
+        self.conn.execute(insert_tile, (tile_id, tile.zoom_level, tile.column, tile.row))
 
         all_layers = []
         for layer_name in tile.decoded_data:
             converted_layer = self.convert_layer(layer_name, tile)
             all_layers.append(converted_layer)
-            # break
 
         encoded_data = mapbox_vector_tile.encode(all_layers)
         out = StringIO()
@@ -115,7 +110,7 @@ class VtWriter:
         print "gzip done"
 
         insert_sql = "INSERT INTO images(tile_id, tile_data) VALUES(?,?)"
-        self.conn.execute(insert_sql, (id, sqlite3.Binary(gzipped_data)))
+        self.conn.execute(insert_sql, (tile_id, sqlite3.Binary(gzipped_data)))
 
     def convert_layer(self, layer_name, tile):
         layer = tile.decoded_data[layer_name]
@@ -128,7 +123,6 @@ class VtWriter:
             if k != "features":
                 converted_layer[k] = layer[k]
 
-        # print "nr  features: ", len(layer["features"])
         for f in layer["features"]:
             geo_type = self.geo_types[f["type"]]
             geom_string = geo_type.upper()
@@ -144,7 +138,7 @@ class VtWriter:
                 all_geometries = geometry
 
             for geom in all_geometries:
-                new_feature = self.create_feature(f, geom, geo_type, is_polygon, is_multi)
+                new_feature = self.create_feature(f, geom, geo_type, is_polygon)
                 try:
                     converted_layer["features"].append(new_feature)
                 except:
@@ -153,15 +147,15 @@ class VtWriter:
             # break
         return converted_layer
 
-    def create_feature(self, f, geom, geo_type, is_polygon, is_multi):
+    def create_feature(self, f, geom, geo_type, is_polygon):
         new_feature = {}
         for k in f.keys():
             if k != "geometry":
                 new_feature[k] = f[k]
-        new_feature["geometry"] = self._convert_geometry(geo_type, is_polygon, is_multi, geom)
+        new_feature["geometry"] = self._convert_geometry(geo_type, is_polygon, geom)
         return new_feature
 
-    def _convert_geometry(self, geo_type, is_polygon, is_multi, geom):
+    def _convert_geometry(self, geo_type, is_polygon, geom):
         geo_type_string = geo_type.upper()
         if is_polygon:
             geo_type_string += "(({}))"
@@ -174,23 +168,10 @@ class VtWriter:
         if geo_type == GeoTypes.POINT:
             coords = [geom]
         else:
-            try:
-                VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
-            except:
-                print "error map: ", is_multi, geom
-        # else:
-        #     coords = geom
+            VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
 
-        # if is_multi:
-        #     VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
-        # else:
-        #     coords = geom
         for index, c in enumerate(coords):
             coords_string += "{} {}".format(c[0], c[1])
-            # try:
-            #     coords_string += "{} {}".format(c[0], c[1])
-            # except:
-            #     print "error coord: ", c
             if index < len(coords)-1:
                 coords_string += ", "
         geom_string = geo_type_string.format(coords_string)
