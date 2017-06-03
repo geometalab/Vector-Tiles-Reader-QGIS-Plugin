@@ -56,7 +56,7 @@ class VtWriter:
                     for t in tiles:
                         self._update_bounds(t)
                         self._save_tile(t)
-                        break
+                        # break
                     self._save_metadata()
                 # self.conn.close()
             except:
@@ -64,6 +64,7 @@ class VtWriter:
                     self.conn.close()
                 raise
                 # critical("Export failed: {}", sys.exc_info())
+        print "export complete"
 
     def _save_metadata(self):
         self.metadata["bounds"] = "{},{},{},{}".format(self.min_lon, self.min_lat, self.max_lon, self.max_lat)
@@ -98,37 +99,15 @@ class VtWriter:
         insert_tile = "INSERT INTO map(tile_id, zoom_level, tile_column, tile_row) VALUES(?,?,?,?)"
         self.conn.execute(insert_tile, (id, tile.zoom_level, tile.column, tile.row))
 
-        layer_name = tile.decoded_data.keys()[0]
-        layer = tile.decoded_data[layer_name]
+        # print "decoded: ", tile.decoded_data
 
-        self._get_metadata("json")["vector_layers"].append({"id": layer_name})
+        all_layers = []
+        for layer_name in tile.decoded_data:
+            converted_layer = self.convert_layer(layer_name, tile)
+            all_layers.append(converted_layer)
+            # break
 
-        converted_layer = {
-            "name": layer_name,
-            "features": []}
-        for k in layer.keys():
-            if k != "features":
-                converted_layer[k] = layer[k]
-
-        # print "nr  features: ", len(layer["features"])
-
-        for f in layer["features"]:
-            for geom in f["geometry"]:
-                new_feature = {}
-                for k in f.keys():
-                    if k != "geometry":
-                        new_feature[k] = f[k]
-                new_feature["geometry"] = self._convert_geometry(f["type"], geom)
-                try:
-                    single_feature_layer = {"name": "dummy", "features": [new_feature]}
-                    encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
-                    converted_layer["features"].append(new_feature)
-                except:
-                    print "encoding failed: ", new_feature, sys.exc_info()
-                    print "original feature: ", f
-                # break
-
-        encoded_data = mapbox_vector_tile.encode(converted_layer)
+        encoded_data = mapbox_vector_tile.encode(all_layers)
         out = StringIO()
         with GzipFile(fileobj=out, mode="w") as f:
             f.write(encoded_data)
@@ -138,24 +117,91 @@ class VtWriter:
         insert_sql = "INSERT INTO images(tile_id, tile_data) VALUES(?,?)"
         self.conn.execute(insert_sql, (id, sqlite3.Binary(gzipped_data)))
 
-    def _convert_geometry(self, geo_type, geom):
-        geom_string = self.geo_types[geo_type].upper()
-        if geom_string == "POLYGON":
-            geom_string += "(({}))"
+    def convert_layer(self, layer_name, tile):
+        layer = tile.decoded_data[layer_name]
+        self._get_metadata("json")["vector_layers"].append({"id": layer_name})
+        converted_layer = {
+            "name": layer_name,
+            "features": []}
+        print "current layer: ", layer_name
+        for k in layer.keys():
+            if k != "features":
+                converted_layer[k] = layer[k]
+
+        # print "nr  features: ", len(layer["features"])
+        for f in layer["features"]:
+            geo_type = self.geo_types[f["type"]]
+            geom_string = geo_type.upper()
+            geometry = f["geometry"]
+            if geo_type == GeoTypes.POINT:
+                geometry = geometry[0]
+
+            is_polygon = is_polygon = geom_string == "POLYGON"
+            is_multi = VtReader._is_multi(geo_type, geometry)
+            if not is_multi:
+                new_feature = self.create_feature(f, geometry, geo_type, is_polygon, is_multi)
+                try:
+                    single_feature_layer = {"name": "dummy", "features": [new_feature]}
+                    encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
+                    converted_layer["features"].append(new_feature)
+                except:
+                    print "single encoding failed: ", new_feature, sys.exc_info()
+                    print "original feature: ", f
+            else:
+                for geom in geometry:
+                    new_feature = self.create_feature(f, geom, geo_type, is_polygon, is_multi)
+                    try:
+                        single_feature_layer = {"name": "dummy", "features": [new_feature]}
+                        encoded_single_feature = mapbox_vector_tile.encode(single_feature_layer)
+                        converted_layer["features"].append(new_feature)
+                    except:
+                        print "multi encoding failed: ", new_feature, sys.exc_info()
+                        print "original feature: ", f
+            # break
+        return converted_layer
+
+    def create_feature(self, f, geom, geo_type, is_polygon, is_multi):
+        new_feature = {}
+        for k in f.keys():
+            if k != "geometry":
+                new_feature[k] = f[k]
+        new_feature["geometry"] = self._convert_geometry(geo_type, is_polygon, is_multi, geom)
+        return new_feature
+
+    def _convert_geometry(self, geo_type, is_polygon, is_multi, geom):
+        geo_type_string = geo_type.upper()
+        if is_polygon:
+            geo_type_string += "(({}))"
         else:
-            geom_string += "({})"
+            geo_type_string += "({})"
 
         coords_string = ""
         coords = []
-        VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
+
+        if geo_type == GeoTypes.POINT:
+            coords = [geom]
+        else:
+            try:
+                VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
+            except:
+                print "error map: ", is_multi, geom
+        # else:
+        #     coords = geom
+
+        # if is_multi:
+        #     VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
+        # else:
+        #     coords = geom
         for index, c in enumerate(coords):
             coords_string += "{} {}".format(c[0], c[1])
+            # try:
+            #     coords_string += "{} {}".format(c[0], c[1])
+            # except:
+            #     print "error coord: ", c
             if index < len(coords)-1:
                 coords_string += ", "
-        geom_string = geom_string.format(coords_string)
+        geom_string = geo_type_string.format(coords_string)
         return geom_string
-
-
 
     def _create_db(self):
         if os.path.isfile(self.file_destination):
