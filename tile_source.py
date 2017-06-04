@@ -93,7 +93,7 @@ class ServerSource:
         urls = []
 
         if len(tiles_to_load) > max_tiles:
-            tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load)
+            tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             if limit_reacher_handler:
                 limit_reacher_handler()
 
@@ -254,12 +254,11 @@ class MBTilesSource:
         :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
         :return: 
         """
-
         self._cancelling = False
-        info("Reading tiles of zoom level {}", zoom_level)
+        debug("Reading tiles of zoom level {}", zoom_level)
 
         if max_tiles:
-            center_tiles = get_tiles_from_center(max_tiles, tiles_to_load)
+            center_tiles = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
         else:
             center_tiles = tiles_to_load
         where_clause = self._get_where_clause(tiles_to_load=center_tiles, zoom_level=zoom_level)

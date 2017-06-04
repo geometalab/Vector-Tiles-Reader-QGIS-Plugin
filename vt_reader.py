@@ -21,7 +21,6 @@ from tile_source import ServerSource, MBTilesSource
 from mp_helper import decode_tile
 
 import multiprocessing as mp
-import mapbox_vector_tile
 import platform
 
 if platform.system() == "Windows":
@@ -180,6 +179,8 @@ class VtReader:
             else:
                 tiles_to_load.append(t)
 
+        debug("{} cache hits. {} will be loaded from the source.", len(tiles), len(tiles_to_load))
+
         debug("Loading extent {} for zoom level '{}' of: {}", zoom_level, self.source.name())
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                   tiles_to_load=tiles_to_load,
@@ -192,9 +193,13 @@ class VtReader:
         if load_mask_layer:
             mask_level = self.source.mask_level()
             if mask_level is not None and mask_level != zoom_level:
+                debug("Mapping {} tiles to mask level", len(all_tiles))
+                scheme = self.source.scheme()
+                crs = self.source.crs()
                 mask_tiles = map(
-                    lambda t: change_zoom(zoom_level, int(mask_level), t, self.source.scheme(), self.source.crs()),
+                    lambda t: change_zoom(zoom_level, int(mask_level), t, scheme, crs),
                     all_tiles)
+                debug("Mapping done")
 
                 mask_tiles_to_load = []
                 for t in mask_tiles:
@@ -205,10 +210,12 @@ class VtReader:
                     else:
                         mask_tiles_to_load.append(t)
 
+                debug("Loading mask layer (zoom_level={})", mask_level)
                 mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
                                                          tiles_to_load=mask_tiles_to_load,
                                                          max_tiles=max_tiles,
                                                          for_each=QApplication.processEvents)
+                debug("Mask layer loaded")
                 tile_data_tuples.extend(mask_layer_data)
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
@@ -560,7 +567,7 @@ class VtReader:
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
-            if not all(0 <= c <= 4096 for c in coordinates):
+            if not all(0 <= c <= self._extent for c in coordinates):
                 return None, None
 
         coordinates = VtReader._map_coordinates_recursive(

@@ -2,7 +2,7 @@ from global_map_tiles import GlobalMercator
 from osgeo import osr
 import operator
 from PyQt4.QtGui import QApplication
-from log_helper import warn
+from log_helper import warn, debug
 
 
 class VectorTile:
@@ -151,6 +151,7 @@ def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
 
 def get_all_tiles(bounds, is_cancel_requested_handler):
     tiles = []
+    debug("Calculating {} tiles", bounds["width"]*bounds["height"])
     for x in range(bounds["width"]):
         QApplication.processEvents()
         if is_cancel_requested_handler():
@@ -183,7 +184,8 @@ _directions = {
     _LEFT: (-1, 0)}
 
 
-def get_tiles_from_center(nr_of_tiles, available_tiles):
+def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
+    debug("Getting {} center-tiles from a total of {} tiles", nr_of_tiles, len(available_tiles))
     if not nr_of_tiles or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles
 
@@ -199,6 +201,10 @@ def get_tiles_from_center(nr_of_tiles, available_tiles):
     nr_of_steps = 0
     current_direction = 0
     while len(selected_tiles) < nr_of_tiles:
+        if should_cancel_func and should_cancel_func():
+            break
+
+        debug("Current nr of center tiles: {}", len(selected_tiles))
         #  always after two direction changes, the step length has to be increased by one
         if current_direction % 2 == 0:
             nr_of_steps += 1
@@ -211,6 +217,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles):
                 if len(selected_tiles) >= nr_of_tiles:
                     break
         current_direction = (current_direction + 1) % 4
+    debug("Center tiles completed")
     return selected_tiles
 
 
