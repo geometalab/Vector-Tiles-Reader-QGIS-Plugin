@@ -175,7 +175,7 @@ class VtWriter:
         if geo_type == GeoTypes.POINT:
             coords = [geom]
         else:
-            VtReader._map_coordinates_recursive(geom, func=lambda c: coords.append(c))
+            VtReader._map_coordinates_recursive(geom, mapper_func=lambda c: coords.append(c))
 
         for index, c in enumerate(coords):
             coords_string += "{} {}".format(c[0], c[1])

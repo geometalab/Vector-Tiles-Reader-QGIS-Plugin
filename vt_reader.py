@@ -569,10 +569,14 @@ class VtReader:
             properties["_symbol"] = self._get_poi_icon(feature)
             if not all(0 <= c <= self._extent for c in coordinates):
                 return None, None
-
+        all_out_of_bounds = []
         coordinates = VtReader._map_coordinates_recursive(
             coordinates=coordinates,
-            func=lambda coords: VtReader._get_absolute_coordinates(coords, tile))
+            mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords, tile),
+            all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(out_of_bounds))
+
+        if all(c is True for c in all_out_of_bounds):
+            return None, None
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
@@ -716,24 +720,34 @@ class VtReader:
         return feature_json
 
     @staticmethod
-    def _map_coordinates_recursive(coordinates, func):
+    def _map_coordinates_recursive(coordinates, mapper_func, all_out_of_bounds_func=None):
         """
         Recursively traverses the array of coordinates (depth first) and applies the specified function
         """
-
+        any_tuples_inside_bounds = False
+        tuple_count_on_current_array_depth = 0
         tmp = []
         is_coordinate_tuple = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
         if is_coordinate_tuple:
-            newval = func(coordinates)
+            newval = mapper_func(coordinates)
             tmp.append(newval)
         else:
             for coord in coordinates:
                 is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
                 if is_coordinate_tuple:
-                    newval = func(coord)
+                    tuple_count_on_current_array_depth += 1
+                    if not any_tuples_inside_bounds and 1 <= coord[0] <= VtReader._extent and 1 <= coord[1] <= VtReader._extent:
+                        any_tuples_inside_bounds = True
+
+                    newval = mapper_func(coord)
                     tmp.append(newval)
                 else:
-                    tmp.append(VtReader._map_coordinates_recursive(coord, func))
+                    tmp.append(VtReader._map_coordinates_recursive(coord, mapper_func, all_out_of_bounds_func))
+
+        all_out_of_bounds = tuple_count_on_current_array_depth > 0 and not any_tuples_inside_bounds
+        if all_out_of_bounds_func:
+            all_out_of_bounds_func(all_out_of_bounds)
+
         return tmp
 
     @staticmethod
