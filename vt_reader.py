@@ -21,7 +21,6 @@ from tile_source import ServerSource, MBTilesSource
 from mp_helper import decode_tile
 
 import multiprocessing as mp
-import mapbox_vector_tile
 import platform
 
 if platform.system() == "Windows":
@@ -101,7 +100,7 @@ class VtReader:
         if self.progress_handler:
             self.progress_handler(title, progress, max_progress, msg, show_dialog)
 
-    def _get_empty_feature_collection(self):
+    def _get_empty_feature_collection(self, zoom_level, layer_name):
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
@@ -120,6 +119,9 @@ class VtReader:
 
         return {
             "tiles": [],
+            "source": self.source.name(),
+            "layer": layer_name,
+            "zoom_level": zoom_level,
             "type": "FeatureCollection",
             "crs": crs,
             "features": []}
@@ -134,7 +136,7 @@ class VtReader:
             self.source.cancel()
 
     def _get_tile_cache_name(self, zoom_level, col, row):
-        return "{}.{}.{}.{}.bin".format(self.source.name(), zoom_level, col, row)
+        return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
 
     def load_tiles(self, zoom_level, layer_filter, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
                    bounds=None, limit_reacher_handler=None):
@@ -164,7 +166,7 @@ class VtReader:
             zoom_level = max_zoom
 
         all_tiles = get_all_tiles(bounds, lambda: self.cancel_requested)
-        tiles_to_load = []
+        tiles_to_load = set()
         tiles = []
         for t in all_tiles:
             if self.cancel_requested:
@@ -175,7 +177,9 @@ class VtReader:
             if tile and tile.decoded_data:
                 tiles.append(tile)
             else:
-                tiles_to_load.append(t)
+                tiles_to_load.add(t)
+
+        debug("{} cache hits. {} will be loaded from the source.", len(tiles), len(tiles_to_load))
 
         debug("Loading extent {} for zoom level '{}' of: {}", zoom_level, self.source.name())
         tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
@@ -189,23 +193,29 @@ class VtReader:
         if load_mask_layer:
             mask_level = self.source.mask_level()
             if mask_level is not None and mask_level != zoom_level:
+                debug("Mapping {} tiles to mask level", len(all_tiles))
+                scheme = self.source.scheme()
+                crs = self.source.crs()
                 mask_tiles = map(
-                    lambda t: change_zoom(zoom_level, int(mask_level), t, self.source.scheme(), self.source.crs()),
+                    lambda t: change_zoom(zoom_level, int(mask_level), t, scheme, crs),
                     all_tiles)
+                debug("Mapping done")
 
-                mask_tiles_to_load = []
+                mask_tiles_to_load = set()
                 for t in mask_tiles:
                     file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
                     tile = FileHelper.get_cached_tile(file_name)
                     if tile and tile.decoded_data:
                         tiles.append(tile)
                     else:
-                        mask_tiles_to_load.append(t)
+                        mask_tiles_to_load.add(t)
 
+                debug("Loading mask layer (zoom_level={})", mask_level)
                 mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
                                                          tiles_to_load=mask_tiles_to_load,
                                                          max_tiles=max_tiles,
                                                          for_each=QApplication.processEvents)
+                debug("Mask layer loaded")
                 tile_data_tuples.extend(mask_layer_data)
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
@@ -242,6 +252,8 @@ class VtReader:
         except NotImplementedError:
             info("CPU count cannot be retrieved. Falling back to default = 4")
 
+        tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
+
         pool = mp.Pool(nr_processors)
         tiles = []
         rs = pool.map_async(decode_tile, tiles_with_encoded_data, callback=tiles.extend)
@@ -263,6 +275,20 @@ class VtReader:
 
         return tiles
 
+    def _unzip(self, data):
+        """
+         * If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
+        :param data:
+        :return:
+        """
+
+        is_gzipped = FileHelper.is_gzipped(data)
+        if is_gzipped:
+            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+        else:
+            file_content = data
+        return file_content
+
     def _process_tiles(self, tiles, layer_filter):
         """
          * Creates GeoJSON for all the specified tiles and reports the progress
@@ -282,28 +308,6 @@ class VtReader:
             if progress != current_progress:
                 current_progress = progress
                 self._update_progress(progress=progress)
-
-    def _decode_binary_tile_data(self, data):
-        """
-         * Decodes the (gzipped) PBF that has been read from the tile source.
-        :param data: 
-        :return: 
-        """
-        decoded_data = None
-        if data:
-            try:
-                is_gzipped = FileHelper.is_gzipped(data)
-                if is_gzipped:
-                    file_content = GzipFile('', 'r', 0, StringIO(data)).read()
-                else:
-                    file_content = data
-                decoded_data = mapbox_vector_tile.decode(file_content)
-            except:
-                critical("Decoding tile-data failed: {}", sys.exc_info())
-        else:
-            decoded_data = None
-            warn("Tried to decode tile-data, but it's empty.")
-        return decoded_data
 
     def _get_cartographic_layer_sort_id(self, layer_name):
         """
@@ -376,7 +380,7 @@ class VtReader:
                     layer.reload()
 
             if not layer:
-                complete_collection = self._get_empty_feature_collection()
+                complete_collection = self._get_empty_feature_collection(zoom_level, layer_name)
                 self._merge_feature_collections(current_feature_collection=complete_collection,
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
@@ -525,7 +529,7 @@ class VtReader:
                         self.feature_collections_by_layer_path[path_and_type] = {}
                     collection_dict = self.feature_collections_by_layer_path[path_and_type]
                     if tile_id not in collection_dict:
-                        collection_dict[tile_id] = self._get_empty_feature_collection()
+                        collection_dict[tile_id] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
                     collection = collection_dict[tile_id]
 
                     collection["features"].append(geojson_feature)
@@ -559,14 +563,20 @@ class VtReader:
         geo_type = VtReader.geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
-        coordinates = VtReader._map_coordinates_recursive(
-            coordinates=coordinates,
-            func=lambda coords: VtReader._get_absolute_coordinates(coords, tile))
-
         properties = feature["properties"]
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
+            if not all(0 <= c <= self._extent for c in coordinates):
+                return None, None
+        all_out_of_bounds = []
+        coordinates = VtReader._map_coordinates_recursive(
+            coordinates=coordinates,
+            mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords, tile),
+            all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(out_of_bounds))
+
+        if all(c is True for c in all_out_of_bounds):
+            return None, None
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
 
@@ -710,18 +720,34 @@ class VtReader:
         return feature_json
 
     @staticmethod
-    def _map_coordinates_recursive(coordinates, func):
+    def _map_coordinates_recursive(coordinates, mapper_func, all_out_of_bounds_func=None):
         """
         Recursively traverses the array of coordinates (depth first) and applies the specified function
         """
+        any_tuples_inside_bounds = False
+        tuple_count_on_current_array_depth = 0
         tmp = []
-        for coord in coordinates:
-            is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
-            if is_coordinate_tuple:
-                newval = func(coord)
-                tmp.append(newval)
-            else:
-                tmp.append(VtReader._map_coordinates_recursive(coord, func))
+        is_coordinate_tuple = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
+        if is_coordinate_tuple:
+            newval = mapper_func(coordinates)
+            tmp.append(newval)
+        else:
+            for coord in coordinates:
+                is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
+                if is_coordinate_tuple:
+                    tuple_count_on_current_array_depth += 1
+                    if not any_tuples_inside_bounds and 1 <= coord[0] <= VtReader._extent and 1 <= coord[1] <= VtReader._extent:
+                        any_tuples_inside_bounds = True
+
+                    newval = mapper_func(coord)
+                    tmp.append(newval)
+                else:
+                    tmp.append(VtReader._map_coordinates_recursive(coord, mapper_func, all_out_of_bounds_func))
+
+        all_out_of_bounds = tuple_count_on_current_array_depth > 0 and not any_tuples_inside_bounds
+        if all_out_of_bounds_func:
+            all_out_of_bounds_func(all_out_of_bounds)
+
         return tmp
 
     @staticmethod

@@ -15,7 +15,7 @@ of the License, or (at your option) any later version.
 
 from log_helper import debug, info, warn, critical
 from PyQt4.QtCore import QSettings
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor
+from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
@@ -61,10 +61,12 @@ class VtrPlugin:
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
+        self.export_action = self._create_action("Export loaded tiles", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
         self.popupMenu.addAction(self.reload_action)
+        self.popupMenu.addAction(self.export_action)
         self.toolButton = QToolButton()
         self.toolButton.setMenu(self.popupMenu)
         self.toolButton.setDefaultAction(self.open_connections_action)
@@ -74,6 +76,7 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         info("Vector Tile Reader Plugin loaded...")
 
@@ -86,6 +89,14 @@ class VtrPlugin:
     def _show_connections_dialog(self):
         self._update_nr_of_tiles()
         self.connections_dialog.show()
+
+    def _export_tiles(self):
+        from vt_writer import VtWriter
+        # file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
+        file_name = "C:\\Users\\Martin\\Downloads\\mbtiles\\test.mbtiles"
+        if file_name:
+            writer = VtWriter(self.iface, file_name)
+            writer.export()
 
     def _reload_tiles(self):
         if self._current_source_path:
@@ -111,7 +122,7 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, crs="EPSG:4326")
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs="EPSG:4326")
 
         debug("Current extent: {}", tile_bounds)
         return tile_bounds
@@ -123,6 +134,9 @@ class VtrPlugin:
 
         try:
             reader = self._create_reader(path_or_url)
+
+            if self.reader:
+                self.reader.source.close_connection()
             self.reader = reader
             if reader:
                 layers = reader.source.vector_layers()
@@ -316,9 +330,13 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
+        if self.reader:
+            self.reader.source.close_connection()
+
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)

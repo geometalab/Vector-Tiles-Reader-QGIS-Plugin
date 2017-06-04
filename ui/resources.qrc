@@ -6,5 +6,6 @@
 	<file alias="server.svg">../icons/server.svg</file> 
 	<file alias="info.svg">../icons/info.svg</file> 
 	<file alias="reload.svg">../icons/reload.svg</file>
+	<file alias="save.svg">../icons/save.svg</file>
   </qresource>
 </RCC>

@@ -67,6 +67,10 @@ class FileHelper:
         return tile
 
     @staticmethod
+    def get_cached_tile_file_name(source_name, zoom_level, col, row):
+        return "{}.{}.{}.{}.bin".format(source_name, zoom_level, col, row)
+
+    @staticmethod
     def cache_tile(tile, file_name):
         if not tile.decoded_data:
             warn("Trying to cache a tile without data: {}", tile)

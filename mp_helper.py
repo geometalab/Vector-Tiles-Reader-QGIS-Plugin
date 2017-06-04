@@ -1,6 +1,5 @@
 import mapbox_vector_tile
 
-
 def decode_tile(tile_data_tuple):
     tile = tile_data_tuple[0]
     if not tile.decoded_data:
