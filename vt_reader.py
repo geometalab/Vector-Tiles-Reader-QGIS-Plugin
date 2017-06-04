@@ -120,6 +120,7 @@ class VtReader:
         return {
             "tiles": [],
             "source": self.source.name(),
+            "scheme": self.source.scheme(),
             "layer": layer_name,
             "zoom_level": zoom_level,
             "type": "FeatureCollection",

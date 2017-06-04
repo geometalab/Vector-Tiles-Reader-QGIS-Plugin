@@ -11,6 +11,7 @@ from gzip import GzipFile
 from log_helper import critical
 from vt_reader import GeoTypes, VtReader
 from global_map_tiles import GlobalMercator
+from tile_helper import change_scheme
 
 
 class VtWriter:
@@ -36,6 +37,7 @@ class VtWriter:
         self.min_lat = None
         self.max_lat = None
         self.layers_to_export = None
+        self.source_scheme = None
 
     def _get_metadata(self, field):
         return self.metadata[field]
@@ -146,7 +148,7 @@ class VtWriter:
                 new_feature = self.create_feature(f, geom, geo_type, is_polygon)
                 try:
                     single_feature_layer = {"name": "dummy", "features": [new_feature]}
-                    mapbox_vector_tile.encode(single_feature_layer)
+                    mapbox_vector_tile.encode(single_feature_layer, y_coord_down=True)
                     converted_layer["features"].append(new_feature)
                 except:
                     pass
@@ -221,12 +223,16 @@ class VtWriter:
                 with open(layer_source, "r") as f:
                     feature_collection = json.load(f)
                     source_name = feature_collection["source"]
+                    source_scheme = feature_collection["scheme"]
                     zoom_level = int(feature_collection["zoom_level"])
 
                     min_zoom = self._get_metadata("minzoom")
                     max_zoom = self._get_metadata("maxzoom")
                     source_id = self._get_metadata("id")
+                    scheme = self._get_metadata("scheme")
 
+                    if not scheme:
+                        self.source_scheme = source_scheme
                     if not source_id:
                         self._set_metadata("id", source_name)
                     if not min_zoom or zoom_level < min_zoom:
@@ -245,5 +251,7 @@ class VtWriter:
         for name in tile_names:
             tile = FileHelper.get_cached_tile(name)
             if tile:
+                if self.source_scheme != "tms":
+                    tile.row = change_scheme(tile.zoom_level, tile.row)
                 tiles.append(tile)
         return tiles
