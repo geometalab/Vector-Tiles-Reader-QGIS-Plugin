@@ -204,7 +204,6 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
         if should_cancel_func and should_cancel_func():
             break
 
-        debug("Current nr of center tiles: {}", len(selected_tiles))
         #  always after two direction changes, the step length has to be increased by one
         if current_direction % 2 == 0:
             nr_of_steps += 1

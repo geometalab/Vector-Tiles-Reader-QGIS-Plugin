@@ -166,7 +166,7 @@ class VtReader:
             zoom_level = max_zoom
 
         all_tiles = get_all_tiles(bounds, lambda: self.cancel_requested)
-        tiles_to_load = []
+        tiles_to_load = set()
         tiles = []
         for t in all_tiles:
             if self.cancel_requested:
@@ -177,7 +177,7 @@ class VtReader:
             if tile and tile.decoded_data:
                 tiles.append(tile)
             else:
-                tiles_to_load.append(t)
+                tiles_to_load.add(t)
 
         debug("{} cache hits. {} will be loaded from the source.", len(tiles), len(tiles_to_load))
 
@@ -201,14 +201,14 @@ class VtReader:
                     all_tiles)
                 debug("Mapping done")
 
-                mask_tiles_to_load = []
+                mask_tiles_to_load = set()
                 for t in mask_tiles:
                     file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
                     tile = FileHelper.get_cached_tile(file_name)
                     if tile and tile.decoded_data:
                         tiles.append(tile)
                     else:
-                        mask_tiles_to_load.append(t)
+                        mask_tiles_to_load.add(t)
 
                 debug("Loading mask layer (zoom_level={})", mask_level)
                 mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
