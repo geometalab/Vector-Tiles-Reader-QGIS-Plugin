@@ -9,17 +9,12 @@ import mapbox_vector_tile
 from cStringIO import StringIO
 from gzip import GzipFile
 from log_helper import critical
-from vt_reader import GeoTypes, VtReader
 from global_map_tiles import GlobalMercator
 from tile_helper import change_scheme
+from feature_helper import GeoTypes, geo_types, is_multi, map_coordinates_recursive
 
 
 class VtWriter:
-
-    geo_types = {
-        1: GeoTypes.POINT,
-        2: GeoTypes.LINE_STRING,
-        3: GeoTypes.POLYGON}
 
     def __init__(self, iface, file_destination):
         self.iface = iface
@@ -130,16 +125,16 @@ class VtWriter:
                 converted_layer[k] = layer[k]
 
         for f in layer["features"]:
-            geo_type = self.geo_types[f["type"]]
+            geo_type = geo_types[f["type"]]
             geom_string = geo_type.upper()
             geometry = f["geometry"]
             if geo_type == GeoTypes.POINT:
                 geometry = geometry[0]
 
             is_polygon = geom_string == "POLYGON"
-            is_multi = VtReader._is_multi(geo_type, geometry)
+            is_multi_geometry = is_multi(geo_type, geometry)
             all_geometries = []
-            if not is_multi:
+            if not is_multi_geometry:
                 all_geometries = [geometry]
             else:
                 all_geometries.extend(geometry)
@@ -151,9 +146,8 @@ class VtWriter:
                     mapbox_vector_tile.encode(single_feature_layer, y_coord_down=True)
                     converted_layer["features"].append(new_feature)
                 except:
+                    # todo: handle invalid geometries
                     pass
-                    # print "multi encoding failed: ", new_feature, sys.exc_info()
-                    # print "original feature: ", f
         return converted_layer
 
     def create_feature(self, f, geom, geo_type, is_polygon):
@@ -177,7 +171,7 @@ class VtWriter:
         if geo_type == GeoTypes.POINT:
             coords = [geom]
         else:
-            VtReader._map_coordinates_recursive(geom, mapper_func=lambda c: coords.append(c))
+            map_coordinates_recursive(geom, mapper_func=lambda c: coords.append(c))
 
         for index, c in enumerate(coords):
             coords_string += "{} {}".format(c[0], c[1])
