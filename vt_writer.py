@@ -156,9 +156,8 @@ class VtWriter:
                     min_zoom = self._get_metadata("minzoom")
                     max_zoom = self._get_metadata("maxzoom")
                     source_id = self._get_metadata("id")
-                    scheme = self._get_metadata("scheme")
 
-                    if not scheme:
+                    if not self.source_scheme:
                         self.source_scheme = source_scheme
                     if not source_id:
                         self._set_metadata("id", source_name)
