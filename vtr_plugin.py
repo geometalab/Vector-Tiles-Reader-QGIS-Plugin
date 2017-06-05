@@ -271,7 +271,6 @@ class VtrPlugin:
                 self.refresh_layers()
                 debug("Loading complete!")
             except RuntimeError:
-                # self._current_reader = None
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
 
