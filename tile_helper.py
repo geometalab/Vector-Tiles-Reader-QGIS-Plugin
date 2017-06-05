@@ -185,6 +185,9 @@ _directions = {
 
 
 def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
+    if nr_of_tiles > len(available_tiles):
+        nr_of_tiles = len(available_tiles)
+
     debug("Getting {} center-tiles from a total of {} tiles", nr_of_tiles, len(available_tiles))
     if not nr_of_tiles or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles

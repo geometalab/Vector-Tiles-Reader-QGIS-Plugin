@@ -166,11 +166,14 @@ class VtReader:
         debug("{} cache hits. {} will be loaded from the source.", len(tiles), len(tiles_to_load))
 
         debug("Loading extent {} for zoom level '{}' of: {}", zoom_level, self.source.name())
-        tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
-                                                  tiles_to_load=tiles_to_load,
-                                                  max_tiles=max_tiles,
-                                                  for_each=QApplication.processEvents,
-                                                  limit_reacher_handler=limit_reacher_handler)
+
+        tile_data_tuples = []
+        if len(tiles_to_load) > 0:
+            tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
+                                                      tiles_to_load=tiles_to_load,
+                                                      max_tiles=max_tiles,
+                                                      for_each=QApplication.processEvents,
+                                                      limit_reacher_handler=limit_reacher_handler)
         if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
             QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
 
@@ -195,12 +198,14 @@ class VtReader:
                         mask_tiles_to_load.add(t)
 
                 debug("Loading mask layer (zoom_level={})", mask_level)
-                mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
-                                                         tiles_to_load=mask_tiles_to_load,
-                                                         max_tiles=max_tiles,
-                                                         for_each=QApplication.processEvents)
-                debug("Mask layer loaded")
-                tile_data_tuples.extend(mask_layer_data)
+                tile_data_tuples = []
+                if len(mask_tiles_to_load) > 0:
+                    mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
+                                                             tiles_to_load=mask_tiles_to_load,
+                                                             max_tiles=max_tiles,
+                                                             for_each=QApplication.processEvents)
+                    debug("Mask layer loaded")
+                    tile_data_tuples.extend(mask_layer_data)
 
         if tile_data_tuples and len(tile_data_tuples) > 0:
             if not self.cancel_requested:
