@@ -254,37 +254,74 @@ class VtWriter:
             geo_type = geo_types[f["type"]]
             geom_string = geo_type.upper()
             geometry = f["geometry"]
-            if geo_type == GeoTypes.POINT:
-                geometry = geometry[0]
+            # if geo_type == GeoTypes.POINT:
+            #     geometry = geometry[0]
 
             is_polygon = geom_string == "POLYGON"
             is_multi_geometry = is_multi(geo_type, geometry)
             all_geometries = []
-            if not is_multi_geometry:
-                all_geometries = [geometry]
+            if is_multi_geometry:
+                VtWriter.get_subarr(geometry, all_geometries)
+                # print "multi geom: ", all_geometries
             else:
-                all_geometries.extend(geometry)
+                if all(VtWriter.is_coordinate_tuple(c) for c in geometry):
+                    all_geometries = [geometry]
+                else:
+                    all_geometries = geometry
 
             for geom in all_geometries:
-                new_feature = self.create_feature(f, geom, geo_type, is_polygon)
+                # try:
+                #     if not all(VtWriter.is_coordinate_tuple(c) for c in geom):
+                #         print "not all tuples: ", geom
+                # except:
+                #     print "error: ", is_multi_geometry, geo_type, geom
+                #     print "geoms: ", geometry, all_geometries
+                #     print "f: ", f
+
+                new_feature = self._copy_feature(f)
+                new_feature["geometry"] = self._create_wkt_geometry(geo_type, is_multi_geometry, is_polygon, geom)
                 try:
                     single_feature_layer = {"name": "dummy", "features": [new_feature]}
                     mapbox_vector_tile.encode(single_feature_layer, y_coord_down=True)
                     converted_layer["features"].append(new_feature)
                 except:
                     # todo: handle invalid geometries
+                    print "invalid geometry: ", new_feature["geometry"]
+                    print "original geom: ", geom
+                    # for g in all_geometries:
+                    #     print "geom: ", g
+
                     pass
         return converted_layer
 
-    def create_feature(self, f, geom, geo_type, is_polygon):
+    @staticmethod
+    def get_subarr(arr, result):
+        if all(VtWriter.is_coordinate_tuple(c) for c in arr):
+            result.append(arr)
+        else:
+            for subarr in arr:
+                VtWriter.get_subarr(subarr, result)
+
+    @staticmethod
+    def is_coordinate_tuple(coordinates):
+        return len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
+
+    @staticmethod
+    def _copy_feature(f):
+        """
+         * Creates a clone of the feature but excludes the geometry
+        :param f:
+        :return:
+        """
+
         new_feature = {}
         for k in f.keys():
             if k != "geometry":
                 new_feature[k] = f[k]
-        new_feature["geometry"] = self._convert_geometry(geo_type, is_polygon, geom)
         return new_feature
 
-    def _convert_geometry(self, geo_type, is_polygon, geom):
+    @staticmethod
+    def _create_wkt_geometry(geo_type, is_multi, is_polygon, geom):
         geo_type_string = geo_type.upper()
         if is_polygon:
             geo_type_string += "(({}))"
@@ -292,14 +329,24 @@ class VtWriter:
             geo_type_string += "({})"
 
         coords_string = ""
-        coords = []
+        coords = geom
 
-        if geo_type == GeoTypes.POINT:
-            coords = [geom]
-        else:
-            map_coordinates_recursive(geom, mapper_func=lambda c: coords.append(c))
+        # if not is_multi:  # and geo_type in [GeoTypes.POINT, GeoTypes.LINE_STRING]:
+        #     coords = [geom]
+        # else:
+        #     coords = geom
+        #     # map_coordinates_recursive(geom, mapper_func=lambda c: coords.append(c))
 
         for index, c in enumerate(coords):
+            # try:
+            #     if not VtWriter.is_coordinate_tuple(c):
+            #         print "coords: ", geo_type, coords
+            #         raise RuntimeError("this is not a tuple: {}".format(c))
+            # except:
+            #     print geo_type, geom
+            #     print "geom (coords): ", geom, coords
+            #     raise
+
             coords_string += "{} {}".format(c[0], c[1])
             if index < len(coords)-1:
                 coords_string += ", "
