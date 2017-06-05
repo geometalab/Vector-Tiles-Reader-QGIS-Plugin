@@ -44,8 +44,8 @@ class VtrPlugin:
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
         self.progress_dialog = None
         self._current_reader = None
+        self._current_writer = None
         self._current_options = None
-        self.reader = None
         self._add_path_to_icons()
         self._current_source_path = None
         self._current_layer_filter = []
@@ -61,7 +61,7 @@ class VtrPlugin:
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
-        self.export_action = self._create_action("Export loaded tiles", "save.svg", self._export_tiles)
+        self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
@@ -92,16 +92,21 @@ class VtrPlugin:
 
     def _export_tiles(self):
         from vt_writer import VtWriter
-        # file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
-        file_name = "C:\\Users\\Martin\\Downloads\\mbtiles\\test.mbtiles"
+        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
         if file_name:
-            writer = VtWriter(self.iface, file_name)
-            writer.export()
+            self.export_action.setDisabled(True)
+            try:
+                self._current_writer = VtWriter(self.iface, file_name, progress_handler=self.handle_progress_update)
+                self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_export)
+                self._current_writer.export()
+            except:
+                critical("Error during export: {}", sys.exc_info())
+            self.export_action.setEnabled(True)
 
     def _reload_tiles(self):
         if self._current_source_path:
-            self._create_progress_dialog(self.iface.mainWindow())
-            scheme = self.reader.source.scheme()
+            self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
+            scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             self._load_tiles(path=self._current_source_path,
@@ -133,11 +138,10 @@ class VtrPlugin:
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
 
         try:
+            if self._current_reader:
+                self._current_reader.source.close_connection()
             reader = self._create_reader(path_or_url)
-
-            if self.reader:
-                self.reader.source.close_connection()
-            self.reader = reader
+            self._current_reader = reader
             if reader:
                 layers = reader.source.vector_layers()
                 self.connections_dialog.set_layers(layers)
@@ -158,10 +162,10 @@ class VtrPlugin:
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
 
-        crs_string = self.reader.source.crs()
+        crs_string = self._current_reader.source.crs()
         self._init_qgis_map(crs_string)
 
-        scheme = self.reader.source.scheme()
+        scheme = self._current_reader.source.scheme()
         zoom = self._get_current_zoom()
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
         # if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
@@ -175,7 +179,7 @@ class VtrPlugin:
         else:
             dialog_owner = self.iface.mainWindow()
             self.connections_dialog.close()
-        self._create_progress_dialog(dialog_owner)
+        self._create_progress_dialog(dialog_owner, on_cancel=self._cancel_load)
         self._load_tiles(path=path_or_url,
                          options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
@@ -185,8 +189,8 @@ class VtrPlugin:
 
     def _get_current_zoom(self):
         zoom = 14
-        if self.reader:
-            zoom = self.reader.source.max_zoom()
+        if self._current_reader:
+            zoom = self._current_reader.source.max_zoom()
         if zoom is None:
             zoom = 14
         manual_zoom = self.connections_dialog.options.manual_zoom()
@@ -215,13 +219,18 @@ class VtrPlugin:
         # self.iface.mapCanvas().mapSettings().setDestinationCrs(crs)
         self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
 
-    def _create_progress_dialog(self, owner):
+    def _create_progress_dialog(self, owner, on_cancel):
         self.progress_dialog = ProgressDialog(owner)
-        self.progress_dialog.on_cancel.connect(self._cancel_load)
+        if on_cancel:
+            self.progress_dialog.on_cancel.connect(on_cancel)
 
     def _cancel_load(self):
         if self._current_reader:
             self._current_reader.cancel()
+
+    def _cancel_export(self):
+        if self._current_writer:
+            self._current_writer.cancel()
 
     def _create_action(self, title, icon, callback, is_enabled=True):
         new_action = QAction(QIcon(':/plugins/vector_tiles_reader/{}'.format(icon)), title, self.iface.mainWindow())
@@ -229,7 +238,7 @@ class VtrPlugin:
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _load_tiles(self, path, options, layers_to_load, bounds=None, reader=None, ignore_limit=False):
+    def _load_tiles(self, path, options, layers_to_load, bounds=None, ignore_limit=False):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -243,10 +252,7 @@ class VtrPlugin:
             self._set_background_color()
 
         debug("Load: {}", path)
-        if not reader:
-            reader = self._create_reader(path)
-            self._current_reader = reader
-            self._current_options = options
+        reader = self._current_reader
         if reader:
             reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
@@ -264,7 +270,6 @@ class VtrPlugin:
                 self.refresh_layers()
                 debug("Loading complete!")
             except RuntimeError:
-                self._current_reader = None
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
 
@@ -330,8 +335,8 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
-        if self.reader:
-            self.reader.source.close_connection()
+        if self._current_reader:
+            self._current_reader.source.close_connection()
 
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)

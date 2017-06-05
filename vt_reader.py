@@ -4,13 +4,12 @@
 import sys
 import os
 import json
-import numbers
 import math
 
 from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
 from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg
-from feature_helper import FeatureMerger
+from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types, tile_extent
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtGui import QMessageBox
@@ -30,22 +29,7 @@ if platform.system() == "Windows":
     sys.argv = [None]
 
 
-class _GeoTypes:
-    def __init__(self):
-        pass
-
-    POINT = "Point"
-    LINE_STRING = "LineString"
-    POLYGON = "Polygon"
-
-GeoTypes = _GeoTypes()
-
-
 class VtReader:
-    geo_types = {
-        1: GeoTypes.POINT,
-        2: GeoTypes.LINE_STRING,
-        3: GeoTypes.POLYGON}
 
     cartographic_layer_ordering = [
         "place",
@@ -65,7 +49,6 @@ class VtReader:
         "landuse"
     ]
 
-    _extent = 4096  # this applies always for Mapbox tiles (see: https://github.com/tilezen/mapbox-vector-tile)
     _layers_to_dissolve = []
     _zoom_level_delimiter = "*"
 
@@ -120,6 +103,7 @@ class VtReader:
         return {
             "tiles": [],
             "source": self.source.name(),
+            "scheme": self.source.scheme(),
             "layer": layer_name,
             "zoom_level": zoom_level,
             "type": "FeatureCollection",
@@ -560,20 +544,21 @@ class VtReader:
         Creates a GeoJSON feature for the specified feature
         """
 
-        geo_type = VtReader.geo_types[feature["type"]]
+        geo_type = geo_types[feature["type"]]
         coordinates = feature["geometry"]
 
         properties = feature["properties"]
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
-            if not all(0 <= c <= self._extent for c in coordinates):
+            if not all(0 <= c <= tile_extent for c in coordinates):
                 return None, None
         all_out_of_bounds = []
-        coordinates = VtReader._map_coordinates_recursive(
-            coordinates=coordinates,
-            mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords, tile),
-            all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(out_of_bounds))
+        coordinates = map_coordinates_recursive(coordinates=coordinates,
+                                                mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords,
+                                                                                                              tile),
+                                                all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(
+                                                    out_of_bounds))
 
         if all(c is True for c in all_out_of_bounds):
             return None, None
@@ -611,7 +596,7 @@ class VtReader:
         :param tile: 
         :return: 
         """
-        geo_type = VtReader.geo_types[feature["type"]]
+        geo_type = geo_types[feature["type"]]
         is_poi = geo_type == GeoTypes.POINT
 
         is_loaded = False
@@ -654,45 +639,6 @@ class VtReader:
         return name
 
     @staticmethod
-    def _is_multi(geo_type, coordinates):
-        """
-        * Returns true, if the specified coordinates belong to a Multi geometry (e.g. MultiPolygon or MultiLineString)
-        :param geo_type: 
-        :param coordinates: 
-        :return: 
-        """
-
-        if geo_type == GeoTypes.POINT:
-            is_single = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
-            return not is_single
-        elif geo_type == GeoTypes.LINE_STRING:
-            is_array_of_tuples = all(len(c) == 2 and all(isinstance(ci, int) for ci in c) for c in coordinates)
-            is_single = is_array_of_tuples
-            return not is_single
-        elif geo_type == GeoTypes.POLYGON:
-            is_multi = VtReader.get_array_depth(coordinates, 0) >= 2
-            return is_multi
-
-        return False
-
-    @staticmethod
-    def get_array_depth(arr, depth):
-        """
-        * Returns the depth of an array.
-          >> Example: arr=[1,2,3], depth=0, then the resulting depth will be 0
-          >> Example: arr=[[1,2], [3,4]], depth=0, then the resulting depth will be 1
-        :param arr: 
-        :param depth: 
-        :return: 
-        """
-
-        if all(isinstance(c, numbers.Real) for c in arr[0]):
-            return depth
-        else:
-            depth += 1
-            return VtReader.get_array_depth(arr[0], depth)
-
-    @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
         """
         * Returns a JSON object that represents a GeoJSON feature
@@ -701,11 +647,8 @@ class VtReader:
         :param properties: 
         :return: 
         """
-
-        is_multi = VtReader._is_multi(geo_type, coordinates)
-
         type_string = geo_type
-        if is_multi:
+        if is_multi(geo_type, coordinates):
             type_string = "Multi{}".format(geo_type)
 
         feature_json = {
@@ -720,49 +663,15 @@ class VtReader:
         return feature_json
 
     @staticmethod
-    def _map_coordinates_recursive(coordinates, mapper_func, all_out_of_bounds_func=None):
-        """
-        Recursively traverses the array of coordinates (depth first) and applies the specified function
-        """
-        any_tuples_inside_bounds = False
-        tuple_count_on_current_array_depth = 0
-        tmp = []
-        is_coordinate_tuple = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
-        if is_coordinate_tuple:
-            newval = mapper_func(coordinates)
-            tmp.append(newval)
-        else:
-            for coord in coordinates:
-                is_coordinate_tuple = len(coord) == 2 and all(isinstance(c, int) for c in coord)
-                if is_coordinate_tuple:
-                    tuple_count_on_current_array_depth += 1
-                    if not any_tuples_inside_bounds and 1 <= coord[0] <= VtReader._extent and 1 <= coord[1] <= VtReader._extent:
-                        any_tuples_inside_bounds = True
-
-                    newval = mapper_func(coord)
-                    tmp.append(newval)
-                else:
-                    tmp.append(VtReader._map_coordinates_recursive(coord, mapper_func, all_out_of_bounds_func))
-
-        all_out_of_bounds = tuple_count_on_current_array_depth > 0 and not any_tuples_inside_bounds
-        if all_out_of_bounds_func:
-            all_out_of_bounds_func(all_out_of_bounds)
-
-        return tmp
-
-    @staticmethod
     def _get_absolute_coordinates(coordinates, tile):
         """
          * The coordinates of a geometry, are relative to the tile the feature is located on.
          * Due to this, we've to get the absolute coordinates of the geometry.
         """
-
-        tile_extent = tile.extent
-
-        delta_x = tile_extent[2] - tile_extent[0]
-        delta_y = tile_extent[3] - tile_extent[1]
-        merc_easting = int(tile_extent[0] + delta_x / VtReader._extent * coordinates[0])
-        merc_northing = int(tile_extent[1] + delta_y / VtReader._extent * coordinates[1])
+        delta_x = tile.extent[2] - tile.extent[0]
+        delta_y = tile.extent[3] - tile.extent[1]
+        merc_easting = int(tile.extent[0] + delta_x / tile_extent * coordinates[0])
+        merc_northing = int(tile.extent[1] + delta_y / tile_extent * coordinates[1])
         return [merc_easting, merc_northing]
 
     def enable_cartographic_ordering(self, enabled):
