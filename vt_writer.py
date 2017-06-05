@@ -12,6 +12,7 @@ from log_helper import critical
 from global_map_tiles import GlobalMercator
 from tile_helper import change_scheme
 from feature_helper import GeoTypes, geo_types, is_multi, map_coordinates_recursive
+from PyQt4.QtGui import QMessageBox
 
 
 class VtWriter:
@@ -51,12 +52,13 @@ class VtWriter:
             try:
                 with self.conn:
                     tile_names = self._get_loaded_tile_names()
-                    tiles = self._load_tiles(tile_names)
-                    for t in tiles:
-                        self._update_bounds(t)
-                        print "layers to export: ", self.layers_to_export
-                        self._save_tile(t)
-                    self._save_metadata()
+                    if tile_names:
+                        tiles = self._load_tiles(tile_names)
+                        for t in tiles:
+                            self._update_bounds(t)
+                            print "layers to export: ", self.layers_to_export
+                            self._save_tile(t)
+                        self._save_metadata()
             except:
                 if self.conn:
                     self.conn.close()
@@ -210,6 +212,9 @@ class VtWriter:
 
         self.layers_to_export = map(lambda l: l.shortName(), all_layers)
 
+        source_to_export = None
+        warning_shown = False
+
         tile_names = set()
         for l in all_layers:
             layer_source = l.source()
@@ -217,6 +222,20 @@ class VtWriter:
                 with open(layer_source, "r") as f:
                     feature_collection = json.load(f)
                     source_name = feature_collection["source"]
+
+                    if source_to_export is None:
+                        source_to_export = source_name
+                    elif source_to_export != source_name:
+                        if not warning_shown:
+                            warning_shown = True
+                            msg = "You're trying to export tiles of multiple sources. Only the source '{}' will be exported." \
+                                  " Do you want to continue?".format(source_to_export)
+                            result = QMessageBox.warning(None, "Multiple Sources", msg,
+                                                         QMessageBox.Ok | QMessageBox.Cancel)
+                            if result == QMessageBox.Cancel:
+                                return None
+                        continue
+
                     source_scheme = feature_collection["scheme"]
                     zoom_level = int(feature_collection["zoom_level"])
 

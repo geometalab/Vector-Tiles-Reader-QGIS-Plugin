@@ -61,7 +61,7 @@ class VtrPlugin:
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
-        self.export_action = self._create_action("Export loaded tiles", "save.svg", self._export_tiles)
+        self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
