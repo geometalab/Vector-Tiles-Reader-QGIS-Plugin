@@ -22,6 +22,7 @@ class VtWriter:
         self.file_destination = file_destination
         self.progress_handler = progress_handler
         self.metadata = {
+            "exporter": "QGIS Vector Tiles Reader Plugin",
             "scheme": "tms",
             "json": {"vector_layers": []},
             "id": None,
@@ -254,15 +255,12 @@ class VtWriter:
             geo_type = geo_types[f["type"]]
             geom_string = geo_type.upper()
             geometry = f["geometry"]
-            # if geo_type == GeoTypes.POINT:
-            #     geometry = geometry[0]
 
             is_polygon = geom_string == "POLYGON"
             is_multi_geometry = is_multi(geo_type, geometry)
             all_geometries = []
             if is_multi_geometry:
                 VtWriter.get_subarr(geometry, all_geometries)
-                # print "multi geom: ", all_geometries
             else:
                 if all(VtWriter.is_coordinate_tuple(c) for c in geometry):
                     all_geometries = [geometry]
@@ -270,27 +268,14 @@ class VtWriter:
                     all_geometries = geometry
 
             for geom in all_geometries:
-                # try:
-                #     if not all(VtWriter.is_coordinate_tuple(c) for c in geom):
-                #         print "not all tuples: ", geom
-                # except:
-                #     print "error: ", is_multi_geometry, geo_type, geom
-                #     print "geoms: ", geometry, all_geometries
-                #     print "f: ", f
-
                 new_feature = self._copy_feature(f)
-                new_feature["geometry"] = self._create_wkt_geometry(geo_type, is_multi_geometry, is_polygon, geom)
+                new_feature["geometry"] = self._create_wkt_geometry(geo_type, is_polygon, geom)
                 try:
                     single_feature_layer = {"name": "dummy", "features": [new_feature]}
                     mapbox_vector_tile.encode(single_feature_layer, y_coord_down=True)
                     converted_layer["features"].append(new_feature)
                 except:
-                    # todo: handle invalid geometries
-                    print "invalid geometry: ", new_feature["geometry"]
-                    print "original geom: ", geom
-                    # for g in all_geometries:
-                    #     print "geom: ", g
-
+                    debug("invalid geometry: {}", new_feature["geometry"])
                     pass
         return converted_layer
 
@@ -321,7 +306,7 @@ class VtWriter:
         return new_feature
 
     @staticmethod
-    def _create_wkt_geometry(geo_type, is_multi, is_polygon, geom):
+    def _create_wkt_geometry(geo_type, is_polygon, geom):
         geo_type_string = geo_type.upper()
         if is_polygon:
             geo_type_string += "(({}))"
@@ -329,26 +314,10 @@ class VtWriter:
             geo_type_string += "({})"
 
         coords_string = ""
-        coords = geom
 
-        # if not is_multi:  # and geo_type in [GeoTypes.POINT, GeoTypes.LINE_STRING]:
-        #     coords = [geom]
-        # else:
-        #     coords = geom
-        #     # map_coordinates_recursive(geom, mapper_func=lambda c: coords.append(c))
-
-        for index, c in enumerate(coords):
-            # try:
-            #     if not VtWriter.is_coordinate_tuple(c):
-            #         print "coords: ", geo_type, coords
-            #         raise RuntimeError("this is not a tuple: {}".format(c))
-            # except:
-            #     print geo_type, geom
-            #     print "geom (coords): ", geom, coords
-            #     raise
-
+        for index, c in enumerate(geom):
             coords_string += "{} {}".format(c[0], c[1])
-            if index < len(coords)-1:
+            if index < len(geom)-1:
                 coords_string += ", "
         geom_string = geo_type_string.format(coords_string)
         return geom_string
