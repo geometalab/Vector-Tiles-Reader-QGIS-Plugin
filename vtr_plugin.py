@@ -44,6 +44,7 @@ class VtrPlugin:
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
         self.progress_dialog = None
         self._current_reader = None
+        self._current_writer = None
         self._current_options = None
         self.reader = None
         self._add_path_to_icons()
@@ -95,12 +96,18 @@ class VtrPlugin:
         # file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
         file_name = "C:\\Users\\Martin\\Downloads\\mbtiles\\test.mbtiles"
         if file_name:
-            writer = VtWriter(self.iface, file_name)
-            writer.export()
+            self.export_action.setDisabled(True)
+            try:
+                self._current_writer = VtWriter(self.iface, file_name, progress_handler=self.handle_progress_update)
+                self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_export)
+                self._current_writer.export()
+            except:
+                critical("Error during export: {}", sys.exc_info())
+            self.export_action.setEnabled(True)
 
     def _reload_tiles(self):
         if self._current_source_path:
-            self._create_progress_dialog(self.iface.mainWindow())
+            self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self.reader.source.scheme()
             zoom = self._get_current_zoom()
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
@@ -175,7 +182,7 @@ class VtrPlugin:
         else:
             dialog_owner = self.iface.mainWindow()
             self.connections_dialog.close()
-        self._create_progress_dialog(dialog_owner)
+        self._create_progress_dialog(dialog_owner, on_cancel=self._cancel_load)
         self._load_tiles(path=path_or_url,
                          options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
@@ -215,13 +222,18 @@ class VtrPlugin:
         # self.iface.mapCanvas().mapSettings().setDestinationCrs(crs)
         self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
 
-    def _create_progress_dialog(self, owner):
+    def _create_progress_dialog(self, owner, on_cancel):
         self.progress_dialog = ProgressDialog(owner)
-        self.progress_dialog.on_cancel.connect(self._cancel_load)
+        if on_cancel:
+            self.progress_dialog.on_cancel.connect(on_cancel)
 
     def _cancel_load(self):
         if self._current_reader:
             self._current_reader.cancel()
+
+    def _cancel_export(self):
+        if self._current_writer:
+            self._current_writer.cancel()
 
     def _create_action(self, title, icon, callback, is_enabled=True):
         new_action = QAction(QIcon(':/plugins/vector_tiles_reader/{}'.format(icon)), title, self.iface.mainWindow())
