@@ -46,7 +46,6 @@ class VtrPlugin:
         self._current_reader = None
         self._current_writer = None
         self._current_options = None
-        self.reader = None
         self._add_path_to_icons()
         self._current_source_path = None
         self._current_layer_filter = []
@@ -108,7 +107,7 @@ class VtrPlugin:
     def _reload_tiles(self):
         if self._current_source_path:
             self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
-            scheme = self.reader.source.scheme()
+            scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             self._load_tiles(path=self._current_source_path,
@@ -140,11 +139,10 @@ class VtrPlugin:
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
 
         try:
+            if self._current_reader:
+                self._current_reader.source.close_connection()
             reader = self._create_reader(path_or_url)
-
-            if self.reader:
-                self.reader.source.close_connection()
-            self.reader = reader
+            self._current_reader = reader
             if reader:
                 layers = reader.source.vector_layers()
                 self.connections_dialog.set_layers(layers)
@@ -165,10 +163,10 @@ class VtrPlugin:
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
 
-        crs_string = self.reader.source.crs()
+        crs_string = self._current_reader.source.crs()
         self._init_qgis_map(crs_string)
 
-        scheme = self.reader.source.scheme()
+        scheme = self._current_reader.source.scheme()
         zoom = self._get_current_zoom()
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
         # if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
@@ -192,8 +190,8 @@ class VtrPlugin:
 
     def _get_current_zoom(self):
         zoom = 14
-        if self.reader:
-            zoom = self.reader.source.max_zoom()
+        if self._current_reader:
+            zoom = self._current_reader.source.max_zoom()
         if zoom is None:
             zoom = 14
         manual_zoom = self.connections_dialog.options.manual_zoom()
@@ -241,7 +239,7 @@ class VtrPlugin:
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _load_tiles(self, path, options, layers_to_load, bounds=None, reader=None, ignore_limit=False):
+    def _load_tiles(self, path, options, layers_to_load, bounds=None, ignore_limit=False):
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -255,10 +253,7 @@ class VtrPlugin:
             self._set_background_color()
 
         debug("Load: {}", path)
-        if not reader:
-            reader = self._create_reader(path)
-            self._current_reader = reader
-            self._current_options = options
+        reader = self._current_reader
         if reader:
             reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
@@ -276,7 +271,7 @@ class VtrPlugin:
                 self.refresh_layers()
                 debug("Loading complete!")
             except RuntimeError:
-                self._current_reader = None
+                # self._current_reader = None
                 QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
                 critical(str(sys.exc_info()[1]))
 
@@ -342,8 +337,8 @@ class VtrPlugin:
             site.addsitedir(ext_libs_path)
 
     def unload(self):
-        if self.reader:
-            self.reader.source.close_connection()
+        if self._current_reader:
+            self._current_reader.source.close_connection()
 
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
