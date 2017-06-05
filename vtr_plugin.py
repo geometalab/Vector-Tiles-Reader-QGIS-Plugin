@@ -92,8 +92,7 @@ class VtrPlugin:
 
     def _export_tiles(self):
         from vt_writer import VtWriter
-        # file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
-        file_name = "C:\\Users\\Martin\\Downloads\\mbtiles\\test.mbtiles"
+        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
         if file_name:
             self.export_action.setDisabled(True)
             try:
