@@ -258,7 +258,9 @@ class MBTilesSource:
         debug("Reading tiles of zoom level {}", zoom_level)
 
         if max_tiles:
-            center_tiles = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
+            center_tiles = get_tiles_from_center(nr_of_tiles=max_tiles,
+                                                 available_tiles=tiles_to_load,
+                                                 should_cancel_func=lambda: self._cancelling)
         else:
             center_tiles = tiles_to_load
         where_clause = self._get_where_clause(tiles_to_load=center_tiles, zoom_level=zoom_level)
