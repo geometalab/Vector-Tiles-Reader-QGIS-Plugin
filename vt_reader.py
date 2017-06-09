@@ -516,7 +516,7 @@ class VtReader:
             tile_id = tile.id()
             feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
             for index, feature in enumerate(tile_features):
-                if self._is_duplicate_feature(feature, tile):
+                if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
                     continue
 
                 geojson_feature, geo_type = self._create_geojson_feature(feature, tile)
