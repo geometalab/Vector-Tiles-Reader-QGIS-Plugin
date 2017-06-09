@@ -322,7 +322,7 @@ class VtReader:
             sort_id = self.cartographic_layer_ordering.index(layer_name)
         return sort_id
 
-    def _assure_qgis_groups_exist(self):
+    def _assure_qgis_groups_exist(self, manual_layer_name=None):
         """
          * Createss a group for each layer that is given by the layer source scheme
          >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
@@ -334,7 +334,11 @@ class VtReader:
         root_group = root.findGroup(self.source.name())
         if not root_group:
             root_group = root.addGroup(self.source.name())
-        layers = map(lambda l: l["id"], self.source.vector_layers())
+        if not manual_layer_name:
+            layers = map(lambda l: l["id"], self.source.vector_layers())
+        else:
+            layers = [manual_layer_name]
+
         layers = sorted(layers, key=lambda x: self._get_cartographic_layer_sort_id(x))
         for index, layer_name in enumerate(layers):
             group = root_group.findGroup(layer_name)
@@ -363,6 +367,8 @@ class VtReader:
             QApplication.processEvents()
             if self.cancel_requested:
                 break
+
+            self._assure_qgis_groups_exist(manual_layer_name=layer_name)
             target_group = self._qgis_layer_groups_by_name[layer_name]
             feature_collections_by_tile_coord = self.feature_collections_by_layer_path[layer_name_and_type]
 
