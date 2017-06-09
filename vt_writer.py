@@ -11,7 +11,7 @@ from gzip import GzipFile
 from log_helper import critical, info, debug
 from global_map_tiles import GlobalMercator
 from tile_helper import change_scheme
-from feature_helper import GeoTypes, geo_types, is_multi, map_coordinates_recursive
+from feature_helper import geo_types, is_multi
 from PyQt4.QtGui import QMessageBox, QApplication
 
 

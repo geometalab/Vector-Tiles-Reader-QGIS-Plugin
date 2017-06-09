@@ -84,9 +84,6 @@ class FeatureMerger:
         return dissolved_layer
 
 
-tile_extent = 4096  # this applies always for Mapbox tiles (see: https://github.com/tilezen/mapbox-vector-tile)
-
-
 class _GeoTypes:
     def __init__(self):
         pass
@@ -140,7 +137,7 @@ def get_array_depth(arr, depth):
         return get_array_depth(arr[0], depth)
 
 
-def map_coordinates_recursive(coordinates, mapper_func, all_out_of_bounds_func=None):
+def map_coordinates_recursive(coordinates, tile_extent, mapper_func, all_out_of_bounds_func=None):
     """
     Recursively traverses the array of coordinates (depth first) and applies the specified function
     """
@@ -162,7 +159,10 @@ def map_coordinates_recursive(coordinates, mapper_func, all_out_of_bounds_func=N
                 newval = mapper_func(coord)
                 tmp.append(newval)
             else:
-                tmp.append(map_coordinates_recursive(coord, mapper_func, all_out_of_bounds_func))
+                tmp.append(map_coordinates_recursive(coordinates=coord,
+                                                     tile_extent=tile_extent,
+                                                     mapper_func=mapper_func,
+                                                     all_out_of_bounds_func=all_out_of_bounds_func))
 
     all_out_of_bounds = tuple_count_on_current_array_depth > 0 and not any_tuples_inside_bounds
     if all_out_of_bounds_func:

@@ -9,7 +9,7 @@ import math
 from log_helper import info, warn, critical, debug, remove_key
 from PyQt4.QtGui import QApplication
 from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg
-from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types, tile_extent
+from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtGui import QMessageBox
@@ -265,6 +265,8 @@ class VtReader:
                 current_progress = progress
                 self._update_progress(progress=progress)
 
+        tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
+
         for t in tiles:
             cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
             if not os.path.isfile(cache_file_name):
@@ -512,14 +514,16 @@ class VtReader:
                 if layer_name not in layer_filter:
                     continue
 
-            tile_features = tile.decoded_data[layer_name]["features"]
+            layer = tile.decoded_data[layer_name]
+            extent = layer["extent"]
+            tile_features = layer["features"]
             tile_id = tile.id()
             feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
             for index, feature in enumerate(tile_features):
                 if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
                     continue
 
-                geojson_feature, geo_type = self._create_geojson_feature(feature, tile)
+                geojson_feature, geo_type = self._create_geojson_feature(feature, tile, extent)
                 if geojson_feature:
                     path_and_type = (feature_path, geo_type)
                     if path_and_type not in self.feature_collections_by_layer_path:
@@ -552,7 +556,7 @@ class VtReader:
             assert feature_class, "A feature with a subclass should also have a class"
         return feature_class, feature_subclass
 
-    def _create_geojson_feature(self, feature, tile):
+    def _create_geojson_feature(self, feature, tile, current_layer_tile_extent):
         """
         Creates a GeoJSON feature for the specified feature
         """
@@ -564,12 +568,14 @@ class VtReader:
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
-            if not all(0 <= c <= tile_extent for c in coordinates):
+            if not all(0 <= c <= current_layer_tile_extent for c in coordinates):
                 return None, None
         all_out_of_bounds = []
         coordinates = map_coordinates_recursive(coordinates=coordinates,
+                                                tile_extent=current_layer_tile_extent,
                                                 mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords,
-                                                                                                              tile),
+                                                                                                              tile,
+                                                                                                              current_layer_tile_extent),
                                                 all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(
                                                     out_of_bounds))
 
@@ -676,15 +682,15 @@ class VtReader:
         return feature_json
 
     @staticmethod
-    def _get_absolute_coordinates(coordinates, tile):
+    def _get_absolute_coordinates(coordinates, tile, extent):
         """
          * The coordinates of a geometry, are relative to the tile the feature is located on.
          * Due to this, we've to get the absolute coordinates of the geometry.
         """
         delta_x = tile.extent[2] - tile.extent[0]
         delta_y = tile.extent[3] - tile.extent[1]
-        merc_easting = int(tile.extent[0] + delta_x / tile_extent * coordinates[0])
-        merc_northing = int(tile.extent[1] + delta_y / tile_extent * coordinates[1])
+        merc_easting = int(tile.extent[0] + delta_x / extent * coordinates[0])
+        merc_northing = int(tile.extent[1] + delta_y / extent * coordinates[1])
         return [merc_easting, merc_northing]
 
     def enable_cartographic_ordering(self, enabled):
