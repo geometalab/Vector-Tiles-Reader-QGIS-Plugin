@@ -152,26 +152,34 @@ class VtReader:
         all_tiles = get_all_tiles(bounds, lambda: self.cancel_requested)
         tiles_to_load = set()
         tiles = []
+        tiles_to_ignore = set()
         for t in all_tiles:
-            if self.cancel_requested:
+            if self.cancel_requested or (max_tiles and len(tiles) >= max_tiles):
                 break
 
             file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
             tile = FileHelper.get_cached_tile(file_name)
             if tile and tile.decoded_data:
                 tiles.append(tile)
+                tiles_to_ignore.add((tile.column, tile.row))
             else:
                 tiles_to_load.add(t)
 
-        debug("{} cache hits. {} will be loaded from the source.", len(tiles), len(tiles_to_load))
+        remaining_nr_of_tiles = len(tiles_to_load)
+        if max_tiles:
+            if len(tiles) + len(tiles_to_load) >= max_tiles:
+                remaining_nr_of_tiles = max_tiles - len(tiles)
+                if remaining_nr_of_tiles < 0:
+                    remaining_nr_of_tiles = 0
+        debug("{} cache hits. {} may potentially be loaded.", len(tiles), remaining_nr_of_tiles)
 
         debug("Loading extent {} for zoom level '{}' of: {}", zoom_level, self.source.name())
 
         tile_data_tuples = []
-        if len(tiles_to_load) > 0:
+        if remaining_nr_of_tiles > 0:
             tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                       tiles_to_load=tiles_to_load,
-                                                      max_tiles=max_tiles,
+                                                      max_tiles=remaining_nr_of_tiles,
                                                       for_each=QApplication.processEvents,
                                                       limit_reacher_handler=limit_reacher_handler)
         if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):

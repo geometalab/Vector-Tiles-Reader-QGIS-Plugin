@@ -181,7 +181,8 @@ _directions = {
     _UP: (0, -1),
     _RIGHT: (1, 0),
     _DOWN: (0,1),
-    _LEFT: (-1, 0)}
+    _LEFT: (-1, 0)
+    }
 
 
 def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
@@ -198,8 +199,11 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
     max_y = max(map(lambda t: t[1], available_tiles))
 
     center_tile_offset = (int(round((max_x-min_x)/2)), int(round((max_y-min_y)/2)))
+    selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
-    selected_tiles = [center_tile]
+    if center_tile in available_tiles:
+        selected_tiles.add(center_tile)
+
     current_tile = center_tile
     nr_of_steps = 0
     current_direction = 0
@@ -215,7 +219,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
         for s in xrange(nr_of_steps):
             current_tile = _sum_tiles(current_tile, _directions[current_direction])
             if current_tile in available_tiles:
-                selected_tiles.append(current_tile)
+                selected_tiles.add(current_tile)
                 if len(selected_tiles) >= nr_of_tiles:
                     break
         current_direction = (current_direction + 1) % 4
