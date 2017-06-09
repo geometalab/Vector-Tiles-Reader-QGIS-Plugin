@@ -281,7 +281,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
             url = self._predefined_connections[name]
             self._set_connection_url(name, url)
 
-        for name in self.connections:
+        for name in sorted(self.connections):
             is_already_added = self.cbxConnections.findText(name) != -1
             if not is_already_added:
                 self.cbxConnections.addItem(name)
@@ -357,6 +357,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
             self._set_connection_url(newname, newurl)
             if newname != name:
                 self.cbxConnections.addItem(newname)
+                self.cbxConnections.setCurrentIndex(len(self.connections)-1)
             self._save_connections()
 
     def _handle_connection_change(self, name):
