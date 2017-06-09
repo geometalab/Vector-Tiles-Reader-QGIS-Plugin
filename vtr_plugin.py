@@ -20,12 +20,13 @@ from qgis.core import *
 from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, convert_coordinate
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
 import os
 import sys
 import site
+import traceback
 
 
 class VtrPlugin:
@@ -269,9 +270,20 @@ class VtrPlugin:
                                   limit_reacher_handler=lambda: self._show_limit_exceeded_message(tile_limit))
                 self.refresh_layers()
                 debug("Loading complete!")
-            except RuntimeError:
-                QMessageBox.critical(None, "Unexpected exception", str(sys.exc_info()[1]))
-                critical(str(sys.exc_info()[1]))
+            except Exception as e:
+                traceback.print_exc()
+                critical("An exception occured: {}", e)
+                tb_lines = traceback.format_tb(sys.exc_traceback)
+                tb_text = ""
+                for line in tb_lines:
+                    tb_text += line
+                critical("{}", tb_text)
+                self.iface.messageBar().pushMessage(
+                    "Something went horribly wrong. Please have a look at the log.",
+                    level=QgsMessageBar.CRITICAL,
+                    duration=5)
+                if self.progress_dialog:
+                    self.progress_dialog.hide()
 
     def _set_background_color(self):
         myColor = QColor("#F2EFE9")
