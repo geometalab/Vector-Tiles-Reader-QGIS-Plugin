@@ -236,7 +236,7 @@
      <item>
       <widget class="QPushButton" name="btnResetToInspectionDefaults">
        <property name="text">
-        <string>Reset to Inspection Defaults</string>
+        <string>Reset to Analysis Defaults</string>
        </property>
       </widget>
      </item>

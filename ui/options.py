@@ -127,5 +127,5 @@ class Ui_OptionsGroup(object):
         self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply predefined OpenMapTiles style", None))
         self.lblZoomRange.setText(_translate("OptionsGroup", "TextLabel", None))
         self.btnResetToBasemapDefaults.setText(_translate("OptionsGroup", "Reset to Base Map Defaults", None))
-        self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Reset to Inspection Defaults", None))
+        self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Reset to Analysis Defaults", None))
 
