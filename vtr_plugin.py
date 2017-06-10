@@ -197,8 +197,7 @@ class VtrPlugin:
 
     def _set_qgis_extent(self, zoom, scheme, bounds):
         """
-         * Sets the current extent of the QGIS map canvas to the center of the specified TileJSON
-        :param tilejson: 
+         * Sets the current extent of the QGIS map canvas to the specified bounds
         :return: 
         """
         min_pos = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
@@ -213,7 +212,6 @@ class VtrPlugin:
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-        # self.iface.mapCanvas().mapSettings().setDestinationCrs(crs)
         self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
 
     def _create_progress_dialog(self, owner, on_cancel):
