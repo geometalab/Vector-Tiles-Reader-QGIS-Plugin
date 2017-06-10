@@ -231,6 +231,13 @@ class VtReader:
             info("Import cancelled")
         else:
             info("Import complete")
+        loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
+        loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
+        loaded_extent = {"x_min": min(loaded_tiles_x),
+                         "x_max": max(loaded_tiles_x),
+                         "y_min": min(loaded_tiles_y),
+                         "y_max": max(loaded_tiles_y)}
+        return loaded_extent
 
     def _decode_tiles(self, tiles_with_encoded_data):
         """

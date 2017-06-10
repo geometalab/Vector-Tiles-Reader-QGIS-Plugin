@@ -169,10 +169,6 @@ class VtrPlugin:
         scheme = self._current_reader.source.scheme()
         zoom = self._get_current_zoom()
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
-        # if not self.tilejson.is_within_bounds(zoom=zoom, extent=extent):
-        #     pass  # todo: something's wrong here. probably a CRS mismatch between _get_visible_extent and tilejson
-            # print "not in bounds"
-            # self._set_qgis_extent(self.tilejson)
 
         keep_dialog_open = self.connections_dialog.keep_dialog_open()
         if keep_dialog_open:
@@ -199,19 +195,19 @@ class VtrPlugin:
             zoom = manual_zoom
         return zoom
 
-    def _set_qgis_extent(self, tilejson):
+    def _set_qgis_extent(self, zoom, scheme, bounds):
         """
          * Sets the current extent of the QGIS map canvas to the center of the specified TileJSON
         :param tilejson: 
         :return: 
         """
-        center_tile = tilejson.center_tile()
-        scheme = tilejson.scheme()
-        max_zoom = tilejson.max_zoom()
-        center_latlon = tile_to_latlon(max_zoom, center_tile[0], center_tile[1], scheme=scheme)
-        map_pos = QgsPoint(center_latlon[0], center_latlon[1])
-        rect = QgsRectangle(map_pos, map_pos)
+        min_pos = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
+        max_pos = tile_to_latlon(zoom, bounds["x_max"], bounds["y_max"], scheme=scheme)
+        map_min_pos = QgsPoint(min_pos[0], min_pos[1])
+        map_max_pos = QgsPoint(max_pos[0], max_pos[1])
+        rect = QgsRectangle(map_min_pos, map_max_pos)
         self.iface.mapCanvas().setExtent(rect)
+        self.iface.mapCanvas().refresh()
 
     def _init_qgis_map(self, crs_string):
         crs = QgsCoordinateReferenceSystem(crs_string)
@@ -260,16 +256,23 @@ class VtrPlugin:
                 zoom = reader.source.max_zoom()
                 if manual_zoom is not None:
                     zoom = manual_zoom
-                reader.load_tiles(zoom_level=zoom,
-                                  layer_filter=layers_to_load,
-                                  load_mask_layer=load_mask_layer,
-                                  merge_tiles=merge_tiles,
-                                  apply_styles=apply_styles,
-                                  max_tiles=tile_limit,
-                                  bounds=bounds,
-                                  limit_reacher_handler=lambda: self._show_limit_exceeded_message(tile_limit))
+                loaded_extent = reader.load_tiles(zoom_level=zoom,
+                                                  layer_filter=layers_to_load,
+                                                  load_mask_layer=load_mask_layer,
+                                                  merge_tiles=merge_tiles,
+                                                  apply_styles=apply_styles,
+                                                  max_tiles=tile_limit,
+                                                  bounds=bounds,
+                                                  limit_reacher_handler=lambda: self._show_limit_exceeded_message(tile_limit))
                 self.refresh_layers()
-                debug("Loading complete!")
+                debug("Loading complete! Loaded extent: {}", loaded_extent)
+                loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \
+                                                 bounds["x_min"] <= loaded_extent["x_max"] <= bounds["x_max"]) and \
+                                                 (bounds["y_min"] <= loaded_extent["y_min"] <= bounds["y_max"] or \
+                                                 bounds["y_min"] <= loaded_extent["y_max"] <= bounds["y_max"])
+                if not loaded_extent_is_within_bounds:
+                    debug("Loaded extent is not within bounds")
+                    self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
             except Exception as e:
                 traceback.print_exc()
                 critical("An exception occured: {}", e)
