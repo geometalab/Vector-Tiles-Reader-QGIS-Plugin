@@ -52,6 +52,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     on_zoom_change = pyqtSignal()
 
     def __init__(self, target_groupbox, zoom_change_handler):
+        super(QtGui.QGroupBox, self).__init__()
         self._zoom_change_handler = zoom_change_handler
         self.setupUi(target_groupbox)
         self.lblZoomRange.setText("")
