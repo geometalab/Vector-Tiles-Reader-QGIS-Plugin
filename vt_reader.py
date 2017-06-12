@@ -79,6 +79,7 @@ class VtReader:
         self._qgis_layer_groups_by_name = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
+        self._clip_tiles_at_tile_bounds = None
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -123,10 +124,11 @@ class VtReader:
     def _get_tile_cache_name(self, zoom_level, col, row):
         return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
 
-    def load_tiles(self, zoom_level, layer_filter, load_mask_layer=False, merge_tiles=True, apply_styles=True, max_tiles=None,
-                   bounds=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, layer_filter, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
+                   apply_styles=True, max_tiles=None, bounds=None, limit_reacher_handler=None):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
+        :param clip_tiles: 
         :param zoom_level: The zoom level to load
         :param layer_filter: A list of layers. If any layers are set, only these will be loaded. If the list is empty,
             all available layers will be loaded
@@ -142,6 +144,7 @@ class VtReader:
         self.feature_collections_by_layer_path = {}
         self._qgis_layer_groups_by_name = {}
         self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
+        self._clip_tiles_at_tile_bounds = clip_tiles
 
         min_zoom = self.source.min_zoom()
         max_zoom = self.source.max_zoom()
@@ -585,7 +588,7 @@ class VtReader:
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
-            if not all(0 <= c <= current_layer_tile_extent for c in coordinates):
+            if self._clip_tiles_at_tile_bounds and not all(0 <= c <= current_layer_tile_extent for c in coordinates):
                 return None, None
         all_out_of_bounds = []
         coordinates = map_coordinates_recursive(coordinates=coordinates,
@@ -596,7 +599,7 @@ class VtReader:
                                                 all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(
                                                     out_of_bounds))
 
-        if all(c is True for c in all_out_of_bounds):
+        if self._clip_tiles_at_tile_bounds and all(c is True for c in all_out_of_bounds):
             return None, None
 
         feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)

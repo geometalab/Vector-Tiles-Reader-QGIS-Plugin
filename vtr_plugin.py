@@ -242,6 +242,7 @@ class VtrPlugin:
             tile_limit = None
         manual_zoom = options.manual_zoom()
         cartographic_ordering = options.cartographic_ordering()
+        clip_tiles = options.clip_tiles()
 
         if apply_styles:
             self._set_background_color()
@@ -258,10 +259,12 @@ class VtrPlugin:
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,
                                                   merge_tiles=merge_tiles,
+                                                  clip_tiles=clip_tiles,
                                                   apply_styles=apply_styles,
                                                   max_tiles=tile_limit,
                                                   bounds=bounds,
-                                                  limit_reacher_handler=lambda: self._show_limit_exceeded_message(tile_limit))
+                                                  limit_reacher_handler=lambda: self._show_limit_exceeded_message(
+                                                      tile_limit))
                 self.refresh_layers()
                 debug("Loading complete! Loaded extent: {}", loaded_extent)
                 loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \

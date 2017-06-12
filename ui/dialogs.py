@@ -60,7 +60,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
         self.zoomSpin.valueChanged.connect(self._on_zoom_change)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
-        self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
+        self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_analysis_defaults)
         self._reset_to_basemap_defaults()
 
     def _on_manual_zoom_selected(self, enabled):
@@ -82,17 +82,19 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
                            styles_enabled=True,
                            merging_enabled=False,
                            load_mask_layer=True,
-                           cartographic_ordering=True)
+                           cartographic_ordering=True,
+                           clip_tile_at_bounds=True)
 
-    def _reset_to_inspection_defaults(self):
+    def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=True,
                            tile_limit=10,
                            styles_enabled=False,
                            merging_enabled=True,
                            load_mask_layer=False,
-                           cartographic_ordering=False)
+                           cartographic_ordering=False,
+                           clip_tile_at_bounds=True)
 
-    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, load_mask_layer, cartographic_ordering):
+    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, load_mask_layer, cartographic_ordering, clip_tile_at_bounds):
         self.rbZoomMax.setChecked(auto_zoom)
         tile_limit_enabled = tile_limit is not None
         self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
@@ -102,6 +104,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkMergeTiles.setChecked(merging_enabled)
         self.chkLoadMaskLayer.setChecked(load_mask_layer)
         self.chkCartographicOrdering.setChecked(cartographic_ordering)
+        self.chkClipTiles.setChecked(clip_tile_at_bounds)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom:
@@ -120,6 +123,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         if min_zoom or max_zoom:
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
+
+    def clip_tiles(self):
+        return self.chkClipTiles.isChecked()
 
     def cartographic_ordering(self):
         return self.chkCartographicOrdering.isChecked()
