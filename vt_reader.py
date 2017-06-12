@@ -51,6 +51,7 @@ class VtReader:
 
     _layers_to_dissolve = []
     _zoom_level_delimiter = "*"
+    _DEFAULT_EXTENT = 4096
 
     _styles = FileHelper.get_styles()
 
@@ -528,7 +529,10 @@ class VtReader:
                     continue
 
             layer = tile.decoded_data[layer_name]
-            extent = layer["extent"]
+            if "extent" in layer:
+                extent = layer["extent"]
+            else:
+                extent = self._DEFAULT_EXTENT
             tile_features = layer["features"]
             tile_id = tile.id()
             feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
