@@ -24,7 +24,7 @@ class VtWriter:
         self.metadata = {
             "exporter": "QGIS Vector Tiles Reader Plugin",
             "scheme": "tms",
-            "json": {"vector_layers": []},
+            "json": None,
             "id": None,
             "minzoom": None,
             "maxzoom": None}
@@ -37,6 +37,7 @@ class VtWriter:
         self.layers_to_export = None
         self.source_scheme = None
         self._cancel_requested = False
+        self.layer_names = set()
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -83,6 +84,9 @@ class VtWriter:
                             self._save_tile(t)
 
                         if not self._cancel_requested:
+                            layer_objects = map(lambda l: {"id": l}, self.layer_names)
+                            vector_layers = {"vector_layers": layer_objects}
+                            self.metadata["json"] = json.dumps(vector_layers)
                             self._save_metadata()
                             debug("export complete")
                             self.iface.messageBar().pushInfo(u'Vector Tiles Reader', u'mbtiles export completed')
@@ -186,7 +190,7 @@ class VtWriter:
         self.metadata["bounds"] = "{},{},{},{}".format(self.min_lon, self.min_lat, self.max_lon, self.max_lat)
         for k in self.metadata:
             insert_sql = "INSERT INTO metadata(name, value) VALUES(?,?)"
-            self.conn.execute(insert_sql, (k, str(self.metadata[k]).replace("'", "\"").replace("\": u\"", "\": \"")))
+            self.conn.execute(insert_sql, (k, self.metadata[k]))
 
     def _update_bounds(self, tile):
         gm = GlobalMercator()
@@ -221,7 +225,7 @@ class VtWriter:
             if self._cancel_requested:
                 return
 
-            self._update_progress(msg="Export '{}'".format(layer_name))
+            self._update_progress(msg="Export '{}' of zoom level {}".format(layer_name, tile.zoom_level))
             if layer_name in self.layers_to_export:
                 converted_layer = self._convert_layer(layer_name, tile)
                 all_layers.append(converted_layer)
@@ -241,7 +245,7 @@ class VtWriter:
 
     def _convert_layer(self, layer_name, tile):
         layer = tile.decoded_data[layer_name]
-        self._get_metadata("json")["vector_layers"].append({"id": layer_name})
+        self.layer_names.add(layer_name)
         converted_layer = {
             "name": layer_name,
             "features": []}
