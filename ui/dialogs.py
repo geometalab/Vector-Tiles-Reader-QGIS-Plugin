@@ -236,13 +236,16 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.selected_layer_id = None
         self.cbxConnections.currentIndexChanged['QString'].connect(self._handle_connection_change)
         self.btnCreateConnection.clicked.connect(self._create_connection)
-        self.btnConnect.clicked.connect(self._on_connect)
+        self.btnConnect.clicked.connect(self._handle_connect)
         self.btnEdit.clicked.connect(self._edit_connection)
         self.btnDelete.clicked.connect(self._delete_connection)
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnSave.clicked.connect(self._export_connections)
         self.btnLoad.clicked.connect(self._import_connections)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
+        self.btnBrowse.clicked.connect(self._select_file_path)
+        self.open_path = None
+        self.browse_path = default_browse_directory
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(self._table_headers.keys())
         self.tblLayers.setModel(self.model)
@@ -250,6 +253,14 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self._add_loaded_connections()
         self.edit_connection_dialog = EditConnectionDialog(default_directory=default_browse_directory)
         _update_size(self)
+
+    def _select_file_path(self):
+        open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
+        if open_file_name and os.path.isfile(open_file_name):
+            self.browse_path = open_file_name
+            self.open_path = open_file_name
+            self.txtPath.setText(open_file_name)
+            self._handle_connect()
 
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
@@ -260,8 +271,11 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
-        conn = self._get_current_connection()
-        self.on_add.emit(conn[1], selected_layers)
+        if self.tabConnections.currentIndex() == 0:
+            path_or_url = self._get_current_connection()[1]
+        else:
+            path_or_url = self.txtPath.text()
+        self.on_add.emit(path_or_url, selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -326,10 +340,14 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _set_connection_url(self, name, url):
         self.connections[name] = url
 
-    def _on_connect(self):
-        conn = self._get_current_connection()
-        name = conn[0]
-        url = conn[1]
+    def _handle_connect(self):
+        if self.tabConnections.currentIndex() == 0:
+            conn = self._get_current_connection()
+            name = conn[0]
+            url = conn[1]
+        else:
+            url = self.txtPath.text()
+            name = os.path.basename(url)
         self.on_connect.emit(name, url)
 
     def _get_current_connection(self):
