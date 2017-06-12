@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>562</width>
-    <height>177</height>
+    <height>131</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,46 +19,15 @@
      <property name="title">
       <string>Connection</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
-      <item row="3" column="0">
-       <widget class="QLabel" name="lblSource">
-        <property name="text">
-         <string>Path</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Type</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Name</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QRadioButton" name="rbServer">
-        <property name="text">
-         <string>Tile Server</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">buttonGroup</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="2" column="1">
+     <layout class="QGridLayout" name="gridLayout" columnstretch="0,0">
+      <item row="0" column="1">
        <widget class="QLineEdit" name="txtName">
         <property name="text">
          <string/>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="1" column="1">
        <widget class="QLineEdit" name="txtUrl">
         <property name="toolTip">
          <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
@@ -71,23 +40,17 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QRadioButton" name="rbFile">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
         <property name="text">
-         <string>File</string>
+         <string>Name</string>
         </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">buttonGroup</string>
-        </attribute>
        </widget>
       </item>
-      <item row="3" column="2">
-       <widget class="QPushButton" name="btnBrowse">
+      <item row="1" column="0">
+       <widget class="QLabel" name="lblTileJsonUrl">
         <property name="text">
-         <string>Browse</string>
+         <string>TileJSON URL</string>
         </property>
        </widget>
       </item>

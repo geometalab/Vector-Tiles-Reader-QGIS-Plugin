@@ -227,9 +227,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def __init__(self, default_browse_directory):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
-        self.grpCrs.setVisible(False)
         self.options = OptionsGroup(self.grpOptions, self._on_zoom_change)
-        # self.options.on_zoom_change.connect(self._on_zoom_change)
         self.settings = QSettings("VtrSettings")
         self.connections = {}
         self.selected_connection = None
@@ -251,7 +249,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.tblLayers.setModel(self.model)
         self._load_connections()
         self._add_loaded_connections()
-        self.edit_connection_dialog = EditConnectionDialog(default_directory=default_browse_directory)
+        self.edit_connection_dialog = EditConnectionDialog()
+        self.current_path_or_url = None
+        self.current_name = None
         _update_size(self)
 
     def _select_file_path(self):
@@ -260,7 +260,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
             self.browse_path = open_file_name
             self.open_path = open_file_name
             self.txtPath.setText(open_file_name)
-            self._handle_connect()
+            path = open_file_name
+            name = os.path.basename(open_file_name)
+            self.on_connect.emit(name, path)
 
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
@@ -271,11 +273,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
-        if self.tabConnections.currentIndex() == 0:
-            path_or_url = self._get_current_connection()[1]
-        else:
-            path_or_url = self.txtPath.text()
-        self.on_add.emit(path_or_url, selected_layers)
+        self.on_add.emit(self.current_path_or_url, selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -341,14 +339,11 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.connections[name] = url
 
     def _handle_connect(self):
-        if self.tabConnections.currentIndex() == 0:
-            conn = self._get_current_connection()
-            name = conn[0]
-            url = conn[1]
-        else:
-            url = self.txtPath.text()
-            name = os.path.basename(url)
+        conn = self._get_current_connection()
+        name = conn[0]
+        url = conn[1]
         self.on_connect.emit(name, url)
+        self.txtPath.setText("")
 
     def _get_current_connection(self):
         name = self.cbxConnections.currentText()
@@ -408,30 +403,18 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
 
 class EditConnectionDialog(QtGui.QDialog, Ui_DlgEditConnection):
-    def __init__(self, default_directory):
+    def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self.txtName.textChanged.connect(self._update_save_btn_state)
         self.txtUrl.textChanged.connect(self._update_save_btn_state)
-        self.rbServer.toggled.connect(self._on_type_change)
-        self.btnBrowse.clicked.connect(self._select_file_path)
-        self.open_path = None
-        self.browse_path = default_directory
         _update_size(self)
 
     def set_name_and_path(self, name, path_or_url):
-        if path_or_url is not None:
-            self.open_path = path_or_url
-            if len(path_or_url) > 0 and not self._is_url(path_or_url):
-                self.browse_path = path_or_url
         if name is not None:
             self.txtName.setText(name)
         if path_or_url is not None:
             self.txtUrl.setText(path_or_url)
-            if self._is_url(path_or_url):
-                self.rbServer.setChecked(True)
-            else:
-                self.rbFile.setChecked(True)
 
     @staticmethod
     def _is_url(path):
@@ -444,14 +427,6 @@ class EditConnectionDialog(QtGui.QDialog, Ui_DlgEditConnection):
                 self.browse_path = open_file_name
             self.open_path = open_file_name
             self.txtUrl.setText(open_file_name)
-
-    def _on_type_change(self):
-        if self.rbServer.isChecked():
-            self.lblSource.setText("TileJSON URL")
-            self.btnBrowse.setVisible(False)
-        else:
-            self.lblSource.setText("Path")
-            self.btnBrowse.setVisible(True)
 
     def _update_save_btn_state(self):
         enable = False
