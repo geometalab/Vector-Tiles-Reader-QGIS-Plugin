@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_OptionsGroup(object):
     def setupUi(self, OptionsGroup):
         OptionsGroup.setObjectName(_fromUtf8("OptionsGroup"))
-        OptionsGroup.resize(615, 562)
+        OptionsGroup.resize(925, 562)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -103,6 +103,9 @@ class Ui_OptionsGroup(object):
         self.btnResetToBasemapDefaults = QtGui.QPushButton(OptionsGroup)
         self.btnResetToBasemapDefaults.setObjectName(_fromUtf8("btnResetToBasemapDefaults"))
         self.horizontalLayout_3.addWidget(self.btnResetToBasemapDefaults)
+        self.btnResetToAnalysisDefaults = QtGui.QPushButton(OptionsGroup)
+        self.btnResetToAnalysisDefaults.setObjectName(_fromUtf8("btnResetToAnalysisDefaults"))
+        self.horizontalLayout_3.addWidget(self.btnResetToAnalysisDefaults)
         self.btnResetToInspectionDefaults = QtGui.QPushButton(OptionsGroup)
         self.btnResetToInspectionDefaults.setObjectName(_fromUtf8("btnResetToInspectionDefaults"))
         self.horizontalLayout_3.addWidget(self.btnResetToInspectionDefaults)
@@ -130,6 +133,7 @@ class Ui_OptionsGroup(object):
         self.lblZoomRange.setText(_translate("OptionsGroup", "TextLabel", None))
         self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (slow)", None))
         self.btnResetToBasemapDefaults.setText(_translate("OptionsGroup", "Reset to Base Map Defaults", None))
-        self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Reset to Analysis Defaults", None))
+        self.btnResetToAnalysisDefaults.setText(_translate("OptionsGroup", "Reset to Analysis Defaults", None))
+        self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Reset to Inspection Defaults", None))
         self.chkClipTiles.setText(_translate("OptionsGroup", "Clip each tile at bounds", None))
 

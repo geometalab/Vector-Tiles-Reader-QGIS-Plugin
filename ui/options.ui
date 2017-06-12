@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>615</width>
+    <width>925</width>
     <height>562</height>
    </rect>
   </property>
@@ -234,9 +234,16 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="btnResetToInspectionDefaults">
+      <widget class="QPushButton" name="btnResetToAnalysisDefaults">
        <property name="text">
         <string>Reset to Analysis Defaults</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnResetToInspectionDefaults">
+       <property name="text">
+        <string>Reset to Inspection Defaults</string>
        </property>
       </widget>
      </item>

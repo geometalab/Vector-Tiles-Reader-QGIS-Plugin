@@ -60,7 +60,8 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
         self.zoomSpin.valueChanged.connect(self._on_zoom_change)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
-        self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_analysis_defaults)
+        self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
+        self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
         self._reset_to_basemap_defaults()
 
     def _on_manual_zoom_selected(self, enabled):
@@ -81,7 +82,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
                            tile_limit=100,
                            styles_enabled=True,
                            merging_enabled=False,
-                           load_mask_layer=True,
+                           load_mask_layer=False,
                            cartographic_ordering=True,
                            clip_tile_at_bounds=True)
 
@@ -93,6 +94,15 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
                            load_mask_layer=False,
                            cartographic_ordering=False,
                            clip_tile_at_bounds=True)
+
+    def _reset_to_inspection_defaults(self):
+        self._set_settings(auto_zoom=True,
+                           tile_limit=10,
+                           styles_enabled=False,
+                           merging_enabled=False,
+                           load_mask_layer=False,
+                           cartographic_ordering=False,
+                           clip_tile_at_bounds=False)
 
     def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, load_mask_layer, cartographic_ordering, clip_tile_at_bounds):
         self.rbZoomMax.setChecked(auto_zoom)
