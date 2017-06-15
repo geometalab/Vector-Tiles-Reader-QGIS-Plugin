@@ -160,6 +160,15 @@ class VtrPlugin:
     def show_about(self):
         AboutDialog().show()
 
+    def _is_valid_qgis_extent(self, extent_to_load, zoom):
+        source_bounds = self._current_reader.source.bounds_tile(zoom)
+        if not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
+                and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
+                and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_min"] \
+                and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_min"]:
+                return False
+        return True
+
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
 
@@ -169,6 +178,9 @@ class VtrPlugin:
         scheme = self._current_reader.source.scheme()
         zoom = self._get_current_zoom()
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+
+        if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
+            extent = self._current_reader.source.bounds_tile(zoom)
 
         keep_dialog_open = self.connections_dialog.keep_dialog_open()
         if keep_dialog_open:
