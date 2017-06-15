@@ -48,7 +48,6 @@ class VtrPlugin:
         self._current_writer = None
         self._current_options = None
         self._add_path_to_icons()
-        self._current_source_path = None
         self._current_layer_filter = []
 
     def _add_path_to_icons(self):
@@ -105,12 +104,12 @@ class VtrPlugin:
             self.export_action.setEnabled(True)
 
     def _reload_tiles(self):
-        if self._current_source_path:
+        if self._current_reader:
             self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
-            self._load_tiles(path=self._current_source_path,
+            self._load_tiles(path=self._current_reader.source.source(),
                              options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
@@ -148,12 +147,10 @@ class VtrPlugin:
                 self.connections_dialog.set_layers(layers)
                 self.connections_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
                 self.reload_action.setEnabled(True)
-                self._current_source_path = path_or_url
             else:
                 self.connections_dialog.set_layers([])
                 self.reload_action.setEnabled(False)
                 self.reload_action.setText(self._reload_button_text)
-                self._current_source_path = None
         except:
             QMessageBox.critical(None, "Unexpected Error", "An unexpected error occured. {}".format(str(sys.exc_info()[1])))
 
@@ -193,7 +190,6 @@ class VtrPlugin:
                          options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
                          bounds=extent)
-        self._current_source_path = path_or_url
         self._current_layer_filter = selected_layers
 
     def _get_current_zoom(self):
