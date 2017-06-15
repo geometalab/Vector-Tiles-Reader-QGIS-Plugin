@@ -196,11 +196,14 @@ class MBTilesSource:
 
     def bounds_tile(self, zoom):
         """
-         * Returns the tile boundaries in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
+         * Returns the tile boundaries
         :param zoom:
         :param manual_bounds:
         :return:         """
         bounds = self._get_metadata_value("bounds")
+        if bounds:
+            bounds = bounds.replace(" ", "").split(",")
+            bounds = map(lambda s: float(s), bounds)
         scheme = self.scheme()
         crs = self.crs()
         return get_tile_bounds(zoom, bounds, crs, scheme)
