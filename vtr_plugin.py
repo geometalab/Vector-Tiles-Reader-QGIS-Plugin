@@ -267,13 +267,14 @@ class VtrPlugin:
                                                       tile_limit))
                 self.refresh_layers()
                 debug("Loading complete! Loaded extent: {}", loaded_extent)
-                loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \
-                                                 bounds["x_min"] <= loaded_extent["x_max"] <= bounds["x_max"]) and \
-                                                 (bounds["y_min"] <= loaded_extent["y_min"] <= bounds["y_max"] or \
-                                                 bounds["y_min"] <= loaded_extent["y_max"] <= bounds["y_max"])
-                if not loaded_extent_is_within_bounds:
-                    debug("Loaded extent is not within bounds")
-                    self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
+                if loaded_extent:
+                    loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \
+                                                     bounds["x_min"] <= loaded_extent["x_max"] <= bounds["x_max"]) and \
+                                                     (bounds["y_min"] <= loaded_extent["y_min"] <= bounds["y_max"] or \
+                                                     bounds["y_min"] <= loaded_extent["y_max"] <= bounds["y_max"])
+                    if not loaded_extent_is_within_bounds:
+                        debug("Loaded extent is not within bounds")
+                        self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
             except Exception as e:
                 traceback.print_exc()
                 critical("An exception occured: {}", e)
