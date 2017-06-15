@@ -75,6 +75,8 @@ def _log_message(msg, level, *args):
         _log_to_qgis(msg, level)
     except:
         print("Unexpected error during logging: {}".format(sys.exc_info()[1]))
+        print("Original message: '{}', params: '{}'".format(msg, args))
+
 
 
 def _import_qgis():
