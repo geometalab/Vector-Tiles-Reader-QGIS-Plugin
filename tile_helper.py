@@ -26,14 +26,13 @@ class VectorTile:
         return self.column, self.row
 
 
-def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
+def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
     :param zoom: 
     :param lat: 
     :param lng: 
-    :param source_crs: 
-    :return: 
+    :return:
     """
     if zoom is None:
         raise RuntimeError("zoom is required")
@@ -42,8 +41,8 @@ def coordinate_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     if lng is None:
         raise RuntimeError("Longitude is required")
 
-    m = convert_coordinate(source_crs, 3857, lat, lng)
     gm = GlobalMercator()
+    m = gm.LatLonToMeters(lat, lng)
     tile = gm.MetersToTile(m[0], m[1], zoom)
     if scheme != "tms":
         y = change_scheme(zoom, tile[1])
@@ -57,8 +56,6 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
 
     src = osr.SpatialReference()
     tgt = osr.SpatialReference()
-    # src.SetFromUserInput(source_crs)
-    # tgt.SetFromUserInput(target_crs)
     src.ImportFromEPSG(source_crs)
     tgt.ImportFromEPSG(target_crs)
     transform = osr.CoordinateTransformation(src, tgt)
@@ -107,7 +104,7 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         raise RuntimeError("Scheme not supported: {}".format(scheme))
     if not bounds:
         warn("Bounds is not available")
-
+    debug("Bounds of source: {}", bounds)
     tile_bounds = None
     if bounds:
         lng_min = bounds[0]
@@ -115,8 +112,8 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         lng_max = bounds[2]
         lat_max = bounds[3]
 
-        xy_min = coordinate_to_tile(zoom, lat_max, lng_min, source_crs, scheme)
-        xy_max = coordinate_to_tile(zoom, lat_min, lng_max, source_crs, scheme)
+        xy_min = latlon_to_tile(zoom, lat_max, lng_min, scheme)
+        xy_max = latlon_to_tile(zoom, lat_min, lng_max, scheme)
 
         x_min = min(xy_min[0], xy_max[0])
         x_max = max(xy_min[0], xy_max[0])
@@ -134,18 +131,17 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
     return tile_bounds
 
 
-def change_zoom(source_zoom, target_zoom, tile, scheme, crs):
+def change_zoom(source_zoom, target_zoom, tile, scheme):
     """
     * Converts tile coordinates from one zoom-level to another
     :param source_zoom: 
     :param target_zoom: 
     :param tile: 
     :param scheme: 
-    :param crs: 
-    :return: 
+    :return:
     """
     lat_lon = tile_to_latlon(source_zoom, tile[0], tile[1], scheme)
-    new_tile = coordinate_to_tile(target_zoom, lat_lon[1], lat_lon[0], crs, scheme)
+    new_tile = latlon_to_tile(target_zoom, lat_lon[1], lat_lon[0], scheme)
     return new_tile
 
 

@@ -1,6 +1,6 @@
 from tile_json import TileJSON
 import pytest
-from tile_helper import get_tile_bounds, coordinate_to_tile, epsg3857_to_wgs84_lonlat, tile_to_latlon
+from tile_helper import get_tile_bounds, latlon_to_tile, epsg3857_to_wgs84_lonlat, tile_to_latlon
 
 def test_load():
     tj = _get_loaded()
@@ -31,7 +31,7 @@ def test_manual_bounds_tms():
     assert t[1] == (8569, 10636)
 
 def test_tile_bounds():
-    b = coordinate_to_tile(14, 47.22541, 8.27173)  # hitzkirch coordinates
+    b = latlon_to_tile(14, 47.22541, 8.27173)  # hitzkirch coordinates
     assert b
     assert b[0] == 8568
     assert b[1] == 5747

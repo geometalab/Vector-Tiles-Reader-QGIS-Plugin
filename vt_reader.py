@@ -196,7 +196,7 @@ class VtReader:
                 scheme = self.source.scheme()
                 crs = self.source.crs()
                 mask_tiles = map(
-                    lambda t: change_zoom(zoom_level, int(mask_level), t, scheme, crs),
+                    lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
                     all_tiles)
                 debug("Mapping done")
 

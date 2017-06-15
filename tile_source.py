@@ -8,8 +8,7 @@ from PyQt4.QtGui import QApplication
 from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
-from tile_helper import VectorTile, get_tiles_from_center
-
+from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds
 
 _DEFAULT_CRS = "EPSG:3857"
 
@@ -194,6 +193,17 @@ class MBTilesSource:
             if "vector_layers" in json_data:
                 layers = json_data["vector_layers"]
         return layers
+
+    def bounds_tile(self, zoom):
+        """
+         * Returns the tile boundaries in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
+        :param zoom:
+        :param manual_bounds:
+        :return:         """
+        bounds = self._get_metadata_value("bounds")
+        scheme = self.scheme()
+        crs = self.crs()
+        return get_tile_bounds(zoom, bounds, crs, scheme)
 
     def name(self):
         base_name = os.path.splitext(os.path.basename(self.path))[0]

@@ -1,7 +1,7 @@
 import sys
 import json
 from log_helper import critical, debug
-from tile_helper import get_tile_bounds, coordinate_to_tile
+from tile_helper import get_tile_bounds, latlon_to_tile
 from file_helper import FileHelper
 
 
@@ -52,7 +52,7 @@ class TileJSON:
             lng = center[0]
             lat = center[1]
             zoom = center[2]
-            center = coordinate_to_tile(zoom, lat, lng, self.crs(), self.scheme())
+            center = latlon_to_tile(zoom, lat, lng, self.scheme())
         else:
             bounds = self.bounds_tile(self.max_zoom())
             if bounds:
