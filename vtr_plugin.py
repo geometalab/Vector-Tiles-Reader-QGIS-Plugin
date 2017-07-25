@@ -95,15 +95,17 @@ class VtrPlugin:
         self._current_zoom = None
 
     def _on_scale_change(self):
+        self.iface.mapCanvas().scaleChanged.disconnect(self._on_scale_change)
         if self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             self._reload_tiles()
+        self.iface.mapCanvas().scaleChanged.connect(self._on_scale_change)
 
     def _add_path_to_icons(self):
         icons_directory = FileHelper.get_icons_directory()
-        current_paths = QgsApplication.svgPaths()
-        if icons_directory not in current_paths:
-            current_paths.append(icons_directory)
-            QgsApplication.setDefaultSvgPaths(current_paths)
+        # current_paths = QgsApplication.instance().svgPaths()
+        # if icons_directory not in current_paths:
+        #     current_paths.append(icons_directory)
+        #     QgsApplication.instance().setDefaultSvgPaths(current_paths)
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -156,6 +158,16 @@ class VtrPlugin:
             self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
+            flush_loaded_layers = self.connections_dialog.options.auto_zoom_enabled() and zoom != self._current_zoom
+            self._current_zoom = zoom
+            if flush_loaded_layers:
+                layers_to_remove = []
+                for l in QgsMapLayerRegistry.instance().mapLayers().values():
+                    if self._current_reader.source.source().startswith(l.dataUrl()):
+                        layers_to_remove.append(l.id())
+                debug("Flushing layers: {}", layers_to_remove)
+                QgsMapLayerRegistry.instance().removeMapLayers(layers_to_remove)
+
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             self._load_tiles(path=self._current_reader.source.source(),
                              options=self.connections_dialog.options,
@@ -323,7 +335,7 @@ class VtrPlugin:
                     zoom = max_zoom
                     if manual_zoom is not None:
                         zoom = manual_zoom
-
+                self._current_zoom = zoom
                 loaded_extent = reader.load_tiles(zoom_level=zoom,
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,
@@ -423,7 +435,7 @@ class VtrPlugin:
     def unload(self):
         if self._current_reader:
             self._current_reader.source.close_connection()
-
+            self._current_reader = None
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
