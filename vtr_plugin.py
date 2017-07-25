@@ -28,12 +28,53 @@ import sys
 import site
 import traceback
 
-
 class VtrPlugin:
     _dialog = None
     _model = None
     _reload_button_text = "Load features overlapping the view extent"
     add_layer_action = None
+
+    zoom_level_by_lower_scale_bound = {
+        1000000000: 0,
+        500000000: 1,
+        200000000: 2,
+        50000000: 3,
+        25000000: 4,
+        12500000: 5,
+        6500000: 6,
+        3000000: 7,
+        1500000: 8,
+        750000: 9,
+        400000: 10,
+        200000: 11,
+        100000: 12,
+        50000: 13,
+        25000: 14,
+        12500: 15,
+        5000: 16,
+        2500: 17,
+        1500: 18,
+        750: 19,
+        500: 20,
+        250: 21,
+        100: 22,
+        0: 23
+    }
+
+    def _get_zoom_for_current_map_scale(self):
+        canvas = self.iface.mapCanvas()
+        current_scale = canvas.scale()
+        return self._get_zoom_for_scale(current_scale)
+
+    def _get_zoom_for_scale(self, scale):
+        if scale < 0:
+            scale = 0
+        zoom = 0
+        for lower_bound in sorted(self.zoom_level_by_lower_scale_bound, key=lambda k: k*-1):
+            if scale > lower_bound:
+                zoom = self.zoom_level_by_lower_scale_bound[lower_bound]
+                break
+        return zoom
 
     def __init__(self, iface):
         self.iface = iface
@@ -49,6 +90,13 @@ class VtrPlugin:
         self._current_options = None
         self._add_path_to_icons()
         self._current_layer_filter = []
+        self._auto_zoom = False
+        self.iface.mapCanvas().scaleChanged.connect(self._on_scale_change)
+        self._current_zoom = None
+
+    def _on_scale_change(self):
+        if self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
+            self._reload_tiles()
 
     def _add_path_to_icons(self):
         icons_directory = FileHelper.get_icons_directory()
@@ -201,6 +249,11 @@ class VtrPlugin:
         manual_zoom = self.connections_dialog.options.manual_zoom()
         if manual_zoom is not None:
             zoom = manual_zoom
+        if self.connections_dialog.options.auto_zoom_enabled():
+            scale_based_zoom = self._get_zoom_for_current_map_scale()
+            if scale_based_zoom > zoom:
+                scale_based_zoom = zoom
+            zoom = scale_based_zoom
         return zoom
 
     def _set_qgis_extent(self, zoom, scheme, bounds):
@@ -246,6 +299,7 @@ class VtrPlugin:
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
         load_mask_layer = options.load_mask_layer_enabled()
+        auto_zoom = options.auto_zoom_enabled()
         if ignore_limit:
             tile_limit = None
         manual_zoom = options.manual_zoom()
@@ -260,9 +314,16 @@ class VtrPlugin:
         if reader:
             reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
-                zoom = reader.source.max_zoom()
-                if manual_zoom is not None:
-                    zoom = manual_zoom
+                max_zoom = reader.source.max_zoom()
+                if auto_zoom:
+                    zoom = self._get_zoom_for_current_map_scale()
+                    if zoom > max_zoom:
+                        zoom = max_zoom
+                else:
+                    zoom = max_zoom
+                    if manual_zoom is not None:
+                        zoom = manual_zoom
+
                 loaded_extent = reader.load_tiles(zoom_level=zoom,
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,

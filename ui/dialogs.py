@@ -141,6 +141,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     def cartographic_ordering(self):
         return self.chkCartographicOrdering.isChecked()
 
+    def auto_zoom_enabled(self):
+        return self.rbAutoZoom.isChecked()
+
     def manual_zoom(self):
         if not self.rbZoomManual.isChecked():
             return None

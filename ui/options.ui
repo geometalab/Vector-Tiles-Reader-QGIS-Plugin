@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>925</width>
-    <height>562</height>
+    <height>302</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -23,7 +23,106 @@
    <string>Options</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="8" column="0">
+   <item row="8" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QRadioButton" name="rbZoomManual">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item alignment="Qt::AlignLeft">
+      <widget class="QSpinBox" name="zoomSpin">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>70</width>
+         <height>16777215</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblZoomRange">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkMergeTiles">
+     <property name="text">
+      <string>Merge Tiles (slow)</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnResetToBasemapDefaults">
+       <property name="text">
+        <string>Reset to Base Map Defaults</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnResetToAnalysisDefaults">
+       <property name="text">
+        <string>Reset to Analysis Defaults</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnResetToInspectionDefaults">
+       <property name="text">
+        <string>Reset to Inspection Defaults</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkClipTiles">
+     <property name="text">
+      <string>Clip each tile at bounds</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -38,19 +137,6 @@
       </size>
      </property>
     </spacer>
-   </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkCartographicOrdering">
-     <property name="toolTip">
-      <string>Use ordering according to cartographic element types (label, points, lines, areas) instead of original ordering from the tile source</string>
-     </property>
-     <property name="text">
-      <string>Cartographic layer ordering</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
    </item>
    <item row="1" column="0" colspan="2">
     <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,0,0,0">
@@ -114,7 +200,7 @@
      </item>
     </layout>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="11" column="0" colspan="2">
     <widget class="QCheckBox" name="chkApplyStyles">
      <property name="toolTip">
       <string>Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)</string>
@@ -127,10 +213,13 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
-    <widget class="QRadioButton" name="rbZoomMax">
+   <item row="2" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkCartographicOrdering">
+     <property name="toolTip">
+      <string>Use ordering according to cartographic element types (label, points, lines, areas) instead of original ordering from the tile source</string>
+     </property>
      <property name="text">
-      <string>Max. Zoom</string>
+      <string>Cartographic layer ordering</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -157,102 +246,20 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QRadioButton" name="rbZoomManual">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item alignment="Qt::AlignLeft">
-      <widget class="QSpinBox" name="zoomSpin">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>70</width>
-         <height>16777215</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="lblZoomRange">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkMergeTiles">
+   <item row="6" column="1">
+    <widget class="QRadioButton" name="rbZoomMax">
      <property name="text">
-      <string>Merge Tiles (slow)</string>
+      <string>Max. Zoom</string>
      </property>
      <property name="checked">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="10" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnResetToBasemapDefaults">
-       <property name="text">
-        <string>Reset to Base Map Defaults</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnResetToAnalysisDefaults">
-       <property name="text">
-        <string>Reset to Analysis Defaults</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnResetToInspectionDefaults">
-       <property name="text">
-        <string>Reset to Inspection Defaults</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkClipTiles">
+   <item row="7" column="1">
+    <widget class="QRadioButton" name="rbAutoZoom">
      <property name="text">
-      <string>Clip each tile at bounds</string>
+      <string>Auto (scale based)</string>
      </property>
     </widget>
    </item>
