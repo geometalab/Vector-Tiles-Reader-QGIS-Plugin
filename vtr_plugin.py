@@ -62,9 +62,13 @@ class VtrPlugin:
     }
 
     def _get_zoom_for_current_map_scale(self):
+        current_scale = self._get_current_map_scale()
+        return self._get_zoom_for_scale(current_scale)
+
+    def _get_current_map_scale(self):
         canvas = self.iface.mapCanvas()
         current_scale = canvas.scale()
-        return self._get_zoom_for_scale(current_scale)
+        return current_scale
 
     def _get_zoom_for_scale(self, scale):
         if scale < 0:
@@ -91,14 +95,35 @@ class VtrPlugin:
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
-        self.iface.mapCanvas().scaleChanged.connect(self._on_scale_change)
         self._current_zoom = None
+        self._current_scale = None
+        self._scale_change_connected = False
+        self._loaded_scale = None
+
+    def _connect_scale_change(self):
+        if not self._scale_change_connected:
+            self.iface.mapCanvas().scaleChanged.connect(self._on_scale_change)
+            self._scale_change_connected = True
+
+    def _disconnect_scale_change(self):
+        debug("disconnecting scale change")
+        if self._scale_change_connected:
+            self.iface.mapCanvas().scaleChanged.disconnect(self._on_scale_change)
+            self._scale_change_connected = False
 
     def _on_scale_change(self):
-        self.iface.mapCanvas().scaleChanged.disconnect(self._on_scale_change)
+        self._disconnect_scale_change()
         if self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
-            self._reload_tiles()
-        self.iface.mapCanvas().scaleChanged.connect(self._on_scale_change)
+            new_scale = self._get_current_map_scale()
+            scale_increased = self._current_scale is None or new_scale > self._current_scale
+            self._current_scale = new_scale
+            zoom = self._get_current_zoom()
+            if zoom != self._current_zoom or (scale_increased and new_scale > self._loaded_scale):
+                self._loaded_scale = new_scale
+                self._reload_tiles()
+                self.iface.mapCanvas().zoomScale(new_scale)
+        self._connect_scale_change()
+        debug("connecting scale change")
 
     def _add_path_to_icons(self):
         icons_directory = FileHelper.get_icons_directory()
@@ -158,7 +183,8 @@ class VtrPlugin:
             self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
-            flush_loaded_layers = self.connections_dialog.options.auto_zoom_enabled() and zoom != self._current_zoom
+            auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
+            flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom
             self._current_zoom = zoom
             if flush_loaded_layers:
                 layers_to_remove = []
@@ -336,6 +362,7 @@ class VtrPlugin:
                     if manual_zoom is not None:
                         zoom = manual_zoom
                 self._current_zoom = zoom
+                self._disconnect_scale_change()
                 loaded_extent = reader.load_tiles(zoom_level=zoom,
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,
@@ -348,7 +375,7 @@ class VtrPlugin:
                                                       tile_limit))
                 self.refresh_layers()
                 debug("Loading complete! Loaded extent: {}", loaded_extent)
-                if loaded_extent:
+                if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
                     loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \
                                                      bounds["x_min"] <= loaded_extent["x_max"] <= bounds["x_max"]) and \
                                                      (bounds["y_min"] <= loaded_extent["y_min"] <= bounds["y_max"] or \
@@ -356,6 +383,8 @@ class VtrPlugin:
                     if not loaded_extent_is_within_bounds:
                         debug("Loaded extent is not within bounds")
                         self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
+                if auto_zoom and not self._scale_change_connected:
+                    self._connect_scale_change()
             except Exception as e:
                 traceback.print_exc()
                 critical("An exception occured: {}", e)
@@ -436,6 +465,7 @@ class VtrPlugin:
         if self._current_reader:
             self._current_reader.source.close_connection()
             self._current_reader = None
+        self._disconnect_scale_change()
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
