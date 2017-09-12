@@ -57,9 +57,9 @@ To create the symlink open a command prompt as Administrator and run:
 ### Ubuntu
 The script install.sh creates a symlink from the current directory to the qgis plugins directory
 
-##FAQ
+## FAQ
 
-####How can I use the server connection feature?
+#### How can I use the server connection feature?
 
 Any vector tile service, implementing the [TileJSON specification](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)  should work.
 
