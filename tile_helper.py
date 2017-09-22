@@ -115,10 +115,10 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         xy_min = latlon_to_tile(zoom, lat_max, lng_min, scheme)
         xy_max = latlon_to_tile(zoom, lat_min, lng_max, scheme)
 
-        x_min = min(xy_min[0], xy_max[0])
-        x_max = max(xy_min[0], xy_max[0])
-        y_min = min(xy_min[1], xy_max[1])
-        y_max = max(xy_min[1], xy_max[1])
+        x_min = int(min(xy_min[0], xy_max[0]))
+        x_max = int(max(xy_min[0], xy_max[0]))
+        y_min = int(min(xy_min[1], xy_max[1]))
+        y_max = int(max(xy_min[1], xy_max[1]))
 
         tile_bounds = {
             "x_min": x_min,
