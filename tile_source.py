@@ -100,9 +100,9 @@ class ServerSource:
             col = t[0]
             row = t[1]
             load_url = base_url\
-                .replace("{z}", str(zoom_level))\
-                .replace("{x}", str(col))\
-                .replace("{y}", str(row))
+                .replace("{z}", str(int(zoom_level)))\
+                .replace("{x}", str(int(col)))\
+                .replace("{y}", str(int(row)))
             urls.append((load_url, col, row))
 
         self._progress_handler(msg="Getting {} tiles from source...".format(len(urls)), max_progress=len(urls))
