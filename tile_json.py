@@ -134,7 +134,7 @@ class TileJSON:
             is_within = x_min_within and y_min_within and x_max_within and y_max_within
             debug("Extent {} is within bounds {}: {}", extent, bounds, is_within)
         else:
-            debug("Assuming extent is within bounds")
+            debug("Bounds not available on source. Assuming extent is within bounds")
         return is_within
 
     def _get_value(self, field_name, is_array=False, is_required=False):
