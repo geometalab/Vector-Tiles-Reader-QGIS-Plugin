@@ -177,7 +177,7 @@ class VtReader:
                     remaining_nr_of_tiles = 0
         debug("{} cache hits. {} may potentially be loaded.", len(tiles), remaining_nr_of_tiles)
 
-        debug("Loading extent {} for zoom level '{}' of: {}", zoom_level, self.source.name())
+        debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
 
         tile_data_tuples = []
         if remaining_nr_of_tiles > 0:
