@@ -123,20 +123,6 @@ class TileJSON:
     def mask_level(self):
         return self._get_value("maskLevel")
 
-    def is_within_bounds(self, zoom, extent):
-        bounds = self.bounds_tile(zoom)
-        is_within = True
-        if bounds:
-            x_min_within = extent[0][0] >= bounds[0][0]
-            y_min_within = extent[0][1] >= bounds[0][1]
-            x_max_within = extent[1][0] <= bounds[1][0]
-            y_max_within = extent[1][1] <= bounds[1][1]
-            is_within = x_min_within and y_min_within and x_max_within and y_max_within
-            debug("Extent {} is within bounds {}: {}", extent, bounds, is_within)
-        else:
-            debug("Bounds not available on source. Assuming extent is within bounds")
-        return is_within
-
     def _get_value(self, field_name, is_array=False, is_required=False):
         if not self.json or (is_required and field_name not in self.json):
             raise RuntimeError("The field '{}' is required but not found. This is invalid TileJSON.".format(field_name))
