@@ -104,7 +104,6 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         raise RuntimeError("Scheme not supported: {}".format(scheme))
     if not bounds:
         warn("Bounds is not available")
-    debug("Bounds of source: {}", bounds)
     tile_bounds = None
     if bounds:
         lng_min = bounds[0]

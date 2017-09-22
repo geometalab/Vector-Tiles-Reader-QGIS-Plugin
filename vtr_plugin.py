@@ -184,7 +184,6 @@ class VtrPlugin:
             x_max_within = extent['x_max'] <= bounds['x_max']
             y_max_within = extent['y_max'] <= bounds['y_max']
             is_within = x_min_within and y_min_within and x_max_within and y_max_within
-            debug("Extent {} is within bounds {}: {}", extent, bounds, is_within)
         else:
             debug("Bounds not available on source. Assuming extent is within bounds")
         return is_within
@@ -201,6 +200,7 @@ class VtrPlugin:
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
 
         bounds = self._current_reader.source.bounds_tile(zoom)
+        info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
             # todo: set the current QGIS map extent inside the available bounds of the source
