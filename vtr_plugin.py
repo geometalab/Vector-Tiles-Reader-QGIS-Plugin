@@ -99,53 +99,14 @@ class VtrPlugin:
         self._current_scale = None
         self._scale_change_connected = False
         self._loaded_scale = None
+        self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-
-    def _connect_scale_change(self):
-        if not self._scale_change_connected:
-            self.iface.mapCanvas().scaleChanged.connect(self._on_scale_change)
-            self._scale_change_connected = True
-
-    def _disconnect_scale_change(self):
-        debug("disconnecting scale change")
-        if self._scale_change_connected:
-            self.iface.mapCanvas().scaleChanged.disconnect(self._on_scale_change)
-            self._scale_change_connected = False
-
-    def _on_scale_change(self):
-        self._disconnect_scale_change()
-        if self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
-            new_scale = self._get_current_map_scale()
-            scale_increased = self._current_scale is None or new_scale > self._current_scale
-            self._current_scale = new_scale
-            zoom = self._get_current_zoom()
-            if zoom != self._current_zoom or (scale_increased and new_scale > self._loaded_scale):
-                self._loaded_scale = new_scale
-                self._reload_tiles()
-                self.iface.mapCanvas().zoomScale(new_scale)
-        self._connect_scale_change()
-        debug("connecting scale change")
-        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-
-    def _handle_mouse_move(self, pos):
-        self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
-        zoom = self._get_current_zoom()
-        lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
-        tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
-        msg = "XYZ-Position: {}, {}".format(tile[0], tile[1])
-        self.iface.mainWindow().statusBar().showMessage(msg)
-        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-
-    def _add_path_to_icons(self):
-        icons_directory = FileHelper.get_icons_directory()
-        # current_paths = QgsApplication.instance().svgPaths()
-        # if icons_directory not in current_paths:
-        #     current_paths.append(icons_directory)
-        #     QgsApplication.instance().setDefaultSvgPaths(current_paths)
+        self._connect_map_refresh()
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg", self._show_connections_dialog)
+        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
+                                                           self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
         self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
@@ -165,6 +126,56 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         info("Vector Tile Reader Plugin loaded...")
+
+    def _connect_map_refresh(self):
+        if not self._scale_change_connected:
+            self.iface.mapCanvas().mapCanvasRefreshed.connect(self._on_map_refresh)
+            self._scale_change_connected = True
+
+    def _disconnect_map_refresh(self):
+        if self._scale_change_connected:
+            self.iface.mapCanvas().mapCanvasRefreshed.disconnect(self._on_map_refresh)
+            self._scale_change_connected = False
+
+    def _on_map_refresh(self):
+        self.iface.mapCanvas().mapCanvasRefreshed.disconnect(self._on_map_refresh)
+        if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
+            new_scale = self._get_current_map_scale()
+            has_scale_changed = self._current_scale is None or new_scale != self._current_scale
+            if has_scale_changed:
+                scale_increased = self._current_scale is None or new_scale > self._current_scale
+                self._current_scale = new_scale
+                max_zoom = self._current_reader.source.max_zoom()
+                new_zoom = self._get_zoom_for_scale(new_scale)
+                if new_zoom > max_zoom:
+                    new_zoom = max_zoom
+                current_zoom = self._current_zoom
+                if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
+                    if new_zoom != current_zoom:
+                        debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
+                    else:
+                        debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+
+                    self._loaded_scale = new_scale
+                    self._reload_tiles()
+                    self.iface.mapCanvas().zoomScale(new_scale)
+        self.iface.mapCanvas().mapCanvasRefreshed.connect(self._on_map_refresh)
+
+    def _handle_mouse_move(self, pos):
+        self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+        zoom = self._get_current_zoom()
+        lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
+        tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
+        msg = "XYZ-Position: {}, {}".format(tile[0], tile[1])
+        self.iface.mainWindow().statusBar().showMessage(msg)
+        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
+
+    def _add_path_to_icons(self):
+        icons_directory = FileHelper.get_icons_directory()
+        # current_paths = QgsApplication.instance().svgPaths()
+        # if icons_directory not in current_paths:
+        #     current_paths.append(icons_directory)
+        #     QgsApplication.instance().setDefaultSvgPaths(current_paths)
 
     def _update_nr_of_tiles(self):
         zoom = self._get_current_zoom()
@@ -364,6 +375,7 @@ class VtrPlugin:
         return new_action
 
     def _load_tiles(self, path, options, layers_to_load, bounds=None, ignore_limit=False):
+        self._is_loading = True
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -393,7 +405,8 @@ class VtrPlugin:
                     if manual_zoom is not None:
                         zoom = manual_zoom
                 self._current_zoom = zoom
-                self._disconnect_scale_change()
+                # if self._scale_change_connected:
+                #     self._disconnect_scale_change()
                 loaded_extent = reader.load_tiles(zoom_level=zoom,
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,
@@ -415,7 +428,7 @@ class VtrPlugin:
                         debug("Loaded extent is not within bounds")
                         self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
                 if auto_zoom and not self._scale_change_connected:
-                    self._connect_scale_change()
+                    self._connect_map_refresh()
             except Exception as e:
                 traceback.print_exc()
                 critical("An exception occured: {}", e)
@@ -430,6 +443,7 @@ class VtrPlugin:
                     duration=5)
                 if self.progress_dialog:
                     self.progress_dialog.hide()
+        self._is_loading = False
 
     def _set_background_color(self):
         myColor = QColor("#F2EFE9")
@@ -496,7 +510,7 @@ class VtrPlugin:
         if self._current_reader:
             self._current_reader.source.close_connection()
             self._current_reader = None
-        self._disconnect_scale_change()
+        self._disconnect_map_refresh()
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
