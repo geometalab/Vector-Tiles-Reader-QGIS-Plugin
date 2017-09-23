@@ -80,7 +80,7 @@ class FileHelper:
             with open(file_path, 'wb') as f:
                 pickle.dump(tile, f, pickle.HIGHEST_PROTOCOL)
         except:
-            debug("Error while writing tile '{}' to cache", str(tile))
+            critical("Error while writing tile '{}' to cache: {}", str(tile), sys.exc_info()[1])
 
     @staticmethod
     def get_sample_data_directory():
