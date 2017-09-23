@@ -588,6 +588,9 @@ class VtReader:
         coordinates = feature["geometry"]
 
         properties = feature["properties"]
+        if "id" in properties and properties["id"] < 0:
+            properties["id"] = 0
+
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
             properties["_symbol"] = self._get_poi_icon(feature)
