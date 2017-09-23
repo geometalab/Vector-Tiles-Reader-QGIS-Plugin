@@ -96,13 +96,18 @@ class ServerSource:
             if limit_reacher_handler:
                 limit_reacher_handler()
 
+        parameters = urlparse.parse_qs(urlparse.urlparse(self.url).query)
+        api_key = ""
+        if "api_key" in parameters.keys():
+            api_key = parameters["api_key"][0]
         for t in tiles_to_load:
             col = t[0]
             row = t[1]
             load_url = base_url\
-                .replace("{z}", str(zoom_level))\
-                .replace("{x}", str(col))\
-                .replace("{y}", str(row))
+                .replace("{z}", str(int(zoom_level)))\
+                .replace("{x}", str(int(col)))\
+                .replace("{y}", str(int(row)))\
+                .replace("{api_key}", str(api_key))
             urls.append((load_url, col, row))
 
         self._progress_handler(msg="Getting {} tiles from source...".format(len(urls)), max_progress=len(urls))

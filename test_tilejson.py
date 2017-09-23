@@ -46,10 +46,6 @@ def test_tile_bounds_world():
     assert b_min == (-1, -1)
     assert b_max == (16383, 16383)
 
-def test_is_within_bounds():
-    tj = _get_loaded()
-    assert tj.is_within_bounds(14, [(8191, 8191), (8192, 8192)])
-
 def test_center_tile():
     json = {
         "center": [8.27187, 47.22550, 14],

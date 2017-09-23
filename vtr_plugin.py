@@ -20,7 +20,7 @@ from qgis.core import *
 from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, latlon_to_tile
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
 import os
@@ -99,6 +99,7 @@ class VtrPlugin:
         self._current_scale = None
         self._scale_change_connected = False
         self._loaded_scale = None
+        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
     def _connect_scale_change(self):
         if not self._scale_change_connected:
@@ -124,6 +125,16 @@ class VtrPlugin:
                 self.iface.mapCanvas().zoomScale(new_scale)
         self._connect_scale_change()
         debug("connecting scale change")
+        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
+
+    def _handle_mouse_move(self, pos):
+        self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+        zoom = self._get_current_zoom()
+        lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
+        tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
+        msg = "XYZ-Position: {}, {}".format(tile[0], tile[1])
+        self.iface.mainWindow().statusBar().showMessage(msg)
+        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
     def _add_path_to_icons(self):
         icons_directory = FileHelper.get_icons_directory()
@@ -252,6 +263,18 @@ class VtrPlugin:
                 return False
         return True
 
+    def is_extent_within_bounds(self, extent, bounds):
+        is_within = True
+        if bounds:
+            x_min_within = extent['x_min'] >= bounds['x_min']
+            y_min_within = extent['y_min'] >= bounds['y_min']
+            x_max_within = extent['x_max'] <= bounds['x_max']
+            y_max_within = extent['y_max'] <= bounds['y_max']
+            is_within = x_min_within and y_min_within and x_max_within and y_max_within
+        else:
+            debug("Bounds not available on source. Assuming extent is within bounds")
+        return is_within
+
     def _on_add_layer(self, path_or_url, selected_layers):
         debug("add layer: {}", path_or_url)
 
@@ -260,7 +283,15 @@ class VtrPlugin:
 
         scheme = self._current_reader.source.scheme()
         zoom = self._get_current_zoom()
+
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+
+        bounds = self._current_reader.source.bounds_tile(zoom)
+        info("Bounds of source: {}", bounds)
+        is_within_bounds = self.is_extent_within_bounds(extent, bounds)
+        if not is_within_bounds:
+            # todo: set the current QGIS map extent inside the available bounds of the source
+            pass
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
             extent = self._current_reader.source.bounds_tile(zoom)
@@ -473,3 +504,7 @@ class VtrPlugin:
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)
+        try:
+            self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+        except:
+            pass
