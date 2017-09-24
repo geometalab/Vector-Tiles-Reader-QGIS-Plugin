@@ -46,6 +46,12 @@ Name conventions for Vector Tiles Reader QGIS Plugin:
 * This Plugin was tested on Ubuntu 16.10 and Windows 10
 
 ## Installation
+### QGIS Plugins
+Download the latest published release inside QGIS:
+1. _Plugins_ -> _Manage and Install Plugins..._
+2. Search for 'Vector Tiles Reader'
+3. Install
+
 ### Windows
 Copy cloned folder or create symlink to: 
 %userprofile%/.qgis2/python/plugins
