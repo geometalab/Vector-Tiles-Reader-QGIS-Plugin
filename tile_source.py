@@ -478,8 +478,25 @@ class TrexCacheSource:
         :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
         :return:
         """
-        raise "not implemented"
         self._cancelling = False
         tile_data_tuples = []
+
+        if len(tiles_to_load) > max_tiles:
+            tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
+            if limit_reacher_handler:
+                limit_reacher_handler()
+
+        for t in tiles_to_load:
+            tile_path = "{}/{}/{}.pbf".format(int(zoom_level), t[0], t[1])
+            full_path = os.path.join(self.path, tile_path)
+            col = t[0]
+            row = t[1]
+            tile = VectorTile(self.scheme(), zoom_level, col, row)
+            if os.path.isfile(full_path):
+                with open(full_path, 'rb') as f:
+                    encoded_data = f.read()
+                    tile_data_tuples.append((tile, encoded_data))
+            if for_each:
+                for_each()
 
         return tile_data_tuples
