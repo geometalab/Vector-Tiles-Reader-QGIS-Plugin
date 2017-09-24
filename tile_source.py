@@ -206,8 +206,13 @@ class MBTilesSource:
         :param manual_bounds:
         :return:         """
         bounds = self._get_metadata_value("bounds")
+        print "bounds: ", bounds
         if bounds:
-            bounds = bounds.replace(" ", "").split(",")
+            bounds = bounds\
+                .replace(" ", "")\
+                .replace("[", "")\
+                .replace("]", "")\
+                .split(",")
             bounds = map(lambda s: float(s), bounds)
         scheme = self.scheme()
         crs = self.crs()
@@ -240,27 +245,6 @@ class MBTilesSource:
         :return: 
         """
         return self._get_metadata_value("maskLevel")
-
-    def is_mapbox_vector_tile(self):
-        """
-         * A .mbtiles file is a Mapbox Vector Tile if the binary tile data is gzipped.
-        :return:
-        """
-        debug("Checking if file corresponds to Mapbox format (i.e. gzipped)")
-        is_mapbox_pbf = False
-        try:
-            tile_data_tuples = self.load_tiles(max_tiles=1, zoom_level=None)
-            if len(tile_data_tuples) == 1:
-                undecoded_data = tile_data_tuples[0][1]
-                if undecoded_data:
-                    is_mapbox_pbf = FileHelper.is_gzipped(undecoded_data)
-                    if is_mapbox_pbf:
-                        debug("File is valid mbtiles")
-                    else:
-                        debug("pbf is not gzipped")
-        except:
-            warn("Something went wrong. This file doesn't seem to be a Mapbox Vector Tile. {}", sys.exc_info())
-        return is_mapbox_pbf
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
         """
@@ -426,3 +410,76 @@ class MBTilesSource:
             debug("Successfully connected")
         except:
             critical("Db connection failed:", sys.exc_info())
+
+
+class TrexCacheSource:
+    def __init__(self, path):
+        if not os.path.isdir(path):
+            raise RuntimeError("The folder does not exist: {}".format(path))
+        self.path = path
+        metadata_path = os.path.join(path, "metadata.json")
+        self.json = TileJSON(metadata_path)
+        self.json.load()
+        self._progress_handler = None
+        self._cancelling = False
+
+    def cancel(self):
+        self._cancelling = True
+
+    def set_progress_handler(self, func):
+        self._progress_handler = func
+
+    def source(self):
+        return self.path
+
+    def attribution(self):
+        return self.json.attribution()
+
+    def vector_layers(self):
+        data = json.loads(self.json.get_value("json"))["vector_layers"]
+        return data
+
+    def close_connection(self):
+        pass
+
+    def name(self):
+        name = self.json.name()
+        if not name:
+            name = self.json.id()
+        if not name:
+            name = os.path.basename(self.path)
+        return name
+
+    def min_zoom(self):
+        return self.json.min_zoom()
+
+    def max_zoom(self):
+        return self.json.max_zoom()
+
+    def mask_level(self):
+        return self.json.mask_level()
+
+    def scheme(self):
+        return self.json.scheme()
+
+    def bounds_tile(self, zoom):
+        return self.json.bounds_tile(zoom)
+
+    def crs(self):
+        return self.json.crs()
+
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
+        """
+         * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
+        :param zoom_level: The zoom level which will be loaded
+        :param bounds: If set, only tiles inside this tile boundary will be loaded
+        :param max_tiles: The maximum number of tiles to be loaded
+        :param for_each: A function which will be called for every row
+        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
+        :return:
+        """
+        raise "not implemented"
+        self._cancelling = False
+        tile_data_tuples = []
+
+        return tile_data_tuples

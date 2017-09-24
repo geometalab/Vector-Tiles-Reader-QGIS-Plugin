@@ -1,5 +1,7 @@
 import sys
 import json
+import os
+import ast
 from log_helper import critical, debug
 from tile_helper import get_tile_bounds, latlon_to_tile
 from file_helper import FileHelper
@@ -19,11 +21,16 @@ class TileJSON:
         debug("Loading TileJSON")
         success = False
         try:
-            status, data = FileHelper.load_url(self.url)
+            if os.path.isfile(self.url):
+                with open(self.url, 'r') as f:
+                    data = f.read()
+            else:
+                status, data = FileHelper.load_url(self.url)
             self.json = json.loads(data)
             if self.json:
                 debug("TileJSON loaded")
                 self._validate()
+                debug("TileJSON validated")
                 success = True
             else:
                 debug("Loading TileJSON failed")
@@ -65,7 +72,7 @@ class TileJSON:
         return self._get_value("attribution")
 
     def center_longlat(self):
-        return self._get_value("center")
+        return self._get_value("center", is_array=True)
 
     def bounds_longlat(self):
         bounds = self._get_value("bounds", is_array=True)
@@ -87,6 +94,10 @@ class TileJSON:
     def vector_layers(self):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
         return layers
+
+    def get_value(self, key):
+        val = self._get_value(key)
+        return val
 
     def crs(self, default="EPSG:3857"):
         crs = self._get_value("crs")
@@ -131,7 +142,8 @@ class TileJSON:
         if field_name in self.json:
             if is_array:
                 result = []
-                result.extend(self.json[field_name])
+                result_arr = ast.literal_eval(str(self.json[field_name]))
+                result.extend(result_arr)
                 if is_required and len(result) == 0:
                     raise RuntimeError(
                         "The field '{}' is required but is empty. At least one entry is expected.".format(field_name))
