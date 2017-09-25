@@ -62,7 +62,6 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.zoomSpin.valueChanged.connect(self._on_zoom_change)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
-        self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
         self._reset_to_basemap_defaults()
 
     def _on_manual_zoom_selected(self, enabled):
@@ -83,37 +82,27 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
                            tile_limit=100,
                            styles_enabled=True,
                            merging_enabled=False,
-                           load_mask_layer=False,
                            cartographic_ordering=True,
-                           clip_tile_at_bounds=True)
-
-    def _reset_to_analysis_defaults(self):
-        self._set_settings(auto_zoom=True,
-                           tile_limit=10,
-                           styles_enabled=False,
-                           merging_enabled=True,
-                           load_mask_layer=False,
-                           cartographic_ordering=False,
                            clip_tile_at_bounds=True)
 
     def _reset_to_inspection_defaults(self):
         self._set_settings(auto_zoom=True,
-                           tile_limit=10,
+                           tile_limit=1,
                            styles_enabled=False,
                            merging_enabled=False,
-                           load_mask_layer=False,
                            cartographic_ordering=False,
                            clip_tile_at_bounds=False)
 
-    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, load_mask_layer, cartographic_ordering, clip_tile_at_bounds):
-        self.rbZoomMax.setChecked(auto_zoom)
+    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, cartographic_ordering,
+                      clip_tile_at_bounds):
+        self.rbZoomMax.setChecked(not auto_zoom)
+        self.rbAutoZoom.setChecked(auto_zoom)
         tile_limit_enabled = tile_limit is not None
         self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
         if tile_limit_enabled:
             self.spinNrOfLoadedTiles.setValue(tile_limit)
         self.chkApplyStyles.setChecked(styles_enabled)
         self.chkMergeTiles.setChecked(merging_enabled)
-        self.chkLoadMaskLayer.setChecked(load_mask_layer)
         self.chkCartographicOrdering.setChecked(cartographic_ordering)
         self.chkClipTiles.setChecked(clip_tile_at_bounds)
 
@@ -161,7 +150,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         return self.chkMergeTiles.isChecked()
 
     def load_mask_layer_enabled(self):
-        return self.chkLoadMaskLayer.isChecked()
+        return False
 
 
 class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
