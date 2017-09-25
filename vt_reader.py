@@ -80,6 +80,7 @@ class VtReader:
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds = None
+        self._always_overwrite_geojson = False
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -111,6 +112,14 @@ class VtReader:
             "type": "FeatureCollection",
             "crs": crs,
             "features": []}
+
+    def always_overwrite_geojson(self, enabled):
+        """
+         * If activated, the geoJson written to the disk will always be overwritten, with each load
+         * As a result of this, only the latest loaded extent will be visible in qgis
+        :return:
+        """
+        self._always_overwrite_geojson = enabled
 
     def cancel(self):
         """
@@ -395,7 +404,7 @@ class VtReader:
                 # get the layer from qgis and update its source
                 layer = self._get_layer_by_source(layer_name_and_zoom, file_path)
                 if layer:
-                    self._update_layer_source(file_path, feature_collections_by_tile_coord)
+                    self._update_layer_source(file_path, feature_collections_by_tile_coord, zoom_level, layer_name)
                     layer.reload()
 
             if not layer:
@@ -421,8 +430,7 @@ class VtReader:
                 VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=index+1)
 
-    @staticmethod
-    def _update_layer_source(layer_source, feature_collections_by_tile_coord):
+    def _update_layer_source(self, layer_source, feature_collections_by_tile_coord, zoom_level, layer_name):
         """
          * Updates the layers GeoJSON source file
         :param layer_source: 
@@ -430,7 +438,10 @@ class VtReader:
         :return: 
         """
         with open(layer_source, "r") as f:
-            current_feature_collection = json.load(f)
+            if self._always_overwrite_geojson:
+                current_feature_collection = self._get_empty_feature_collection(zoom_level, layer_name)
+            else:
+                current_feature_collection = json.load(f)
             VtReader._merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord)
         if current_feature_collection:
             with open(layer_source, "w") as f:
@@ -588,6 +599,8 @@ class VtReader:
         coordinates = feature["geometry"]
 
         properties = feature["properties"]
+        properties["_col"] = tile.column
+        properties["_row"] = tile.row
         if "id" in properties and properties["id"] < 0:
             properties["id"] = 0
 

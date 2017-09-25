@@ -27,6 +27,7 @@ import os
 import sys
 import site
 import traceback
+import json
 
 
 class VtrPlugin:
@@ -144,23 +145,27 @@ class VtrPlugin:
             new_scale = self._get_current_map_scale()
             has_scale_changed = self._current_scale is None or new_scale != self._current_scale
             if has_scale_changed:
-                scale_increased = self._current_scale is None or new_scale > self._current_scale
-                self._current_scale = new_scale
-                max_zoom = self._current_reader.source.max_zoom()
-                new_zoom = self._get_zoom_for_scale(new_scale)
-                if new_zoom > max_zoom:
-                    new_zoom = max_zoom
-                current_zoom = self._current_zoom
-                if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
-                    if new_zoom != current_zoom:
-                        debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
-                    else:
-                        debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
-
-                    self._loaded_scale = new_scale
-                    self._reload_tiles()
-                    self.iface.mapCanvas().zoomScale(new_scale)
+                self._handle_scale_change(new_scale)
+            else:
+                pass
         self.iface.mapCanvas().mapCanvasRefreshed.connect(self._on_map_refresh)
+
+    def _handle_scale_change(self, new_scale):
+        scale_increased = self._current_scale is None or new_scale > self._current_scale
+        self._current_scale = new_scale
+        max_zoom = self._current_reader.source.max_zoom()
+        new_zoom = self._get_zoom_for_scale(new_scale)
+        if new_zoom > max_zoom:
+            new_zoom = max_zoom
+        current_zoom = self._current_zoom
+        if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
+            if new_zoom != current_zoom:
+                debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
+            else:
+                debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+            self._loaded_scale = new_scale
+            self._reload_tiles()
+            self.iface.mapCanvas().zoomScale(new_scale)
 
     def _handle_mouse_move(self, pos):
         self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
@@ -201,6 +206,14 @@ class VtrPlugin:
                 critical("Error during export: {}", sys.exc_info())
             self.export_action.setEnabled(True)
 
+    def _get_all_own_layers(self):
+        layers = []
+        for l in QgsMapLayerRegistry.instance().mapLayers().values():
+            data_url = l.dataUrl().lower()
+            if data_url and self._current_reader.source.source().lower().startswith(data_url):
+                layers.append(l)
+        return layers
+
     def _reload_tiles(self):
         if self._current_reader:
             self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
@@ -210,15 +223,13 @@ class VtrPlugin:
             flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom
             self._current_zoom = zoom
             if flush_loaded_layers:
-                layers_to_remove = []
-                for l in QgsMapLayerRegistry.instance().mapLayers().values():
-                    data_url = l.dataUrl().lower()
-                    if data_url and self._current_reader.source.source().lower().startswith(data_url):
-                        layers_to_remove.append(l.id())
+                layers_to_remove = map(lambda layer: layer.id(), self._get_all_own_layers())
                 debug("Flushing layers: {}", layers_to_remove)
                 QgsMapLayerRegistry.instance().removeMapLayers(layers_to_remove)
 
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+            if self.connections_dialog.options.auto_zoom_enabled():
+                self._current_reader.always_overwrite_geojson(True)
             self._load_tiles(path=self._current_reader.source.source(),
                              options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
@@ -512,7 +523,11 @@ class VtrPlugin:
         if self._current_reader:
             self._current_reader.source.close_connection()
             self._current_reader = None
-        self._disconnect_map_refresh()
+        try:
+            self._disconnect_map_refresh()
+        except:
+            pass
+
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
