@@ -47,8 +47,7 @@ def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     if scheme != "tms":
         y = change_scheme(zoom, tile[1])
         tile = (tile[0], y)
-    return tile
-
+    return int(tile[0]), int(tile[1])
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
