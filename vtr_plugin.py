@@ -212,8 +212,10 @@ class VtrPlugin:
             if flush_loaded_layers:
                 layers_to_remove = []
                 for l in QgsMapLayerRegistry.instance().mapLayers().values():
-                    if self._current_reader.source.source().startswith(l.dataUrl()):
-                        layers_to_remove.append(l.id())
+                    data_url = l.dataUrl().lower()
+                    if data_url:
+                        if self._current_reader.source.source().lower().startswith(data_url):
+                            layers_to_remove.append(l.id())
                 debug("Flushing layers: {}", layers_to_remove)
                 QgsMapLayerRegistry.instance().removeMapLayers(layers_to_remove)
 
