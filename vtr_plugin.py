@@ -28,6 +28,7 @@ import sys
 import site
 import traceback
 
+
 class VtrPlugin:
     _dialog = None
     _model = None
@@ -405,8 +406,6 @@ class VtrPlugin:
                     if manual_zoom is not None:
                         zoom = manual_zoom
                 self._current_zoom = zoom
-                # if self._scale_change_connected:
-                #     self._disconnect_scale_change()
                 loaded_extent = reader.load_tiles(zoom_level=zoom,
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,
@@ -417,6 +416,8 @@ class VtrPlugin:
                                                   bounds=bounds,
                                                   limit_reacher_handler=lambda: self._show_limit_exceeded_message(
                                                       tile_limit))
+                if self._current_scale is None:
+                    self._current_scale = self._get_current_map_scale()
                 self.refresh_layers()
                 debug("Loading complete! Loaded extent: {}", loaded_extent)
                 if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
