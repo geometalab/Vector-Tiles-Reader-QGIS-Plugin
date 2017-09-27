@@ -69,7 +69,7 @@ def _log_message(msg, level, *args):
         elif level == _DEBUG:
             _logger.debug(msg)
 
-        print(msg)
+        # print(msg)
 
         _log_to_qgis(msg, level)
     except:
