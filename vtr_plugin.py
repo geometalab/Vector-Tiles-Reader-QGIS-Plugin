@@ -262,13 +262,13 @@ class VtrPlugin:
 
     def _on_connect(self, connection_name, path_or_url):
         debug("Connect to path_or_url: {}", path_or_url)
-
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
 
         try:
             if self._current_reader:
                 self._current_reader.source.close_connection()
             reader = self._create_reader(path_or_url)
+            reader.set_root_group_name(connection_name)
             self._current_reader = reader
             if reader:
                 layers = reader.source.vector_layers()

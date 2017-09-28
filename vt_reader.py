@@ -81,6 +81,10 @@ class VtReader:
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds = None
         self._always_overwrite_geojson = False
+        self._root_group_name = None
+
+    def set_root_group_name(self, name):
+        self._root_group_name = name
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
@@ -354,9 +358,12 @@ class VtReader:
         """
 
         root = QgsProject.instance().layerTreeRoot()
-        root_group = root.findGroup(self.source.name())
+        name = self._root_group_name
+        if not name:
+            name = self.source.name()
+        root_group = root.findGroup(name)
         if not root_group:
-            root_group = root.addGroup(self.source.name())
+            root_group = root.addGroup(name)
         if not manual_layer_name:
             layers = map(lambda l: l["id"], self.source.vector_layers())
         else:
