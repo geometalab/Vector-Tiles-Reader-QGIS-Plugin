@@ -79,7 +79,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True,
-                           tile_limit=100,
+                           tile_limit=10,
                            styles_enabled=True,
                            merging_enabled=False,
                            cartographic_ordering=True,

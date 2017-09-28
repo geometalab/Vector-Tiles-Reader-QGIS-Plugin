@@ -207,7 +207,6 @@ class VtReader:
             if mask_level is not None and mask_level != zoom_level:
                 debug("Mapping {} tiles to mask level", len(all_tiles))
                 scheme = self.source.scheme()
-                crs = self.source.crs()
                 mask_tiles = map(
                     lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
                     all_tiles)
@@ -387,6 +386,8 @@ class VtReader:
 
         self._assure_qgis_groups_exist()
 
+        all_qgis_layers = map(lambda (name, l): l, QgsMapLayerRegistry.instance().mapLayers().iteritems())
+
         self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_path), msg="Creating layers...")
         layers = []
         for index, layer_name_and_type in enumerate(self.feature_collections_by_layer_path):
@@ -399,7 +400,6 @@ class VtReader:
                 break
 
             self._assure_qgis_groups_exist(manual_layer_name=layer_name)
-            target_group = self._qgis_layer_groups_by_name[layer_name]
             feature_collections_by_tile_coord = self.feature_collections_by_layer_path[layer_name_and_type]
 
             file_name = self._get_geojson_filename(layer_name, geo_type, zoom_level)
@@ -409,10 +409,9 @@ class VtReader:
             if os.path.isfile(file_path):
                 # file exists already. add the features of the collection to the existing collection
                 # get the layer from qgis and update its source
-                layer = self._get_layer_by_source(layer_name_and_zoom, file_path)
+                layer = self._get_layer_by_source(all_qgis_layers, layer_name_and_zoom, file_path, geo_type)
                 if layer:
                     self._update_layer_source(file_path, feature_collections_by_tile_coord, zoom_level, layer_name)
-                    layer.reload()
 
             if not layer:
                 complete_collection = self._get_empty_feature_collection(zoom_level, layer_name)
@@ -420,10 +419,19 @@ class VtReader:
                                                 feature_collections_by_tile_coord=feature_collections_by_tile_coord)
                 with open(file_path, "w") as f:
                     f.write(json.dumps(complete_collection))
-                layer = self._add_vector_layer_to_qgis(file_path, layer_name, zoom_level, target_group, merge_features, geo_type)
-                if apply_styles:
-                    layers.append((layer_name_and_type, layer))
+                layer = self._create_named_layer(file_path, layer_name, zoom_level, merge_features, geo_type)
+                layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=index+1)
+
+        QgsMapLayerRegistry.instance().reloadAllLayers()
+
+        if len(layers) > 0:
+            only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], layers))
+            QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
+        for name, geo_type, layer in layers:
+            info("name: {}", name)
+            target_group = self._qgis_layer_groups_by_name[name]
+            target_group.addLayer(layer)
 
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
@@ -431,9 +439,8 @@ class VtReader:
                 QApplication.processEvents()
                 if self.cancel_requested:
                     break
-                path_and_type = layer_path_tuple[0]
-                geo_type = path_and_type[1]
-                layer = layer_path_tuple[1]
+                geo_type = layer_path_tuple[1]
+                layer = layer_path_tuple[2]
                 VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=index+1)
 
@@ -444,12 +451,12 @@ class VtReader:
         :param feature_collections_by_tile_coord: 
         :return: 
         """
-        with open(layer_source, "r") as f:
-            if self._always_overwrite_geojson:
-                current_feature_collection = self._get_empty_feature_collection(zoom_level, layer_name)
-            else:
+        if self._always_overwrite_geojson:
+            current_feature_collection = self._get_empty_feature_collection(zoom_level, layer_name)
+        else:
+            with open(layer_source, "r") as f:
                 current_feature_collection = json.load(f)
-            VtReader._merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord)
+        VtReader._merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord)
         if current_feature_collection:
             with open(layer_source, "w") as f:
                 json.dump(current_feature_collection, f)
@@ -470,21 +477,17 @@ class VtReader:
                 current_feature_collection["features"].extend(feature_collection["features"])
 
     @staticmethod
-    def _get_layer_by_source(layer_name, layer_source_file):
+    def _get_layer_by_source(all_layers, layer_name, layer_source_file, geo_type):
         """
          * Returns the layer from QGIS whose name and layer_source matches the specified parameters
         :param layer_name: 
         :param layer_source_file: 
         :return: 
         """
-
-        matching_layer = None
-        layers = QgsMapLayerRegistry.instance().mapLayersByName(layer_name)
-        for l in layers:
-            if l.source() == layer_source_file:
-                matching_layer = l
-                break
-        return matching_layer
+        layers = filter(lambda l: l.name() == layer_name and l.source() == layer_source_file, all_layers)  #QgsMapLayerRegistry.instance().mapLayersByName(layer_name)
+        if len(layers) > 0:
+            return layers[0]
+        return None
 
     @staticmethod
     def _apply_named_style(layer, geo_type):
@@ -513,7 +516,7 @@ class VtReader:
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _add_vector_layer_to_qgis(self, json_src, layer_name, zoom_level, layer_target_group, merge_features, geo_type):
+    def _create_named_layer(self, json_src, layer_name, zoom_level, merge_features, geo_type):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
@@ -522,14 +525,7 @@ class VtReader:
         layer_with_zoom = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, zoom_level)
         layer = QgsVectorLayer(json_src, layer_with_zoom, "ogr")
 
-        if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-            layer = FeatureMerger().merge_features(layer)
-            layer.setName(layer_name)
-
-        QgsMapLayerRegistry.instance().addMapLayer(layer, False)
-        layer_target_group.addLayer(layer)
         layer.setCustomProperty("vector_tile_source", self.source.source())
-
         layer.setShortName(layer_name)
         layer.setDataUrl(self.source.source())
 
@@ -538,6 +534,9 @@ class VtReader:
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 
+        if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
+            layer = FeatureMerger().merge_features(layer)
+            layer.setName(layer_name)
         return layer
 
     def _create_geojson(self, tile, layer_filter):

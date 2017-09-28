@@ -179,7 +179,7 @@ class VtrPlugin:
         zoom = self._get_current_zoom()
         lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
         tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
-        msg = "XYZ-Position: {}, {}".format(tile[0], tile[1])
+        msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
         self.iface.mainWindow().statusBar().showMessage(msg)
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
