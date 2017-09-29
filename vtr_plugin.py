@@ -74,9 +74,9 @@ class VtrPlugin:
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-        self._map_scale_timer = QTimer()
-        self._map_scale_timer.timeout.connect(self._handle_scale_change_delayed)
-        self._connect_map_refresh()
+        self._map_scale_change_debounce_timer = QTimer()
+        self._map_scale_change_debounce_timer.timeout.connect(self._handle_map_scale_changed)
+        self._connect_map_scale_changed()
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -104,46 +104,47 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
 
-    def _connect_map_refresh(self):
+    def _connect_map_scale_changed(self):
         if not self._scale_change_connected:
-            self.iface.mapCanvas().scaleChanged.connect(self._on_map_refresh, Qt.QueuedConnection)
+            self.iface.mapCanvas().scaleChanged.connect(self._restart_map_scale_debounce_timer, Qt.QueuedConnection)
             self._scale_change_connected = True
 
-    def _disconnect_map_refresh(self):
+    def _disconnect_map_scale_changed(self):
         if self._scale_change_connected:
-            self.iface.mapCanvas().scaleChanged.disconnect(self._on_map_refresh)
+            self.iface.mapCanvas().scaleChanged.disconnect(self._restart_map_scale_debounce_timer)
             self._scale_change_connected = False
 
-    def _on_map_refresh(self):
-        self._map_scale_timer.stop()
-        self._map_scale_timer.start(1000)
+    def _restart_map_scale_debounce_timer(self):
+        self._map_scale_change_debounce_timer.stop()
+        self._map_scale_change_debounce_timer.start(1000)
 
-    def _handle_scale_change_delayed(self):
-        self._map_scale_timer.stop()
-        if self._is_loading:
-            self._map_scale_timer.start(750)
+    def _get_new_scale_if_changed(self):
+        new_scale = self._get_current_map_scale()
+        has_scale_changed = self._current_scale is None or new_scale != self._current_scale
+        if has_scale_changed:
+            return new_scale
+        return None
+
+    def _handle_map_scale_changed(self):
+        self._map_scale_change_debounce_timer.stop()
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
-            new_scale = self._get_current_map_scale()
-            has_scale_changed = self._current_scale is None or new_scale != self._current_scale
-            if has_scale_changed:
-                self._handle_scale_change(new_scale)
-
-    def _handle_scale_change(self, new_scale):
-        scale_increased = self._current_scale is None or new_scale > self._current_scale
-        self._current_scale = new_scale
-        max_zoom = self._current_reader.source.max_zoom()
-        new_zoom = get_zoom_by_scale(new_scale)
-        if new_zoom > max_zoom:
-            new_zoom = max_zoom
-        current_zoom = self._current_zoom
-        if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
-            if new_zoom != current_zoom:
-                debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
-            else:
-                debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
-            self._loaded_scale = new_scale
-            self._reload_tiles()
-            self.iface.mapCanvas().zoomScale(new_scale)
+            new_scale = self._get_new_scale_if_changed()
+            if new_scale:
+                scale_increased = self._current_scale is None or new_scale > self._current_scale
+                self._current_scale = new_scale
+                max_zoom = self._current_reader.source.max_zoom()
+                new_zoom = get_zoom_by_scale(new_scale)
+                if new_zoom > max_zoom:
+                    new_zoom = max_zoom
+                current_zoom = self._current_zoom
+                if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
+                    if new_zoom != current_zoom:
+                        debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
+                    else:
+                        debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+                    self._loaded_scale = new_scale
+                    self._reload_tiles()
+                    self.iface.mapCanvas().zoomScale(new_scale)
 
     def _handle_mouse_move(self, pos):
         self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
@@ -417,7 +418,7 @@ class VtrPlugin:
                         debug("Loaded extent is not within bounds")
                         self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
                 if auto_zoom and not self._scale_change_connected:
-                    self._connect_map_refresh()
+                    self._connect_map_scale_changed()
             except Exception as e:
                 traceback.print_exc()
                 critical("An exception occured: {}", e)
@@ -500,7 +501,7 @@ class VtrPlugin:
             self._current_reader.source.close_connection()
             self._current_reader = None
         try:
-            self._disconnect_map_refresh()
+            self._disconnect_map_scale_changed()
         except:
             pass
 
