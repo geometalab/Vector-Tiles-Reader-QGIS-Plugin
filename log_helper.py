@@ -20,7 +20,7 @@ def remove_key(text):
 
 
 def get_temp_dir(path_extension=None):
-    temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
+    temp_dir = os.path.join(tempfile.gettempdir(), "vector_tiles_reader")
     if path_extension:
         temp_dir = os.path.join(temp_dir, path_extension)
 
