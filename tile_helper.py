@@ -1,7 +1,6 @@
 from global_map_tiles import GlobalMercator
 from osgeo import osr
 import operator
-from PyQt4.QtGui import QApplication
 from log_helper import warn, debug
 
 
@@ -26,12 +25,20 @@ class VectorTile:
         return self.column, self.row
 
 
+def clamp(value, low=None, high=None):
+    if low is not None and value < low:
+        value = low
+    if high is not None and value > high:
+        value = high
+    return value
+
+
 def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
-    :param zoom: 
-    :param lat: 
-    :param lng: 
+    :param zoom:
+    :param lat:
+    :param lng:
     :return:
     """
     if zoom is None:
@@ -41,13 +48,20 @@ def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     if lng is None:
         raise RuntimeError("Longitude is required")
 
+    max_lat = 85.05112878
+    max_lng = 180
+    lat = clamp(lat, -max_lat, max_lat)
+    lng = clamp(lng, -max_lng, max_lng)
+
     gm = GlobalMercator()
     m = gm.LatLonToMeters(lat, lng)
     tile = gm.MetersToTile(m[0], m[1], zoom)
+    x = clamp(tile[0], low=0)
+    y = tile[1]
     if scheme != "tms":
-        y = change_scheme(zoom, tile[1])
-        tile = (tile[0], y)
-    return int(tile[0]), int(tile[1])
+        y = change_scheme(zoom, y)
+    y = clamp(y, low=0)
+    return int(x), int(y)
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
@@ -143,11 +157,12 @@ def change_zoom(source_zoom, target_zoom, tile, scheme):
     return new_tile
 
 
-def get_all_tiles(bounds, is_cancel_requested_handler):
+def get_all_tiles(bounds, is_cancel_requested_handler, for_each=None):
     tiles = []
     debug("Calculating {} tiles", bounds["width"]*bounds["height"])
     for x in range(bounds["width"]):
-        QApplication.processEvents()
+        if for_each:
+            for_each()
         if is_cancel_requested_handler():
             break
         for y in range(bounds["height"]):

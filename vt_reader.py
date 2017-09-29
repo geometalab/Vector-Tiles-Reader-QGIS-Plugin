@@ -166,7 +166,10 @@ class VtReader:
         if max_zoom is not None and zoom_level > max_zoom:
             zoom_level = max_zoom
 
-        all_tiles = get_all_tiles(bounds, lambda: self.cancel_requested)
+        all_tiles = get_all_tiles(
+            bounds=bounds,
+            is_cancel_requested_handler=lambda: self.cancel_requested,
+            for_each=lambda: QApplication.processEvents())
         tiles_to_load = set()
         tiles = []
         tiles_to_ignore = set()
@@ -429,7 +432,6 @@ class VtReader:
             only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], layers))
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in layers:
-            info("name: {}", name)
             target_group = self._qgis_layer_groups_by_name[name]
             target_group.addLayer(layer)
 
