@@ -159,15 +159,19 @@ def change_zoom(source_zoom, target_zoom, tile, scheme):
 
 def get_all_tiles(bounds, is_cancel_requested_handler, for_each=None):
     tiles = []
-    debug("Calculating {} tiles", bounds["width"]*bounds["height"])
-    for x in range(bounds["width"]):
+    width = bounds["width"]
+    height = bounds["height"]
+    x_min = bounds["x_min"]
+    y_min = bounds["y_min"]
+    debug("Preprocessing {} tiles", width*height)
+    for x in range(width):
         if for_each:
             for_each()
         if is_cancel_requested_handler():
             break
-        for y in range(bounds["height"]):
-            col = x + bounds["x_min"]
-            row = y + bounds["y_min"]
+        for y in range(height):
+            col = x + x_min
+            row = y + y_min
             tiles.append((col, row))
     return tiles
 
