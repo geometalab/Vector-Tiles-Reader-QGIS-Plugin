@@ -28,10 +28,15 @@ import sys
 import site
 import traceback
 
+# try:
+#     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'
+#     if pth not in sys.path:
+#         sys.path.append(pth)
+#     import pydevd
+#     pydevd.settrace('localhost', port=53100, stdoutToServer=True, stderrToServer=True)
+# except:
+#     pass
 
-sys.path.append('C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg')
-import pydevd
-pydevd.settrace('localhost', port=53100, stdoutToServer=True, stderrToServer=True)
 
 class VtrPlugin:
     _dialog = None
@@ -370,7 +375,6 @@ class VtrPlugin:
         if ignore_limit:
             tile_limit = None
         manual_zoom = options.manual_zoom()
-        cartographic_ordering = options.cartographic_ordering()
         clip_tiles = options.clip_tiles()
 
         if apply_styles:
@@ -379,7 +383,6 @@ class VtrPlugin:
         debug("Load: {}", path)
         reader = self._current_reader
         if reader:
-            reader.enable_cartographic_ordering(enabled=cartographic_ordering)
             try:
                 max_zoom = reader.source.max_zoom()
                 if auto_zoom:

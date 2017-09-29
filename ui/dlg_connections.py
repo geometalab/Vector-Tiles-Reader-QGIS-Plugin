@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_DlgConnections(object):
     def setupUi(self, DlgConnections):
         DlgConnections.setObjectName(_fromUtf8("DlgConnections"))
-        DlgConnections.resize(550, 606)
+        DlgConnections.resize(880, 748)
         DlgConnections.setSizeGripEnabled(True)
         self.gridLayout = QtGui.QGridLayout(DlgConnections)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))

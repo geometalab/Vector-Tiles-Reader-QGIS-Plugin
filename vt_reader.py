@@ -31,7 +31,7 @@ if platform.system() == "Windows":
 
 class VtReader:
 
-    cartographic_layer_ordering = [
+    omt_layer_ordering = [
         "place",
         "mountain_peak",
         "housenumber",
@@ -73,7 +73,6 @@ class VtReader:
 
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
-        self.cartographic_ordering_enabled = True
         self.progress_handler = progress_handler
         self.feature_collections_by_layer_path = {}
         self._qgis_layer_groups_by_name = {}
@@ -337,21 +336,21 @@ class VtReader:
                 current_progress = progress
                 self._update_progress(progress=progress)
 
-    def _get_cartographic_layer_sort_id(self, layer_name):
+    def _get_omt_layer_sort_id(self, layer_name):
         """
          * Returns the cartographic sort id for the specified layer.
-         * This sort id is the position of the layer in the cartographic_layer_ordering collection.
+         * This sort id is the position of the layer in the omt_layer_ordering collection.
          * If the layer isn't present in the collection, the sort id wil be 999 and therefore the layer will be added at the bottom.
         :param layer_name: 
         :return: 
         """
 
         sort_id = 999
-        if layer_name in self.cartographic_layer_ordering:
-            sort_id = self.cartographic_layer_ordering.index(layer_name)
+        if layer_name in self.omt_layer_ordering:
+            sort_id = self.omt_layer_ordering.index(layer_name)
         return sort_id
 
-    def _assure_qgis_groups_exist(self, manual_layer_name=None):
+    def _assure_qgis_groups_exist(self, manual_layer_name=None, sort_layers=False):
         """
          * Createss a group for each layer that is given by the layer source scheme
          >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
@@ -371,7 +370,8 @@ class VtReader:
         else:
             layers = [manual_layer_name]
 
-        layers = sorted(layers, key=lambda x: self._get_cartographic_layer_sort_id(x))
+        if sort_layers:
+            layers = sorted(layers, key=lambda x: self._get_omt_layer_sort_id(x))
         for index, layer_name in enumerate(layers):
             group = root_group.findGroup(layer_name)
             if not group:
@@ -387,7 +387,7 @@ class VtReader:
         """
         debug("Creating hierarchy in QGIS")
 
-        self._assure_qgis_groups_exist()
+        self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         all_qgis_layers = map(lambda (name, l): l, QgsMapLayerRegistry.instance().mapLayers().iteritems())
 
@@ -402,7 +402,7 @@ class VtReader:
             if self.cancel_requested:
                 break
 
-            self._assure_qgis_groups_exist(manual_layer_name=layer_name)
+            self._assure_qgis_groups_exist(manual_layer_name=layer_name, sort_layers=apply_styles)
             feature_collections_by_tile_coord = self.feature_collections_by_layer_path[layer_name_and_type]
 
             file_name = self._get_geojson_filename(layer_name, geo_type, zoom_level)
@@ -739,6 +739,3 @@ class VtReader:
         merc_easting = int(tile.extent[0] + delta_x / extent * coordinates[0])
         merc_northing = int(tile.extent[1] + delta_y / extent * coordinates[1])
         return [merc_easting, merc_northing]
-
-    def enable_cartographic_ordering(self, enabled):
-        self.cartographic_ordering_enabled = enabled
