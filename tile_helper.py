@@ -238,3 +238,42 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
 
 def _sum_tiles(first_tile, second_tile):
     return tuple(map(operator.add, first_tile, second_tile))
+
+
+def get_zoom_by_scale(scale):
+    if scale < 0:
+        scale = 0
+    zoom = 0
+    for lower_bound in sorted(_zoom_level_by_lower_scale_bound, key=lambda k: k*-1):
+        if scale >= lower_bound:
+            zoom = _zoom_level_by_lower_scale_bound[lower_bound]
+            break
+    return zoom
+
+
+_zoom_level_by_lower_scale_bound = {
+    1000000000: 0,
+    500000000: 1,
+    200000000: 2,
+    50000000: 3,
+    25000000: 4,
+    12500000: 5,
+    6500000: 6,
+    3000000: 7,
+    1500000: 8,
+    750000: 9,
+    400000: 10,
+    200000: 11,
+    100000: 12,
+    50000: 13,
+    25000: 14,
+    12500: 15,
+    5000: 16,
+    2500: 17,
+    1500: 18,
+    750: 19,
+    500: 20,
+    250: 21,
+    100: 22,
+    0: 23
+}

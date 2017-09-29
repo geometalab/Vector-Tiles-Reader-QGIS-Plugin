@@ -20,15 +20,18 @@ from qgis.core import *
 from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, latlon_to_tile
+from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, latlon_to_tile, get_zoom_by_scale
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
 import os
 import sys
 import site
 import traceback
-import json
 
+
+sys.path.append('C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg')
+import pydevd
+pydevd.settrace('localhost', port=53100, stdoutToServer=True, stderrToServer=True)
 
 class VtrPlugin:
     _dialog = None
@@ -36,51 +39,14 @@ class VtrPlugin:
     _reload_button_text = "Load features overlapping the view extent"
     add_layer_action = None
 
-    zoom_level_by_lower_scale_bound = {
-        1000000000: 0,
-        500000000: 1,
-        200000000: 2,
-        50000000: 3,
-        25000000: 4,
-        12500000: 5,
-        6500000: 6,
-        3000000: 7,
-        1500000: 8,
-        750000: 9,
-        400000: 10,
-        200000: 11,
-        100000: 12,
-        50000: 13,
-        25000: 14,
-        12500: 15,
-        5000: 16,
-        2500: 17,
-        1500: 18,
-        750: 19,
-        500: 20,
-        250: 21,
-        100: 22,
-        0: 23
-    }
-
     def _get_zoom_for_current_map_scale(self):
         current_scale = self._get_current_map_scale()
-        return self._get_zoom_for_scale(current_scale)
+        return get_zoom_by_scale(current_scale)
 
     def _get_current_map_scale(self):
         canvas = self.iface.mapCanvas()
         current_scale = canvas.scale()
         return current_scale
-
-    def _get_zoom_for_scale(self, scale):
-        if scale < 0:
-            scale = 0
-        zoom = 0
-        for lower_bound in sorted(self.zoom_level_by_lower_scale_bound, key=lambda k: k*-1):
-            if scale > lower_bound:
-                zoom = self.zoom_level_by_lower_scale_bound[lower_bound]
-                break
-        return zoom
 
     def __init__(self, iface):
         self.iface = iface
@@ -161,7 +127,7 @@ class VtrPlugin:
         scale_increased = self._current_scale is None or new_scale > self._current_scale
         self._current_scale = new_scale
         max_zoom = self._current_reader.source.max_zoom()
-        new_zoom = self._get_zoom_for_scale(new_scale)
+        new_zoom = get_zoom_by_scale(new_scale)
         if new_zoom > max_zoom:
             new_zoom = max_zoom
         current_zoom = self._current_zoom
