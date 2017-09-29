@@ -14,7 +14,7 @@ of the License, or (at your option) any later version.
 """
 
 from log_helper import debug, info, warn, critical
-from PyQt4.QtCore import *  # QSettings, QTimer, QueuedConnection
+from PyQt4.QtCore import QSettings, QTimer, QueuedConnection
 from PyQt4.QtGui import *  # QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
 from qgis.core import *
 from qgis.gui import QgsMessageBar
@@ -516,3 +516,24 @@ class VtrPlugin:
             self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
         except:
             pass
+
+
+class SignalDebouncer:
+    def __init__(self, timeout, handler, signals):
+        self._debounce_timer = QTimer()
+        self._debounce_timer.timeout.connect(self._on_timeout)
+        self._timeout = timeout
+        self._signals = signals
+        self._handler = handler
+
+    def start(self):
+        for s in self._signals:
+            s.connect(self._debounce)
+
+    def _on_timeout(self):
+        self._debounce_timer.stop()
+        self._handler()
+
+    def _debounce(self):
+        self._debounce_timer.stop()
+        self._debounce_timer.start(self._timeout)
