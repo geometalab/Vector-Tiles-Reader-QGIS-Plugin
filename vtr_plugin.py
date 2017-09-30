@@ -212,9 +212,7 @@ class VtrPlugin:
             flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom
             self._current_zoom = zoom
             if flush_loaded_layers:
-                layers_to_remove = map(lambda layer: layer.id(), self._get_all_own_layers())
-                debug("Flushing layers: {}", layers_to_remove)
-                QgsMapLayerRegistry.instance().removeMapLayers(layers_to_remove)
+                self._current_reader.flush_layers_of_other_zoom_level = True
 
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             if self.connections_dialog.options.auto_zoom_enabled():

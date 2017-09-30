@@ -55,6 +55,8 @@ class VtReader:
 
     _styles = FileHelper.get_styles()
 
+    flush_layers_of_other_zoom_level = False
+
     def __init__(self, iface, path_or_url, progress_handler):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
@@ -81,6 +83,7 @@ class VtReader:
         self._clip_tiles_at_tile_bounds = None
         self._always_overwrite_geojson = False
         self._root_group_name = None
+        self._flush = False
 
     def set_root_group_name(self, name):
         self._root_group_name = name
@@ -389,7 +392,9 @@ class VtReader:
 
         self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
-        all_qgis_layers = map(lambda (name, l): l, QgsMapLayerRegistry.instance().mapLayers().iteritems())
+        qgis_layers = QgsMapLayerRegistry.instance().mapLayers().iteritems()
+        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") is not None, qgis_layers)
+        own_layers = map(lambda (n, l): l, vt_qgis_name_layer_tuples)
 
         self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_path), msg="Creating layers...")
         layers = []
@@ -412,7 +417,7 @@ class VtReader:
             if os.path.isfile(file_path):
                 # file exists already. add the features of the collection to the existing collection
                 # get the layer from qgis and update its source
-                layer = self._get_layer_by_source(all_qgis_layers, layer_name_and_zoom, file_path, geo_type)
+                layer = self._get_layer_by_source(own_layers, layer_name_and_zoom, file_path, geo_type)
                 if layer:
                     self._update_layer_source(file_path, feature_collections_by_tile_coord, zoom_level, layer_name)
 
@@ -425,6 +430,12 @@ class VtReader:
                 layer = self._create_named_layer(file_path, layer_name, zoom_level, merge_features, geo_type)
                 layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=index+1)
+
+        if self.flush_layers_of_other_zoom_level:
+            layers_to_remove = filter(lambda l: l.name().split(self._zoom_level_delimiter)[1] != zoom_level, own_layers)
+            ids = map(lambda l: l.id(), layers_to_remove)
+            debug("Flushing layers: {}", ids)
+            QgsMapLayerRegistry.instance().removeMapLayers(ids)
 
         QgsMapLayerRegistry.instance().reloadAllLayers()
 
