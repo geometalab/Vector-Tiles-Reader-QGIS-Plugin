@@ -254,7 +254,7 @@ class VtrPlugin:
         bounds = []
         bounds.extend(min_proj)
         bounds.extend(max_proj)
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs="EPSG:4326")
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme)
 
         debug("Current extent: {}", tile_bounds)
         return tile_bounds
@@ -393,6 +393,12 @@ class VtrPlugin:
         new_action.setEnabled(is_enabled)
         return new_action
 
+    def _extent_overlap_bounds(self, extent, bounds):
+        return (bounds["x_min"] <= extent["x_min"] <= bounds["x_max"] or
+                bounds["x_min"] <= extent["x_max"] <= bounds["x_max"]) and\
+                (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
+                 bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
+
     def _load_tiles(self, path, options, layers_to_load, bounds=None, ignore_limit=False):
         if self._debouncer.is_running():
             self._debouncer.pause()
@@ -425,6 +431,13 @@ class VtrPlugin:
                     if manual_zoom is not None:
                         zoom = manual_zoom
                 self._current_zoom = zoom
+
+                source_bounds = reader.source.bounds_tile(zoom)
+                if not self._extent_overlap_bounds(bounds, source_bounds):
+                    info("The current extent '{}' is not within the bounds of the source '{}'. The extent to load "
+                         "will be set to the bounds of the source", bounds, source_bounds)
+                    bounds = source_bounds
+
                 loaded_extent = reader.load_tiles(zoom_level=zoom,
                                                   layer_filter=layers_to_load,
                                                   load_mask_layer=load_mask_layer,
@@ -440,13 +453,11 @@ class VtrPlugin:
                 self.refresh_layers()
                 info("Loading complete! Loaded extent: {}", loaded_extent)
                 if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
-                    loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \
-                                                     bounds["x_min"] <= loaded_extent["x_max"] <= bounds["x_max"]) and \
-                                                     (bounds["y_min"] <= loaded_extent["y_min"] <= bounds["y_max"] or \
-                                                     bounds["y_min"] <= loaded_extent["y_max"] <= bounds["y_max"])
-                    if not loaded_extent_is_within_bounds:
-                        debug("Loaded extent is not within bounds")
-                        self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
+                    scheme = reader.source.scheme()
+                    visible_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+                    overlap = self._extent_overlap_bounds(visible_extent, loaded_extent)
+                    if not overlap:
+                        self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=loaded_extent)
                 if auto_zoom:
                     self._loaded_extent = loaded_extent
                     self._debouncer.start()

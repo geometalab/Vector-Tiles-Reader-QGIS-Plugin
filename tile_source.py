@@ -215,8 +215,7 @@ class MBTilesSource:
                 .split(",")
             bounds = map(lambda s: float(s), bounds)
         scheme = self.scheme()
-        crs = self.crs()
-        return get_tile_bounds(zoom, bounds, crs, scheme)
+        return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme)
 
     def name(self):
         base_name = os.path.splitext(os.path.basename(self.path))[0]
