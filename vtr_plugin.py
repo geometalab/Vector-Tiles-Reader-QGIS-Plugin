@@ -50,7 +50,7 @@ class VtrPlugin:
 
     def _get_current_map_scale(self):
         canvas = self.iface.mapCanvas()
-        current_scale = canvas.scale()
+        current_scale = int(round(canvas.scale()))
         return current_scale
 
     def __init__(self, iface):
@@ -70,7 +70,7 @@ class VtrPlugin:
         self._auto_zoom = False
         self._current_zoom = None
         self._current_scale = None
-        self._current_extent = None
+        self._loaded_extent = None
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
@@ -114,8 +114,11 @@ class VtrPlugin:
             self._cancel_load()
 
     def _remember_scale_and_extent(self):
+        assert self._current_reader
         self._scale_to_load = self._get_current_map_scale()
-        self._extent_to_load = self._get_current_extent_as_wkt()
+        scheme = self._current_reader.source.scheme()
+        zoom = get_zoom_by_scale(self._scale_to_load)
+        self._extent_to_load = self._get_visible_extent_as_tile_bounds(scheme, zoom)
 
     def _reset_remembered_scale_and_extent(self):
         self._scale_to_load = None
@@ -135,9 +138,17 @@ class VtrPlugin:
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             new_scale = self._get_new_scale_if_changed()
             if new_scale:
+                info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
                 self._handle_scale_change(new_scale)
             else:
-                self._reload_tiles()
+                scheme = self._current_reader.source.scheme()
+                scale = self._get_current_map_scale()
+                zoom = get_zoom_by_scale(scale)
+                new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+                extent_changed = new_extent != self._loaded_extent
+                if extent_changed:
+                    info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
+                    self._reload_tiles()
 
     def _handle_scale_change(self, new_scale):
         scale_increased = self._current_scale is None or new_scale > self._current_scale
@@ -227,9 +238,10 @@ class VtrPlugin:
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
-        extent = self._extent_to_load
-        if not extent:
-            extent = self._get_current_extent_as_wkt()
+        if self._extent_to_load:
+            return self._extent_to_load
+
+        extent = self._get_current_extent_as_wkt()
         self._reset_remembered_scale_and_extent()
         splits = extent.split(", ")
         new_extent = map(lambda x: map(float, x.split(" ")), splits)
@@ -426,7 +438,7 @@ class VtrPlugin:
                 if self._current_scale is None:
                     self._current_scale = self._get_current_map_scale()
                 self.refresh_layers()
-                debug("Loading complete! Loaded extent: {}", loaded_extent)
+                info("Loading complete! Loaded extent: {}", loaded_extent)
                 if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
                     loaded_extent_is_within_bounds = (bounds["x_min"] <= loaded_extent["x_min"] <= bounds["x_max"] or \
                                                      bounds["x_min"] <= loaded_extent["x_max"] <= bounds["x_max"]) and \
@@ -436,7 +448,7 @@ class VtrPlugin:
                         debug("Loaded extent is not within bounds")
                         self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
                 if auto_zoom:
-                    self._current_extent = loaded_extent
+                    self._loaded_extent = loaded_extent
                     self._debouncer.start()
             except Exception as e:
                 traceback.print_exc()

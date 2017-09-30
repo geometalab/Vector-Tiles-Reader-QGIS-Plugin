@@ -261,6 +261,9 @@ class VtReader:
                          "x_max": max(loaded_tiles_x),
                          "y_min": min(loaded_tiles_y),
                          "y_max": max(loaded_tiles_y)}
+        loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
+        loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
+
         return loaded_extent
 
     def _decode_tiles(self, tiles_with_encoded_data):
