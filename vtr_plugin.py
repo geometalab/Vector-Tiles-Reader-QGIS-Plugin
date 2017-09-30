@@ -71,7 +71,6 @@ class VtrPlugin:
         self._current_zoom = None
         self._current_scale = None
         self._current_extent = None
-        # self._scale_change_connected = False
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
@@ -79,9 +78,9 @@ class VtrPlugin:
                                           handler=self._handle_map_scale_or_extents_changed,
                                           signals=[self.iface.mapCanvas().scaleChanged,
                                                    self.iface.mapCanvas().extentsChanged])
-        # self._map_scale_change_debounce_timer = QTimer()
-        # self._map_scale_change_debounce_timer.timeout.connect(self._handle_map_scale_changed)
-        # self._connect_map_scale_changed()
+        self._debouncer.set_pause_request_handler(self._remember_scale_and_extent)
+        self._scale_to_load = None
+        self._extent_to_load = None
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -109,22 +108,19 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
 
-    # def _connect_map_scale_changed(self):
-    #     if not self._scale_change_connected:
-    #         self.iface.mapCanvas().scaleChanged.connect(self._restart_map_scale_debounce_timer, Qt.QueuedConnection)
-    #         self._scale_change_connected = True
-    #
-    # def _disconnect_map_scale_changed(self):
-    #     if self._scale_change_connected:
-    #         self.iface.mapCanvas().scaleChanged.disconnect(self._restart_map_scale_debounce_timer)
-    #         self._scale_change_connected = False
-    #
-    # def _restart_map_scale_debounce_timer(self):
-    #     self._map_scale_change_debounce_timer.stop()
-    #     self._map_scale_change_debounce_timer.start(1000)
+    def _remember_scale_and_extent(self):
+        self._scale_to_load = self._get_current_map_scale()
+        self._extent_to_load = self._get_current_extent_as_wkt()
+
+    def _reset_remembered_scale_and_extent(self):
+        self._scale_to_load = None
+        self._extent_to_load = None
 
     def _get_new_scale_if_changed(self):
-        new_scale = self._get_current_map_scale()
+        new_scale = self._scale_to_load
+        if not new_scale:
+            new_scale = self._get_current_map_scale()
+        self._reset_remembered_scale_and_extent()
         has_scale_changed = self._current_scale is None or new_scale != self._current_scale
         if has_scale_changed:
             return new_scale
@@ -225,9 +221,16 @@ class VtrPlugin:
                              bounds=bounds,
                              ignore_limit=True)
 
+    def _get_current_extent_as_wkt(self):
+        return self.iface.mapCanvas().extent().asWktCoordinates()
+
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
-        e = self.iface.mapCanvas().extent().asWktCoordinates().split(", ")
-        new_extent = map(lambda x: map(float, x.split(" ")), e)
+        extent = self._extent_to_load
+        if not extent:
+            extent = self._get_current_extent_as_wkt()
+        self._reset_remembered_scale_and_extent()
+        splits = extent.split(", ")
+        new_extent = map(lambda x: map(float, x.split(" ")), splits)
         min_extent = new_extent[0]
         max_extent = new_extent[1]
 
