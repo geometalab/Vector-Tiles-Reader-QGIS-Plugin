@@ -78,7 +78,7 @@ class VtrPlugin:
                                           handler=self._handle_map_scale_or_extents_changed,
                                           signals=[self.iface.mapCanvas().scaleChanged,
                                                    self.iface.mapCanvas().extentsChanged])
-        self._debouncer.set_pause_request_handler(self._remember_scale_and_extent)
+        self._debouncer.set_pause_request_handler(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
 
@@ -108,6 +108,11 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
 
+    def _on_scale_or_extent_change_during_pause(self):
+        self._remember_scale_and_extent()
+        if self._is_loading:
+            self._cancel_load()
+
     def _remember_scale_and_extent(self):
         self._scale_to_load = self._get_current_map_scale()
         self._extent_to_load = self._get_current_extent_as_wkt()
@@ -127,7 +132,6 @@ class VtrPlugin:
         return None
 
     def _handle_map_scale_or_extents_changed(self):
-        # self._map_scale_change_debounce_timer.stop()
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             new_scale = self._get_new_scale_if_changed()
             if new_scale:
@@ -448,8 +452,8 @@ class VtrPlugin:
                     "Something went horribly wrong. Please have a look at the log.",
                     level=QgsMessageBar.CRITICAL,
                     duration=5)
-                if self.progress_dialog:
-                    self.progress_dialog.hide()
+            if self.progress_dialog:
+                self.progress_dialog.hide()
         self._is_loading = False
 
     def _set_background_color(self):
@@ -537,6 +541,11 @@ class VtrPlugin:
 
 
 class SignalDebouncer:
+    """
+     * This class can be used to debounce signals, i.e. if many signals are received in a very short timespan,
+     only the latest shall be processed and all others ignored.
+    """
+
     def __init__(self, timeout, handler, signals):
         self._debounce_timer = QTimer()
         self._debounce_timer.timeout.connect(self._on_timeout)
