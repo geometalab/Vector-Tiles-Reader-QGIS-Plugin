@@ -486,7 +486,7 @@ class VtReader:
         :param layer_source_file: 
         :return: 
         """
-        layers = filter(lambda l: l.name() == layer_name and l.source() == layer_source_file, all_layers)  #QgsMapLayerRegistry.instance().mapLayersByName(layer_name)
+        layers = filter(lambda l: l.name() == layer_name and l.source() == layer_source_file, all_layers)
         if len(layers) > 0:
             return layers[0]
         return None

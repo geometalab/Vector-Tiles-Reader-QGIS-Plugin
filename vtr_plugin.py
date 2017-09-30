@@ -14,7 +14,7 @@ of the License, or (at your option) any later version.
 """
 
 from log_helper import debug, info, warn, critical
-from PyQt4.QtCore import QSettings, QTimer, QueuedConnection
+from PyQt4.QtCore import QSettings, QTimer, Qt
 from PyQt4.QtGui import *  # QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
 from qgis.core import *
 from qgis.gui import QgsMessageBar
