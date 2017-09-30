@@ -227,6 +227,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.btnLoad.clicked.connect(self._import_connections)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.btnBrowse.clicked.connect(self._select_file_path)
+        self.btnBrowseTrexCache.clicked.connect(self._select_trex_cache_folder)
         self.open_path = None
         self.browse_path = default_browse_directory
         self.model = QStandardItemModel()
@@ -242,12 +243,20 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _select_file_path(self):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
         if open_file_name and os.path.isfile(open_file_name):
-            self.browse_path = open_file_name
-            self.open_path = open_file_name
             self.txtPath.setText(open_file_name)
-            path = open_file_name
-            name = os.path.basename(open_file_name)
-            self.on_connect.emit(name, path)
+            self._handle_path_or_folder_selection(open_file_name)
+
+    def _select_trex_cache_folder(self):
+        open_file_name = QFileDialog.getExistingDirectory(None, "Select t-rex Cache directory", self.browse_path)
+        if open_file_name and os.path.isdir(open_file_name):
+            self.txtTrexCachePath.setText(open_file_name)
+            self._handle_path_or_folder_selection(open_file_name)
+
+    def _handle_path_or_folder_selection(self, path):
+        self.browse_path = path
+        self.open_path = path
+        name = os.path.basename(path)
+        self.on_connect.emit(name, path)
 
     def _on_zoom_change(self):
         self.on_zoom_change.emit()

@@ -15,7 +15,7 @@ from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpres
 from PyQt4.QtGui import QMessageBox
 from cStringIO import StringIO
 from gzip import GzipFile
-from tile_source import ServerSource, MBTilesSource
+from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
 from mp_helper import decode_tile
 
@@ -70,7 +70,10 @@ class VtReader:
         if is_web_source:
             self.source = ServerSource(url=path_or_url)
         else:
-            self.source = MBTilesSource(path=path_or_url)
+            if os.path.isfile(path_or_url):
+                self.source = MBTilesSource(path=path_or_url)
+            else:
+                self.source = TrexCacheSource(path=path_or_url)
         self.source.set_progress_handler(self._update_progress)
 
         FileHelper.assure_temp_dirs_exist()
@@ -300,7 +303,6 @@ class VtReader:
                 self._update_progress(progress=progress)
 
         tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
-
         for t in tiles:
             cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
             if not os.path.isfile(cache_file_name):

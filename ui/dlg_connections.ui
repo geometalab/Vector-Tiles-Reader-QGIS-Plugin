@@ -289,6 +289,40 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tabTrexCache">
+      <attribute name="title">
+       <string>t-rex Cache</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QLabel" name="lblSource_2">
+         <property name="text">
+          <string>Path</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="txtTrexCachePath">
+         <property name="toolTip">
+          <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="placeholderText">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnBrowseTrexCache">
+         <property name="text">
+          <string>Browse</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
