@@ -15,7 +15,7 @@ of the License, or (at your option) any later version.
 
 from log_helper import debug, info, warn, critical
 from PyQt4.QtCore import QSettings, QTimer, Qt
-from PyQt4.QtGui import *  # QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
+from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
@@ -70,13 +70,18 @@ class VtrPlugin:
         self._auto_zoom = False
         self._current_zoom = None
         self._current_scale = None
-        self._scale_change_connected = False
+        self._current_extent = None
+        # self._scale_change_connected = False
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-        self._map_scale_change_debounce_timer = QTimer()
-        self._map_scale_change_debounce_timer.timeout.connect(self._handle_map_scale_changed)
-        self._connect_map_scale_changed()
+        self._debouncer = SignalDebouncer(1000,
+                                          handler=self._handle_map_scale_or_extents_changed,
+                                          signals=[self.iface.mapCanvas().scaleChanged,
+                                                   self.iface.mapCanvas().extentsChanged])
+        # self._map_scale_change_debounce_timer = QTimer()
+        # self._map_scale_change_debounce_timer.timeout.connect(self._handle_map_scale_changed)
+        # self._connect_map_scale_changed()
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -104,19 +109,19 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
 
-    def _connect_map_scale_changed(self):
-        if not self._scale_change_connected:
-            self.iface.mapCanvas().scaleChanged.connect(self._restart_map_scale_debounce_timer, Qt.QueuedConnection)
-            self._scale_change_connected = True
-
-    def _disconnect_map_scale_changed(self):
-        if self._scale_change_connected:
-            self.iface.mapCanvas().scaleChanged.disconnect(self._restart_map_scale_debounce_timer)
-            self._scale_change_connected = False
-
-    def _restart_map_scale_debounce_timer(self):
-        self._map_scale_change_debounce_timer.stop()
-        self._map_scale_change_debounce_timer.start(1000)
+    # def _connect_map_scale_changed(self):
+    #     if not self._scale_change_connected:
+    #         self.iface.mapCanvas().scaleChanged.connect(self._restart_map_scale_debounce_timer, Qt.QueuedConnection)
+    #         self._scale_change_connected = True
+    #
+    # def _disconnect_map_scale_changed(self):
+    #     if self._scale_change_connected:
+    #         self.iface.mapCanvas().scaleChanged.disconnect(self._restart_map_scale_debounce_timer)
+    #         self._scale_change_connected = False
+    #
+    # def _restart_map_scale_debounce_timer(self):
+    #     self._map_scale_change_debounce_timer.stop()
+    #     self._map_scale_change_debounce_timer.start(1000)
 
     def _get_new_scale_if_changed(self):
         new_scale = self._get_current_map_scale()
@@ -125,26 +130,31 @@ class VtrPlugin:
             return new_scale
         return None
 
-    def _handle_map_scale_changed(self):
-        self._map_scale_change_debounce_timer.stop()
+    def _handle_map_scale_or_extents_changed(self):
+        # self._map_scale_change_debounce_timer.stop()
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             new_scale = self._get_new_scale_if_changed()
             if new_scale:
-                scale_increased = self._current_scale is None or new_scale > self._current_scale
-                self._current_scale = new_scale
-                max_zoom = self._current_reader.source.max_zoom()
-                new_zoom = get_zoom_by_scale(new_scale)
-                if new_zoom > max_zoom:
-                    new_zoom = max_zoom
-                current_zoom = self._current_zoom
-                if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
-                    if new_zoom != current_zoom:
-                        debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
-                    else:
-                        debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
-                    self._loaded_scale = new_scale
-                    self._reload_tiles()
-                    self.iface.mapCanvas().zoomScale(new_scale)
+                self._handle_scale_change(new_scale)
+            else:
+                self._reload_tiles()
+
+    def _handle_scale_change(self, new_scale):
+        scale_increased = self._current_scale is None or new_scale > self._current_scale
+        self._current_scale = new_scale
+        max_zoom = self._current_reader.source.max_zoom()
+        new_zoom = get_zoom_by_scale(new_scale)
+        if new_zoom > max_zoom:
+            new_zoom = max_zoom
+        current_zoom = self._current_zoom
+        if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
+            if new_zoom != current_zoom:
+                debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
+            else:
+                debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+            self._loaded_scale = new_scale
+            self._reload_tiles()
+            self.iface.mapCanvas().zoomScale(new_scale)
 
     def _handle_mouse_move(self, pos):
         self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
@@ -367,6 +377,9 @@ class VtrPlugin:
         return new_action
 
     def _load_tiles(self, path, options, layers_to_load, bounds=None, ignore_limit=False):
+        if self._debouncer.is_running():
+            self._debouncer.pause()
+
         self._is_loading = True
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
@@ -417,8 +430,9 @@ class VtrPlugin:
                     if not loaded_extent_is_within_bounds:
                         debug("Loaded extent is not within bounds")
                         self._set_qgis_extent(zoom=zoom, scheme=reader.source.scheme(), bounds=loaded_extent)
-                if auto_zoom and not self._scale_change_connected:
-                    self._connect_map_scale_changed()
+                if auto_zoom:
+                    self._current_extent = loaded_extent
+                    self._debouncer.start()
             except Exception as e:
                 traceback.print_exc()
                 critical("An exception occured: {}", e)
@@ -505,6 +519,7 @@ class VtrPlugin:
         except:
             pass
 
+        self._debouncer.stop()
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
@@ -525,15 +540,68 @@ class SignalDebouncer:
         self._timeout = timeout
         self._signals = signals
         self._handler = handler
+        self._is_connected = False
+        self._is_paused = False
+        self._got_request_in_pause = False
+        self._pause_handler = handler
 
     def start(self):
-        for s in self._signals:
-            s.connect(self._debounce)
+        """
+         * Starts handling the signals
+        :return:
+        """
+        if self._is_paused:
+            self._is_paused = False
+            if self._got_request_in_pause:
+                self._got_request_in_pause = False
+                self._debounce_timer.start(self._timeout)
+        else:
+            self._connect()
+
+    def set_pause_request_handler(self, handler):
+        """
+         * The specified handler will be executed upon receiving a signal during pause
+         Notice that the pause events will not be debounced
+        :return:
+        """
+        self._pause_handler = handler
+
+    def is_running(self):
+        return self._is_connected
+
+    def stop(self):
+        """
+         * Stops handling the signals
+        :return:
+        """
+        self._disconnect()
+
+    def pause(self):
+        self._is_paused = True
+
+    def _connect(self):
+        if not self._is_connected:
+            for s in self._signals:
+                s.connect(self._debounce, Qt.QueuedConnection)
+            self._is_connected = True
+
+    def _disconnect(self):
+        self._debounce_timer.stop()
+        if self._is_connected:
+            self._is_connected = False
+            for s in self._signals:
+                s.disconnect(self._debounce)
 
     def _on_timeout(self):
         self._debounce_timer.stop()
-        self._handler()
+        if self._is_paused:
+            self._got_request_in_pause = True
+            if self._pause_handler:
+                self._pause_handler()
+        else:
+            self._handler()
 
     def _debounce(self):
         self._debounce_timer.stop()
-        self._debounce_timer.start(self._timeout)
+        if self._is_connected:
+            self._debounce_timer.start(self._timeout)
