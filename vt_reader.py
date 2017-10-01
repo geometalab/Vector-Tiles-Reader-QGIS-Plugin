@@ -12,7 +12,7 @@ from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, G
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtGui import QMessageBox, QApplication
-from PyQt4.QtCore import QObject, pyqtSignal
+from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot
 from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
@@ -82,9 +82,9 @@ class VtReader(QObject):
             else:
                 self.source = TrexCacheSource(path=path_or_url)
 
-        self.source.progress_changed.connect(lambda p: self._update_progress(progress=p))
-        self.source.max_progress_changed.connect(lambda p: self._update_progress(max_progress=p))
-        self.source.message_changed.connect(lambda p: self._update_progress(msg=p))
+        self.source.progress_changed.connect(self._source_progress_changed)
+        self.source.max_progress_changed.connect(self._source_max_progress_changed)
+        self.source.message_changed.connect(self._source_message_changed)
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
         self.feature_collections_by_layer_path = {}
@@ -95,6 +95,24 @@ class VtReader(QObject):
         self._always_overwrite_geojson = False
         self._root_group_name = None
         self._flush = False
+
+    def shutdown(self):
+        self.source.progress_changed.disconnect()
+        self.source.max_progress_changed.disconnect()
+        self.source.message_changed.disconnect()
+        self.source.close_connection()
+
+    @pyqtSlot(int)
+    def _source_progress_changed(self, progress):
+        self._update_progress(progress=progress)
+
+    @pyqtSlot(int)
+    def _source_max_progress_changed(self, max_progress):
+        self._update_progress(max_progress=max_progress)
+
+    @pyqtSlot('QString')
+    def _source_message_changed(self, msg):
+        self._update_progress(msg=msg)
 
     def set_root_group_name(self, name):
         self._root_group_name = name
@@ -190,7 +208,7 @@ class VtReader(QObject):
         all_tiles = get_all_tiles(
             bounds=bounds,
             is_cancel_requested_handler=lambda: self.cancel_requested,
-            for_each=lambda: QApplication.processEvents())
+        )
         tiles_to_load = set()
         tiles = []
         tiles_to_ignore = set()
@@ -221,7 +239,6 @@ class VtReader(QObject):
             tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                       tiles_to_load=tiles_to_load,
                                                       max_tiles=remaining_nr_of_tiles,
-                                                      for_each=QApplication.processEvents,
                                                       limit_reacher_handler=limit_reacher_handler)
         if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
             QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
@@ -250,8 +267,7 @@ class VtReader(QObject):
                 if len(mask_tiles_to_load) > 0:
                     mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
                                                              tiles_to_load=mask_tiles_to_load,
-                                                             max_tiles=max_tiles,
-                                                             for_each=QApplication.processEvents)
+                                                             max_tiles=max_tiles)
                     debug("Mask layer loaded")
                     tile_data_tuples.extend(mask_layer_data)
 
@@ -310,19 +326,26 @@ class VtReader(QObject):
         pool.close()
         current_progress = 0
         while not rs.ready() and not self.cancel_requested:
-            QApplication.processEvents()
-            remaining = rs._number_left
-            index = total_nr_tiles - remaining
-            progress = int(100.0 / total_nr_tiles * (index + 1))
-            if progress != current_progress:
-                current_progress = progress
-                self._update_progress(progress=progress)
+            if self.cancel_requested:
+                pool.terminate()
+                break
+            else:
+                QApplication.processEvents()
+                remaining = rs._number_left
+                index = total_nr_tiles - remaining
+                progress = int(100.0 / total_nr_tiles * (index + 1))
+                if progress != current_progress:
+                    current_progress = progress
+                    self._update_progress(progress=progress)
 
         tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
         for t in tiles:
-            cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-            if not os.path.isfile(cache_file_name):
-                FileHelper.cache_tile(t, cache_file_name)
+            if self.cancel_requested:
+                break
+            else:
+                cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
+                if not os.path.isfile(cache_file_name):
+                    FileHelper.cache_tile(t, cache_file_name)
 
         return tiles
 
@@ -351,7 +374,6 @@ class VtReader(QObject):
         self._update_progress(progress=0, max_progress=100, msg="Processing features...")
         current_progress = -1
         for index, tile in enumerate(tiles):
-            QApplication.processEvents()
             if self.cancel_requested:
                 break
             self._create_geojson(tile, layer_filter)
@@ -424,7 +446,6 @@ class VtReader(QObject):
             geo_type = layer_name_and_type[1]
             layer_name = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[0]
             zoom_level = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[1]
-            QApplication.processEvents()
             if self.cancel_requested:
                 break
 
@@ -470,7 +491,6 @@ class VtReader(QObject):
         if apply_styles:
             self._update_progress(progress=0, max_progress=len(layers), msg="Styling layers...")
             for index, layer_path_tuple in enumerate(layers):
-                QApplication.processEvents()
                 if self.cancel_requested:
                     break
                 geo_type = layer_path_tuple[1]

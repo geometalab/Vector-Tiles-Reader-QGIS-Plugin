@@ -157,7 +157,7 @@ def change_zoom(source_zoom, target_zoom, tile, scheme):
     return new_tile
 
 
-def get_all_tiles(bounds, is_cancel_requested_handler, for_each=None):
+def get_all_tiles(bounds, is_cancel_requested_handler):
     tiles = []
     width = bounds["width"]
     height = bounds["height"]
@@ -165,8 +165,6 @@ def get_all_tiles(bounds, is_cancel_requested_handler, for_each=None):
     y_min = bounds["y_min"]
     debug("Preprocessing {} tiles", width*height)
     for x in range(width):
-        if for_each:
-            for_each()
         if is_cancel_requested_handler():
             break
         for y in range(height):

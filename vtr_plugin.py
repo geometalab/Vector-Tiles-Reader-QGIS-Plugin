@@ -14,7 +14,7 @@ of the License, or (at your option) any later version.
 """
 
 from log_helper import debug, info, warn, critical
-from PyQt4.QtCore import QSettings, QTimer, Qt
+from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot
 from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
 from qgis.core import *
 from qgis.gui import QgsMessageBar
@@ -265,7 +265,7 @@ class VtrPlugin:
 
         try:
             if self._current_reader:
-                self._current_reader.source.close_connection()
+                self._current_reader.shutdown()
                 self._current_reader.progress_changed.disconnect()
                 self._current_reader.max_progress_changed.disconnect()
                 self._current_reader.title_changed.disconnect()
@@ -512,15 +512,35 @@ class VtrPlugin:
         reader = None
         try:
             reader = VtReader(self.iface, path_or_url=path_or_url)
-            reader.progress_changed.connect(lambda p: self.handle_progress_update(progress=p))
-            reader.max_progress_changed.connect(lambda p: self.handle_progress_update(max_progress=p))
-            reader.title_changed.connect(lambda p: self.handle_progress_update(title=p))
-            reader.message_changed.connect(lambda p: self.handle_progress_update(msg=p))
-            reader.show_progress_changed.connect(lambda p: self.handle_progress_update(show_progress=p))
+            reader.progress_changed.connect(self.reader_progress_changed)
+            reader.max_progress_changed.connect(self.reader_max_progress_changed)
+            reader.show_progress_changed.connect(self.reader_show_progress_changed)
+            reader.title_changed.connect(self.reader_title_changed)
+            reader.message_changed.connect(self.reader_message_changed)
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
+
+    @pyqtSlot(int)
+    def reader_progress_changed(self, progress):
+        self.handle_progress_update(progress=progress)
+
+    @pyqtSlot(int)
+    def reader_max_progress_changed(self, max_progress):
+        self.handle_progress_update(max_progress=max_progress)
+
+    @pyqtSlot('QString')
+    def reader_title_changed(self, title):
+        self.handle_progress_update(title=title)
+
+    @pyqtSlot('QString')
+    def reader_message_changed(self, msg):
+        self.handle_progress_update(msg=msg)
+
+    @pyqtSlot(bool)
+    def reader_show_progress_changed(self, show_progress):
+        self.handle_progress_update(show_progress=show_progress)
 
     def handle_progress_update(self, title=None, progress=None, max_progress=None, msg=None, show_progress=None):
         if show_progress:

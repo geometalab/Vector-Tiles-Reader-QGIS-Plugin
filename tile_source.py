@@ -40,24 +40,49 @@ class AbstractSource(QObject):
         raise NotImplementedError
 
     def min_zoom(self):
+        """
+         * Returns the minimum zoom that is found in either the metadata or the tile table
+        :return:
+        """
         raise NotImplementedError
 
     def max_zoom(self):
+        """
+         * Returns the maximum zoom that is found in either the metadata or the tile table
+        :return:
+        """
         raise NotImplementedError
 
     def mask_level(self):
+        """
+         * Returns the mask level from the metadata table
+        :return:
+        """
         raise NotImplementedError
 
     def scheme(self):
         raise NotImplementedError
 
     def bounds_tile(self, zoom):
+        """
+         * Returns the tile boundaries
+        :param zoom:
+        :return:
+        """
         raise NotImplementedError
 
     def crs(self):
         raise NotImplementedError
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
+        """
+         * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
+        :param tiles_to_load: All tile coordinates which shall be loaded
+        :param zoom_level: The zoom level which will be loaded
+        :param max_tiles: The maximum number of tiles to be loaded
+        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
+        :return:
+        """
         raise NotImplementedError
 
 
@@ -114,17 +139,7 @@ class ServerSource(AbstractSource):
     def crs(self):
         return self.json.crs()
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
-        """
-         * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
-        :param zoom_level: The zoom level which will be loaded
-        :param bounds: If set, only tiles inside this tile boundary will be loaded
-        :param max_tiles: The maximum number of tiles to be loaded
-        :param for_each: A function which will be called for every row
-        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
-        :return: 
-        """
-
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
         self._cancelling = False
         base_url = self.json.tiles()[0]
         tile_data_tuples = []
@@ -154,7 +169,7 @@ class ServerSource(AbstractSource):
 
         page_size = 5
         results = []
-        self._do_paged(page_size, urls, results, self._load_urls_async, for_each)
+        self._do_paged(page_size, urls, results, self._load_urls_async)
 
         for r in results:
             content = r[0]
@@ -165,9 +180,7 @@ class ServerSource(AbstractSource):
 
         return tile_data_tuples
 
-    def _load_urls_async(self, page_offset, urls_with_col_and_row, *args):
-        for_each = args[0]
-
+    def _load_urls_async(self, page_offset, urls_with_col_and_row):
         replies = map(lambda url: (FileHelper.load_url_async(url[0]), (url[1], url[2])), urls_with_col_and_row)
         all_finished = False
         nr_finished_before = 0
@@ -175,7 +188,6 @@ class ServerSource(AbstractSource):
             QApplication.processEvents()
             nr_finished = sum(map(lambda r: r[0].isFinished(), replies), 0)
             if nr_finished != nr_finished_before:
-                for_each()
                 self.progress_changed.emit(page_offset + nr_finished)
             all_finished = nr_finished == len(replies)
 
@@ -233,11 +245,6 @@ class MBTilesSource(AbstractSource):
         return layers
 
     def bounds_tile(self, zoom):
-        """
-         * Returns the tile boundaries
-        :param zoom:
-        :param manual_bounds:
-        :return:         """
         bounds = self._get_metadata_value("bounds")
         print "bounds: ", bounds
         if bounds:
@@ -258,36 +265,15 @@ class MBTilesSource(AbstractSource):
         return self._get_metadata_value("scheme", default="tms")
 
     def min_zoom(self):
-        """
-         * Returns the minimum zoom that is found in either the metadata or the tile table
-        :return: 
-        """
         return self._get_zoom(max_zoom=False)
 
     def max_zoom(self):
-        """
-         * Returns the maximum zoom that is found in either the metadata or the tile table
-        :return: 
-        """
         return self._get_zoom(max_zoom=True)
 
     def mask_level(self):
-        """
-         * Returns the mask level from the metadata table
-        :return: 
-        """
         return self._get_metadata_value("maskLevel")
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
-        """
-         * Loads the tiles for the specified zoom_level and bounds from the mbtiles file this source has been created with
-        :param zoom_level: The zoom level which will be loaded
-        :param bounds: If set, only tiles inside this tile boundary will be loaded
-        :param max_tiles: The maximum number of tiles to be loaded
-        :param for_each: A function which will be called for every row
-        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
-        :return: 
-        """
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
         self._cancelling = False
         debug("Reading tiles of zoom level {}", zoom_level)
 
@@ -319,8 +305,6 @@ class MBTilesSource(AbstractSource):
                         limit_reacher_handler()
             self.max_progress_changed.emit(len(rows))
             for index, row in enumerate(rows):
-                if for_each:
-                    for_each()
                 if self._cancelling or (max_tiles and len(tile_data_tuples) >= max_tiles):
                     break
                 tile, data = self._create_tile(row)
@@ -487,16 +471,7 @@ class TrexCacheSource(AbstractSource):
     def crs(self):
         return self.json.crs()
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
-        """
-         * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
-        :param zoom_level: The zoom level which will be loaded
-        :param bounds: If set, only tiles inside this tile boundary will be loaded
-        :param max_tiles: The maximum number of tiles to be loaded
-        :param for_each: A function which will be called for every row
-        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
-        :return:
-        """
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
         self._cancelling = False
         tile_data_tuples = []
 
@@ -517,7 +492,5 @@ class TrexCacheSource(AbstractSource):
                 with open(full_path, 'rb') as f:
                     encoded_data = f.read()
                     tile_data_tuples.append((tile, encoded_data))
-            if for_each:
-                for_each()
 
         return tile_data_tuples
