@@ -264,20 +264,22 @@ class VtrPlugin:
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
 
         try:
-            if self._current_reader:
+            if self._current_reader and self._current_reader.source.source() != path_or_url:
                 self._current_reader.shutdown()
                 self._current_reader.progress_changed.disconnect()
                 self._current_reader.max_progress_changed.disconnect()
                 self._current_reader.title_changed.disconnect()
                 self._current_reader.message_changed.disconnect()
                 self._current_reader.show_progress_changed.disconnect()
-            reader = self._create_reader(path_or_url)
-            reader.set_root_group_name(connection_name)
-            self._current_reader = reader
-            if reader:
-                layers = reader.source.vector_layers()
+                self._current_reader = None
+            if not self._current_reader:
+                reader = self._create_reader(path_or_url)
+                reader.set_root_group_name(connection_name)
+                self._current_reader = reader
+            if self._current_reader:
+                layers = self._current_reader.source.vector_layers()
                 self.connections_dialog.set_layers(layers)
-                self.connections_dialog.options.set_zoom(reader.source.min_zoom(), reader.source.max_zoom())
+                self.connections_dialog.options.set_zoom(self._current_reader.source.min_zoom(), self._current_reader.source.max_zoom())
                 self.reload_action.setEnabled(True)
             else:
                 self.connections_dialog.set_layers([])
@@ -311,7 +313,7 @@ class VtrPlugin:
         return is_within
 
     def _on_add_layer(self, path_or_url, selected_layers):
-        debug("add layer: {}", path_or_url)
+        assert path_or_url
 
         crs_string = self._current_reader.source.crs()
         self._init_qgis_map(crs_string)
@@ -408,7 +410,6 @@ class VtrPlugin:
         if self._debouncer.is_running():
             self._debouncer.pause()
 
-        self._is_loading = True
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
@@ -422,9 +423,10 @@ class VtrPlugin:
         if apply_styles:
             self._set_background_color()
 
-        debug("Load: {}", path)
         reader = self._current_reader
-        if reader:
+        if not reader:
+            self._is_loading = False
+        else:
             try:
                 max_zoom = reader.source.max_zoom()
                 if auto_zoom:
@@ -443,29 +445,14 @@ class VtrPlugin:
                          "will be set to the bounds of the source", bounds, source_bounds)
                     bounds = source_bounds
 
-                loaded_extent = reader.load_tiles(zoom_level=zoom,
-                                                  layer_filter=layers_to_load,
-                                                  load_mask_layer=load_mask_layer,
-                                                  merge_tiles=merge_tiles,
-                                                  clip_tiles=clip_tiles,
-                                                  apply_styles=apply_styles,
-                                                  max_tiles=tile_limit,
-                                                  bounds=bounds,
-                                                  limit_reacher_handler=lambda: self._show_limit_exceeded_message(
-                                                      tile_limit))
-                if self._current_scale is None:
-                    self._current_scale = self._get_current_map_scale()
-                self.refresh_layers()
-                info("Loading complete! Loaded extent: {}", loaded_extent)
-                if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
-                    scheme = reader.source.scheme()
-                    visible_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
-                    overlap = self._extent_overlap_bounds(visible_extent, loaded_extent)
-                    if not overlap:
-                        self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=loaded_extent)
-                if auto_zoom:
-                    self._loaded_extent = loaded_extent
-                    self._debouncer.start()
+                reader.set_options(layer_filter=layers_to_load,
+                                   load_mask_layer=load_mask_layer,
+                                   merge_tiles=merge_tiles,
+                                   clip_tiles=clip_tiles,
+                                   apply_styles=apply_styles,
+                                   max_tiles=tile_limit)
+                self._is_loading = True
+                reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
             except Exception as e:
                 critical("An exception occured: {}", e)
                 tb_lines = traceback.format_tb(sys.exc_traceback)
@@ -477,9 +464,9 @@ class VtrPlugin:
                     "Something went horribly wrong. Please have a look at the log.",
                     level=QgsMessageBar.CRITICAL,
                     duration=5)
-            if self.progress_dialog:
-                self.progress_dialog.hide()
-        self._is_loading = False
+                if self.progress_dialog:
+                    self.progress_dialog.hide()
+                self._is_loading = False
 
     def _set_background_color(self):
         myColor = QColor("#F2EFE9")
@@ -495,7 +482,15 @@ class VtrPlugin:
         for layer in self.iface.mapCanvas().layers():
             layer.triggerRepaint()
 
-    def _show_limit_exceeded_message(self, limit):
+    @pyqtSlot()
+    def reader_cancelled(self):
+        info("cancelled")
+        self._is_loading = False
+        if self.progress_dialog:
+            self.progress_dialog.hide()
+
+    @pyqtSlot(int)
+    def reader_limit_exceeded_message(self, limit):
         """
         * Shows a message in QGIS that the nr of tiles has been restricted by the tile limit set in the options
         :return: 
@@ -517,10 +512,35 @@ class VtrPlugin:
             reader.show_progress_changed.connect(self.reader_show_progress_changed)
             reader.title_changed.connect(self.reader_title_changed)
             reader.message_changed.connect(self.reader_message_changed)
+            reader.loading_finished.connect(self.reader_loading_finished)
+            reader.tile_limit_reached.connect(self.reader_limit_exceeded_message)
+            reader.cancelled.connect(self.reader_cancelled)
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
+
+    @pyqtSlot(object)
+    def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
+        if self.progress_dialog:
+            self.progress_dialog.hide()
+
+        auto_zoom = True
+
+        if self._current_scale is None:
+            self._current_scale = self._get_current_map_scale()
+        self.refresh_layers()
+        info("Loading complete! Loaded extent: {}", loaded_extent)
+        if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
+            scheme = self._current_reader.source.scheme()
+            visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
+            overlap = self._extent_overlap_bounds(visible_extent, loaded_extent)
+            if not overlap:
+                self._set_qgis_extent(zoom=loaded_zoom_level, scheme=scheme, bounds=loaded_extent)
+        if auto_zoom:
+            self._loaded_extent = loaded_extent
+            self._debouncer.start()
+        self._is_loading = False
 
     @pyqtSlot(int)
     def reader_progress_changed(self, progress):
@@ -553,6 +573,7 @@ class VtrPlugin:
         if max_progress is not None:
             self.progress_dialog.set_maximum(max_progress)
         if msg:
+            info(msg)
             self.progress_dialog.set_message(msg)
         if progress is not None:
             self.progress_dialog.set_progress(progress)

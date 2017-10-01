@@ -12,6 +12,7 @@ from dlg_edit_connection import Ui_DlgEditConnection
 from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
 from options import Ui_OptionsGroup
+from ..log_helper import *
 
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
@@ -236,8 +237,6 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self._load_connections()
         self._add_loaded_connections()
         self.edit_connection_dialog = EditConnectionDialog()
-        self.current_path_or_url = None
-        self.current_name = None
         _update_size(self)
 
     def _select_file_path(self):
@@ -267,7 +266,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
-        self.on_add.emit(self.current_path_or_url, selected_layers)
+        name, url = self._get_current_connection()
+        self.on_add.emit(url, selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -340,8 +340,15 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.txtPath.setText("")
 
     def _get_current_connection(self):
-        name = self.cbxConnections.currentText()
-        url = self.connections[name]
+        if self.tabServer.isEnabled():
+            name = self.cbxConnections.currentText()
+            url = self.connections[name]
+        elif self.tabFile.isEnabled():
+            url = self.txtPath.text()
+            name = os.path.basename(url)
+        else:
+            url = self.txtTrexCachePath.text()
+            name = os.path.basename(url)
         if name in self._predefined_connections:
             url = url.replace("{token}", self._tokens[name])
         return name, url

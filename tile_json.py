@@ -2,7 +2,7 @@ import sys
 import json
 import os
 import ast
-from log_helper import critical, debug
+from log_helper import critical, debug, info
 from tile_helper import get_tile_bounds, latlon_to_tile
 from file_helper import FileHelper
 
@@ -33,7 +33,7 @@ class TileJSON:
                 debug("TileJSON validated")
                 success = True
             else:
-                debug("Loading TileJSON failed")
+                info("Parsing TileJSON failed")
                 self.json = {}
                 raise RuntimeError("TileJSON could not be loaded.")
         except:

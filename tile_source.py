@@ -19,6 +19,7 @@ class AbstractSource(QObject):
     progress_changed = pyqtSignal(int, name='tileSourceProgressChanged')
     max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
     message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
+    tile_limit_reached = pyqtSignal(name='tile_limit_reached')
 
     def __init__(self):
         QObject.__init__(self)
@@ -74,7 +75,7 @@ class AbstractSource(QObject):
     def crs(self):
         raise NotImplementedError
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         """
          * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
         :param tiles_to_load: All tile coordinates which shall be loaded
@@ -139,7 +140,7 @@ class ServerSource(AbstractSource):
     def crs(self):
         return self.json.crs()
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         self._cancelling = False
         base_url = self.json.tiles()[0]
         tile_data_tuples = []
@@ -147,8 +148,7 @@ class ServerSource(AbstractSource):
 
         if len(tiles_to_load) > max_tiles:
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
-            if limit_reacher_handler:
-                limit_reacher_handler()
+            self.tile_limit_reached.emit()
 
         parameters = urlparse.parse_qs(urlparse.urlparse(self.url).query)
         api_key = ""
@@ -273,7 +273,7 @@ class MBTilesSource(AbstractSource):
     def mask_level(self):
         return self._get_metadata_value("maskLevel")
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         self._cancelling = False
         debug("Reading tiles of zoom level {}", zoom_level)
 
@@ -301,8 +301,7 @@ class MBTilesSource(AbstractSource):
                 if no_tiles_in_current_extent:
                     rows = rows[:max_tiles]
                 if no_tiles_in_current_extent:
-                    if limit_reacher_handler:
-                        limit_reacher_handler()
+                    self.tile_limit_reached.emit()
             self.max_progress_changed.emit(len(rows))
             for index, row in enumerate(rows):
                 if self._cancelling or (max_tiles and len(tile_data_tuples) >= max_tiles):
@@ -471,14 +470,13 @@ class TrexCacheSource(AbstractSource):
     def crs(self):
         return self.json.crs()
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, limit_reacher_handler=None):
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         self._cancelling = False
         tile_data_tuples = []
 
         if len(tiles_to_load) > max_tiles:
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
-            if limit_reacher_handler:
-                limit_reacher_handler()
+            self.tile_limit_reached.emit()
 
         self.max_progress_changed.emit(tiles_to_load)
         for index, t in enumerate(tiles_to_load):
