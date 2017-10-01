@@ -14,7 +14,7 @@ of the License, or (at your option) any later version.
 """
 
 from log_helper import debug, info, warn, critical
-from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot
+from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog
 from qgis.core import *
 from qgis.gui import QgsMessageBar
@@ -74,11 +74,11 @@ class VtrPlugin:
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-        self._debouncer = SignalDebouncer(1000,
-                                          handler=self._handle_map_scale_or_extents_changed,
+        self._debouncer = SignalDebouncer(timeout=1000,
                                           signals=[self.iface.mapCanvas().scaleChanged,
                                                    self.iface.mapCanvas().extentsChanged])
-        self._debouncer.set_pause_request_handler(self._on_scale_or_extent_change_during_pause)
+        self._debouncer.on_notify.connect(self._handle_map_scale_or_extents_changed)
+        self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
 
@@ -108,14 +108,15 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
 
+    @pyqtSlot()
     def _on_scale_or_extent_change_during_pause(self):
         assert self._current_reader
         self._scale_to_load = self._get_current_map_scale()
         scheme = self._current_reader.source.scheme()
         zoom = get_zoom_by_scale(self._scale_to_load)
         self._extent_to_load = self._get_visible_extent_as_tile_bounds(scheme, zoom)
-        # if self._is_loading:
-        #     self._cancel_load()
+        if self._is_loading:
+            self._cancel_load()
 
     def _get_new_scale_if_changed(self):
         new_scale = self._scale_to_load
@@ -126,18 +127,16 @@ class VtrPlugin:
             return new_scale
         return None
 
+    @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             new_scale = self._get_new_scale_if_changed()
-
             extent_to_load = self._extent_to_load
             self._scale_to_load = None
             self._extent_to_load = None
-
-            if new_scale:
-                if new_scale != self._loaded_scale:
-                    info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
-                    self._handle_scale_change(new_scale)
+            if new_scale and new_scale != self._loaded_scale:
+                info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+                self._handle_scale_change(new_scale)
             else:
                 scheme = self._current_reader.source.scheme()
                 scale = self._get_current_map_scale()
@@ -535,9 +534,9 @@ class VtrPlugin:
             overlap = self._extent_overlap_bounds(visible_extent, loaded_extent)
             if not overlap:
                 self._set_qgis_extent(zoom=loaded_zoom_level, scheme=scheme, bounds=loaded_extent)
+        self._is_loading = False
         if auto_zoom:
             self._debouncer.start()
-        self._is_loading = False
 
     @pyqtSlot(int)
     def reader_progress_changed(self, progress):
@@ -606,47 +605,41 @@ class VtrPlugin:
             pass
 
 
-class SignalDebouncer:
+class SignalDebouncer(QObject):
     """
      * This class can be used to debounce signals, i.e. if many signals are received in a very short timespan,
      only the latest shall be processed and all others ignored.
     """
 
-    def __init__(self, timeout, handler, signals):
+    on_notify = pyqtSignal(name="onNotify")
+    on_notify_in_pause = pyqtSignal(name="onNotifyInPause")
+
+    def __init__(self, timeout, signals):
+        QObject.__init__(self)
         self._debounce_timer = QTimer()
         self._debounce_timer.timeout.connect(self._on_timeout)
         self._timeout = timeout
         self._signals = signals
-        self._handler = handler
         self._is_connected = False
         self._is_paused = False
         self._got_request_in_pause = False
-        self._pause_handler = handler
 
     def start(self, start_immediate=False):
         """
          * Starts handling the signals
         :return:
         """
+        timeout = 0
         if self._is_paused:
             self._is_paused = False
             if self._got_request_in_pause:
                 self._got_request_in_pause = False
                 timeout = self._timeout
                 if start_immediate:
-                    timeout = 0
-                self._debounce_timer.setSingleShot(True)
-                self._debounce_timer.start(timeout)
+                    timeout = 0.1
         else:
             self._connect()
-
-    def set_pause_request_handler(self, handler):
-        """
-         * The specified handler will be executed upon receiving a signal during pause
-         Notice that the pause events will not be debounced
-        :return:
-        """
-        self._pause_handler = handler
+        self._debounce_timer.start(timeout)
 
     def is_running(self):
         return self._is_connected
@@ -674,17 +667,16 @@ class SignalDebouncer:
             for s in self._signals:
                 s.disconnect(self._debounce)
 
+    @pyqtSlot()
     def _on_timeout(self):
         self._debounce_timer.stop()
         if self._is_paused:
             self._got_request_in_pause = True
-            if self._pause_handler:
-                self._pause_handler()
+            self.on_notify_in_pause.emit()
         else:
-            self._handler()
+            self.on_notify.emit()
 
     def _debounce(self):
         self._debounce_timer.stop()
         if self._is_connected:
-            self._debounce_timer.setSingleShot(True)
             self._debounce_timer.start(self._timeout)
