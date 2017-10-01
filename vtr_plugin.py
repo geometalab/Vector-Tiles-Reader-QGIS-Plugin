@@ -109,27 +109,19 @@ class VtrPlugin:
         info("Vector Tile Reader Plugin loaded...")
 
     def _on_scale_or_extent_change_during_pause(self):
-        self._remember_scale_and_extent()
-        if self._is_loading:
-            self._cancel_load()
-
-    def _remember_scale_and_extent(self):
         assert self._current_reader
         self._scale_to_load = self._get_current_map_scale()
         scheme = self._current_reader.source.scheme()
         zoom = get_zoom_by_scale(self._scale_to_load)
         self._extent_to_load = self._get_visible_extent_as_tile_bounds(scheme, zoom)
-
-    def _reset_remembered_scale_and_extent(self):
-        self._scale_to_load = None
-        self._extent_to_load = None
+        # if self._is_loading:
+        #     self._cancel_load()
 
     def _get_new_scale_if_changed(self):
         new_scale = self._scale_to_load
         if not new_scale:
             new_scale = self._get_current_map_scale()
-        self._reset_remembered_scale_and_extent()
-        has_scale_changed = self._current_scale is None or new_scale != self._current_scale
+        has_scale_changed = self._current_scale is None or int(new_scale) != int(self._current_scale)
         if has_scale_changed:
             return new_scale
         return None
@@ -137,14 +129,22 @@ class VtrPlugin:
     def _handle_map_scale_or_extents_changed(self):
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             new_scale = self._get_new_scale_if_changed()
+
+            extent_to_load = self._extent_to_load
+            self._scale_to_load = None
+            self._extent_to_load = None
+
             if new_scale:
-                info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
-                self._handle_scale_change(new_scale)
+                if new_scale != self._loaded_scale:
+                    info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+                    self._handle_scale_change(new_scale)
             else:
                 scheme = self._current_reader.source.scheme()
                 scale = self._get_current_map_scale()
                 zoom = get_zoom_by_scale(scale)
                 new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+                if extent_to_load:
+                    new_extent = extent_to_load
                 extent_changed = new_extent != self._loaded_extent
                 if extent_changed:
                     info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
@@ -238,11 +238,7 @@ class VtrPlugin:
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
-        if self._extent_to_load:
-            return self._extent_to_load
-
         extent = self._get_current_extent_as_wkt()
-        self._reset_remembered_scale_and_extent()
         splits = extent.split(", ")
         new_extent = map(lambda x: map(float, x.split(" ")), splits)
         min_extent = new_extent[0]
@@ -414,7 +410,7 @@ class VtrPlugin:
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
         load_mask_layer = options.load_mask_layer_enabled()
-        auto_zoom = options.auto_zoom_enabled()
+        self._auto_zoom = options.auto_zoom_enabled()
         if ignore_limit:
             tile_limit = None
         manual_zoom = options.manual_zoom()
@@ -429,7 +425,7 @@ class VtrPlugin:
         else:
             try:
                 max_zoom = reader.source.max_zoom()
-                if auto_zoom:
+                if self._auto_zoom:
                     zoom = self._get_zoom_for_current_map_scale()
                     if zoom > max_zoom:
                         zoom = max_zoom
@@ -488,6 +484,8 @@ class VtrPlugin:
         self._is_loading = False
         if self.progress_dialog:
             self.progress_dialog.hide()
+        if self._auto_zoom:
+            self._debouncer.start(start_immediate=True)
 
     @pyqtSlot(int)
     def reader_limit_exceeded_message(self, limit):
@@ -522,15 +520,15 @@ class VtrPlugin:
 
     @pyqtSlot(object)
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
+        self._loaded_extent = loaded_extent
         if self.progress_dialog:
             self.progress_dialog.hide()
 
-        auto_zoom = True
+        auto_zoom = self._auto_zoom
 
-        if self._current_scale is None:
-            self._current_scale = self._get_current_map_scale()
+        self._loaded_scale = self._get_current_map_scale()
         self.refresh_layers()
-        info("Loading complete! Loaded extent: {}", loaded_extent)
+        info("Loading of zoom level {} complete! Loaded extent: {}", loaded_zoom_level, loaded_extent)
         if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
             scheme = self._current_reader.source.scheme()
             visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
@@ -538,7 +536,6 @@ class VtrPlugin:
             if not overlap:
                 self._set_qgis_extent(zoom=loaded_zoom_level, scheme=scheme, bounds=loaded_extent)
         if auto_zoom:
-            self._loaded_extent = loaded_extent
             self._debouncer.start()
         self._is_loading = False
 
@@ -626,7 +623,7 @@ class SignalDebouncer:
         self._got_request_in_pause = False
         self._pause_handler = handler
 
-    def start(self):
+    def start(self, start_immediate=False):
         """
          * Starts handling the signals
         :return:
@@ -635,7 +632,11 @@ class SignalDebouncer:
             self._is_paused = False
             if self._got_request_in_pause:
                 self._got_request_in_pause = False
-                self._debounce_timer.start(self._timeout)
+                timeout = self._timeout
+                if start_immediate:
+                    timeout = 0
+                self._debounce_timer.setSingleShot(True)
+                self._debounce_timer.start(timeout)
         else:
             self._connect()
 
@@ -685,4 +686,5 @@ class SignalDebouncer:
     def _debounce(self):
         self._debounce_timer.stop()
         if self._is_connected:
+            self._debounce_timer.setSingleShot(True)
             self._debounce_timer.start(self._timeout)
