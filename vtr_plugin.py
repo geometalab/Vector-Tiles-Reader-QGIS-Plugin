@@ -20,7 +20,7 @@ from qgis.core import *
 from qgis.gui import QgsMessageBar
 
 from file_helper import FileHelper
-from tile_helper import get_tile_bounds, epsg3857_to_wgs84_lonlat, tile_to_latlon, latlon_to_tile, get_zoom_by_scale
+from tile_helper import *
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
 import os
@@ -114,6 +114,9 @@ class VtrPlugin:
         self._scale_to_load = self._get_current_map_scale()
         scheme = self._current_reader.source.scheme()
         zoom = get_zoom_by_scale(self._scale_to_load)
+        max_zoom = self._current_reader.source.max_zoom()
+        min_zoom = self._current_reader.source.min_zoom()
+        zoom = clamp(zoom, low=min_zoom, high=max_zoom)
         self._extent_to_load = self._get_visible_extent_as_tile_bounds(scheme, zoom)
         if self._is_loading:
             self._cancel_load()
@@ -129,6 +132,8 @@ class VtrPlugin:
 
     @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
+        info("notify map scale or extent change")
+
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             new_scale = self._get_new_scale_if_changed()
             extent_to_load = self._extent_to_load
@@ -138,16 +143,23 @@ class VtrPlugin:
                 info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
                 self._handle_scale_change(new_scale)
             else:
+                self._current_scale = self._get_current_map_scale()
                 scheme = self._current_reader.source.scheme()
-                scale = self._get_current_map_scale()
+                scale = self._current_scale
+                if new_scale:
+                    scale = new_scale
+                max_zoom = self._current_reader.source.max_zoom()
+                min_zoom = self._current_reader.source.min_zoom()
                 zoom = get_zoom_by_scale(scale)
+                zoom = clamp(zoom, low=min_zoom, high=max_zoom)
                 new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
                 if extent_to_load:
                     new_extent = extent_to_load
                 extent_changed = new_extent != self._loaded_extent
                 if extent_changed:
                     info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
-                    self._reload_tiles()
+                    self._loaded_extent = new_extent
+                    self._reload_tiles(new_extent)
 
     def _handle_scale_change(self, new_scale):
         scale_increased = self._current_scale is None or new_scale > self._current_scale
@@ -213,7 +225,9 @@ class VtrPlugin:
                 layers.append(l)
         return layers
 
-    def _reload_tiles(self):
+    def _reload_tiles(self, overwrite_extent=None):
+        if self._debouncer.is_running():
+            self._debouncer.pause()
         if self._current_reader:
             self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self._current_reader.source.scheme()
@@ -225,6 +239,9 @@ class VtrPlugin:
                 self._current_reader.flush_layers_of_other_zoom_level = True
 
             bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+            if overwrite_extent:
+                bounds = overwrite_extent
+
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
             self._load_tiles(path=self._current_reader.source.source(),
@@ -424,10 +441,10 @@ class VtrPlugin:
         else:
             try:
                 max_zoom = reader.source.max_zoom()
+                min_zoom = reader.source.min_zoom()
                 if self._auto_zoom:
                     zoom = self._get_zoom_for_current_map_scale()
-                    if zoom > max_zoom:
-                        zoom = max_zoom
+                    zoom = clamp(zoom, low=min_zoom, high=max_zoom)
                 else:
                     zoom = max_zoom
                     if manual_zoom is not None:
