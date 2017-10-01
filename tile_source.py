@@ -5,6 +5,7 @@ import urlparse
 import json
 
 from PyQt4.QtGui import QApplication
+from PyQt4.QtCore import QObject, pyqtSignal
 from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
@@ -12,8 +13,57 @@ from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds
 
 _DEFAULT_CRS = "EPSG:3857"
 
-class ServerSource:
+
+class AbstractSource(QObject):
+
+    progress_changed = pyqtSignal(int, name='tileSourceProgressChanged')
+    max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
+    message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
+
+    def __init__(self):
+        QObject.__init__(self)
+        self._cancelling = False
+
+    def cancel(self):
+        self._cancelling = True
+
+    def source(self):
+        raise NotImplementedError
+
+    def vector_layers(self):
+        raise NotImplementedError
+
+    def close_connection(self):
+        pass
+
+    def name(self):
+        raise NotImplementedError
+
+    def min_zoom(self):
+        raise NotImplementedError
+
+    def max_zoom(self):
+        raise NotImplementedError
+
+    def mask_level(self):
+        raise NotImplementedError
+
+    def scheme(self):
+        raise NotImplementedError
+
+    def bounds_tile(self, zoom):
+        raise NotImplementedError
+
+    def crs(self):
+        raise NotImplementedError
+
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None, for_each=None, limit_reacher_handler=None):
+        raise NotImplementedError
+
+
+class ServerSource(AbstractSource):
     def __init__(self, url):
+        AbstractSource.__init__(self)
         if not url:
             raise RuntimeError("URL is required")
 
@@ -28,20 +78,9 @@ class ServerSource:
 
         self.json = TileJSON(url)
         self.json.load()
-        self._progress_handler = None
-        self._cancelling = False
-
-    def cancel(self):
-        self._cancelling = True
-
-    def set_progress_handler(self, func):
-        self._progress_handler = func
 
     def source(self):
         return self.url
-
-    def attribution(self):
-        return self.json.attribution()
 
     def vector_layers(self):
         return self.json.vector_layers()
@@ -110,7 +149,8 @@ class ServerSource:
                 .replace("{api_key}", str(api_key))
             urls.append((load_url, col, row))
 
-        self._progress_handler(msg="Getting {} tiles from source...".format(len(urls)), max_progress=len(urls))
+        self.max_progress_changed.emit(len(urls))
+        self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
 
         page_size = 5
         results = []
@@ -136,7 +176,7 @@ class ServerSource:
             nr_finished = sum(map(lambda r: r[0].isFinished(), replies), 0)
             if nr_finished != nr_finished_before:
                 for_each()
-                self._progress_handler(progress=page_offset + nr_finished)
+                self.progress_changed.emit(page_offset + nr_finished)
             all_finished = nr_finished == len(replies)
 
         results = []
@@ -162,8 +202,9 @@ class ServerSource:
             page_nr += page_size
 
 
-class MBTilesSource:
+class MBTilesSource(AbstractSource):
     def __init__(self, path):
+        AbstractSource.__init__(self)
         if not os.path.isfile(path):
             raise RuntimeError("The file does not exist: {}".format(path))
 
@@ -175,14 +216,6 @@ class MBTilesSource:
         self.path = path
         self.conn = None
         self._metadata_cache = {}
-        self._progress_handler = None
-        self._cancelling = False
-
-    def cancel(self):
-        self._cancelling = True
-
-    def set_progress_handler(self, func):
-        self._progress_handler = func
 
     def source(self):
         return self.path
@@ -284,7 +317,7 @@ class MBTilesSource:
                 if no_tiles_in_current_extent:
                     if limit_reacher_handler:
                         limit_reacher_handler()
-            self._progress_handler(max_progress=len(rows))
+            self.max_progress_changed.emit(len(rows))
             for index, row in enumerate(rows):
                 if for_each:
                     for_each()
@@ -292,7 +325,7 @@ class MBTilesSource:
                     break
                 tile, data = self._create_tile(row)
                 tile_data_tuples.append((tile, data))
-                self._progress_handler(progress=index+1)
+                self.progress_changed.emit(index+1)
         return tile_data_tuples
 
     @staticmethod
@@ -411,35 +444,22 @@ class MBTilesSource:
             critical("Db connection failed:", sys.exc_info())
 
 
-class TrexCacheSource:
+class TrexCacheSource(AbstractSource):
     def __init__(self, path):
+        AbstractSource.__init__(self)
         if not os.path.isdir(path):
             raise RuntimeError("The folder does not exist: {}".format(path))
         self.path = path
         metadata_path = os.path.join(path, "metadata.json")
         self.json = TileJSON(metadata_path)
         self.json.load()
-        self._progress_handler = None
-        self._cancelling = False
-
-    def cancel(self):
-        self._cancelling = True
-
-    def set_progress_handler(self, func):
-        self._progress_handler = func
 
     def source(self):
         return self.path
 
-    def attribution(self):
-        return self.json.attribution()
-
     def vector_layers(self):
         data = json.loads(self.json.get_value("json"))["vector_layers"]
         return data
-
-    def close_connection(self):
-        pass
 
     def name(self):
         name = self.json.name()
@@ -485,7 +505,9 @@ class TrexCacheSource:
             if limit_reacher_handler:
                 limit_reacher_handler()
 
-        for t in tiles_to_load:
+        self.max_progress_changed.emit(tiles_to_load)
+        for index, t in enumerate(tiles_to_load):
+            self.progress_changed.emit(index)
             tile_path = "{}/{}/{}.pbf".format(int(zoom_level), t[0], t[1])
             full_path = os.path.join(self.path, tile_path)
             col = t[0]

@@ -7,12 +7,12 @@ import json
 import math
 
 from log_helper import info, warn, critical, debug, remove_key
-from PyQt4.QtGui import QApplication
 from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg
 from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
-from PyQt4.QtGui import QMessageBox
+from PyQt4.QtGui import QMessageBox, QApplication
+from PyQt4.QtCore import QObject, pyqtSignal
 from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
@@ -29,7 +29,13 @@ if platform.system() == "Windows":
     sys.argv = [None]
 
 
-class VtReader:
+class VtReader(QObject):
+
+    progress_changed = pyqtSignal(int, name='progressChanged')
+    max_progress_changed = pyqtSignal(int, name='maxProgressChanged')
+    message_changed = pyqtSignal('QString', name='messageChanged')
+    title_changed = pyqtSignal('QString', name='titleChanged')
+    show_progress_changed = pyqtSignal(bool, name='titleChanged')
 
     omt_layer_ordering = [
         "place",
@@ -57,12 +63,13 @@ class VtReader:
 
     flush_layers_of_other_zoom_level = False
 
-    def __init__(self, iface, path_or_url, progress_handler):
+    def __init__(self, iface, path_or_url):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
         :param path_or_url: 
         """
+        QObject.__init__(self)
         if not path_or_url:
             raise RuntimeError("The datasource is required")
 
@@ -74,11 +81,12 @@ class VtReader:
                 self.source = MBTilesSource(path=path_or_url)
             else:
                 self.source = TrexCacheSource(path=path_or_url)
-        self.source.set_progress_handler(self._update_progress)
 
+        self.source.progress_changed.connect(lambda p: self._update_progress(progress=p))
+        self.source.max_progress_changed.connect(lambda p: self._update_progress(max_progress=p))
+        self.source.message_changed.connect(lambda p: self._update_progress(msg=p))
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
-        self.progress_handler = progress_handler
         self.feature_collections_by_layer_path = {}
         self._qgis_layer_groups_by_name = {}
         self.cancel_requested = False
@@ -92,8 +100,16 @@ class VtReader:
         self._root_group_name = name
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
-        if self.progress_handler:
-            self.progress_handler(title, progress, max_progress, msg, show_dialog)
+        if progress is not None:
+            self.progress_changed.emit(progress)
+        if max_progress is not None:
+            self.max_progress_changed.emit(max_progress)
+        if title:
+            self.title_changed.emit(title)
+        if msg:
+            self.message_changed.emit(msg)
+        if show_dialog:
+            self.show_progress_changed.emit(show_dialog)
 
     def _get_empty_feature_collection(self, zoom_level, layer_name):
         """

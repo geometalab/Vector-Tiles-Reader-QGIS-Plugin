@@ -266,6 +266,11 @@ class VtrPlugin:
         try:
             if self._current_reader:
                 self._current_reader.source.close_connection()
+                self._current_reader.progress_changed.disconnect()
+                self._current_reader.max_progress_changed.disconnect()
+                self._current_reader.title_changed.disconnect()
+                self._current_reader.message_changed.disconnect()
+                self._current_reader.show_progress_changed.disconnect()
             reader = self._create_reader(path_or_url)
             reader.set_root_group_name(connection_name)
             self._current_reader = reader
@@ -462,7 +467,6 @@ class VtrPlugin:
                     self._loaded_extent = loaded_extent
                     self._debouncer.start()
             except Exception as e:
-                traceback.print_exc()
                 critical("An exception occured: {}", e)
                 tb_lines = traceback.format_tb(sys.exc_traceback)
                 tb_text = ""
@@ -507,15 +511,18 @@ class VtrPlugin:
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface,
-                              path_or_url=path_or_url,
-                              progress_handler=self.handle_progress_update)
+            reader = VtReader(self.iface, path_or_url=path_or_url)
+            reader.progress_changed.connect(lambda p: self.handle_progress_update(progress=p))
+            reader.max_progress_changed.connect(lambda p: self.handle_progress_update(max_progress=p))
+            reader.title_changed.connect(lambda p: self.handle_progress_update(title=p))
+            reader.message_changed.connect(lambda p: self.handle_progress_update(msg=p))
+            reader.show_progress_changed.connect(lambda p: self.handle_progress_update(show_progress=p))
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
 
-    def handle_progress_update(self, title, progress, max_progress, msg, show_progress):
+    def handle_progress_update(self, title=None, progress=None, max_progress=None, msg=None, show_progress=None):
         if show_progress:
             self.progress_dialog.open()
         elif show_progress is False:
@@ -523,11 +530,11 @@ class VtrPlugin:
             self.progress_dialog.set_message(None)
         if title:
             self.progress_dialog.setWindowTitle(title)
-        if max_progress:
+        if max_progress is not None:
             self.progress_dialog.set_maximum(max_progress)
         if msg:
             self.progress_dialog.set_message(msg)
-        if progress:
+        if progress is not None:
             self.progress_dialog.set_progress(progress)
 
     def _add_path_to_dependencies_to_syspath(self):
