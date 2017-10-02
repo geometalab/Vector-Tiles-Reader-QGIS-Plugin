@@ -316,7 +316,7 @@ class VtReader(QObject):
                                  "x_max": max(loaded_tiles_x),
                                  "y_min": min(loaded_tiles_y),
                                  "y_max": max(loaded_tiles_y),
-                                 "zoom": zoom_level
+                                 "zoom": int(zoom_level)
                                  }
                 loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
                 loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
@@ -480,7 +480,7 @@ class VtReader(QObject):
             self._qgis_layer_groups_by_name[layer_name] = group
 
     def _get_geojson_filename(self, layer_name, geo_type, zoom_level):
-        return "{}.{}.{}.{}".format(self.source.name(), layer_name, geo_type, zoom_level)
+        return "{}.{}.{}.{}".format(self.source.name().replace(" ", "_"), layer_name, geo_type, zoom_level)
 
     def _create_qgis_layers(self, merge_features, apply_styles):
         """
@@ -490,8 +490,8 @@ class VtReader(QObject):
 
         self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
-        qgis_layers = QgsMapLayerRegistry.instance().mapLayers().iteritems()
-        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") is not None, qgis_layers)
+        qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
+        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") is not None, qgis_layers.iteritems())
         own_layers = map(lambda (n, l): l, vt_qgis_name_layer_tuples)
 
         self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_path), msg="Creating layers...")
@@ -517,7 +517,7 @@ class VtReader(QObject):
                 layer = self._get_layer_by_source(own_layers, layer_name_and_zoom, file_path, geo_type)
                 if layer:
                     self._update_layer_source(file_path, feature_collections_by_tile_coord, zoom_level, layer_name)
-                    layer.reload()
+                    # layer.reload()
 
             if not layer:
                 complete_collection = self._get_empty_feature_collection(zoom_level, layer_name)
@@ -529,11 +529,16 @@ class VtReader(QObject):
                 layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=index+1)
 
-        if self.flush_layers_of_other_zoom_level:
-            layers_to_remove = filter(lambda l: l.name().split(self._zoom_level_delimiter)[1] != zoom_level, own_layers)
-            ids = map(lambda l: l.id(), layers_to_remove)
-            # info("Removing layers of old zoom level: {}", map(lambda l: l.name, layers_to_remove))
-            # QgsMapLayerRegistry.instance().removeMapLayers(ids)
+        # if self.flush_layers_of_other_zoom_level:
+        #     layers_to_remove = filter(lambda l: l.customProperty("vector_tile_source") and int(l.name().split("*")[1]) != self._loading_options["zoom_level"], own_layers)
+        #     info("remove: {}", map(lambda l: l.name(), layers_to_remove))
+        #     ids = map(lambda l: l.id(), layers_to_remove)
+        #     # info("Removing layers of old zoom level: {}", map(lambda l: l.name, layers_to_remove))
+        #     QgsMapLayerRegistry.instance().removeMapLayers(ids)
+        #     QApplication.processEvents()
+        #     QApplication.processEvents()
+
+        QgsMapLayerRegistry.instance().reloadAllLayers()
 
         if len(layers) > 0:
             only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], layers))
