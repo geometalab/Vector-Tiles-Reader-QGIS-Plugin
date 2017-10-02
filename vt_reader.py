@@ -318,7 +318,9 @@ class VtReader(QObject):
                 loaded_extent = {"x_min": min(loaded_tiles_x),
                                  "x_max": max(loaded_tiles_x),
                                  "y_min": min(loaded_tiles_y),
-                                 "y_max": max(loaded_tiles_y)}
+                                 "y_max": max(loaded_tiles_y),
+                                 "zoom": zoom_level
+                                 }
                 loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
                 loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
                 self.loading_finished.emit(zoom_level, loaded_extent)
@@ -366,8 +368,7 @@ class VtReader(QObject):
         :return:
         """
         total_nr_tiles = len(tiles_with_encoded_data)
-        info("Decoding {} tiles", total_nr_tiles)
-        self._update_progress(progress=0, max_progress=100, msg="Decoding tiles...")
+        self._update_progress(progress=0, max_progress=100, msg="Decoding {} tiles...".format(total_nr_tiles))
 
         nr_processors = 4
         try:
@@ -519,6 +520,7 @@ class VtReader(QObject):
                 layer = self._get_layer_by_source(own_layers, layer_name_and_zoom, file_path, geo_type)
                 if layer:
                     self._update_layer_source(file_path, feature_collections_by_tile_coord, zoom_level, layer_name)
+                    layer.reload()
 
             if not layer:
                 complete_collection = self._get_empty_feature_collection(zoom_level, layer_name)
@@ -533,10 +535,8 @@ class VtReader(QObject):
         if self.flush_layers_of_other_zoom_level:
             layers_to_remove = filter(lambda l: l.name().split(self._zoom_level_delimiter)[1] != zoom_level, own_layers)
             ids = map(lambda l: l.id(), layers_to_remove)
-            debug("Flushing layers: {}", ids)
-            QgsMapLayerRegistry.instance().removeMapLayers(ids)
-
-        QgsMapLayerRegistry.instance().reloadAllLayers()
+            # info("Removing layers of old zoom level: {}", map(lambda l: l.name, layers_to_remove))
+            # QgsMapLayerRegistry.instance().removeMapLayers(ids)
 
         if len(layers) > 0:
             only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], layers))

@@ -76,7 +76,8 @@ class VtrPlugin:
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
         self._debouncer = SignalDebouncer(timeout=1000,
                                           signals=[self.iface.mapCanvas().scaleChanged,
-                                                   self.iface.mapCanvas().extentsChanged])
+                                                   self.iface.mapCanvas().extentsChanged],
+                                          predicate=self._have_extent_or_scale_changed)
         self._debouncer.on_notify.connect(self._handle_map_scale_or_extents_changed)
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
@@ -108,58 +109,76 @@ class VtrPlugin:
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
 
+    def _have_extent_or_scale_changed(self):
+        has_scale_changed = self._has_scale_changed()[0]
+        has_extent_changed = self._has_extent_changed()[0]
+        return has_scale_changed or has_extent_changed
+
     @pyqtSlot()
     def _on_scale_or_extent_change_during_pause(self):
         assert self._current_reader
-        self._scale_to_load = self._get_current_map_scale()
-        scheme = self._current_reader.source.scheme()
-        zoom = get_zoom_by_scale(self._scale_to_load)
-        max_zoom = self._current_reader.source.max_zoom()
-        min_zoom = self._current_reader.source.min_zoom()
-        zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-        self._extent_to_load = self._get_visible_extent_as_tile_bounds(scheme, zoom)
-        if self._is_loading:
+        self._scale_to_load = None
+        self._extent_to_load = None
+
+        info("got request in pause")
+        has_scale_changed, new_target_scale, has_scale_increased = self._has_scale_changed()
+        if has_scale_changed:
+            self._scale_to_load = None
+        else:
+            has_extent_changed, new_target_extent = self._has_extent_changed()
+            if has_extent_changed:
+                self._extent_to_load = new_target_extent
+
+        if self._is_loading and (self._scale_to_load or self._extent_to_load):
             self._cancel_load()
 
-    def _get_new_scale_if_changed(self):
-        new_scale = self._scale_to_load
-        if not new_scale:
-            new_scale = self._get_current_map_scale()
-        has_scale_changed = self._current_scale is None or int(new_scale) != int(self._current_scale)
-        if has_scale_changed:
-            return new_scale
-        return None
+    def _has_extent_changed(self):
+        scheme = self._current_reader.source.scheme()
+        scale = self._scale_to_load
+        if not scale:
+            scale = self._get_current_map_scale()
+
+        if self._extent_to_load:
+            new_extent = self._extent_to_load
+        else:
+            zoom = get_zoom_by_scale(scale)
+            max_zoom = self._current_reader.source.max_zoom()
+            min_zoom = self._current_reader.source.min_zoom()
+            zoom = clamp(zoom, low=min_zoom, high=max_zoom)
+            new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+        has_changed = new_extent != self._loaded_extent
+        return has_changed, new_extent
+
+    def _has_scale_changed(self):
+        new_scale = self._get_current_map_scale()
+        if self._scale_to_load:
+            new_scale = self._scale_to_load
+
+        has_changed = new_scale != self._loaded_scale
+        scale_increased = self._current_scale is None or new_scale > self._current_scale
+        return has_changed, new_scale, scale_increased
 
     @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
         info("notify map scale or extent change")
 
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
-            new_scale = self._get_new_scale_if_changed()
-            extent_to_load = self._extent_to_load
+            has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
+            has_extent_changed, new_extent = self._has_extent_changed()
+
             self._scale_to_load = None
             self._extent_to_load = None
-            if new_scale and new_scale != self._loaded_scale:
+
+            self._loaded_scale = new_scale
+            self._loaded_extent = new_extent
+
+            if new_scale and has_scale_changed:
                 info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
                 self._handle_scale_change(new_scale)
-            else:
-                self._current_scale = self._get_current_map_scale()
-                scheme = self._current_reader.source.scheme()
-                scale = self._current_scale
-                if new_scale:
-                    scale = new_scale
-                max_zoom = self._current_reader.source.max_zoom()
-                min_zoom = self._current_reader.source.min_zoom()
-                zoom = get_zoom_by_scale(scale)
-                zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-                new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
-                if extent_to_load:
-                    new_extent = extent_to_load
-                extent_changed = new_extent != self._loaded_extent
-                if extent_changed:
-                    info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
-                    self._loaded_extent = new_extent
-                    self._reload_tiles(new_extent)
+            elif has_extent_changed:
+                info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
+                self._loaded_extent = new_extent
+                self._reload_tiles(new_extent)
 
     def _handle_scale_change(self, new_scale):
         scale_increased = self._current_scale is None or new_scale > self._current_scale
@@ -631,7 +650,7 @@ class SignalDebouncer(QObject):
     on_notify = pyqtSignal(name="onNotify")
     on_notify_in_pause = pyqtSignal(name="onNotifyInPause")
 
-    def __init__(self, timeout, signals):
+    def __init__(self, timeout, signals, predicate=None):
         QObject.__init__(self)
         self._debounce_timer = QTimer()
         self._debounce_timer.timeout.connect(self._on_timeout)
@@ -639,24 +658,18 @@ class SignalDebouncer(QObject):
         self._signals = signals
         self._is_connected = False
         self._is_paused = False
-        self._got_request_in_pause = False
+        self._predicate = predicate
 
     def start(self, start_immediate=False):
         """
          * Starts handling the signals
         :return:
         """
-        timeout = 0
         if self._is_paused:
             self._is_paused = False
-            if self._got_request_in_pause:
-                self._got_request_in_pause = False
-                timeout = self._timeout
-                if start_immediate:
-                    timeout = 0.1
         else:
             self._connect()
-        self._debounce_timer.start(timeout)
+            self._debounce_timer.start(self._timeout)
 
     def is_running(self):
         return self._is_connected
@@ -670,6 +683,8 @@ class SignalDebouncer(QObject):
 
     def pause(self):
         self._is_paused = True
+        self._debounce_timer.stop()
+        self._debounce_timer.start(self._timeout)
 
     def _connect(self):
         if not self._is_connected:
@@ -687,11 +702,16 @@ class SignalDebouncer(QObject):
     @pyqtSlot()
     def _on_timeout(self):
         self._debounce_timer.stop()
-        if self._is_paused:
-            self._got_request_in_pause = True
-            self.on_notify_in_pause.emit()
-        else:
-            self.on_notify.emit()
+
+        should_notify = True
+        if self._predicate:
+            should_notify = self._predicate()
+
+        if should_notify:
+            if self._is_paused:
+                self.on_notify_in_pause.emit()
+            else:
+                self.on_notify.emit()
 
     def _debounce(self):
         self._debounce_timer.stop()
