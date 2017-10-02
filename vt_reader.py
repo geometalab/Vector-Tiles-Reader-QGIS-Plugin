@@ -8,7 +8,7 @@ import math
 import uuid
 
 from log_helper import info, warn, critical, debug, remove_key
-from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg
+from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg, clamp
 from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
@@ -223,10 +223,7 @@ class VtReader(QObject):
 
             min_zoom = self.source.min_zoom()
             max_zoom = self.source.max_zoom()
-            if min_zoom is not None and zoom_level < min_zoom:
-                zoom_level = min_zoom
-            if max_zoom is not None and zoom_level > max_zoom:
-                zoom_level = max_zoom
+            zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
 
             all_tiles = get_all_tiles(
                 bounds=bounds,
