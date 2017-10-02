@@ -583,17 +583,6 @@ class VtrPlugin:
             if not overlap:
                 self._set_qgis_extent(zoom=loaded_zoom_level, scheme=scheme, bounds=loaded_extent)
 
-        if auto_zoom:
-            layers = map(lambda (n, l): l, QgsMapLayerRegistry.instance().mapLayers().iteritems())
-            for l in layers:
-                info("layer: {}", l.name())
-            layers_to_remove = filter(lambda l: l.customProperty("vector_tile_source") and int(l.name().split("*")[1]) != loaded_extent["zoom"], layers)
-            info("remove: {}", map(lambda l: l.name(), layers_to_remove))
-            ids = map(lambda l: l.id(), layers_to_remove)
-            QgsMapLayerRegistry.instance().removeMapLayers(ids)
-            for i in range(1, 10):
-                QApplication.processEvents()
-
         self._is_loading = False
         if auto_zoom:
             self._debouncer.start()
