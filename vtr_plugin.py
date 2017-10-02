@@ -520,7 +520,19 @@ class VtrPlugin:
         if self.progress_dialog:
             self.progress_dialog.hide()
         if self._auto_zoom:
-            self._debouncer.start(start_immediate=True)
+            extent = self._extent_to_load
+            reload_immediate = self._scale_to_load is not None or extent
+            if reload_immediate:
+                if self._scale_to_load:
+                    self._loaded_scale = self._scale_to_load
+                if extent:
+                    self._loaded_extent = extent
+
+                self._extent_to_load = None
+                self._scale_to_load = None
+                self._reload_tiles(overwrite_extent=extent)
+            else:
+                self._debouncer.start(start_immediate=True)
 
     @pyqtSlot(int)
     def reader_limit_exceeded_message(self, limit):
