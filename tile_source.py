@@ -246,7 +246,6 @@ class MBTilesSource(AbstractSource):
 
     def bounds_tile(self, zoom):
         bounds = self._get_metadata_value("bounds")
-        print "bounds: ", bounds
         if bounds:
             bounds = bounds\
                 .replace(" ", "")\
@@ -412,7 +411,7 @@ class MBTilesSource(AbstractSource):
             cur.execute(sql)
             return cur.fetchall()
         except:
-            critical("Getting data from db failed:", sys.exc_info())
+            critical("Getting data from db failed: {}", sys.exc_info())
 
     def _connect_to_db(self):
         """

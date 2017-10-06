@@ -371,8 +371,7 @@ class VtrPlugin:
             dialog_owner = self.iface.mainWindow()
             self.connections_dialog.close()
         self._create_progress_dialog(dialog_owner, on_cancel=self._cancel_load)
-        self._load_tiles(path=path_or_url,
-                         options=self.connections_dialog.options,
+        self._load_tiles(options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
                          bounds=extent)
         self._current_layer_filter = selected_layers
@@ -437,7 +436,7 @@ class VtrPlugin:
                 (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
                  bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
 
-    def _load_tiles(self, path, options, layers_to_load, bounds=None, ignore_limit=False):
+    def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False):
         if self._debouncer.is_running():
             self._debouncer.pause()
 
