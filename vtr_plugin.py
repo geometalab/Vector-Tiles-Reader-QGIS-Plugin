@@ -263,8 +263,7 @@ class VtrPlugin:
 
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
-            self._load_tiles(path=self._current_reader.source.source(),
-                             options=self.connections_dialog.options,
+            self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
                              ignore_limit=True)
@@ -324,6 +323,7 @@ class VtrPlugin:
 
     def _is_valid_qgis_extent(self, extent_to_load, zoom):
         source_bounds = self._current_reader.source.bounds_tile(zoom)
+        info("bounds: {}", source_bounds)
         if not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_min"] \
@@ -470,7 +470,7 @@ class VtrPlugin:
                 self._current_zoom = zoom
 
                 source_bounds = reader.source.bounds_tile(zoom)
-                if not self._extent_overlap_bounds(bounds, source_bounds):
+                if source_bounds and not self._extent_overlap_bounds(bounds, source_bounds):
                     info("The current extent '{}' is not within the bounds of the source '{}'. The extent to load "
                          "will be set to the bounds of the source", bounds, source_bounds)
                     bounds = source_bounds
