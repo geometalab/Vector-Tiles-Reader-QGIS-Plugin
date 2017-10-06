@@ -206,6 +206,8 @@ class VtReader(QObject):
 
     def _load_tiles(self):
         try:
+            # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
+            self.source = self._create_source(self.source.source())
             zoom_level = self._loading_options["zoom_level"]
             bounds = self._loading_options["bounds"]
             load_mask_layer = self._loading_options["load_mask_layer"]
