@@ -18,16 +18,17 @@ from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
-from mp_helper import decode_tile, decode_tile_cpp
+from ctypes import *
+from mp_helper import decode_tile, decode_tile_cpp, decode_tile_cpp_external_lib_load
 
-import multiprocessing.dummy as mp
+import multiprocessing as mp
 import platform
 
-# if platform.system() == "Windows":
-#     # OSGeo4W does not bundle python in exec_prefix for python
-#     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-#     mp.set_executable(path)
-#     sys.argv = [None]
+if platform.system() == "Windows":
+    # OSGeo4W does not bundle python in exec_prefix for python
+    path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+    mp.set_executable(path)
+    sys.argv = [None]
 
 
 class VtReader(QObject):
@@ -385,33 +386,34 @@ class VtReader(QObject):
             self.extended = True
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
+
         # lib = cdll.LoadLibrary("C:\\DEV\\vtzero\\examples\\pbf2geojson.dll")
         # decode_mvt = lib.decodeMvtToJson
         # decode_mvt.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
         # decode_mvt.restype = c_char_p
 
-        # tiles = []
-        # for t in tiles_with_encoded_data:
-        #     tile = self.decode_tile_cpp(decode_mvt, t)
-        #     tiles.append(tile)
-
-        pool = mp.Pool(nr_processors)
         tiles = []
-        rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
-        pool.close()
-        current_progress = 0
-        while not rs.ready() and not self.cancel_requested:
-            if self.cancel_requested:
-                pool.terminate()
-                break
-            else:
-                QApplication.processEvents()
-                remaining = rs._number_left
-                index = total_nr_tiles - remaining
-                progress = int(100.0 / total_nr_tiles * (index + 1))
-                if progress != current_progress:
-                    current_progress = progress
-                    self._update_progress(progress=progress)
+        for t in tiles_with_encoded_data:
+            tile = decode_tile_cpp(t)
+            tiles.append(tile)
+
+        # pool = mp.Pool(nr_processors)
+        # tiles = []
+        # rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
+        # pool.close()
+        # current_progress = 0
+        # while not rs.ready() and not self.cancel_requested:
+        #     if self.cancel_requested:
+        #         pool.terminate()
+        #         break
+        #     else:
+        #         QApplication.processEvents()
+        #         remaining = rs._number_left
+        #         index = total_nr_tiles - remaining
+        #         progress = int(100.0 / total_nr_tiles * (index + 1))
+        #         if progress != current_progress:
+        #             current_progress = progress
+        #             self._update_progress(progress=progress)
 
         tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
         info("Decoding finished, {} tiles with data", len(tiles))

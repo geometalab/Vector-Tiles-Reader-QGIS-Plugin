@@ -15,13 +15,13 @@ def decode_tile(tile_data_tuple):
     return tile
 
 
-def decode_tile_cpp(tile_data_tuple):
+def decode_tile_cpp_external_lib_load(decode_mvt, tile_data_tuple):
     # self.extend_path()
     tile = tile_data_tuple[0]
     if not tile.decoded_data:
         try:
-            with open(r"c:\temp\uster.pbf", 'wb') as f:
-                f.write(tile_data_tuple[1])
+            # with open(r"c:\temp\uster.pbf", 'wb') as f:
+            #     f.write(tile_data_tuple[1])
             encoded_data = bytearray(tile_data_tuple[1])
 
             hex_string = "".join("%02x" % b for b in encoded_data)
@@ -33,12 +33,42 @@ def decode_tile_cpp(tile_data_tuple):
             tileX = tile.extent[0]
             tileY = tile.extent[1] - tileSpanY  # subtract tile size because Y starts from top, not from bottom
 
+            decoded_data = decode_mvt(tileX, tileY, tileSpanX, tileSpanY, hex_string)
+
+            # with open(r"c:\temp\output.txt", 'w') as f:
+            #     f.write(decoded_data)
+            tile.decoded_data = json.loads(decoded_data)
+        except:
+            info("error: {}", sys.exc_info())
+    return tile
+
+
+def decode_tile_cpp(tile_data_tuple):
+    # self.extend_path()
+    tile = tile_data_tuple[0]
+    if not tile.decoded_data:
+        try:
+            # with open(r"c:\temp\uster.pbf", 'wb') as f:
+            #     f.write(tile_data_tuple[1])
+            encoded_data = bytearray(tile_data_tuple[1])
+
+            hex_string = "".join("%02x" % b for b in encoded_data)
+
+            tileSpanX = tile.extent[2] - tile.extent[0]
+            tileSpanY = tile.extent[1] - tile.extent[3]
+            tileX = tile.extent[0]
+            tileY = tile.extent[1] - tileSpanY  # subtract tile size because Y starts from top, not from bottom
+
             lib = cdll.LoadLibrary("C:\\DEV\\vtzero\\examples\\pbf2geojson.dll")
             decode_mvt = lib.decodeMvtToJson
             decode_mvt.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
-            decode_mvt.restype = c_char_p
+            decode_mvt.restype = c_void_p
+            lib.freeme.argtypes = [c_void_p]
+            lib.freeme.restype = None
 
-            decoded_data = decode_mvt(tileX, tileY, tileSpanX, tileSpanY, hex_string)
+            ptr = decode_mvt(tileX, tileY, tileSpanX, tileSpanY, hex_string)
+            decoded_data = cast(ptr, c_char_p).value
+            lib.freeme(ptr)
 
             with open(r"c:\temp\output.txt", 'w') as f:
                 f.write(decoded_data)

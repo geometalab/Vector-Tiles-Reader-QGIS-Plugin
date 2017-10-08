@@ -68,11 +68,11 @@ struct my_geom_handler_linestrings {
     }
 
     void linestring_end() {
-        if (temp.empty()) {
-            return;
-        }
+        // if (temp.back() == ',') {
+            // temp.resize(temp.size() - 1);
+        // }
         if (temp.back() == ',') {
-            temp.resize(temp.size() - 1);
+            temp.back() = ' ';
         }
 		temp += ']';
 		result += temp;
@@ -91,6 +91,7 @@ struct my_geom_handler_polygons {
 
     void ring_begin(uint32_t count) {
 		if (++ringCounter > 1) {
+			isMulti = true;
 			temp = ",[[";
 		} else {
 			temp = "[[";
@@ -109,17 +110,10 @@ struct my_geom_handler_polygons {
     }
 
     void ring_end(bool is_outer) {
-        if (temp.empty()) {
-            return;
-        }
-
         if (temp.back() == ',') {
             temp.back() = ' ';
         }
-
-		isMulti = !is_outer;
 		temp += "]]";
-
 		result += temp;
     }
 };
@@ -206,7 +200,7 @@ void getJson(tile_location& loc, const vtzero::layer& layer, std::stringstream& 
 }
 
 
-const char* decodeAsJson(tile_location& loc, const char* hex){
+std::string decodeAsJson(tile_location& loc, const char* hex){
 	std::string hexString(hex);
 	std::string data;
 	data.reserve(hexString.size() / 2);
@@ -233,14 +227,28 @@ const char* decodeAsJson(tile_location& loc, const char* hex){
 
 	test << "]}";
 
-	static std::string result = test.str();
-	return result.c_str();
+	return test.str();
 }
 
 extern "C" {
-	const char* decodeMvtToJson(const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data)
-	{
+	char* decodeMvtToJson(const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data) {
 		tile_location loc{tileX, tileY, tileSpanX, tileSpanY};
-		return decodeAsJson(loc, data);
+		auto res = decodeAsJson(loc, data);
+		const char* result = res.c_str();
+		char *new_buf = strdup(result);
+		return new_buf;
+	}
+
+	char* say_hi(const char * to_whom) {
+		std::string result("Hello " + std::string(to_whom));
+		const char *buf = result.c_str();
+		char *new_buf = strdup(buf);
+		printf("allocated address: %p\n", new_buf);
+		return new_buf;
+	}
+
+	void freeme(char *ptr) {
+		printf("freeing address: %p\n", ptr);
+		free(ptr);
 	}
 }
