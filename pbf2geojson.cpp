@@ -29,7 +29,6 @@ struct my_geom_handler_points {
     void points_end() const noexcept {
 		output << ']';
     }
-
 };
 
 struct my_geom_handler_linestrings {
@@ -122,9 +121,7 @@ struct my_geom_handler_polygons {
 
 		result += temp;
     }
-
 };
-
 
 struct my_print_value {
 
@@ -164,11 +161,11 @@ void getJson(float (&tile_extent)[4], const vtzero::layer& layer, std::stringstr
 		result << "\"geometry\": { \"coordinates\":";
 		switch (feature.geometry_type()) {
 			case vtzero::GeomType::POINT:
-				vtzero::decode_point_geometry(feature.geometry(), true, my_geom_handler_points{extent, tile_extent, result});
+				vtzero::decode_point_geometry(feature.geometry(), false, my_geom_handler_points{extent, tile_extent, result});
 				result << ", \"type\": \"Point\"";
 				break;
 			case vtzero::GeomType::LINESTRING:
-				vtzero::decode_linestring_geometry(feature.geometry(), true, my_geom_handler_linestrings{extent, tile_extent, isMulti, coordinatesString});
+				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, tile_extent, isMulti, coordinatesString});
 				if (isMulti) {
 					result << '[' << coordinatesString << ']';
 					result << ", \"type\": \"MultiLineString\"";
@@ -179,7 +176,7 @@ void getJson(float (&tile_extent)[4], const vtzero::layer& layer, std::stringstr
 
 				break;
 			case vtzero::GeomType::POLYGON:
-				vtzero::decode_polygon_geometry(feature.geometry(), true, my_geom_handler_polygons{extent, isMulti, tile_extent, coordinatesString});
+				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, isMulti, tile_extent, coordinatesString});
 				if (isMulti) {
 					result << '[' << coordinatesString << ']';
 					result << ", \"type\": \"MultiPolygon\"";
