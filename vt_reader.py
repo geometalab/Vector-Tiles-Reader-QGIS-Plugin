@@ -392,28 +392,30 @@ class VtReader(QObject):
         # decode_mvt.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
         # decode_mvt.restype = c_char_p
 
-        tiles = []
-        for t in tiles_with_encoded_data:
-            tile = decode_tile_cpp(t)
-            tiles.append(tile)
-
-        # pool = mp.Pool(nr_processors)
         # tiles = []
-        # rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
-        # pool.close()
-        # current_progress = 0
-        # while not rs.ready() and not self.cancel_requested:
-        #     if self.cancel_requested:
-        #         pool.terminate()
-        #         break
-        #     else:
-        #         QApplication.processEvents()
-        #         remaining = rs._number_left
-        #         index = total_nr_tiles - remaining
-        #         progress = int(100.0 / total_nr_tiles * (index + 1))
-        #         if progress != current_progress:
-        #             current_progress = progress
-        #             self._update_progress(progress=progress)
+        # for index, t in enumerate(tiles_with_encoded_data):
+        #     tile = decode_tile_cpp(t)
+        #     tiles.append(tile)
+        #     progress = int(100.0 / total_nr_tiles * (index + 1))
+        #     self._update_progress(progress=progress)
+
+        pool = mp.Pool(nr_processors)
+        tiles = []
+        rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
+        pool.close()
+        current_progress = 0
+        while not rs.ready() and not self.cancel_requested:
+            if self.cancel_requested:
+                pool.terminate()
+                break
+            else:
+                QApplication.processEvents()
+                remaining = rs._number_left
+                index = total_nr_tiles - remaining
+                progress = int(100.0 / total_nr_tiles * (index + 1))
+                if progress != current_progress:
+                    current_progress = progress
+                    self._update_progress(progress=progress)
 
         tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
         info("Decoding finished, {} tiles with data", len(tiles))
