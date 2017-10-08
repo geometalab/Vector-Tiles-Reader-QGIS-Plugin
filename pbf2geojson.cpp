@@ -8,10 +8,17 @@
 #include <sstream>
 #include <string>
 
+struct tile_location {
+	const double x;
+	const double y;
+	const double spanX;
+	const double spanY;
+};
+
 struct my_geom_handler_points {
 
 	int extent;
-	float (&tile_coords)[4];
+	tile_location& loc;
 	std::stringstream& output;
 
     void points_begin(uint32_t /*count*/) const noexcept {
@@ -19,11 +26,9 @@ struct my_geom_handler_points {
     }
 
     void points_point(const vtzero::point point) const {
-		float delta_x = tile_coords[2] - tile_coords[0];
-		float delta_y = tile_coords[3] - tile_coords[1];
-		float merc_easting = tile_coords[0] + delta_x / extent * point.x;
-		float merc_northing = tile_coords[1] + delta_y / extent * point.y;
-        output << merc_easting << ',' << merc_northing;
+		auto absoluteX = loc.x + loc.spanX / extent * point.x;
+		auto absoluteY = loc.y + loc.spanY / extent * point.y;
+        output << absoluteX << ',' << absoluteY;
     }
 
     void points_end() const noexcept {
@@ -34,7 +39,7 @@ struct my_geom_handler_points {
 struct my_geom_handler_linestrings {
 
 	int extent;
-	float (&tile_coords)[4];
+	tile_location& loc;
 	bool& isMulti;
 	std::string& result;
 
@@ -52,15 +57,13 @@ struct my_geom_handler_linestrings {
     }
 
     void linestring_point(const vtzero::point point) {
-		float delta_x = tile_coords[2] - tile_coords[0];
-		float delta_y = tile_coords[3] - tile_coords[1];
-		float merc_easting = tile_coords[0] + delta_x / extent * point.x;
-		float merc_northing = tile_coords[1] + delta_y / extent * point.y;
+		auto absoluteX = loc.x + loc.spanX / extent * point.x;
+		auto absoluteY = loc.y + loc.spanY / extent * point.y;
 
 		temp += '[';
-		temp +=  std::to_string(merc_easting);
+		temp +=  std::to_string(absoluteX);
         temp +=  ",";
-        temp +=  std::to_string(merc_northing);
+        temp +=  std::to_string(absoluteY);
         temp +=  "],";
     }
 
@@ -80,7 +83,7 @@ struct my_geom_handler_polygons {
 
     int extent;
 	bool& isMulti;
-	float (&tile_coords)[4];
+	tile_location& loc;
 	std::string& result;
 
 	int ringCounter;
@@ -95,15 +98,13 @@ struct my_geom_handler_polygons {
     }
 
     void ring_point(const vtzero::point point) {
-		float delta_x = tile_coords[2] - tile_coords[0];
-		float delta_y = tile_coords[3] - tile_coords[1];
-		float merc_easting = tile_coords[0] + delta_x / extent * point.x;
-		float merc_northing = tile_coords[1] + delta_y / extent * point.y;
+		auto absoluteX = loc.x + loc.spanX / extent * point.x;
+		auto absoluteY = loc.y + loc.spanY / extent * point.y;
 
 		temp += '[';
-		temp +=  std::to_string(merc_easting);
+		temp +=  std::to_string(absoluteX);
         temp +=  ',';
-        temp +=  std::to_string(merc_northing);
+        temp +=  std::to_string(absoluteY);
         temp +=  "],";
     }
 
@@ -137,7 +138,7 @@ struct my_print_value {
     }
 };
 
-void getJson(float (&tile_extent)[4], const vtzero::layer& layer, std::stringstream& result) {
+void getJson(tile_location& loc, const vtzero::layer& layer, std::stringstream& result) {
 	result << "{ \"name\": \"" << std::string{layer.name()} << "\",";
 	int extent = layer.extent();
 	result << "\"extent\": " << extent << ", ";
@@ -161,11 +162,11 @@ void getJson(float (&tile_extent)[4], const vtzero::layer& layer, std::stringstr
 		result << "\"geometry\": { \"coordinates\":";
 		switch (feature.geometry_type()) {
 			case vtzero::GeomType::POINT:
-				vtzero::decode_point_geometry(feature.geometry(), false, my_geom_handler_points{extent, tile_extent, result});
+				vtzero::decode_point_geometry(feature.geometry(), false, my_geom_handler_points{extent, loc, result});
 				result << ", \"type\": \"Point\"";
 				break;
 			case vtzero::GeomType::LINESTRING:
-				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, tile_extent, isMulti, coordinatesString});
+				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, loc, isMulti, coordinatesString});
 				if (isMulti) {
 					result << '[' << coordinatesString << ']';
 					result << ", \"type\": \"MultiLineString\"";
@@ -176,7 +177,7 @@ void getJson(float (&tile_extent)[4], const vtzero::layer& layer, std::stringstr
 
 				break;
 			case vtzero::GeomType::POLYGON:
-				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, isMulti, tile_extent, coordinatesString});
+				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, isMulti, loc, coordinatesString});
 				if (isMulti) {
 					result << '[' << coordinatesString << ']';
 					result << ", \"type\": \"MultiPolygon\"";
@@ -205,7 +206,7 @@ void getJson(float (&tile_extent)[4], const vtzero::layer& layer, std::stringstr
 }
 
 
-const char* decodeAsJson(float (&tile_extent)[4], const char* hex){
+const char* decodeAsJson(tile_location& loc, const char* hex){
 	std::string hexString(hex);
 	std::string data;
 	data.reserve(hexString.size() / 2);
@@ -227,7 +228,7 @@ const char* decodeAsJson(float (&tile_extent)[4], const char* hex){
 		if (layerCount++ > 0) {
 			test << ',';
 		}
-	   getJson(tile_extent, layer, test);
+	   getJson(loc, layer, test);
 	}
 
 	test << "]}";
@@ -237,9 +238,9 @@ const char* decodeAsJson(float (&tile_extent)[4], const char* hex){
 }
 
 extern "C" {
-	const char* decodeMvtToJson(const float f1, const float f2, const float f3, const float f4, const char* data)
+	const char* decodeMvtToJson(const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data)
 	{
-		float arr[4] = {f1,f2,f3,f4};
-		return decodeAsJson(arr, data);
+		tile_location loc{tileX, tileY, tileSpanX, tileSpanY};
+		return decodeAsJson(loc, data);
 	}
 }
