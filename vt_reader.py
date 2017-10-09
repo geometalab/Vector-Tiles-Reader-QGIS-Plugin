@@ -416,10 +416,10 @@ class VtReader(QObject):
         for t in tiles:
             if self.cancel_requested:
                 break
-            # else:
-            #     cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-            #     if not os.path.isfile(cache_file_name):
-            #         FileHelper.cache_tile(t, cache_file_name)
+            else:
+                cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
+                if not os.path.isfile(cache_file_name):
+                    FileHelper.cache_tile(t, cache_file_name)
 
         return tiles
 
@@ -526,7 +526,7 @@ class VtReader(QObject):
                 break
 
             feature_collection = self.feature_collections_by_layer_name_and_geotype[(layer_name, geo_type)]
-            zoom_level = feature_collection
+            zoom_level = feature_collection["zoom_level"]
 
             file_name = self._get_geojson_filename(layer_name, geo_type)
             file_path = FileHelper.get_geojson_file_name(file_name)
