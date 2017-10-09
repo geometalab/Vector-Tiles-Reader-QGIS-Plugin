@@ -315,10 +315,10 @@ class VtReader(QObject):
                 if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
                     return None
 
-                loaded_extent = {"x_min": min(loaded_tiles_x),
-                                 "x_max": max(loaded_tiles_x),
-                                 "y_min": min(loaded_tiles_y),
-                                 "y_max": max(loaded_tiles_y),
+                loaded_extent = {"x_min": int(min(loaded_tiles_x)),
+                                 "x_max": int(max(loaded_tiles_x)),
+                                 "y_min": int(min(loaded_tiles_y)),
+                                 "y_max": int(max(loaded_tiles_y)),
                                  "zoom": int(zoom_level)
                                  }
                 loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
@@ -501,8 +501,6 @@ class VtReader(QObject):
             geo_type = l.customProperty("geo_type")
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
-
-        info("feature_collections_by_layer_name_and_geotype: {}", self.feature_collections_by_layer_name_and_geotype.keys())
 
         self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_name_and_geotype), msg="Creating layers...")
         new_layers = []

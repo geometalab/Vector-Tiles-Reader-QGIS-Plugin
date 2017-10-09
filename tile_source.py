@@ -123,10 +123,10 @@ class ServerSource(AbstractSource):
         return name
 
     def min_zoom(self):
-        return self.json.min_zoom()
+        return int(self.json.min_zoom())
 
     def max_zoom(self):
-        return self.json.max_zoom()
+        return int(self.json.max_zoom())
 
     def mask_level(self):
         return self.json.mask_level()

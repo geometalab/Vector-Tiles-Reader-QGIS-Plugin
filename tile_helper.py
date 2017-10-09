@@ -133,13 +133,13 @@ def get_tile_bounds(zoom, bounds, scheme="xyz"):
         y_max = int(max(xy_min[1], xy_max[1]))
 
         tile_bounds = {
-            "zoom": zoom,
-            "x_min": x_min,
-            "x_max": x_max,
-            "y_min": y_min,
-            "y_max": y_max,
-            "width": x_max-x_min+1,
-            "height": y_max-y_min+1
+            "zoom": int(zoom),
+            "x_min": int(x_min),
+            "x_max": int(x_max),
+            "y_min": int(y_min),
+            "y_max": int(y_max),
+            "width": int(x_max-x_min+1),
+            "height": int(y_max-y_min+1)
         }
     return tile_bounds
 
