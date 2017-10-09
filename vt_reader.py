@@ -19,8 +19,7 @@ from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
-from ctypes import *
-from mp_helper import decode_tile, decode_tile_cpp, decode_tile_cpp_external_lib_load
+from mp_helper import decode_tile_cpp
 
 import multiprocessing as mp
 import platform
@@ -208,127 +207,127 @@ class VtReader(QObject):
         return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
 
     def _load_tiles(self):
-        # try:
-        # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
-        self.source = self._create_source(self.source.source())
-        zoom_level = self._loading_options["zoom_level"]
-        bounds = self._loading_options["bounds"]
-        load_mask_layer = self._loading_options["load_mask_layer"]
-        merge_tiles = self._loading_options["merge_tiles"]
-        clip_tiles = self._loading_options["clip_tiles"]
-        apply_styles = self._loading_options["apply_styles"]
-        max_tiles = self._loading_options["max_tiles"]
-        layer_filter = self._loading_options["layer_filter"]
+        try:
+            # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
+            self.source = self._create_source(self.source.source())
+            zoom_level = self._loading_options["zoom_level"]
+            bounds = self._loading_options["bounds"]
+            load_mask_layer = self._loading_options["load_mask_layer"]
+            merge_tiles = self._loading_options["merge_tiles"]
+            clip_tiles = self._loading_options["clip_tiles"]
+            apply_styles = self._loading_options["apply_styles"]
+            max_tiles = self._loading_options["max_tiles"]
+            layer_filter = self._loading_options["layer_filter"]
 
-        self.cancel_requested = False
-        self.feature_collections_by_layer_name_and_geotype = {}
-        self._qgis_layer_groups_by_name = {}
-        self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
-        self._clip_tiles_at_tile_bounds = clip_tiles
+            self.cancel_requested = False
+            self.feature_collections_by_layer_name_and_geotype = {}
+            self._qgis_layer_groups_by_name = {}
+            self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
+            self._clip_tiles_at_tile_bounds = clip_tiles
 
-        min_zoom = self.source.min_zoom()
-        max_zoom = self.source.max_zoom()
-        zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
+            min_zoom = self.source.min_zoom()
+            max_zoom = self.source.max_zoom()
+            zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
 
-        all_tiles = get_all_tiles(
-            bounds=bounds,
-            is_cancel_requested_handler=lambda: self.cancel_requested,
-        )
-        tiles_to_load = set()
-        tiles = []
-        tiles_to_ignore = set()
-        for t in all_tiles:
-            if self.cancel_requested or (max_tiles and len(tiles) >= max_tiles):
-                break
+            all_tiles = get_all_tiles(
+                bounds=bounds,
+                is_cancel_requested_handler=lambda: self.cancel_requested,
+            )
+            tiles_to_load = set()
+            tiles = []
+            tiles_to_ignore = set()
+            for t in all_tiles:
+                if self.cancel_requested or (max_tiles and len(tiles) >= max_tiles):
+                    break
 
-            file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
-            tile = FileHelper.get_cached_tile(file_name)
-            if tile and tile.decoded_data:
-                tiles.append(tile)
-                tiles_to_ignore.add((tile.column, tile.row))
+                file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
+                tile = FileHelper.get_cached_tile(file_name)
+                if tile and tile.decoded_data:
+                    tiles.append(tile)
+                    tiles_to_ignore.add((tile.column, tile.row))
+                else:
+                    tiles_to_load.add(t)
+
+            remaining_nr_of_tiles = len(tiles_to_load)
+            if max_tiles:
+                if len(tiles) + len(tiles_to_load) >= max_tiles:
+                    remaining_nr_of_tiles = max_tiles - len(tiles)
+                    if remaining_nr_of_tiles < 0:
+                        remaining_nr_of_tiles = 0
+            debug("{} cache hits. {} may potentially be loaded.", len(tiles), remaining_nr_of_tiles)
+
+            debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
+
+            tile_data_tuples = []
+            if remaining_nr_of_tiles > 0:
+                tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
+                                                          tiles_to_load=tiles_to_load,
+                                                          max_tiles=remaining_nr_of_tiles)
+            if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
+                QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
+
+            if load_mask_layer:
+                mask_level = self.source.mask_level()
+                if mask_level is not None and mask_level != zoom_level:
+                    debug("Mapping {} tiles to mask level", len(all_tiles))
+                    scheme = self.source.scheme()
+                    mask_tiles = map(
+                        lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
+                        all_tiles)
+                    debug("Mapping done")
+
+                    mask_tiles_to_load = set()
+                    for t in mask_tiles:
+                        file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
+                        tile = FileHelper.get_cached_tile(file_name)
+                        if tile and tile.decoded_data:
+                            tiles.append(tile)
+                        else:
+                            mask_tiles_to_load.add(t)
+
+                    debug("Loading mask layer (zoom_level={})", mask_level)
+                    tile_data_tuples = []
+                    if len(mask_tiles_to_load) > 0:
+                        mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
+                                                                 tiles_to_load=mask_tiles_to_load,
+                                                                 max_tiles=max_tiles)
+                        debug("Mask layer loaded")
+                        tile_data_tuples.extend(mask_layer_data)
+
+            if tile_data_tuples and len(tile_data_tuples) > 0:
+                if not self.cancel_requested:
+                    decoded_tiles = self._decode_tiles(tile_data_tuples)
+                    tiles.extend(decoded_tiles)
+            if len(tiles) > 0:
+                if not self.cancel_requested:
+                    self._process_tiles(tiles, layer_filter)
+                if not self.cancel_requested:
+                    self._create_qgis_layers(merge_features=merge_tiles,
+                                             apply_styles=apply_styles)
+
+            self._update_progress(show_dialog=False)
+            if self.cancel_requested:
+                info("Import cancelled")
+                self.cancelled.emit()
             else:
-                tiles_to_load.add(t)
+                info("Import complete")
+                loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
+                loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
+                if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
+                    return None
 
-        remaining_nr_of_tiles = len(tiles_to_load)
-        if max_tiles:
-            if len(tiles) + len(tiles_to_load) >= max_tiles:
-                remaining_nr_of_tiles = max_tiles - len(tiles)
-                if remaining_nr_of_tiles < 0:
-                    remaining_nr_of_tiles = 0
-        debug("{} cache hits. {} may potentially be loaded.", len(tiles), remaining_nr_of_tiles)
-
-        debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
-
-        tile_data_tuples = []
-        if remaining_nr_of_tiles > 0:
-            tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
-                                                      tiles_to_load=tiles_to_load,
-                                                      max_tiles=remaining_nr_of_tiles)
-        if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
-            QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
-
-        if load_mask_layer:
-            mask_level = self.source.mask_level()
-            if mask_level is not None and mask_level != zoom_level:
-                debug("Mapping {} tiles to mask level", len(all_tiles))
-                scheme = self.source.scheme()
-                mask_tiles = map(
-                    lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
-                    all_tiles)
-                debug("Mapping done")
-
-                mask_tiles_to_load = set()
-                for t in mask_tiles:
-                    file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
-                    tile = FileHelper.get_cached_tile(file_name)
-                    if tile and tile.decoded_data:
-                        tiles.append(tile)
-                    else:
-                        mask_tiles_to_load.add(t)
-
-                debug("Loading mask layer (zoom_level={})", mask_level)
-                tile_data_tuples = []
-                if len(mask_tiles_to_load) > 0:
-                    mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
-                                                             tiles_to_load=mask_tiles_to_load,
-                                                             max_tiles=max_tiles)
-                    debug("Mask layer loaded")
-                    tile_data_tuples.extend(mask_layer_data)
-
-        if tile_data_tuples and len(tile_data_tuples) > 0:
-            if not self.cancel_requested:
-                decoded_tiles = self._decode_tiles(tile_data_tuples)
-                tiles.extend(decoded_tiles)
-        if len(tiles) > 0:
-            if not self.cancel_requested:
-                self._process_tiles(tiles, layer_filter)
-            if not self.cancel_requested:
-                self._create_qgis_layers(merge_features=merge_tiles,
-                                         apply_styles=apply_styles)
-
-        self._update_progress(show_dialog=False)
-        if self.cancel_requested:
-            info("Import cancelled")
+                loaded_extent = {"x_min": int(min(loaded_tiles_x)),
+                                 "x_max": int(max(loaded_tiles_x)),
+                                 "y_min": int(min(loaded_tiles_y)),
+                                 "y_max": int(max(loaded_tiles_y)),
+                                 "zoom": int(zoom_level)
+                                 }
+                loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
+                loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
+                self.loading_finished.emit(zoom_level, loaded_extent)
+        except Exception as e:
+            critical("An exception occured: {}, {}", e, traceback.format_exc())
             self.cancelled.emit()
-        else:
-            info("Import complete")
-            loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
-            loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
-            if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
-                return None
-
-            loaded_extent = {"x_min": int(min(loaded_tiles_x)),
-                             "x_max": int(max(loaded_tiles_x)),
-                             "y_min": int(min(loaded_tiles_y)),
-                             "y_max": int(max(loaded_tiles_y)),
-                             "zoom": int(zoom_level)
-                             }
-            loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
-            loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
-            self.loading_finished.emit(zoom_level, loaded_extent)
-        # except Exception as e:
-        #     critical("An exception occured: {}, {}", e, traceback.format_exc())
-        #     self.cancelled.emit()
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
                     apply_styles=True, max_tiles=None, layer_filter=None):
@@ -387,36 +386,30 @@ class VtReader(QObject):
             self.extended = True
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
-
-        # lib = cdll.LoadLibrary("C:\\DEV\\vtzero\\examples\\pbf2geojson.dll")
-        # decode_mvt = lib.decodeMvtToJson
-        # decode_mvt.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
-        # decode_mvt.restype = c_char_p
-
-        # tiles = []
-        # for index, t in enumerate(tiles_with_encoded_data):
-        #     tile = decode_tile_cpp(t)
-        #     tiles.append(tile)
-        #     progress = int(100.0 / total_nr_tiles * (index + 1))
-        #     self._update_progress(progress=progress)
-
-        pool = mp.Pool(nr_processors)
         tiles = []
-        rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
-        pool.close()
-        current_progress = 0
-        while not rs.ready() and not self.cancel_requested:
-            if self.cancel_requested:
-                pool.terminate()
-                break
-            else:
-                QApplication.processEvents()
-                remaining = rs._number_left
-                index = total_nr_tiles - remaining
+        if len(tiles_with_encoded_data) < 4:
+            for index, t in enumerate(tiles_with_encoded_data):
+                tile = decode_tile_cpp(t)
+                tiles.append(tile)
                 progress = int(100.0 / total_nr_tiles * (index + 1))
-                if progress != current_progress:
-                    current_progress = progress
-                    self._update_progress(progress=progress)
+                self._update_progress(progress=progress)
+        else:
+            pool = mp.Pool(nr_processors)
+            rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
+            pool.close()
+            current_progress = 0
+            while not rs.ready() and not self.cancel_requested:
+                if self.cancel_requested:
+                    pool.terminate()
+                    break
+                else:
+                    QApplication.processEvents()
+                    remaining = rs._number_left
+                    index = total_nr_tiles - remaining
+                    progress = int(100.0 / total_nr_tiles * (index + 1))
+                    if progress != current_progress:
+                        current_progress = progress
+                        self._update_progress(progress=progress)
 
         tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
         info("Decoding finished, {} tiles with data", len(tiles))
@@ -667,8 +660,7 @@ class VtReader(QObject):
         :param tile:
         :return:
         """
-        layers = tile.decoded_data["layers"]
-        for layer in layers:
+        for layer in tile.decoded_data["layers"]:
             layer_name = layer["name"]
 
             if layer_filter and len(layer_filter) > 0:
@@ -700,8 +692,6 @@ class VtReader(QObject):
                 feature_collection["features"].append(geojson_feature)
                 if tile_id not in feature_collection["tiles"]:
                     feature_collection["tiles"].append(tile_id)
-
-
 
     @staticmethod
     def _get_feature_class_and_subclass(feature):
