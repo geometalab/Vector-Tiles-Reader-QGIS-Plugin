@@ -6,6 +6,7 @@ import os
 import json
 import math
 import uuid
+import traceback
 
 from log_helper import info, warn, critical, debug, remove_key
 from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg, clamp
@@ -324,7 +325,7 @@ class VtReader(QObject):
                 loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
                 self.loading_finished.emit(zoom_level, loaded_extent)
         except Exception as e:
-            critical("An exception occured: {}", e)
+            critical("An exception occured: {}, {}", e, traceback.format_exc())
             self.cancelled.emit()
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
@@ -658,7 +659,8 @@ class VtReader(QObject):
                 extent = self._DEFAULT_EXTENT
             tile_features = layer["features"]
             tile_id = tile.id()
-            for index, feature in enumerate(tile_features):
+
+            for feature in tile_features:
                 if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
                     continue
 
@@ -803,20 +805,19 @@ class VtReader(QObject):
         :param properties: 
         :return: 
         """
+        assert coordinates is not None
         all_features = []
 
-        coordinate_sets = []
+        coordinate_sets = [coordinates]
 
         type_string = geo_type
         is_multi_geometry = is_multi(geo_type, coordinates)
         if is_multi_geometry and not split_multi_geometries:
             type_string = "Multi{}".format(geo_type)
         elif is_multi_geometry and split_multi_geometries:
+            coordinate_sets = []
             for coord_array in coordinates:
                 coordinate_sets.append(coord_array)
-
-        if not is_multi_geometry:
-            coordinate_sets = [coordinates]
 
         for c in coordinate_sets:
             feature_json = {
