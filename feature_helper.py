@@ -103,20 +103,17 @@ geo_types = {
 def is_multi(geo_type, coordinates):
     """
     * Returns true, if the specified coordinates belong to a Multi geometry (e.g. MultiPolygon or MultiLineString)
+     See GeoJSON specification for details: https://tools.ietf.org/html/rfc7946#appendix-A.4
     :param geo_type:
     :param coordinates:
     :return:
     """
 
-    if geo_type == GeoTypes.POINT:
-        is_single = len(coordinates) == 2 and all(isinstance(c, int) for c in coordinates)
-        return not is_single
+    if geo_type == GeoTypes.POINT or geo_type == GeoTypes.POLYGON:
+        return len(coordinates) > 1
     elif geo_type == GeoTypes.LINE_STRING:
         is_array_of_tuples = all(len(c) == 2 and all(isinstance(ci, int) for ci in c) for c in coordinates)
-        is_single = is_array_of_tuples
-        return not is_single
-    elif geo_type == GeoTypes.POLYGON:
-        return get_array_depth(coordinates, 0) >= 2
+        return not is_array_of_tuples
     return False
 
 

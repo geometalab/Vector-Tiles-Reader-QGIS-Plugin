@@ -662,14 +662,14 @@ class VtReader(QObject):
                 if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
                     continue
 
-                geojson_feature, geo_type = self._create_geojson_feature(feature, tile, extent)
-                if geojson_feature:
+                geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
+                if geojson_features and len(geojson_features) > 0:
                     name_and_geotype = (layer_name, geo_type)
                     if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
                         self.feature_collections_by_layer_name_and_geotype[name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
                     feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
 
-                    feature_collection["features"].append(geojson_feature)
+                    feature_collection["features"].extend(geojson_features)
                     if tile_id not in feature_collection["tiles"]:
                         feature_collection["tiles"].append(tile_id)
 
@@ -695,7 +695,6 @@ class VtReader(QObject):
 
         geo_type = geo_types[feature["type"]]
         coordinates = feature["geometry"]
-
         properties = feature["properties"]
         properties["_col"] = tile.column
         properties["_row"] = tile.row
@@ -719,9 +718,10 @@ class VtReader(QObject):
         if self._clip_tiles_at_tile_bounds and all(c is True for c in all_out_of_bounds):
             return None, None
 
-        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
+        split_geometries = self._loading_options["merge_tiles"]
+        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_geometries)
 
-        return feature_json, geo_type
+        return geojson_features, geo_type
 
     def _get_poi_icon(self, feature):
         """
@@ -795,7 +795,7 @@ class VtReader(QObject):
         return name
 
     @staticmethod
-    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
+    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):
         """
         * Returns a JSON object that represents a GeoJSON feature
         :param geo_type: 
@@ -803,20 +803,33 @@ class VtReader(QObject):
         :param properties: 
         :return: 
         """
+        all_features = []
+
+        coordinate_sets = []
+
         type_string = geo_type
-        if is_multi(geo_type, coordinates):
+        is_multi_geometry = is_multi(geo_type, coordinates)
+        if is_multi_geometry and not split_multi_geometries:
             type_string = "Multi{}".format(geo_type)
+        elif is_multi_geometry and split_multi_geometries:
+            for coord_array in coordinates:
+                coordinate_sets.append(coord_array)
 
-        feature_json = {
-            "type": "Feature",
-            "geometry": {
-                "type": type_string,
-                "coordinates": coordinates
-            },
-            "properties": properties
-        }
+        if not is_multi_geometry:
+            coordinate_sets = [coordinates]
 
-        return feature_json
+        for c in coordinate_sets:
+            feature_json = {
+                "type": "Feature",
+                "geometry": {
+                    "type": type_string,
+                    "coordinates": c
+                },
+                "properties": properties
+            }
+            all_features.append(feature_json)
+
+        return all_features
 
     @staticmethod
     def _get_absolute_coordinates(coordinates, tile, extent):
