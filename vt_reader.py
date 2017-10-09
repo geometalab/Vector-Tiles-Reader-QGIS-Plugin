@@ -6,6 +6,7 @@ import os
 import json
 import math
 import uuid
+import traceback
 
 from log_helper import info, warn, critical, debug, remove_key
 from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg, clamp
@@ -94,7 +95,7 @@ class VtReader(QObject):
 
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
-        self.feature_collections_by_layer_path = {}
+        self.feature_collections_by_layer_name_and_geotype = {}
         self._qgis_layer_groups_by_name = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
@@ -159,7 +160,7 @@ class VtReader(QObject):
         if show_dialog:
             self.show_progress_changed.emit(show_dialog)
 
-    def _get_empty_feature_collection(self, zoom_level, layer_name):
+    def _get_empty_feature_collection(self, layer_name, zoom_level):
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
@@ -220,7 +221,7 @@ class VtReader(QObject):
         layer_filter = self._loading_options["layer_filter"]
 
         self.cancel_requested = False
-        self.feature_collections_by_layer_path = {}
+        self.feature_collections_by_layer_name_and_geotype = {}
         self._qgis_layer_groups_by_name = {}
         self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
         self._clip_tiles_at_tile_bounds = clip_tiles
@@ -316,17 +317,17 @@ class VtReader(QObject):
             if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
                 return None
 
-            loaded_extent = {"x_min": min(loaded_tiles_x),
-                             "x_max": max(loaded_tiles_x),
-                             "y_min": min(loaded_tiles_y),
-                             "y_max": max(loaded_tiles_y),
+            loaded_extent = {"x_min": int(min(loaded_tiles_x)),
+                             "x_max": int(max(loaded_tiles_x)),
+                             "y_min": int(min(loaded_tiles_y)),
+                             "y_max": int(max(loaded_tiles_y)),
                              "zoom": int(zoom_level)
                              }
             loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
             loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
             self.loading_finished.emit(zoom_level, loaded_extent)
         # except Exception as e:
-        #     critical("An exception occured: {}", e)
+        #     critical("An exception occured: {}, {}", e, traceback.format_exc())
         #     self.cancelled.emit()
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
@@ -496,7 +497,7 @@ class VtReader(QObject):
             layers = [manual_layer_name]
 
         if sort_layers:
-            layers = sorted(layers, key=lambda x: self._get_omt_layer_sort_id(x))
+            layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
         for index, layer_name in enumerate(layers):
             group = root_group.findGroup(layer_name)
             if not group:
@@ -515,24 +516,24 @@ class VtReader(QObject):
         self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") is not None, qgis_layers.iteritems())
+        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), qgis_layers.iteritems())
         own_layers = map(lambda (n, l): l, vt_qgis_name_layer_tuples)
         for l in own_layers:
-            with open(l.source(), 'w') as f:
-                f.write(json.dumps(self._get_empty_feature_collection(0, l.name())))
+            name = l.name()
+            geo_type = l.customProperty("geo_type")
+            if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
+                self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
 
-        self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_path), msg="Creating layers...")
+        self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_name_and_geotype), msg="Creating layers...")
         new_layers = []
-        for index, layer_name_and_type in enumerate(self.feature_collections_by_layer_path):
-            layer_name_and_zoom = layer_name_and_type[0]
-            geo_type = layer_name_and_type[1]
-            layer_name = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[0]
-            zoom_level = layer_name_and_zoom.split(VtReader._zoom_level_delimiter)[1]
+        count = 0
+        for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
+            count += 1
             if self.cancel_requested:
                 break
 
-            self._assure_qgis_groups_exist(manual_layer_name=layer_name, sort_layers=apply_styles)
-            feature_collections_by_tile_coord = self.feature_collections_by_layer_path[layer_name_and_type]
+            feature_collection = self.feature_collections_by_layer_name_and_geotype[(layer_name, geo_type)]
+            zoom_level = feature_collection
 
             file_name = self._get_geojson_filename(layer_name, geo_type)
             file_path = FileHelper.get_geojson_file_name(file_name)
@@ -541,19 +542,15 @@ class VtReader(QObject):
             if os.path.isfile(file_path):
                 # file exists already. add the features of the collection to the existing collection
                 # get the layer from qgis and update its source
-                layer = self._get_layer_by_source(own_layers, layer_name, file_path, geo_type)
+                layer = self._get_layer_by_source(own_layers, layer_name, file_path)
                 if layer:
-                    self._update_layer_source(file_path, feature_collections_by_tile_coord, zoom_level, layer_name)
+                    self._update_layer_source(file_path, feature_collection)
 
             if not layer:
-                complete_collection = self._get_empty_feature_collection(zoom_level, layer_name)
-                self._merge_feature_collections(current_feature_collection=complete_collection,
-                                                feature_collections_by_tile_coord=feature_collections_by_tile_coord)
-                with open(file_path, "w") as f:
-                    f.write(json.dumps(complete_collection))
+                self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(file_path, layer_name, zoom_level, merge_features, geo_type)
                 new_layers.append((layer_name, geo_type, layer))
-            self._update_progress(progress=index+1)
+            self._update_progress(progress=count+1)
 
         QgsMapLayerRegistry.instance().reloadAllLayers()
 
@@ -565,26 +562,24 @@ class VtReader(QObject):
             target_group.addLayer(layer)
 
         if apply_styles:
+            count = 0
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
-            for index, layer_path_tuple in enumerate(new_layers):
+            for name, geo_type, layer in new_layers:
+                count += 1
                 if self.cancel_requested:
                     break
-                geo_type = layer_path_tuple[1]
-                layer = layer_path_tuple[2]
                 VtReader._apply_named_style(layer, geo_type)
-                self._update_progress(progress=index+1)
+                self._update_progress(progress=count)
 
-    def _update_layer_source(self, layer_source, feature_collections_by_tile_coord, zoom_level, layer_name):
+    def _update_layer_source(self, layer_source, feature_collection):
         """
          * Updates the layers GeoJSON source file
         :param layer_source: 
         :param feature_collections_by_tile_coord: 
         :return: 
         """
-        current_feature_collection = self._get_empty_feature_collection(zoom_level, layer_name)
-        VtReader._merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord)
         with open(layer_source, "w") as f:
-            json.dump(current_feature_collection, f)
+            f.write(json.dumps(feature_collection))
 
     @staticmethod
     def _merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord):
@@ -602,7 +597,7 @@ class VtReader(QObject):
                 current_feature_collection["features"].extend(feature_collection["features"])
 
     @staticmethod
-    def _get_layer_by_source(all_layers, layer_name, layer_source_file, geo_type):
+    def _get_layer_by_source(all_layers, layer_name, layer_source_file):
         """
          * Returns the layer from QGIS whose name and layer_source matches the specified parameters
         :param layer_name: 
@@ -623,7 +618,7 @@ class VtReader(QObject):
         :return: 
         """
         try:
-            name = layer.name().split(VtReader._zoom_level_delimiter)[0].lower()
+            name = layer.name().lower()
             styles = [
                 "{}.{}".format(name, geo_type.lower()),
                 name
@@ -651,6 +646,7 @@ class VtReader(QObject):
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
         layer.setCustomProperty("vector_tile_source", self.source.source())
+        layer.setCustomProperty("zoom_level", zoom_level)
         layer.setShortName(layer_name)
         layer.setDataUrl(self.source.source())
 
@@ -681,11 +677,12 @@ class VtReader(QObject):
 
             tile_features = layer["geojsonFeatures"]
             tile_id = tile.id()
-            feature_path = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, tile.zoom_level)
+
             for geojson_feature in tile_features:
                 # if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
                 #     continue
 
+                geo_type = None
                 geom_type = str(geojson_feature["geometry"]["type"])
                 if geom_type.endswith("Polygon"):
                     geo_type = GeoTypes.POLYGON
@@ -693,22 +690,18 @@ class VtReader(QObject):
                     geo_type = GeoTypes.POINT
                 elif geom_type.endswith("LineString"):
                     geo_type = GeoTypes.LINE_STRING
+                assert geo_type is not None
 
-                path_and_type = (feature_path, geo_type)
-                if path_and_type not in self.feature_collections_by_layer_path:
-                    self.feature_collections_by_layer_path[path_and_type] = {}
-                collection_dict = self.feature_collections_by_layer_path[path_and_type]
-                if tile_id not in collection_dict:
-                    collection_dict[tile_id] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
-                collection = collection_dict[tile_id]
+                name_and_geotype = (layer_name, geo_type)
+                if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
+                    self.feature_collections_by_layer_name_and_geotype[name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
+                feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
 
-                collection["features"].append(geojson_feature)
-                if tile_id not in collection["tiles"]:
-                    collection["tiles"].append(tile_id)
+                feature_collection["features"].append(geojson_feature)
+                if tile_id not in feature_collection["tiles"]:
+                    feature_collection["tiles"].append(tile_id)
 
-                geotypes_to_dissolve = [GeoTypes.POLYGON, GeoTypes.LINE_STRING]
-                if geo_type in geotypes_to_dissolve and feature_path not in self._layers_to_dissolve:
-                    self._layers_to_dissolve.append(feature_path)
+
 
     @staticmethod
     def _get_feature_class_and_subclass(feature):
@@ -732,7 +725,6 @@ class VtReader(QObject):
 
         geo_type = geo_types[feature["type"]]
         coordinates = feature["geometry"]
-
         properties = feature["properties"]
         properties["_col"] = tile.column
         properties["_row"] = tile.row
@@ -756,9 +748,10 @@ class VtReader(QObject):
         if self._clip_tiles_at_tile_bounds and all(c is True for c in all_out_of_bounds):
             return None, None
 
-        feature_json = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties)
+        split_geometries = self._loading_options["merge_tiles"]
+        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_geometries)
 
-        return feature_json, geo_type
+        return geojson_features, geo_type
 
     def _get_poi_icon(self, feature):
         """
@@ -832,7 +825,7 @@ class VtReader(QObject):
         return name
 
     @staticmethod
-    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties):
+    def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):
         """
         * Returns a JSON object that represents a GeoJSON feature
         :param geo_type: 
@@ -840,20 +833,32 @@ class VtReader(QObject):
         :param properties: 
         :return: 
         """
+        assert coordinates is not None
+        all_features = []
+
+        coordinate_sets = [coordinates]
+
         type_string = geo_type
-        if is_multi(geo_type, coordinates):
+        is_multi_geometry = is_multi(geo_type, coordinates)
+        if is_multi_geometry and not split_multi_geometries:
             type_string = "Multi{}".format(geo_type)
+        elif is_multi_geometry and split_multi_geometries:
+            coordinate_sets = []
+            for coord_array in coordinates:
+                coordinate_sets.append(coord_array)
 
-        feature_json = {
-            "type": "Feature",
-            "geometry": {
-                "type": type_string,
-                "coordinates": coordinates
-            },
-            "properties": properties
-        }
+        for c in coordinate_sets:
+            feature_json = {
+                "type": "Feature",
+                "geometry": {
+                    "type": type_string,
+                    "coordinates": c
+                },
+                "properties": properties
+            }
+            all_features.append(feature_json)
 
-        return feature_json
+        return all_features
 
     @staticmethod
     def _get_absolute_coordinates(coordinates, tile, extent):

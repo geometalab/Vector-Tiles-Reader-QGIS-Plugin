@@ -160,22 +160,38 @@ class VtrPlugin:
 
     @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
-        info("notify map scale or extent change")
-
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()
 
             self._scale_to_load = None
             self._extent_to_load = None
+            
+            is_new_extent_within_loaded_extent = self._loaded_extent["x_min"] <= new_extent["x_min"] <= self._loaded_extent["x_max"] \
+                and self._loaded_extent["x_min"] <= new_extent["x_max"] <= self._loaded_extent["x_max"] \
+                and self._loaded_extent["y_min"] <= new_extent["y_min"] <= self._loaded_extent["y_max"] \
+                and self._loaded_extent["y_min"] <= new_extent["y_max"] <= self._loaded_extent["y_max"]
 
-            self._loaded_scale = new_scale
-            self._loaded_extent = new_extent
+            old_scale = self._loaded_scale
 
-            if new_scale and has_scale_changed:
-                info("Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
+            new_zoom = self._get_zoom_for_current_map_scale()
+            min_zoom = self._current_reader.source.min_zoom()
+            max_zoom = self._current_reader.source.max_zoom()
+            new_zoom = clamp(new_zoom, low=min_zoom, high=max_zoom)
+
+            has_zoom_changed = new_zoom != self._current_zoom
+            if new_scale and has_scale_changed and has_zoom_changed:
+                self._loaded_scale = new_scale
+                self._loaded_extent = new_extent
+
+                info("current zoom: {}", self._current_zoom)
+                info("new zoom: {}", new_zoom)
+                info("Reloading due to scale change from '{}' (zoom {}) to '{}' (zoom {})", old_scale, self._current_zoom, new_scale, new_zoom)
                 self._handle_scale_change(new_scale)
-            elif has_extent_changed:
+            elif has_extent_changed and not is_new_extent_within_loaded_extent:
+                self._loaded_scale = new_scale
+                self._loaded_extent = new_extent
+
                 info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
                 self._loaded_extent = new_extent
                 self._reload_tiles(new_extent)
@@ -189,10 +205,6 @@ class VtrPlugin:
             new_zoom = max_zoom
         current_zoom = self._current_zoom
         if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
-            if new_zoom != current_zoom:
-                debug("Auto zoom: Reloading due to zoom level change from '{}' to '{}'", current_zoom, new_zoom)
-            else:
-                debug("Auto zoom: Reloading due to scale change from '{}' to '{}'", self._loaded_scale, new_scale)
             self._loaded_scale = new_scale
             self._reload_tiles()
             self.iface.mapCanvas().zoomScale(new_scale)
@@ -326,8 +338,8 @@ class VtrPlugin:
         info("bounds: {}", source_bounds)
         if not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
-                and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_min"] \
-                and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_min"]:
+                and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
+                and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]:
                 return False
         return True
 
