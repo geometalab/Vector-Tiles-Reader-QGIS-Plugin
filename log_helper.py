@@ -20,7 +20,7 @@ def remove_key(text):
 
 
 def get_temp_dir(path_extension=None):
-    temp_dir = os.path.join(tempfile.gettempdir(), "vtreader")
+    temp_dir = os.path.join(tempfile.gettempdir(), "vector_tiles_reader")
     if path_extension:
         temp_dir = os.path.join(temp_dir, path_extension)
 
@@ -69,13 +69,12 @@ def _log_message(msg, level, *args):
         elif level == _DEBUG:
             _logger.debug(msg)
 
-        if level != _INFO:
-            print(msg)
+        # print(msg)
 
         _log_to_qgis(msg, level)
     except:
-        print("Unexpected error during logging: {}".format(sys.exc_info()[1]))
-        print("Original message: '{}', params: '{}'".format(msg, args))
+        _logger.info("Unexpected error during logging: {}", sys.exc_info()[1])
+        _logger.info("Original message: '{}', params: '{}'", args)
 
 
 

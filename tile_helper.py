@@ -1,7 +1,6 @@
 from global_map_tiles import GlobalMercator
 from osgeo import osr
 import operator
-from PyQt4.QtGui import QApplication
 from log_helper import warn, debug
 
 
@@ -26,12 +25,20 @@ class VectorTile:
         return self.column, self.row
 
 
+def clamp(value, low=None, high=None):
+    if low is not None and value < low:
+        value = low
+    if high is not None and value > high:
+        value = high
+    return value
+
+
 def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
-    :param zoom: 
-    :param lat: 
-    :param lng: 
+    :param zoom:
+    :param lat:
+    :param lng:
     :return:
     """
     if zoom is None:
@@ -41,14 +48,20 @@ def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     if lng is None:
         raise RuntimeError("Longitude is required")
 
+    max_lat = 85.05112878
+    max_lng = 180
+    lat = clamp(lat, -max_lat, max_lat)
+    lng = clamp(lng, -max_lng, max_lng)
+
     gm = GlobalMercator()
     m = gm.LatLonToMeters(lat, lng)
     tile = gm.MetersToTile(m[0], m[1], zoom)
+    x = clamp(tile[0], low=0)
+    y = tile[1]
     if scheme != "tms":
-        y = change_scheme(zoom, tile[1])
-        tile = (tile[0], y)
-    return tile
-
+        y = change_scheme(zoom, y)
+    y = clamp(y, low=0)
+    return int(x), int(y)
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
@@ -92,7 +105,7 @@ def tile_to_latlon(zoom, x, y, scheme="tms"):
     return gm.TileBounds(x, y, zoom)
 
 
-def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
+def get_tile_bounds(zoom, bounds, scheme="xyz"):
     """
      * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param scheme: 
@@ -120,12 +133,13 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         y_max = int(max(xy_min[1], xy_max[1]))
 
         tile_bounds = {
-            "x_min": x_min,
-            "x_max": x_max,
-            "y_min": y_min,
-            "y_max": y_max,
-            "width": x_max-x_min+1,
-            "height": y_max-y_min+1
+            "zoom": int(zoom),
+            "x_min": int(x_min),
+            "x_max": int(x_max),
+            "y_min": int(y_min),
+            "y_max": int(y_max),
+            "width": int(x_max-x_min+1),
+            "height": int(y_max-y_min+1)
         }
     return tile_bounds
 
@@ -146,14 +160,17 @@ def change_zoom(source_zoom, target_zoom, tile, scheme):
 
 def get_all_tiles(bounds, is_cancel_requested_handler):
     tiles = []
-    debug("Calculating {} tiles", bounds["width"]*bounds["height"])
-    for x in range(bounds["width"]):
-        QApplication.processEvents()
+    width = bounds["width"]
+    height = bounds["height"]
+    x_min = bounds["x_min"]
+    y_min = bounds["y_min"]
+    debug("Preprocessing {} tiles", width*height)
+    for x in range(width):
         if is_cancel_requested_handler():
             break
-        for y in range(bounds["height"]):
-            col = x + bounds["x_min"]
-            row = y + bounds["y_min"]
+        for y in range(height):
+            col = x + x_min
+            row = y + y_min
             tiles.append((col, row))
     return tiles
 
@@ -224,3 +241,42 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
 
 def _sum_tiles(first_tile, second_tile):
     return tuple(map(operator.add, first_tile, second_tile))
+
+
+def get_zoom_by_scale(scale):
+    if scale < 0:
+        scale = 0
+    zoom = 0
+    for lower_bound in sorted(_zoom_level_by_lower_scale_bound, key=lambda k: k*-1):
+        if scale >= lower_bound:
+            zoom = _zoom_level_by_lower_scale_bound[lower_bound]
+            break
+    return zoom
+
+
+_zoom_level_by_lower_scale_bound = {
+    1000000000: 0,
+    500000000: 1,
+    200000000: 2,
+    50000000: 3,
+    25000000: 4,
+    12500000: 5,
+    6500000: 6,
+    3000000: 7,
+    1500000: 8,
+    750000: 9,
+    400000: 10,
+    200000: 11,
+    100000: 12,
+    50000: 13,
+    25000: 14,
+    12500: 15,
+    5000: 16,
+    2500: 17,
+    1500: 18,
+    750: 19,
+    500: 20,
+    250: 21,
+    100: 22,
+    0: 23
+}

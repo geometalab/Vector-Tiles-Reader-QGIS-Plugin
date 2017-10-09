@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>550</width>
-    <height>606</height>
+    <width>880</width>
+    <height>748</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -282,6 +282,40 @@
        </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="btnBrowse">
+         <property name="text">
+          <string>Browse</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabTrexCache">
+      <attribute name="title">
+       <string>t-rex Cache</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QLabel" name="lblSource_2">
+         <property name="text">
+          <string>Path</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="txtTrexCachePath">
+         <property name="toolTip">
+          <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="placeholderText">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnBrowseTrexCache">
          <property name="text">
           <string>Browse</string>
          </property>

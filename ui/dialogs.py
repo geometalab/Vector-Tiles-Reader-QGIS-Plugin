@@ -12,6 +12,7 @@ from dlg_edit_connection import Ui_DlgEditConnection
 from dlg_about import Ui_DlgAbout
 from dlg_progress import Ui_DlgProgress
 from options import Ui_OptionsGroup
+from ..log_helper import *
 
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
@@ -79,42 +80,26 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.lblNumberTilesInCurrentExtent.setText("(Current extent: {} tiles)".format(nr_tiles))
 
     def _reset_to_basemap_defaults(self):
-        self._set_settings(auto_zoom=True,
-                           tile_limit=100,
-                           styles_enabled=True,
-                           merging_enabled=False,
-                           load_mask_layer=False,
-                           cartographic_ordering=True,
+        self._set_settings(auto_zoom=True, tile_limit=32, styles_enabled=True, merging_enabled=False,
                            clip_tile_at_bounds=True)
 
     def _reset_to_analysis_defaults(self):
-        self._set_settings(auto_zoom=True,
-                           tile_limit=10,
-                           styles_enabled=False,
-                           merging_enabled=True,
-                           load_mask_layer=False,
-                           cartographic_ordering=False,
+        self._set_settings(auto_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
                            clip_tile_at_bounds=True)
 
     def _reset_to_inspection_defaults(self):
-        self._set_settings(auto_zoom=True,
-                           tile_limit=10,
-                           styles_enabled=False,
-                           merging_enabled=False,
-                           load_mask_layer=False,
-                           cartographic_ordering=False,
+        self._set_settings(auto_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
                            clip_tile_at_bounds=False)
 
-    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, load_mask_layer, cartographic_ordering, clip_tile_at_bounds):
-        self.rbZoomMax.setChecked(auto_zoom)
+    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds):
+        self.rbZoomMax.setChecked(not auto_zoom)
+        self.rbAutoZoom.setChecked(auto_zoom)
         tile_limit_enabled = tile_limit is not None
         self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
         if tile_limit_enabled:
             self.spinNrOfLoadedTiles.setValue(tile_limit)
         self.chkApplyStyles.setChecked(styles_enabled)
         self.chkMergeTiles.setChecked(merging_enabled)
-        self.chkLoadMaskLayer.setChecked(load_mask_layer)
-        self.chkCartographicOrdering.setChecked(cartographic_ordering)
         self.chkClipTiles.setChecked(clip_tile_at_bounds)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
@@ -138,8 +123,8 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     def clip_tiles(self):
         return self.chkClipTiles.isChecked()
 
-    def cartographic_ordering(self):
-        return self.chkCartographicOrdering.isChecked()
+    def auto_zoom_enabled(self):
+        return self.rbAutoZoom.isChecked()
 
     def manual_zoom(self):
         if not self.rbZoomManual.isChecked():
@@ -158,7 +143,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         return self.chkMergeTiles.isChecked()
 
     def load_mask_layer_enabled(self):
-        return self.chkLoadMaskLayer.isChecked()
+        return False
 
 
 class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
@@ -243,6 +228,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.btnLoad.clicked.connect(self._import_connections)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.btnBrowse.clicked.connect(self._select_file_path)
+        self.btnBrowseTrexCache.clicked.connect(self._select_trex_cache_folder)
         self.open_path = None
         self.browse_path = default_browse_directory
         self.model = QStandardItemModel()
@@ -251,19 +237,25 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self._load_connections()
         self._add_loaded_connections()
         self.edit_connection_dialog = EditConnectionDialog()
-        self.current_path_or_url = None
-        self.current_name = None
         _update_size(self)
 
     def _select_file_path(self):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
         if open_file_name and os.path.isfile(open_file_name):
-            self.browse_path = open_file_name
-            self.open_path = open_file_name
             self.txtPath.setText(open_file_name)
-            path = open_file_name
-            name = os.path.basename(open_file_name)
-            self.on_connect.emit(name, path)
+            self._handle_path_or_folder_selection(open_file_name)
+
+    def _select_trex_cache_folder(self):
+        open_file_name = QFileDialog.getExistingDirectory(None, "Select t-rex Cache directory", self.browse_path)
+        if open_file_name and os.path.isdir(open_file_name):
+            self.txtTrexCachePath.setText(open_file_name)
+            self._handle_path_or_folder_selection(open_file_name)
+
+    def _handle_path_or_folder_selection(self, path):
+        self.browse_path = path
+        self.open_path = path
+        name = os.path.basename(path)
+        self.on_connect.emit(name, path)
 
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
@@ -274,7 +266,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
-        self.on_add.emit(self.current_path_or_url, selected_layers)
+        name, url = self._get_current_connection()
+        self.on_add.emit(url, selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -347,8 +340,15 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.txtPath.setText("")
 
     def _get_current_connection(self):
-        name = self.cbxConnections.currentText()
-        url = self.connections[name]
+        if self.tabServer.isEnabled():
+            name = self.cbxConnections.currentText()
+            url = self.connections[name]
+        elif self.tabFile.isEnabled():
+            url = self.txtPath.text()
+            name = os.path.basename(url)
+        else:
+            url = self.txtTrexCachePath.text()
+            name = os.path.basename(url)
         if name in self._predefined_connections:
             url = url.replace("{token}", self._tokens[name])
         return name, url
