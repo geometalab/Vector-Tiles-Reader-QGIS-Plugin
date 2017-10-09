@@ -545,8 +545,10 @@ class VtReader(QObject):
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
+        self._update_progress(msg="Refresh layers...")
         QgsMapLayerRegistry.instance().reloadAllLayers()
 
+        self._update_progress(msg="Adding new layers...")
         if len(new_layers) > 0:
             only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], new_layers))
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
@@ -635,16 +637,16 @@ class VtReader(QObject):
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
-        # layer_with_zoom = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, zoom_level)
+        source_url = self.source.source()
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
-        layer.setCustomProperty("vector_tile_source", self.source.source())
+        layer.setCustomProperty("vector_tile_source", source_url)
         layer.setCustomProperty("zoom_level", zoom_level)
         layer.setShortName(layer_name)
-        layer.setDataUrl(self.source.source())
+        layer.setDataUrl(source_url)
 
         if self.source.name() and "openmaptiles" in self.source.name().lower():
-            layer.setDataUrl(remove_key(self.source.source()))
+            layer.setDataUrl(remove_key(source_url))
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 
