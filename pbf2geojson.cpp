@@ -239,14 +239,6 @@ extern "C" {
 		return new_buf;
 	}
 
-	char* say_hi(const char * to_whom) {
-		std::string result("Hello " + std::string(to_whom));
-		const char *buf = result.c_str();
-		char *new_buf = strdup(buf);
-		printf("allocated address: %p\n", new_buf);
-		return new_buf;
-	}
-
 	void freeme(char *ptr) {
 		printf("freeing address: %p\n", ptr);
 		free(ptr);
