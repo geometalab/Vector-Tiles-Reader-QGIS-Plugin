@@ -1,2 +1,1 @@
-g++ -m64 -std=c++11 -Iinclude -I../protozero/include -I../vtzero/include -s -Os -Ofast -O3 -Wl,-Bstatic --shared -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
-g++ -m32 -std=c++11 -Iinclude -I../protozero/include -I../vtzero/include -s -Os -Ofast -O3 -Wl,-Bstatic --shared -o ./ext-libs/pbf2geojson/pbf2geojson_i686.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+g++ -m64 -std=c++11 -Iinclude -I../protozero/include -I../vtzero/include -s -Os -Ofast -O3 -fPIC --shared -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
