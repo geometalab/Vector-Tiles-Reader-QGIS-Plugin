@@ -1,5 +1,3 @@
-#include "utils.hpp"
-
 #include <vtzero/vector_tile.hpp>
 
 #include <fstream>

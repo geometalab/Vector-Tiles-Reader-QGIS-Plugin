@@ -19,12 +19,11 @@ from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
-from mp_helper import decode_tile_cpp
+from mp_helper import decode_tile_native, can_load_lib
 
 import multiprocessing as mp
-import platform
 
-if platform.system() == "Windows":
+if sys.platform.startswith("win32"):
     # OSGeo4W does not bundle python in exec_prefix for python
     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
     mp.set_executable(path)
@@ -389,13 +388,13 @@ class VtReader(QObject):
         tiles = []
         if len(tiles_with_encoded_data) < 4:
             for index, t in enumerate(tiles_with_encoded_data):
-                tile = decode_tile_cpp(t)
+                tile = decode_tile_native(t)
                 tiles.append(tile)
                 progress = int(100.0 / total_nr_tiles * (index + 1))
                 self._update_progress(progress=progress)
         else:
             pool = mp.Pool(nr_processors)
-            rs = pool.map_async(decode_tile_cpp, tiles_with_encoded_data, callback=tiles.extend)
+            rs = pool.map_async(decode_tile_native, tiles_with_encoded_data, callback=tiles.extend)
             pool.close()
             current_progress = 0
             while not rs.ready() and not self.cancel_requested:

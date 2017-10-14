@@ -1,1 +1,0 @@
-x86_64-w64-mingw32-g++ -std=c++11 -Iinclude -I../protozero/include -I../vtzero/include -s -Os -Ofast -O3 -Wl,-Bstatic --shared -o ./ext-libs/pbf2geojson/pbf2geojson.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp

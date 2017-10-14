@@ -1,12 +1,58 @@
+import mapbox_vector_tile
 from ctypes import *
 import json
 import sys
 import os
 
-from log_helper import info
+from log_helper import info, warn
 
 
-def decode_tile_cpp(tile_data_tuple):
+def decode_tile(tile_data_tuple):
+    tile = tile_data_tuple[0]
+    if not tile.decoded_data:
+        encoded_data = tile_data_tuple[1]
+        tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
+    return tile
+
+
+def get_lib_for_current_platform():
+    is_64_bit = sys.maxsize > 2**32
+    if is_64_bit:
+        bitness_string = "x86_64"
+    else:
+        bitness_string = "i686"
+    lib = None
+    if sys.platform.startswith("linux"):
+        lib = "pbf2geojson_{}.so".format(bitness_string)
+    elif sys.platform.startswith("win32"):
+        lib = "pbf2geojson_{}.dll".format(bitness_string)
+    elif sys.platform.startswith("darwin"):
+        pass
+    return lib
+
+
+def can_load_lib():
+    return load_lib() is not None
+
+
+def load_lib():
+    lib = None
+    path = get_lib_for_current_platform()
+    if path:
+        try:
+            lib = cdll.LoadLibrary(path)
+            lib.decodeMvtToJson.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
+            lib.decodeMvtToJson.restype = c_void_p
+            lib.freeme.argtypes = [c_void_p]
+            lib.freeme.restype = None
+        except:
+            warn("Loading lib failed for platform '{}': {}", sys.platform, path)
+    else:
+        warn("No prebuilt binary found for: {}, 64bit={}", sys.platform, sys.maxsize > 2**32)
+    return lib
+
+
+def decode_tile_native(tile_data_tuple):
     # self.extend_path()
     tile = tile_data_tuple[0]
     if not tile.decoded_data:
@@ -17,19 +63,13 @@ def decode_tile_cpp(tile_data_tuple):
 
             hex_string = "".join("%02x" % b for b in encoded_data)
 
-            tileSpanX = tile.extent[2] - tile.extent[0]
-            tileSpanY = tile.extent[1] - tile.extent[3]
-            tileX = tile.extent[0]
-            tileY = tile.extent[1] - tileSpanY  # subtract tile size because Y starts from top, not from bottom
+            tile_span_x = tile.extent[2] - tile.extent[0]
+            tile_span_y = tile.extent[1] - tile.extent[3]
+            tile_x = tile.extent[0]
+            tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
-            lib = cdll.LoadLibrary(r"C:\DEV\vtzero\examples\pbf2geojson.dll")
-            decode_mvt = lib.decodeMvtToJson
-            decode_mvt.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
-            decode_mvt.restype = c_void_p
-            lib.freeme.argtypes = [c_void_p]
-            lib.freeme.restype = None
-
-            ptr = decode_mvt(tileX, tileY, tileSpanX, tileSpanY, hex_string)
+            lib = load_lib()
+            ptr = lib.decode_mvt(tile_x, tile_y, tile_span_x, tile_span_y, hex_string)
             decoded_data = cast(ptr, c_char_p).value
             lib.freeme(ptr)
 
