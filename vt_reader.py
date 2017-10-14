@@ -442,7 +442,7 @@ class VtReader(QObject):
         for index, tile in enumerate(tiles):
             if self.cancel_requested:
                 break
-            self._create_geojson(tile, layer_filter)
+            self._add_features_to_feature_collection(tile, layer_filter)
             progress = int(100.0 / total_nr_tiles * (index + 1))
             if progress != current_progress:
                 current_progress = progress
@@ -648,7 +648,7 @@ class VtReader(QObject):
             layer.setName(layer_name)
         return layer
 
-    def _create_geojson(self, tile, layer_filter):
+    def _add_features_to_feature_collection(self, tile, layer_filter):
         """
          * Transforms all features of the specified tile into GeoJSON
          * The resulting GeoJSON feature will be applied to the features of the corresponding GeoJSON FeatureCollection
@@ -711,8 +711,6 @@ class VtReader(QObject):
         geo_type = geo_types[feature["type"]]
         coordinates = feature["geometry"]
         properties = feature["properties"]
-        properties["_col"] = tile.column
-        properties["_row"] = tile.row
         if "id" in properties and properties["id"] < 0:
             properties["id"] = 0
 
