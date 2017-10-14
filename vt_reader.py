@@ -101,7 +101,6 @@ class VtReader(QObject):
         self._always_overwrite_geojson = False
         self._root_group_name = None
         self._flush = False
-        self.extended = False
 
     def _create_source(self, path_or_url):
         is_web_source = path_or_url.lower().startswith("http://") or path_or_url.lower().startswith("https://")
@@ -360,10 +359,6 @@ class VtReader(QObject):
         _worker_thread.started.connect(self._load_tiles)
         _worker_thread.start()
 
-    def extend_path(self):
-        os.environ["path"] = os.environ[
-                                 "path"] + ";" + "C:\\Users\\Martin\\Anaconda2\\Lib\\site-packages\\PyQt4;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\GTK\\bin;C:\\ProgramData\\Oracle\\Java\\javapath;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Common Files\\Acronis\\VirtualFile\\;C:\\Program Files (x86)\\Common Files\\Acronis\\VirtualFile64\\;C:\\Program Files (x86)\\Common Files\\Acronis\\SnapAPI\\;C:\\Program Files\\Microsoft SQL Server\\120\\Tools\\Binn\\;C:\\Program Files\\Microsoft\\Web Platform Installer\\;C:\\Program Files (x86)\\GtkSharp\\2.12\\bin;C:\\Program Files\\Microsoft SQL Server\\130\\Tools\\Binn\\;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\;C:\\Program Files\\dotnet\\;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Microsoft DNX\\Dnvm\\;C:\\Program Files (x86)\\Skype\\Phone\\;C:\\Program Files\\PuTTY\\;C:\\Program Files\\nodejs\\;C:\\Python27\\Scripts\\;C:\\Python27\\;C:\\Users\\Martin\\Anaconda2;C:\\Users\\Martin\\Anaconda2\\Scripts;C:\\Users\\Martin\\Anaconda2\\Library\\bin;C:\\Program Files (x86)\\Microsoft VS Code\\bin;C:\\Users\\Martin\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Temp\\cmake-3.8.0-rc1-win64-x64\\bin;C:\\Temp\\protoc_build\\protobuf\\cmake;C:\\virtuoso-opensource\\bin;C:\\Users\\Martin\\Anaconda2\\Lib\\site-packages\\PyQt4;C:\\Program Files\\QGIS 2.18\\bin;C:\\Program Files\\QGIS 2.18\\apps\\qgis\\bin;C:\\Program Files\\PostgreSQL\\9.6\\bin;C:\\Users\\Martin\\AppData\\Roaming\\npm;C:\\cygwin64\\bin;C:\\DEV\\vtzero\\examples;"
-
     def _decode_tiles(self, tiles_with_encoded_data):
         """
          * Decodes the PBF data from all the specified tiles and reports the progress
@@ -380,9 +375,6 @@ class VtReader(QObject):
         except NotImplementedError:
             info("CPU count cannot be retrieved. Falling back to default = 4")
 
-        if not self.extended:
-            self.extend_path()
-            self.extended = True
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
         tiles = []
