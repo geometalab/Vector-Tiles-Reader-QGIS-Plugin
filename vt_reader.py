@@ -119,6 +119,7 @@ class VtReader(QObject):
         return source
 
     def shutdown(self):
+        info("Shutdown reader")
         self.source.progress_changed.disconnect()
         self.source.max_progress_changed.disconnect()
         self.source.message_changed.disconnect()
