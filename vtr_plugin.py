@@ -88,6 +88,7 @@ class VtrPlugin:
     def _on_project_change(self):
         self._cancel_export()
         self._cancel_load()
+        self.connections_dialog.set_layers([])
         if self._current_reader:
             self._current_reader.shutdown()
             self._current_reader = None
@@ -314,7 +315,6 @@ class VtrPlugin:
     def _on_connect(self, connection_name, path_or_url):
         debug("Connect to path_or_url: {}", path_or_url)
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
-
         try:
             if self._current_reader and self._current_reader.source.source() != path_or_url:
                 self._current_reader.shutdown()
