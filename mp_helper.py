@@ -48,15 +48,13 @@ def load_lib():
             lib.freeme.argtypes = [c_void_p]
             lib.freeme.restype = None
         except:
-            warn("Loading lib failed for platform '{}': {}", sys.platform, path)
+            warn("Loading lib failed for platform '{}': {}, {}", sys.platform, path, sys.exc_info()[1])
     else:
         warn("No prebuilt binary found for: {}, 64bit={}", sys.platform, sys.maxsize > 2**32)
     return lib
 
 
 def decode_tile_native(tile_data_tuple):
-    if sys.platform.startswith("win32"):
-        extend_path()
     tile = tile_data_tuple[0]
     if not tile.decoded_data:
         try:
@@ -82,17 +80,3 @@ def decode_tile_native(tile_data_tuple):
         except:
             info("error: {}", sys.exc_info())
     return tile
-
-
-def extend_path():
-    os.environ["path"] = os.environ["path"] + ";" + "C:\\Users\\Martin\\Anaconda2\\Lib\\site-packages\\PyQt4;"\
-                                                    "C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;"\
-                                                    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;"\
-                                                    "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\;"\
-                                                    "C:\\Python27\\Scripts\\;C:\\Python27\\;C:\\Users\\Martin\\Anaconda2;C:\\Users\\Martin\\Anaconda2\\Scripts;C:\\Users\\Martin\\Anaconda2\\Library\\bin;"\
-                                                    "C:\\Users\\Martin\\AppData\\Local\\Microsoft\\WindowsApps;"\
-                                                    "C:\\Temp\\cmake-3.8.0-rc1-win64-x64\\bin;"\
-                                                    "C:\\Temp\\protoc_build\\protobuf\\cmake;"\
-                                                    "C:\\Users\\Martin\\Anaconda2\\Lib\\site-packages\\PyQt4;"\
-                                                    "C:\\Program Files\\QGIS 2.18\\bin;C:\\Program Files\\QGIS 2.18\\apps\\qgis\\bin;"\
-                                                    "C:\\cygwin64\\bin;C:\\DEV\\vtzero\\examples;"

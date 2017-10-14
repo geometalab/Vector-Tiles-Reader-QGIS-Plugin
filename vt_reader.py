@@ -23,7 +23,9 @@ from mp_helper import decode_tile_native, can_load_lib
 
 import multiprocessing as mp
 
-if sys.platform.startswith("win32"):
+is_windows = sys.platform.startswith("win32")
+
+if is_windows:
     # OSGeo4W does not bundle python in exec_prefix for python
     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
     mp.set_executable(path)
@@ -378,7 +380,7 @@ class VtReader(QObject):
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
         tiles = []
-        if len(tiles_with_encoded_data) < 4:
+        if is_windows and len(tiles_with_encoded_data) < 30:
             for index, t in enumerate(tiles_with_encoded_data):
                 tile = decode_tile_native(t)
                 tiles.append(tile)
