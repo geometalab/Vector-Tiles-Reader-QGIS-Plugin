@@ -55,6 +55,8 @@ class VtrPlugin:
 
     def __init__(self, iface):
         self.iface = iface
+        iface.newProjectCreated.connect(self._on_project_change)
+        iface.projectRead.connect(self._on_project_change)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self.connections_dialog = ConnectionsDialog(FileHelper.get_sample_data_directory())
@@ -82,6 +84,13 @@ class VtrPlugin:
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
+
+    def _on_project_change(self):
+        self._cancel_export()
+        self._cancel_load()
+        if self._current_reader:
+            self._current_reader.shutdown()
+            self._current_reader = None
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -167,7 +176,8 @@ class VtrPlugin:
             self._scale_to_load = None
             self._extent_to_load = None
             
-            is_new_extent_within_loaded_extent = self._loaded_extent["x_min"] <= new_extent["x_min"] <= self._loaded_extent["x_max"] \
+            is_new_extent_within_loaded_extent = self._loaded_extent \
+                and self._loaded_extent["x_min"] <= new_extent["x_min"] <= self._loaded_extent["x_max"] \
                 and self._loaded_extent["x_min"] <= new_extent["x_max"] <= self._loaded_extent["x_max"] \
                 and self._loaded_extent["y_min"] <= new_extent["y_min"] <= self._loaded_extent["y_max"] \
                 and self._loaded_extent["y_min"] <= new_extent["y_max"] <= self._loaded_extent["y_max"]
@@ -651,6 +661,8 @@ class VtrPlugin:
         except:
             pass
 
+        self.iface.newProjectCreated.disconnect(self._on_project_change)
+        self.iface.projectRead.disconnect(self._on_project_change)
         self._debouncer.stop()
         self.iface.layerToolBar().removeAction(self.toolButtonAction)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
