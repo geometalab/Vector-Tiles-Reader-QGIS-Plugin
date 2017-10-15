@@ -395,7 +395,7 @@ class VtReader(QObject):
 
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
-        if can_load_lib() and False:
+        if can_load_lib():
             info("Decoding native")
             decoder_func = decode_tile_native
         else:
