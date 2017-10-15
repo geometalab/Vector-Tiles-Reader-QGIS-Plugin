@@ -19,7 +19,7 @@ from cStringIO import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
-from mp_helper import decode_tile_native, can_load_lib
+from mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 
 import multiprocessing as mp
 
@@ -207,11 +207,17 @@ class VtReader(QObject):
     def _get_tile_cache_name(self, zoom_level, col, row):
         return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
 
+    def _get_clamped_zoom_level(self):
+        zoom_level = self._loading_options["zoom_level"]
+        min_zoom = self.source.min_zoom()
+        max_zoom = self.source.max_zoom()
+        zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
+        return zoom_level
+
     def _load_tiles(self):
         try:
             # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
             self.source = self._create_source(self.source.source())
-            zoom_level = self._loading_options["zoom_level"]
             bounds = self._loading_options["bounds"]
             load_mask_layer = self._loading_options["load_mask_layer"]
             merge_tiles = self._loading_options["merge_tiles"]
@@ -226,9 +232,7 @@ class VtReader(QObject):
             self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
             self._clip_tiles_at_tile_bounds = clip_tiles
 
-            min_zoom = self.source.min_zoom()
-            max_zoom = self.source.max_zoom()
-            zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
+            zoom_level = self._get_clamped_zoom_level()
 
             all_tiles = get_all_tiles(
                 bounds=bounds,
@@ -268,37 +272,12 @@ class VtReader(QObject):
                 QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
 
             if load_mask_layer:
-                mask_level = self.source.mask_level()
-                if mask_level is not None and mask_level != zoom_level:
-                    debug("Mapping {} tiles to mask level", len(all_tiles))
-                    scheme = self.source.scheme()
-                    mask_tiles = map(
-                        lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
-                        all_tiles)
-                    debug("Mapping done")
+                mask_layer_data = self._load_mask_layer(all_tiles=all_tiles)
+                tile_data_tuples.extend(mask_layer_data)
 
-                    mask_tiles_to_load = set()
-                    for t in mask_tiles:
-                        file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
-                        tile = FileHelper.get_cached_tile(file_name)
-                        if tile and tile.decoded_data:
-                            tiles.append(tile)
-                        else:
-                            mask_tiles_to_load.add(t)
-
-                    debug("Loading mask layer (zoom_level={})", mask_level)
-                    tile_data_tuples = []
-                    if len(mask_tiles_to_load) > 0:
-                        mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
-                                                                 tiles_to_load=mask_tiles_to_load,
-                                                                 max_tiles=max_tiles)
-                        debug("Mask layer loaded")
-                        tile_data_tuples.extend(mask_layer_data)
-
-            if tile_data_tuples and len(tile_data_tuples) > 0:
-                if not self.cancel_requested:
-                    decoded_tiles = self._decode_tiles(tile_data_tuples)
-                    tiles.extend(decoded_tiles)
+            if tile_data_tuples and len(tile_data_tuples) > 0 and not self.cancel_requested:
+                decoded_tiles = self._decode_tiles(tile_data_tuples)
+                tiles.extend(decoded_tiles)
             if len(tiles) > 0:
                 if not self.cancel_requested:
                     self._process_tiles(tiles, layer_filter)
@@ -312,23 +291,59 @@ class VtReader(QObject):
                 self.cancelled.emit()
             else:
                 info("Import complete")
-                loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
-                loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
-                if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
-                    return None
-
-                loaded_extent = {"x_min": int(min(loaded_tiles_x)),
-                                 "x_max": int(max(loaded_tiles_x)),
-                                 "y_min": int(min(loaded_tiles_y)),
-                                 "y_max": int(max(loaded_tiles_y)),
-                                 "zoom": int(zoom_level)
-                                 }
-                loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
-                loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
+                loaded_extent = self._get_extent(tiles, zoom_level)
                 self.loading_finished.emit(zoom_level, loaded_extent)
         except Exception as e:
             critical("An exception occured: {}, {}", e, traceback.format_exc())
             self.cancelled.emit()
+
+    @staticmethod
+    def _get_extent(tiles, zoom_level):
+        loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
+        loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
+        if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
+            return None
+
+        loaded_extent = {"x_min": int(min(loaded_tiles_x)),
+                         "x_max": int(max(loaded_tiles_x)),
+                         "y_min": int(min(loaded_tiles_y)),
+                         "y_max": int(max(loaded_tiles_y)),
+                         "zoom": int(zoom_level)
+                         }
+        loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
+        loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
+        return loaded_extent
+
+    def _load_mask_layer(self, all_tiles):
+        zoom_level = self._get_clamped_zoom_level()
+        mask_level = self.source.mask_level()
+        max_tiles = self._loading_options["max_tiles"]
+        tiles = []
+        tile_data_tuples = []
+        if mask_level is not None and mask_level != zoom_level:
+            debug("Mapping {} tiles to mask level", len(all_tiles))
+            scheme = self.source.scheme()
+            mask_tiles = set(map(
+                lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
+                all_tiles))
+            debug("Mapping done")
+
+            mask_tiles_to_load = set()
+            for t in mask_tiles:
+                file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
+                tile = FileHelper.get_cached_tile(file_name)
+                if tile and tile.decoded_data:
+                    tiles.append(tile)
+                else:
+                    mask_tiles_to_load.add(t)
+
+            debug("Loading mask layer (zoom_level={})", mask_level)
+            if len(mask_tiles_to_load) > 0:
+                tile_data_tuples = self.source.load_tiles(zoom_level=mask_level,
+                                                          tiles_to_load=mask_tiles_to_load,
+                                                          max_tiles=max_tiles)
+                assert tile_data_tuples is not None
+        return tile_data_tuples
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
                     apply_styles=True, max_tiles=None, layer_filter=None):
@@ -380,16 +395,25 @@ class VtReader(QObject):
 
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
+        if can_load_lib() and False:
+            info("Decoding native")
+            decoder_func = decode_tile_native
+        else:
+            info("Decoding in python")
+            decoder_func = decode_tile_python
+
         tiles = []
         if is_windows and len(tiles_with_encoded_data) < 30:
             for index, t in enumerate(tiles_with_encoded_data):
-                tile = decode_tile_native(t)
+                if self.cancel_requested:
+                    break
+                tile = decoder_func(t)
                 tiles.append(tile)
                 progress = int(100.0 / total_nr_tiles * (index + 1))
                 self._update_progress(progress=progress)
         else:
             pool = mp.Pool(nr_processors)
-            rs = pool.map_async(decode_tile_native, tiles_with_encoded_data, callback=tiles.extend)
+            rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
             pool.close()
             current_progress = 0
             while not rs.ready() and not self.cancel_requested:
@@ -649,6 +673,32 @@ class VtReader(QObject):
             layer.setName(layer_name)
         return layer
 
+    def _handle_geojson_features(self, tile, layer_name, features):
+        tile_id = tile.id()
+        for geojson_feature in features:
+            # if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
+            #     continue
+
+            geo_type = None
+            geom_type = str(geojson_feature["geometry"]["type"])
+            if geom_type.endswith("Polygon"):
+                geo_type = GeoTypes.POLYGON
+            elif geom_type.endswith("Point"):
+                geo_type = GeoTypes.POINT
+            elif geom_type.endswith("LineString"):
+                geo_type = GeoTypes.LINE_STRING
+            assert geo_type is not None
+
+            name_and_geotype = (layer_name, geo_type)
+            if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
+                self.feature_collections_by_layer_name_and_geotype[
+                    name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
+            feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
+
+            feature_collection["features"].append(geojson_feature)
+            if tile_id not in feature_collection["tiles"]:
+                feature_collection["tiles"].append(tile_id)
+
     def _add_features_to_feature_collection(self, tile, layer_filter):
         """
          * Transforms all features of the specified tile into GeoJSON
@@ -656,36 +706,45 @@ class VtReader(QObject):
         :param tile:
         :return:
         """
-        for layer in tile.decoded_data["layers"]:
-            layer_name = layer["name"]
-
+        for layer_name in tile.decoded_data:
+            layer = tile.decoded_data[layer_name]
+            is_geojson_already = False
+            if "isGeojson" in layer:
+                is_geojson_already = layer["isGeojson"]
             if layer_filter and len(layer_filter) > 0:
                 if layer_name not in layer_filter:
                     continue
 
-            tile_features = layer["geojsonFeatures"]
             tile_id = tile.id()
-
-            for geojson_feature in tile_features:
-                # if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
+            for feature in layer["features"]:
+                # if self._is_duplicate_feature(geojson_feature, tile) or self.cancel_requested:
                 #     continue
-
-                geo_type = None
-                geom_type = str(geojson_feature["geometry"]["type"])
-                if geom_type.endswith("Polygon"):
-                    geo_type = GeoTypes.POLYGON
-                elif geom_type.endswith("Point"):
-                    geo_type = GeoTypes.POINT
-                elif geom_type.endswith("LineString"):
-                    geo_type = GeoTypes.LINE_STRING
-                assert geo_type is not None
+                if is_geojson_already:
+                    geojson_features = [feature]
+                    geo_type = None
+                    geom_type = str(feature["geometry"]["type"])
+                    if geom_type.endswith("Polygon"):
+                        geo_type = GeoTypes.POLYGON
+                    elif geom_type.endswith("Point"):
+                        geo_type = GeoTypes.POINT
+                    elif geom_type.endswith("LineString"):
+                        geo_type = GeoTypes.LINE_STRING
+                    assert geo_type is not None
+                else:
+                    if "extent" in layer:
+                        extent = layer["extent"]
+                    else:
+                        extent = self._DEFAULT_EXTENT
+                    geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
+                    info("python geojson: {}", geojson_features)
 
                 name_and_geotype = (layer_name, geo_type)
                 if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
-                    self.feature_collections_by_layer_name_and_geotype[name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
+                    self.feature_collections_by_layer_name_and_geotype[
+                        name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
                 feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
 
-                feature_collection["features"].append(geojson_feature)
+                feature_collection["features"].extend(geojson_features)
                 if tile_id not in feature_collection["tiles"]:
                     feature_collection["tiles"].append(tile_id)
 

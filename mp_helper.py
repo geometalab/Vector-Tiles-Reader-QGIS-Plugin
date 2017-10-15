@@ -7,7 +7,7 @@ import os
 from log_helper import info, warn
 
 
-def decode_tile(tile_data_tuple):
+def decode_tile_python(tile_data_tuple):
     tile = tile_data_tuple[0]
     if not tile.decoded_data:
         encoded_data = tile_data_tuple[1]
@@ -57,6 +57,7 @@ def load_lib():
 def decode_tile_native(tile_data_tuple):
     tile = tile_data_tuple[0]
     if not tile.decoded_data:
+        decoded_data = None
         try:
             # with open(r"c:\temp\uster.pbf", 'wb') as f:
             #     f.write(tile_data_tuple[1])
@@ -74,9 +75,9 @@ def decode_tile_native(tile_data_tuple):
             decoded_data = cast(ptr, c_char_p).value
             lib.freeme(ptr)
 
-            # with open(r"c:\temp\output.txt", 'w') as f:
-            #     f.write(decoded_data)
+            with open(r"c:\temp\output.txt", 'w') as f:
+                f.write(decoded_data)
             tile.decoded_data = json.loads(decoded_data)
         except:
-            info("error: {}", sys.exc_info())
+            info("Decoding failed: {}, {}", sys.exc_info()[1], decoded_data)
     return tile

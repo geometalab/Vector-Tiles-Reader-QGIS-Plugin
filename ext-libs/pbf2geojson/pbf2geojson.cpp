@@ -131,10 +131,11 @@ struct my_print_value {
 };
 
 void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result) {
-	result << "{ \"name\": \"" << std::string{layer.name()} << "\",";
+	result << "\"" << std::string{layer.name()} << "\":{";
 	int extent = layer.extent();
-	result << "\"extent\": " << extent << ", ";
-	result << "\"geojsonFeatures\": [";
+	result << "\"extent\":" << extent << ",";
+	result << "\"isGeojson\":true,";
+	result << "\"features\":[";
 
 	int featureCount = 0;
 	while (auto feature = layer.next_feature()) {
@@ -151,7 +152,7 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 
 		std::string coordinatesString("");
 		bool isMulti = false;
-		result << "\"geometry\": { \"coordinates\":";
+		result << "\"geometry\":{\"coordinates\":";
 		switch (feature.geometry_type()) {
 			case vtzero::GeomType::POINT:
 				vtzero::decode_point_geometry(feature.geometry(), false, my_geom_handler_points{extent, loc, result});
@@ -161,10 +162,10 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, loc, isMulti, coordinatesString});
 				if (isMulti) {
 					result << '[' << coordinatesString << ']';
-					result << ", \"type\": \"MultiLineString\"";
+					result << ",\"type\":\"MultiLineString\"";
 				} else {
 					result << coordinatesString;
-					result << ", \"type\": \"LineString\"";
+					result << ",\"type\":\"LineString\"";
 				}
 
 				break;
@@ -172,10 +173,10 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, isMulti, loc, coordinatesString});
 				if (isMulti) {
 					result << '[' << coordinatesString << ']';
-					result << ", \"type\": \"MultiPolygon\"";
+					result << ",\"type\":\"MultiPolygon\"";
 				} else {
 					result << coordinatesString;
-					result << ", \"type\": \"Polygon\"";
+					result << ",\"type\":\"Polygon\"";
 				}
 				break;
 			default:
@@ -214,7 +215,7 @@ std::string decodeAsJson(tile_location& loc, const char* hex){
 
 	vtzero::vector_tile tile{data};
 
-	test << "{ \"layers\": [";
+	test << '{';
 	int layerCount = 0;
 	while (auto layer = tile.next_layer()) {
 		if (layerCount++ > 0) {
@@ -223,7 +224,7 @@ std::string decodeAsJson(tile_location& loc, const char* hex){
 	   getJson(loc, layer, test);
 	}
 
-	test << "]}";
+	test << '}';
 
 	return test.str();
 }
