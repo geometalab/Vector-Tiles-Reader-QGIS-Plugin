@@ -276,14 +276,14 @@ class VtReader(QObject):
                 tile_data_tuples.extend(mask_layer_data)
 
             if tile_data_tuples and len(tile_data_tuples) > 0 and not self.cancel_requested:
-                decoded_tiles = self._decode_tiles(tile_data_tuples)
-                tiles.extend(decoded_tiles)
+                decoded_tiles = self._decode_and_process_tiles(tile_data_tuples)
+                # tiles.extend(decoded_tiles)
             if len(tiles) > 0:
                 if not self.cancel_requested:
                     self._process_tiles(tiles, layer_filter)
-                if not self.cancel_requested:
-                    self._create_qgis_layers(merge_features=merge_tiles,
-                                             apply_styles=apply_styles)
+            if not self.cancel_requested:
+                self._create_qgis_layers(merge_features=merge_tiles,
+                                         apply_styles=apply_styles)
 
             self._update_progress(show_dialog=False)
             if self.cancel_requested:
@@ -377,7 +377,7 @@ class VtReader(QObject):
         _worker_thread.started.connect(self._load_tiles)
         _worker_thread.start()
 
-    def _decode_tiles(self, tiles_with_encoded_data):
+    def _decode_and_process_tiles(self, tiles_with_encoded_data):
         """
          * Decodes the PBF data from all the specified tiles and reports the progress
          * If a tile is loaded from the cache, the decoded_data is already set and doesn't have to be encoded
@@ -403,7 +403,7 @@ class VtReader(QObject):
             decoder_func = decode_tile_python
 
         tiles = []
-        if is_windows and len(tiles_with_encoded_data) < 30:
+        if False:  # is_windows and len(tiles_with_encoded_data) < 30:
             for index, t in enumerate(tiles_with_encoded_data):
                 if self.cancel_requested:
                     break
@@ -413,31 +413,47 @@ class VtReader(QObject):
                 self._update_progress(progress=progress)
         else:
             pool = mp.Pool(nr_processors)
-            rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
-            pool.close()
-            current_progress = 0
-            while not rs.ready() and not self.cancel_requested:
-                if self.cancel_requested:
-                    pool.terminate()
-                    break
-                else:
-                    QApplication.processEvents()
-                    remaining = rs._number_left
-                    index = total_nr_tiles - remaining
-                    progress = int(100.0 / total_nr_tiles * (index + 1))
-                    if progress != current_progress:
-                        current_progress = progress
-                        self._update_progress(progress=progress)
+            # rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
+            # pool.close()
+            # current_progress = 0
 
-        tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
+            count = 0
+            for t in pool.imap_unordered(decoder_func, tiles_with_encoded_data):
+                if self.cancel_requested:
+                    break
+                count += 1
+                if t.decoded_data:
+                    tiles.append(t)
+                    self._add_features_to_feature_collection(t, layer_filter=[])
+                    cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
+                    if not os.path.isfile(cache_file_name):
+                        FileHelper.cache_tile(t, cache_file_name)
+                progress = int(100.0 / total_nr_tiles * count)
+                self._update_progress(progress=progress)
+            pool.close()
+
+            # while not rs.ready() and not self.cancel_requested:
+            #     if self.cancel_requested:
+            #         pool.terminate()
+            #         break
+            #     else:
+            #         QApplication.processEvents()
+            #         remaining = rs._number_left
+            #         index = total_nr_tiles - remaining
+            #         progress = int(100.0 / total_nr_tiles * (index + 1))
+            #         if progress != current_progress:
+            #             current_progress = progress
+            #             self._update_progress(progress=progress)
+
+        # tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
         info("Decoding finished, {} tiles with data", len(tiles))
-        for t in tiles:
-            if self.cancel_requested:
-                break
-            else:
-                cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-                if not os.path.isfile(cache_file_name):
-                    FileHelper.cache_tile(t, cache_file_name)
+        # for t in tiles:
+        #     if self.cancel_requested:
+        #         break
+        #     else:
+        #         cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
+        #         if not os.path.isfile(cache_file_name):
+        #             FileHelper.cache_tile(t, cache_file_name)
 
         return tiles
 
@@ -455,12 +471,16 @@ class VtReader(QObject):
             file_content = data
         return file_content
 
+    def _process_tile(self, tile, layer_filter):
+        self._add_features_to_feature_collection(tile, layer_filter)
+
     def _process_tiles(self, tiles, layer_filter):
         """
          * Creates GeoJSON for all the specified tiles and reports the progress
         :param tiles: 
         :return: 
         """
+        info("Process tiles")
         total_nr_tiles = len(tiles)
         self._update_progress(progress=0, max_progress=100, msg="Processing features of {} tiles...".format(total_nr_tiles))
         current_progress = -1
