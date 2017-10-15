@@ -166,11 +166,7 @@ class ServerSource(AbstractSource):
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
-
-        page_size = 5
-        results = []
-        self._do_paged(page_size, urls, results, self._load_urls_async)
-
+        results = self._load_urls_async(urls)
         for r in results:
             content = r[0]
             col = r[1][0]
@@ -180,38 +176,29 @@ class ServerSource(AbstractSource):
 
         return tile_data_tuples
 
-    def _load_urls_async(self, page_offset, urls_with_col_and_row):
+    def _load_urls_async(self, urls_with_col_and_row):
         replies = map(lambda url: (FileHelper.load_url_async(url[0]), (url[1], url[2])), urls_with_col_and_row)
         all_finished = False
         nr_finished_before = 0
+        finished_tiles = set()
+        results = []
+        nr_finished = 0
         while not all_finished and not self._cancelling:
+            new_finished = filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies)
+            nr_finished += len(new_finished)
+            for r in new_finished:
+                reply = r[0]
+                content = reply.readAll().data()
+                reply.deleteLater()
+                tile_coord = r[1]
+                finished_tiles.add(tile_coord)
+                results.append((content, tile_coord))
             QApplication.processEvents()
-            nr_finished = sum(map(lambda r: r[0].isFinished(), replies), 0)
             if nr_finished != nr_finished_before:
-                self.progress_changed.emit(page_offset + nr_finished)
+                self.progress_changed.emit(nr_finished)
             all_finished = nr_finished == len(replies)
 
-        results = []
-        for r in replies:
-            reply = r[0]
-            content = reply.readAll().data()
-            reply.deleteLater()
-            tile_coord = r[1]
-            results.append((content, tile_coord))
-
         return results
-
-    def _do_paged(self, page_size, all_items, result_set, func, *args):
-        page_nr = 0
-        items = []
-        while page_nr == 0 or len(items) > 0:
-            items = all_items[page_nr:page_nr + page_size]
-            if self._cancelling or len(items) == 0:
-                break
-            page_offset = page_nr*page_size
-            results = func(page_offset, items, *args)
-            result_set.extend(results)
-            page_nr += page_size
 
 
 class MBTilesSource(AbstractSource):
