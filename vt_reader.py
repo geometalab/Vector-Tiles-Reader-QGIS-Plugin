@@ -689,11 +689,7 @@ class VtReader(QObject):
                 geo_type = GeoTypes.LINE_STRING
             assert geo_type is not None
 
-            name_and_geotype = (layer_name, geo_type)
-            if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
-                self.feature_collections_by_layer_name_and_geotype[
-                    name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
-            feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
+            feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
 
             feature_collection["features"].append(geojson_feature)
             if tile_id not in feature_collection["tiles"]:
@@ -736,17 +732,20 @@ class VtReader(QObject):
                     else:
                         extent = self._DEFAULT_EXTENT
                     geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
-                    info("python geojson: {}", geojson_features)
 
-                name_and_geotype = (layer_name, geo_type)
-                if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
-                    self.feature_collections_by_layer_name_and_geotype[
-                        name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
-                feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
+                if geojson_features and len(geojson_features) > 0:
+                    feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
+                    feature_collection["features"].extend(geojson_features)
+                    if tile_id not in feature_collection["tiles"]:
+                        feature_collection["tiles"].append(tile_id)
 
-                feature_collection["features"].extend(geojson_features)
-                if tile_id not in feature_collection["tiles"]:
-                    feature_collection["tiles"].append(tile_id)
+    def _get_feature_collection(self, layer_name, geo_type, zoom_level):
+        name_and_geotype = (layer_name, geo_type)
+        if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
+            self.feature_collections_by_layer_name_and_geotype[
+                name_and_geotype] = self._get_empty_feature_collection(zoom_level, layer_name)
+        feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
+        return feature_collection
 
     @staticmethod
     def _get_feature_class_and_subclass(feature):

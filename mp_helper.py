@@ -9,8 +9,8 @@ from log_helper import info, warn
 
 def decode_tile_python(tile_data_tuple):
     tile = tile_data_tuple[0]
-    if not tile.decoded_data:
-        encoded_data = tile_data_tuple[1]
+    encoded_data = tile_data_tuple[1]
+    if encoded_data and not tile.decoded_data:
         tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
     return tile
 
