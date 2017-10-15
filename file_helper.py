@@ -5,7 +5,7 @@ import tempfile
 import sys
 import cPickle as pickle
 import time
-from log_helper import critical, warn, debug
+from log_helper import info, critical, warn, debug
 from qgis.core import QgsNetworkAccessManager
 
 from PyQt4.QtGui import QApplication
@@ -112,6 +112,7 @@ class FileHelper:
                 os.remove(f)
             except:
                 warn("File could not be deleted: {}", f)
+        info("Cache cleared")
 
     @staticmethod
     def load_url_async(url):
