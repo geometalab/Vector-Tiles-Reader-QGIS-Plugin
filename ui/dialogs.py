@@ -192,8 +192,8 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
 
 class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
-    on_connect = pyqtSignal(str, str)
-    on_add = pyqtSignal(str, list)
+    on_connect = pyqtSignal('QString', 'QString')
+    on_add = pyqtSignal('QString', 'QString', list)
     on_connection_change = pyqtSignal()
     on_zoom_change = pyqtSignal()
 
@@ -267,7 +267,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
         name, url = self._get_current_connection()
-        self.on_add.emit(url, selected_layers)
+        self.on_add.emit(name, url, selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")

@@ -38,6 +38,25 @@ import traceback
 #     pass
 
 
+omt_layer_ordering = [
+    "place",
+    "mountain_peak",
+    "housenumber",
+    "water_name",
+    "transportation_name",
+    "poi",
+    "boundary",
+    "transportation",
+    "building",
+    "aeroway",
+    "park",
+    "water",
+    "waterway",
+    "landcover",
+    "landuse"
+]
+
+
 class VtrPlugin:
     _dialog = None
     _model = None
@@ -70,6 +89,7 @@ class VtrPlugin:
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
+        self._currrent_connection_name = None
         self._current_zoom = None
         self._current_scale = None
         self._loaded_extent = None
@@ -86,6 +106,7 @@ class VtrPlugin:
         self._extent_to_load = None
 
     def _on_project_change(self):
+        self._debouncer.stop()
         self._cancel_export()
         self._cancel_load()
         self.connections_dialog.set_layers([])
@@ -236,6 +257,7 @@ class VtrPlugin:
         #     current_paths.append(icons_directory)
         #     QgsApplication.instance().setDefaultSvgPaths(current_paths)
 
+    @pyqtSlot()
     def _update_nr_of_tiles(self):
         zoom = self._get_current_zoom()
         bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
@@ -312,7 +334,9 @@ class VtrPlugin:
         debug("Current extent: {}", tile_bounds)
         return tile_bounds
 
+    @pyqtSlot('QString', 'QString')
     def _on_connect(self, connection_name, path_or_url):
+        self._currrent_connection_name = connection_name
         debug("Connect to path_or_url: {}", path_or_url)
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
         try:
@@ -326,7 +350,6 @@ class VtrPlugin:
                 self._current_reader = None
             if not self._current_reader:
                 reader = self._create_reader(path_or_url)
-                reader.set_root_group_name(connection_name)
                 self._current_reader = reader
             if self._current_reader:
                 layers = self._current_reader.source.vector_layers()
@@ -365,8 +388,10 @@ class VtrPlugin:
             debug("Bounds not available on source. Assuming extent is within bounds")
         return is_within
 
-    def _on_add_layer(self, path_or_url, selected_layers):
+    @pyqtSlot('QString', 'QString', list)
+    def _on_add_layer(self, connection_name, path_or_url, selected_layers):
         assert path_or_url
+        self._assure_qgis_groups_exist(connection_name, True)
 
         crs_string = self._current_reader.source.crs()
         self._init_qgis_map(crs_string)
@@ -581,10 +606,28 @@ class VtrPlugin:
             reader.loading_finished.connect(self.reader_loading_finished)
             reader.tile_limit_reached.connect(self.reader_limit_exceeded_message)
             reader.cancelled.connect(self.reader_cancelled)
+            reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
+
+    @pyqtSlot(list)
+    def add_layers(self, layers):
+        info("add layers: {}", layers)
+        QgsMapLayerRegistry.instance().addMapLayers(layers, False)
+
+    @pyqtSlot('QString', object)
+    def add_layer_to_group(self, layer):
+        root_group_name = self._currrent_connection_name
+        root = QgsProject.instance().layerTreeRoot()
+        root_group = root.findGroup(root_group_name)
+        if not root_group:
+            root_group = root.addGroup(root_group_name)
+        layer_group = root_group.findGroup(layer.name())
+        if not layer_group:
+            layer_group = root_group.addGroup(layer.name())
+        layer_group.addLayer(layer)
 
     @pyqtSlot(object)
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
@@ -644,7 +687,44 @@ class VtrPlugin:
         if progress is not None:
             self.progress_dialog.set_progress(progress)
 
-    def _add_path_to_dependencies_to_syspath(self):
+    def _assure_qgis_groups_exist(self, root_group_name, sort_layers=False):
+        """
+         * Createss a group for each layer that is given by the layer source scheme
+         >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
+         >> TileJSON: value 'vector_layers'
+        :return:
+        """
+
+        root = QgsProject.instance().layerTreeRoot()
+        root_group = root.findGroup(root_group_name)
+        if not root_group:
+            root_group = root.addGroup(root_group_name)
+        layers = map(lambda l: l["id"], self._current_reader.source.vector_layers())
+
+        if sort_layers:
+            layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
+        for index, layer_name in enumerate(layers):
+            group = root_group.findGroup(layer_name)
+            if not group:
+                root_group.addGroup(layer_name)
+
+    @staticmethod
+    def _get_omt_layer_sort_id(layer_name):
+        """
+         * Returns the cartographic sort id for the specified layer.
+         * This sort id is the position of the layer in the omt_layer_ordering collection.
+         * If the layer isn't present in the collection, the sort id wil be 999 and therefore the layer will be added at the bottom.
+        :param layer_name:
+        :return:
+        """
+
+        sort_id = 999
+        if layer_name in omt_layer_ordering:
+            sort_id = omt_layer_ordering.index(layer_name)
+        return sort_id
+
+    @staticmethod
+    def _add_path_to_dependencies_to_syspath():
         """
          * Adds the path to the external libraries to the sys.path if not already added
         """

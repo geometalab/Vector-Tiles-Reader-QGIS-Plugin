@@ -13,7 +13,6 @@ from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg, clamp
 from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
-from PyQt4.QtGui import QMessageBox, QApplication
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from cStringIO import StringIO
 from gzip import GzipFile
@@ -38,28 +37,11 @@ class VtReader(QObject):
     max_progress_changed = pyqtSignal(int, name='maxProgressChanged')
     message_changed = pyqtSignal('QString', name='messageChanged')
     title_changed = pyqtSignal('QString', name='titleChanged')
-    show_progress_changed = pyqtSignal(bool, name='titleChanged')
+    show_progress_changed = pyqtSignal(bool, name='show_progress_changed')
     loading_finished = pyqtSignal(int, object, name='loadingFinished')
     tile_limit_reached = pyqtSignal(int, name='tile_limit_reached')
     cancelled = pyqtSignal(name='cancelled')
-
-    omt_layer_ordering = [
-        "place",
-        "mountain_peak",
-        "housenumber",
-        "water_name",
-        "transportation_name",
-        "poi",
-        "boundary",
-        "transportation",
-        "building",
-        "aeroway",
-        "park",
-        "water",
-        "waterway",
-        "landcover",
-        "landuse"
-    ]
+    add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
 
     _loading_options = {
             'zoom_level': None,
@@ -98,12 +80,10 @@ class VtReader(QObject):
         FileHelper.assure_temp_dirs_exist()
         self.iface = iface
         self.feature_collections_by_layer_name_and_geotype = {}
-        self._qgis_layer_groups_by_name = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds = None
         self._always_overwrite_geojson = False
-        self._root_group_name = None
         self._flush = False
 
     def _create_source(self, path_or_url):
@@ -156,9 +136,6 @@ class VtReader(QObject):
     @pyqtSlot('QString')
     def _source_message_changed(self, msg):
         self._update_progress(msg=msg)
-
-    def set_root_group_name(self, name):
-        self._root_group_name = name
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if progress is not None:
@@ -246,7 +223,6 @@ class VtReader(QObject):
 
             self.cancel_requested = False
             self.feature_collections_by_layer_name_and_geotype = {}
-            self._qgis_layer_groups_by_name = {}
             self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
             self._clip_tiles_at_tile_bounds = clip_tiles
 
@@ -453,48 +429,6 @@ class VtReader(QObject):
                 current_progress = progress
                 self._update_progress(progress=progress)
 
-    def _get_omt_layer_sort_id(self, layer_name):
-        """
-         * Returns the cartographic sort id for the specified layer.
-         * This sort id is the position of the layer in the omt_layer_ordering collection.
-         * If the layer isn't present in the collection, the sort id wil be 999 and therefore the layer will be added at the bottom.
-        :param layer_name: 
-        :return: 
-        """
-
-        sort_id = 999
-        if layer_name in self.omt_layer_ordering:
-            sort_id = self.omt_layer_ordering.index(layer_name)
-        return sort_id
-
-    def _assure_qgis_groups_exist(self, manual_layer_name=None, sort_layers=False):
-        """
-         * Createss a group for each layer that is given by the layer source scheme
-         >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
-         >> TileJSON: value 'vector_layers'
-        :return: 
-        """
-
-        root = QgsProject.instance().layerTreeRoot()
-        name = self._root_group_name
-        if not name:
-            name = self.source.name()
-        root_group = root.findGroup(name)
-        if not root_group:
-            root_group = root.addGroup(name)
-        if not manual_layer_name:
-            layers = map(lambda l: l["id"], self.source.vector_layers())
-        else:
-            layers = [manual_layer_name]
-
-        if sort_layers:
-            layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
-        for index, layer_name in enumerate(layers):
-            group = root_group.findGroup(layer_name)
-            if not group:
-                group = root_group.addGroup(layer_name)
-            self._qgis_layer_groups_by_name[layer_name] = group
-
     def _get_geojson_filename(self, layer_name, geo_type):
         return "{}.{}.{}".format(self.source.name().replace(" ", "_"), layer_name, geo_type)
 
@@ -504,7 +438,7 @@ class VtReader(QObject):
         """
         debug("Creating hierarchy in QGIS")
 
-        self._assure_qgis_groups_exist(sort_layers=apply_styles)
+        # self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
         vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), qgis_layers.iteritems())
@@ -551,8 +485,7 @@ class VtReader(QObject):
             only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], new_layers))
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in new_layers:
-            target_group = self._qgis_layer_groups_by_name[name]
-            target_group.addLayer(layer)
+            self.add_layer_to_group.emit(layer)
 
         if apply_styles:
             count = 0

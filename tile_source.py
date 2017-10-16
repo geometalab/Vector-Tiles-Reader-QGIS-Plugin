@@ -20,7 +20,7 @@ class AbstractSource(QObject):
     max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
     message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
     tile_limit_reached = pyqtSignal(name='tile_limit_reached')
-    loading_result = pyqtSignal(bool, list, name='tile_limit_reached')
+    loading_result = pyqtSignal(bool, list, name='loading_result')
 
     def __init__(self):
         QObject.__init__(self)
