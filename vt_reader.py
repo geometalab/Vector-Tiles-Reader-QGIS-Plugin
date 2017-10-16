@@ -546,8 +546,8 @@ class VtReader(QObject):
         self._update_progress(msg="Refresh layers...")
         QgsMapLayerRegistry.instance().reloadAllLayers()
 
-        self._update_progress(msg="Adding new layers...")
         if len(new_layers) > 0:
+            self._update_progress(msg="Adding new layers...")
             only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], new_layers))
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in new_layers:
