@@ -286,6 +286,8 @@ class VtReader(QObject):
                 self.source.load_tiles(zoom_level=zoom_level,
                                        tiles_to_load=tiles_to_load,
                                        max_tiles=remaining_nr_of_tiles)
+            else:
+                self._continue_loading()
 
             # if loaded_tile_data_tuples and len(loaded_tile_data_tuples) > 0 and not self.cancel_requested:
             #     self._decode_and_process_tiles(loaded_tile_data_tuples)
