@@ -76,7 +76,7 @@ class VtrPlugin:
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-        self._debouncer = SignalDebouncer(timeout=1000,
+        self._debouncer = SignalDebouncer(timeout=500,
                                           signals=[self.iface.mapCanvas().scaleChanged,
                                                    self.iface.mapCanvas().extentsChanged],
                                           predicate=self._have_extent_or_scale_changed)

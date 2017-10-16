@@ -228,6 +228,14 @@ class VtReader(QObject):
 
     def _load_tiles(self):
         try:
+            if can_load_lib():
+                info("Native decoding supported")
+            else:
+                bits = "32"
+                if sys.maxsize > 2**32:
+                    bits = "64"
+                info("Native decoding not supported: {}, {}bit", sys.platform, bits)
+
             self._all_tiles = []
             # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
             self.source = self._create_source(self.source.source())
