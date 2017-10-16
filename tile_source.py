@@ -20,6 +20,7 @@ class AbstractSource(QObject):
     max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
     message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
     tile_limit_reached = pyqtSignal(name='tile_limit_reached')
+    loading_result = pyqtSignal(bool, list, name='tile_limit_reached')
 
     def __init__(self):
         QObject.__init__(self)
@@ -166,24 +167,17 @@ class ServerSource(AbstractSource):
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
-        results = self._load_urls_async(urls)
-        for r in results:
-            content = r[0]
-            col = r[1][0]
-            row = r[1][1]
-            tile = VectorTile(self.scheme(), zoom_level, col, row)
-            tile_data_tuples.append((tile, content))
+        self._load_urls_async(zoom_level, urls)
 
-        return tile_data_tuples
-
-    def _load_urls_async(self, urls_with_col_and_row):
+    def _load_urls_async(self, zoom_level, urls_with_col_and_row):
         replies = map(lambda url: (FileHelper.load_url_async(url[0]), (url[1], url[2])), urls_with_col_and_row)
+        total_nr_of_requests = len(replies)
         all_finished = False
         nr_finished_before = 0
         finished_tiles = set()
-        results = []
         nr_finished = 0
         while not all_finished and not self._cancelling:
+            results = []
             new_finished = filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies)
             nr_finished += len(new_finished)
             for r in new_finished:
@@ -194,11 +188,19 @@ class ServerSource(AbstractSource):
                 finished_tiles.add(tile_coord)
                 results.append((content, tile_coord))
             QApplication.processEvents()
+            all_finished = nr_finished == total_nr_of_requests
             if nr_finished != nr_finished_before:
+                nr_finished_before = nr_finished
                 self.progress_changed.emit(nr_finished)
-            all_finished = nr_finished == len(replies)
+                tiles_with_data = map(lambda r: self._create_vector_tile_from_respond(zoom_level, r), results)
+                self.loading_result.emit(all_finished, list(tiles_with_data))
 
-        return results
+    def _create_vector_tile_from_respond(self, zoom_level, r):
+        content = r[0]
+        col = r[1][0]
+        row = r[1][1]
+        tile = VectorTile(self.scheme(), zoom_level, col, row)
+        return tile, content
 
 
 class MBTilesSource(AbstractSource):

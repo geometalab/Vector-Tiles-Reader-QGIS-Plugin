@@ -81,6 +81,8 @@ class VtReader(QObject):
 
     flush_layers_of_other_zoom_level = False
 
+    _all_tiles = []
+
     def __init__(self, iface, path_or_url):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
@@ -117,6 +119,7 @@ class VtReader(QObject):
         source.max_progress_changed.connect(self._source_max_progress_changed)
         source.message_changed.connect(self._source_message_changed)
         source.tile_limit_reached.connect(self._source_tile_limit_reached)
+        source.loading_result.connect(self._loading_result)
         return source
 
     def shutdown(self):
@@ -124,10 +127,20 @@ class VtReader(QObject):
         self.source.progress_changed.disconnect()
         self.source.max_progress_changed.disconnect()
         self.source.message_changed.disconnect()
+        self.source.loading_result.disconnect()
         self.source.close_connection()
 
     def id(self):
         return self._id
+
+    @pyqtSlot(bool, list)
+    def _loading_result(self, loading_complete, loaded_tile_data_tuples):
+        # info("loading result, finished: {}, nr tiles: {}", loading_complete, len(loaded_tile_data_tuples))
+        if loaded_tile_data_tuples and len(loaded_tile_data_tuples) > 0 and not self.cancel_requested:
+            self._decode_and_process_tiles(loaded_tile_data_tuples)
+
+        if loading_complete:
+            self._continue_loading()
 
     @pyqtSlot(int)
     def _source_tile_limit_reached(self):
@@ -216,6 +229,7 @@ class VtReader(QObject):
 
     def _load_tiles(self):
         try:
+            self._all_tiles = []
             # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
             self.source = self._create_source(self.source.source())
             bounds = self._loading_options["bounds"]
@@ -239,63 +253,63 @@ class VtReader(QObject):
                 is_cancel_requested_handler=lambda: self.cancel_requested,
             )
             tiles_to_load = set()
-            tiles = []
+            cached_tiles = []
             tiles_to_ignore = set()
             for t in all_tiles:
-                if self.cancel_requested or (max_tiles and len(tiles) >= max_tiles):
+                if self.cancel_requested or (max_tiles and len(cached_tiles) >= max_tiles):
                     break
 
                 file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
                 tile = FileHelper.get_cached_tile(file_name)
                 if tile and tile.decoded_data:
-                    tiles.append(tile)
+                    cached_tiles.append(tile)
                     tiles_to_ignore.add((tile.column, tile.row))
                 else:
                     tiles_to_load.add(t)
 
             remaining_nr_of_tiles = len(tiles_to_load)
             if max_tiles:
-                if len(tiles) + len(tiles_to_load) >= max_tiles:
-                    remaining_nr_of_tiles = max_tiles - len(tiles)
+                if len(cached_tiles) + len(tiles_to_load) >= max_tiles:
+                    remaining_nr_of_tiles = max_tiles - len(cached_tiles)
                     if remaining_nr_of_tiles < 0:
                         remaining_nr_of_tiles = 0
-            debug("{} cache hits. {} may potentially be loaded.", len(tiles), remaining_nr_of_tiles)
+            debug("{} cache hits. {} may potentially be loaded.", len(cached_tiles), remaining_nr_of_tiles)
+            if len(cached_tiles) > 0:
+                if not self.cancel_requested:
+                    self._process_tiles(cached_tiles, layer_filter)
+                    self._all_tiles.extend(cached_tiles)
 
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
 
-            tile_data_tuples = []
+            loaded_tile_data_tuples = []
             if remaining_nr_of_tiles > 0:
-                tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
-                                                          tiles_to_load=tiles_to_load,
-                                                          max_tiles=remaining_nr_of_tiles)
-            if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
-                QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
+                self.source.load_tiles(zoom_level=zoom_level,
+                                       tiles_to_load=tiles_to_load,
+                                       max_tiles=remaining_nr_of_tiles)
 
-            if load_mask_layer:
-                mask_layer_data = self._load_mask_layer(all_tiles=all_tiles)
-                tile_data_tuples.extend(mask_layer_data)
+            # if loaded_tile_data_tuples and len(loaded_tile_data_tuples) > 0 and not self.cancel_requested:
+            #     self._decode_and_process_tiles(loaded_tile_data_tuples)
 
-            if tile_data_tuples and len(tile_data_tuples) > 0 and not self.cancel_requested:
-                decoded_tiles = self._decode_and_process_tiles(tile_data_tuples)
-                # tiles.extend(decoded_tiles)
-            if len(tiles) > 0:
-                if not self.cancel_requested:
-                    self._process_tiles(tiles, layer_filter)
-            if not self.cancel_requested:
-                self._create_qgis_layers(merge_features=merge_tiles,
-                                         apply_styles=apply_styles)
-
-            self._update_progress(show_dialog=False)
-            if self.cancel_requested:
-                info("Import cancelled")
-                self.cancelled.emit()
-            else:
-                info("Import complete")
-                loaded_extent = self._get_extent(tiles, zoom_level)
-                self.loading_finished.emit(zoom_level, loaded_extent)
         except Exception as e:
             critical("An exception occured: {}, {}", e, traceback.format_exc())
             self.cancelled.emit()
+
+    def _continue_loading(self):
+        zoom_level = self._loading_options["zoom_level"]
+        merge_tiles = self._loading_options["merge_tiles"]
+        apply_styles = self._loading_options["apply_styles"]
+        if not self.cancel_requested:
+            self._create_qgis_layers(merge_features=merge_tiles,
+                                     apply_styles=apply_styles)
+
+        self._update_progress(show_dialog=False)
+        if self.cancel_requested:
+            info("Import cancelled")
+            self.cancelled.emit()
+        else:
+            info("Import complete")
+            loaded_extent = self._get_extent(self._all_tiles, zoom_level)
+            self.loading_finished.emit(zoom_level, loaded_extent)
 
     @staticmethod
     def _get_extent(tiles, zoom_level):
@@ -313,37 +327,6 @@ class VtReader(QObject):
         loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
         loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
         return loaded_extent
-
-    def _load_mask_layer(self, all_tiles):
-        zoom_level = self._get_clamped_zoom_level()
-        mask_level = self.source.mask_level()
-        max_tiles = self._loading_options["max_tiles"]
-        tiles = []
-        tile_data_tuples = []
-        if mask_level is not None and mask_level != zoom_level:
-            debug("Mapping {} tiles to mask level", len(all_tiles))
-            scheme = self.source.scheme()
-            mask_tiles = set(map(
-                lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
-                all_tiles))
-            debug("Mapping done")
-
-            mask_tiles_to_load = set()
-            for t in mask_tiles:
-                file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
-                tile = FileHelper.get_cached_tile(file_name)
-                if tile and tile.decoded_data:
-                    tiles.append(tile)
-                else:
-                    mask_tiles_to_load.add(t)
-
-            debug("Loading mask layer (zoom_level={})", mask_level)
-            if len(mask_tiles_to_load) > 0:
-                tile_data_tuples = self.source.load_tiles(zoom_level=mask_level,
-                                                          tiles_to_load=mask_tiles_to_load,
-                                                          max_tiles=max_tiles)
-                assert tile_data_tuples is not None
-        return tile_data_tuples
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
                     apply_styles=True, max_tiles=None, layer_filter=None):
@@ -385,7 +368,7 @@ class VtReader(QObject):
         :return:
         """
         total_nr_tiles = len(tiles_with_encoded_data)
-        self._update_progress(progress=0, max_progress=100, msg="Decoding {} tiles...".format(total_nr_tiles))
+        # self._update_progress(progress=0, max_progress=100, msg="Decoding {} tiles...".format(total_nr_tiles))
 
         nr_processors = 4
         try:
@@ -396,68 +379,47 @@ class VtReader(QObject):
         tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
 
         if can_load_lib():
-            info("Decoding native")
+            # info("Decoding native")
             decoder_func = decode_tile_native
         else:
-            info("Decoding in python")
+            # info("Decoding in python")
             decoder_func = decode_tile_python
 
         tiles = []
-        if False:  # is_windows and len(tiles_with_encoded_data) < 30:
-            for index, t in enumerate(tiles_with_encoded_data):
-                if self.cancel_requested:
-                    break
-                tile = decoder_func(t)
+        # if is_windows and len(tiles_with_encoded_data) < 30:
+        for t in tiles_with_encoded_data:
+            if self.cancel_requested:
+                break
+            tile = decoder_func(t)
+            if tile.decoded_data:
                 tiles.append(tile)
-                progress = int(100.0 / total_nr_tiles * (index + 1))
-                self._update_progress(progress=progress)
-        else:
-            pool = mp.Pool(nr_processors)
-            # rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
-            # pool.close()
-            # current_progress = 0
+                self._add_features_to_feature_collection(tile, layer_filter=[])
+                cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
+                if not os.path.isfile(cache_file_name):
+                    FileHelper.cache_tile(tile, cache_file_name)
+            # progress = int(100.0 / total_nr_tiles * (index + 1))
+            # self._update_progress(progress=progress)
+        # else:
+        #     pool = mp.Pool(nr_processors)
+        #     count = 0
+        #     for t in pool.imap_unordered(decoder_func, tiles_with_encoded_data):
+        #         if self.cancel_requested:
+        #             break
+        #         count += 1
+        #         if t.decoded_data:
+        #             tiles.append(t)
+        #             self._add_features_to_feature_collection(t, layer_filter=[])
+        #             cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
+        #             if not os.path.isfile(cache_file_name):
+        #                 FileHelper.cache_tile(t, cache_file_name)
+        #         progress = int(100.0 / total_nr_tiles * count)
+        #         # self._update_progress(progress=progress)
+        #     pool.close()
+        self._all_tiles.extend(tiles)
+        # info("Decoding finished, {} tiles with data", len(tiles))
 
-            count = 0
-            for t in pool.imap_unordered(decoder_func, tiles_with_encoded_data):
-                if self.cancel_requested:
-                    break
-                count += 1
-                if t.decoded_data:
-                    tiles.append(t)
-                    self._add_features_to_feature_collection(t, layer_filter=[])
-                    cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-                    if not os.path.isfile(cache_file_name):
-                        FileHelper.cache_tile(t, cache_file_name)
-                progress = int(100.0 / total_nr_tiles * count)
-                self._update_progress(progress=progress)
-            pool.close()
-
-            # while not rs.ready() and not self.cancel_requested:
-            #     if self.cancel_requested:
-            #         pool.terminate()
-            #         break
-            #     else:
-            #         QApplication.processEvents()
-            #         remaining = rs._number_left
-            #         index = total_nr_tiles - remaining
-            #         progress = int(100.0 / total_nr_tiles * (index + 1))
-            #         if progress != current_progress:
-            #             current_progress = progress
-            #             self._update_progress(progress=progress)
-
-        # tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
-        info("Decoding finished, {} tiles with data", len(tiles))
-        # for t in tiles:
-        #     if self.cancel_requested:
-        #         break
-        #     else:
-        #         cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-        #         if not os.path.isfile(cache_file_name):
-        #             FileHelper.cache_tile(t, cache_file_name)
-
-        return tiles
-
-    def _unzip(self, data):
+    @staticmethod
+    def _unzip(data):
         """
          * If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
         :param data:
