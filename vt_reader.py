@@ -135,7 +135,6 @@ class VtReader(QObject):
 
     @pyqtSlot(bool, list)
     def _loading_result(self, loading_complete, loaded_tile_data_tuples):
-        # info("loading result, finished: {}, nr tiles: {}", loading_complete, len(loaded_tile_data_tuples))
         if loaded_tile_data_tuples and len(loaded_tile_data_tuples) > 0 and not self.cancel_requested:
             self._decode_and_process_tiles(loaded_tile_data_tuples)
 
@@ -233,10 +232,7 @@ class VtReader(QObject):
             # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
             self.source = self._create_source(self.source.source())
             bounds = self._loading_options["bounds"]
-            load_mask_layer = self._loading_options["load_mask_layer"]
-            merge_tiles = self._loading_options["merge_tiles"]
             clip_tiles = self._loading_options["clip_tiles"]
-            apply_styles = self._loading_options["apply_styles"]
             max_tiles = self._loading_options["max_tiles"]
             layer_filter = self._loading_options["layer_filter"]
 
@@ -281,16 +277,12 @@ class VtReader(QObject):
 
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
 
-            loaded_tile_data_tuples = []
             if remaining_nr_of_tiles > 0:
                 self.source.load_tiles(zoom_level=zoom_level,
                                        tiles_to_load=tiles_to_load,
                                        max_tiles=remaining_nr_of_tiles)
             else:
                 self._continue_loading()
-
-            # if loaded_tile_data_tuples and len(loaded_tile_data_tuples) > 0 and not self.cancel_requested:
-            #     self._decode_and_process_tiles(loaded_tile_data_tuples)
 
         except Exception as e:
             critical("An exception occured: {}, {}", e, traceback.format_exc())
@@ -369,9 +361,6 @@ class VtReader(QObject):
         :param tiles_with_encoded_data:
         :return:
         """
-        total_nr_tiles = len(tiles_with_encoded_data)
-        # self._update_progress(progress=0, max_progress=100, msg="Decoding {} tiles...".format(total_nr_tiles))
-
         nr_processors = 4
         try:
             nr_processors = mp.cpu_count()
@@ -418,7 +407,6 @@ class VtReader(QObject):
         #         # self._update_progress(progress=progress)
         #     pool.close()
         self._all_tiles.extend(tiles)
-        # info("Decoding finished, {} tiles with data", len(tiles))
 
     @staticmethod
     def _unzip(data):
