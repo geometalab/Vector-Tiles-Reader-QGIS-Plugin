@@ -75,9 +75,11 @@ def decode_tile_native(tile_data_tuple):
             decoded_data = cast(ptr, c_char_p).value
             lib.freeme(ptr)
 
-            with open(r"c:\temp\output.txt", 'w') as f:
-                f.write(decoded_data)
+            # with open(r"c:\temp\output.txt", 'w') as f:
+            #     f.write(decoded_data)
             tile.decoded_data = json.loads(decoded_data)
         except:
-            info("Decoding failed: {}, {}", sys.exc_info()[1], decoded_data)
+            info("Decoding failed: {}", sys.exc_info()[1])
+            # with open(r"c:\temp\output.txt", 'w') as f:
+            #     f.write(decoded_data)
     return tile
