@@ -6,7 +6,7 @@ import importlib
 import tempfile
 import re
 
-_KEY_REGEX = re.compile(r"(\?|&)key=[^?&]*")
+_KEY_REGEX = re.compile(r"(\?|&)(api_)?key=[^\s?&]*")
 
 _DEBUG = "debug"
 _INFO = "info"

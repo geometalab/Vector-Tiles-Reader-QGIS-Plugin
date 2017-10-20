@@ -8,8 +8,8 @@ import math
 import uuid
 import traceback
 
-from log_helper import info, warn, critical, debug, remove_key
-from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg, clamp
+from log_helper import info, critical, debug, remove_key
+from tile_helper import get_all_tiles, get_code_from_epsg, clamp
 from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
@@ -308,6 +308,17 @@ class VtReader(QObject):
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
                     apply_styles=True, max_tiles=None, layer_filter=None):
+        """
+         * Specify the reader options
+        :param load_mask_layer:  If True the mask layer will also be loaded
+        :param merge_tiles: If True neighbouring tiles and features will be merged
+        :param clip_tiles: If True the features located outside the tile will be removed
+        :param apply_styles: If True the default styles will be applied
+        :param max_tiles: The maximum number of tiles to load
+        :param layer_filter: A list of layers. If any layers are set, only these will be loaded. If the list is empty,
+            all available layers will be loaded
+        :return:
+        """
         self._loading_options = {
             'load_mask_layer': load_mask_layer,
             'merge_tiles': merge_tiles,
@@ -320,14 +331,7 @@ class VtReader(QObject):
     def load_tiles_async(self, zoom_level, bounds):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
-        :param clip_tiles: 
         :param zoom_level: The zoom level to load
-        :param layer_filter: A list of layers. If any layers are set, only these will be loaded. If the list is empty,
-            all available layers will be loaded
-        :param load_mask_layer: If True the mask layer will also be loaded
-        :param merge_tiles: If True neighbouring tiles and features will be merged
-        :param apply_styles: If True the default styles will be applied
-        :param max_tiles: The maximum number of tiles to load
         :param bounds:
         :return: 
         """
@@ -418,7 +422,9 @@ class VtReader(QObject):
         """
         info("Process tiles")
         total_nr_tiles = len(tiles)
-        self._update_progress(progress=0, max_progress=100, msg="Processing features of {} tiles...".format(total_nr_tiles))
+        self._update_progress(progress=0,
+                              max_progress=100,
+                              msg="Processing features of {} tiles...".format(total_nr_tiles))
         current_progress = -1
         for index, tile in enumerate(tiles):
             if self.cancel_requested:
@@ -449,7 +455,9 @@ class VtReader(QObject):
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
 
-        self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_name_and_geotype), msg="Creating layers...")
+        self._update_progress(progress=0,
+                              max_progress=len(self.feature_collections_by_layer_name_and_geotype),
+                              msg="Creating layers...")
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
@@ -497,11 +505,12 @@ class VtReader(QObject):
                 VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=count)
 
-    def _update_layer_source(self, layer_source, feature_collection):
+    @staticmethod
+    def _update_layer_source(layer_source, feature_collection):
         """
          * Updates the layers GeoJSON source file
-        :param layer_source: 
-        :param feature_collections_by_tile_coord: 
+        :param layer_source: The path to the geoJSON file that is the source of the layer
+        :param feature_collection: The feature collection to dump
         :return: 
         """
         with open(layer_source, "w") as f:
@@ -539,8 +548,8 @@ class VtReader(QObject):
     def _apply_named_style(layer, geo_type):
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
-        :param layer: 
-        :param layer_path: e.g. 'transportation.service' or 'transportation_name.path'
+        :param layer: The layer to which the style shall be applied
+        :param geo_type: The geo type of the features on the layer (point, linestring or polygon)
         :return: 
         """
         try:
@@ -576,9 +585,10 @@ class VtReader(QObject):
         layer.setShortName(layer_name)
         layer.setDataUrl(source_url)
 
+        layer.setDataUrl(remove_key(source_url))
         if self.source.name() and "openmaptiles" in self.source.name().lower():
-            layer.setDataUrl(remove_key(source_url))
-            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
+            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors "
+                                 u"(ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 
         if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
@@ -694,9 +704,10 @@ class VtReader(QObject):
         all_out_of_bounds = []
         coordinates = map_coordinates_recursive(coordinates=coordinates,
                                                 tile_extent=current_layer_tile_extent,
-                                                mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords,
-                                                                                                              tile,
-                                                                                                              current_layer_tile_extent),
+                                                mapper_func=lambda coords: self._get_absolute_coordinates(
+                                                    coordinates=coords,
+                                                    tile=tile,
+                                                    extent=current_layer_tile_extent),
                                                 all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(
                                                     out_of_bounds))
 
@@ -704,7 +715,10 @@ class VtReader(QObject):
             return None, None
 
         split_geometries = self._loading_options["merge_tiles"]
-        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_geometries)
+        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type=geo_type,
+                                                                             coordinates=coordinates,
+                                                                             properties=properties,
+                                                                             split_multi_geometries=split_geometries)
 
         return geojson_features, geo_type
 
