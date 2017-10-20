@@ -306,7 +306,7 @@ class MBTilesSource(AbstractSource):
                 tile, data = self._create_tile(row)
                 tile_data_tuples.append((tile, data))
                 self.progress_changed.emit(index+1)
-        return tile_data_tuples
+        self.loading_result.emit(True, tile_data_tuples)
 
     @staticmethod
     def _get_where_clause(tiles_to_load, zoom_level):
@@ -487,5 +487,4 @@ class TrexCacheSource(AbstractSource):
                 with open(full_path, 'rb') as f:
                     encoded_data = f.read()
                     tile_data_tuples.append((tile, encoded_data))
-
-        return tile_data_tuples
+        self.loading_result.emit(True, tile_data_tuples)

@@ -13,7 +13,7 @@ of the License, or (at your option) any later version.
 
 """
 
-from log_helper import debug, info, warn, critical
+from log_helper import info, critical
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import (
     QAction,
@@ -23,7 +23,6 @@ from PyQt4.QtGui import (
     QMessageBox,
     QColor,
     QFileDialog,
-    QApplication,
     QProgressBar,
     QPushButton)
 from qgis.core import *
@@ -375,22 +374,24 @@ class VtrPlugin:
         except:
             QMessageBox.critical(None, "Unexpected Error", "An unexpected error occured. {}".format(str(sys.exc_info()[1])))
 
-    def show_about(self):
+    @staticmethod
+    def show_about():
         AboutDialog().show()
 
     def _is_valid_qgis_extent(self, extent_to_load, zoom):
         source_bounds = self._current_reader.source.bounds_tile(zoom)
         info("bounds: {}", source_bounds)
-        if not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
+        if source_bounds and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]:
                 return False
         return True
 
-    def is_extent_within_bounds(self, extent, bounds):
+    @staticmethod
+    def is_extent_within_bounds(extent, bounds):
         is_within = True
-        if bounds:
+        if bounds and extent:
             x_min_within = extent['x_min'] >= bounds['x_min']
             y_min_within = extent['y_min'] >= bounds['y_min']
             x_max_within = extent['x_max'] <= bounds['x_max']
