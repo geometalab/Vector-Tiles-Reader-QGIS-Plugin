@@ -102,6 +102,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkMergeTiles.setChecked(merging_enabled)
         self.chkClipTiles.setChecked(clip_tile_at_bounds)
 
+    def set_omt_styles_enabled(self, enabled):
+        self.chkApplyStyles.setChecked(enabled)
+
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom:
             self.zoomSpin.setMinimum(min_zoom)
@@ -397,6 +400,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if name in self.connections:
             enable_connect = True
             enable_edit = name not in self._predefined_connections
+            is_omt = name == "OpenMapTiles.com"
+            self.options.set_omt_styles_enabled(is_omt)
+
         self.btnConnect.setEnabled(enable_connect)
         self.btnEdit.setEnabled(enable_edit)
         self.btnDelete.setEnabled(enable_edit)

@@ -182,11 +182,15 @@ class ServerSource(AbstractSource):
             nr_finished += len(new_finished)
             for r in new_finished:
                 reply = r[0]
-                content = reply.readAll().data()
+                error = reply.error()
+                if error:
+                    info("Error during network request: {}", error)
+                else:
+                    content = reply.readAll().data()
+                    tile_coord = r[1]
+                    finished_tiles.add(tile_coord)
+                    results.append((content, tile_coord))
                 reply.deleteLater()
-                tile_coord = r[1]
-                finished_tiles.add(tile_coord)
-                results.append((content, tile_coord))
             QApplication.processEvents()
             all_finished = nr_finished == total_nr_of_requests
             if nr_finished != nr_finished_before:
@@ -194,6 +198,11 @@ class ServerSource(AbstractSource):
                 self.progress_changed.emit(nr_finished)
                 tiles_with_data = map(lambda r: self._create_vector_tile_from_respond(zoom_level, r), results)
                 self.loading_result.emit(all_finished, list(tiles_with_data))
+        if not all_finished and self._cancelling:
+            unfinished_requests = filter(lambda r: not r[0].isFinished, replies)
+            for r in unfinished_requests:
+                r.abort()
+            self.loading_result.emit(True, [])
 
     def _create_vector_tile_from_respond(self, zoom_level, r):
         content = r[0]
