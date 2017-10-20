@@ -15,7 +15,17 @@ of the License, or (at your option) any later version.
 
 from log_helper import debug, info, warn, critical
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog, QApplication
+from PyQt4.QtGui import (
+    QAction,
+    QIcon,
+    QMenu,
+    QToolButton,
+    QMessageBox,
+    QColor,
+    QFileDialog,
+    QApplication,
+    QProgressBar,
+    QPushButton)
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
@@ -104,6 +114,8 @@ class VtrPlugin:
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
+        self.message_bar_item = None
+        self.progress_bar = None
 
     def _on_project_change(self):
         self._debouncer.stop()
@@ -293,7 +305,7 @@ class VtrPlugin:
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
-            self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
+            # self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
             auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
@@ -563,8 +575,7 @@ class VtrPlugin:
     def reader_cancelled(self):
         info("cancelled")
         self._is_loading = False
-        if self.progress_dialog:
-            self.progress_dialog.hide()
+        self.handle_progress_update(show_progress=False)
         if self._auto_zoom:
             extent = self._extent_to_load
             reload_immediate = self._scale_to_load is not None or extent
@@ -632,8 +643,9 @@ class VtrPlugin:
     @pyqtSlot(object)
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
         self._loaded_extent = loaded_extent
-        if self.progress_dialog:
-            self.progress_dialog.hide()
+        self.handle_progress_update(show_progress=False)
+        # if self.progress_dialog:
+        #     self.progress_dialog.hide()
 
         auto_zoom = self._auto_zoom
 
@@ -671,21 +683,46 @@ class VtrPlugin:
     def reader_show_progress_changed(self, show_progress):
         self.handle_progress_update(show_progress=show_progress)
 
+    def _create_message_bar(self):
+        message_bar_item = self.iface.messageBar().createMessage("")
+        progress_bar = QProgressBar()
+        progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        cancel_button = QPushButton()
+        cancel_button.setText('Cancel')
+        cancel_button.clicked.connect(self._cancel_load)
+        message_bar_item.layout().addWidget(progress_bar)
+        message_bar_item.layout().addWidget(cancel_button)
+        self.iface.messageBar().pushWidget(message_bar_item, self.iface.messageBar().INFO)
+        self.message_bar_item = message_bar_item
+        self.progress_bar = progress_bar
+
     def handle_progress_update(self, title=None, progress=None, max_progress=None, msg=None, show_progress=None):
         if show_progress:
-            self.progress_dialog.open()
+            if not self.message_bar_item:
+                self._create_message_bar()
+            # self.progress_dialog.open()
         elif show_progress is False:
-            self.progress_dialog.hide()
-            self.progress_dialog.set_message(None)
+            info("hide progress")
+            self.iface.messageBar().popWidget(self.message_bar_item)
+            self.message_bar_item = None
+            self.progress_bar = None
+            # self.progress_dialog.hide()
+            # self.progress_dialog.set_message(None)
         if title:
-            self.progress_dialog.setWindowTitle(title)
+            pass
+            # self.message_bar_item.setTitle(title)
+            # self.progress_dialog.setWindowTitle(title)
         if max_progress is not None:
-            self.progress_dialog.set_maximum(max_progress)
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(max_progress)
+            # self.progress_dialog.set_maximum(max_progress)
         if msg:
             info(msg)
-            self.progress_dialog.set_message(msg)
+            self.message_bar_item.setTitle(msg)
+            # self.progress_dialog.set_message(msg)
         if progress is not None:
-            self.progress_dialog.set_progress(progress)
+            self.progress_bar.setValue(progress)
+            # self.progress_dialog.set_progress(progress)
 
     def _assure_qgis_groups_exist(self, root_group_name, sort_layers=False):
         """
