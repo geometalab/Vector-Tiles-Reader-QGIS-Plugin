@@ -31,7 +31,7 @@ from PyQt4.QtGui import (
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
-from file_helper import FileHelper
+from file_helper import *
 from tile_helper import *
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
@@ -90,7 +90,7 @@ class VtrPlugin(object):
         iface.projectRead.connect(self._on_project_change)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.connections_dialog = ConnectionsDialog(FileHelper.get_sample_data_directory())
+        self.connections_dialog = ConnectionsDialog(get_sample_data_directory())
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
@@ -134,7 +134,7 @@ class VtrPlugin(object):
                                                            self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
         self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
-        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
+        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
@@ -265,7 +265,7 @@ class VtrPlugin(object):
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
     def _add_path_to_icons(self):
-        icons_directory = FileHelper.get_icons_directory()
+        icons_directory = get_icons_directory()
         # current_paths = QgsApplication.instance().svgPaths()
         # if icons_directory not in current_paths:
         #     current_paths.append(icons_directory)
@@ -284,7 +284,7 @@ class VtrPlugin(object):
 
     def _export_tiles(self):
         from vt_writer import VtWriter
-        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
+        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", get_home_directory(), "mbtiles (*.mbtiles)")
         if file_name:
             self.export_action.setDisabled(True)
             try:

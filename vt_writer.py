@@ -2,7 +2,7 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 from builtins import object
-from file_helper import FileHelper
+from file_helper import *
 import os
 import sys
 import json
@@ -136,7 +136,7 @@ class VtWriter(object):
         source_to_export = None
         warning_shown = False
 
-        temp_dir = os.path.normpath(FileHelper.get_temp_dir()).lower()
+        temp_dir = os.path.normpath(get_temp_dir()).lower()
         tile_names = set()
         for l in all_layers:
             layer_source = l.source()
@@ -176,14 +176,14 @@ class VtWriter(object):
 
                     collection_tiles = [(int(t.split(";")[0]), int(t.split(";")[1])) for t in feature_collection["tiles"]]
                     for t in collection_tiles:
-                        cached_tile_name = FileHelper.get_cached_tile_file_name(source_name, zoom_level, t[0], t[1])
+                        cached_tile_name = get_cached_tile_file_name(source_name, zoom_level, t[0], t[1])
                         tile_names.add(cached_tile_name)
         return tile_names
 
     def _load_tiles(self, tile_names):
         tiles = []
         for name in tile_names:
-            tile = FileHelper.get_cached_tile(name)
+            tile = get_cached_tile(name)
             if tile:
                 if self.source_scheme != "tms":
                     tile.row = change_scheme(tile.zoom_level, tile.row)

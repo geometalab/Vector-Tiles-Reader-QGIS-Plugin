@@ -1,19 +1,16 @@
 from future import standard_library
 standard_library.install_aliases()
 from builtins import str
-import os
-import sys
 import sqlite3
 import urllib.parse
 import json
 
 from PyQt4.QtGui import QApplication
 from PyQt4.QtCore import QObject, pyqtSignal
-from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
-from file_helper import FileHelper
+from file_helper import *
 from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds
-from network_helper import load_url, url_exists, load_url_async
+from network_helper import url_exists, load_url_async
 
 _DEFAULT_CRS = "EPSG:3857"
 
@@ -224,7 +221,7 @@ class MBTilesSource(AbstractSource):
         if not os.path.isfile(path):
             raise RuntimeError("The file does not exist: {}".format(path))
 
-        is_sqlite_db = FileHelper.is_sqlite_db(path)
+        is_sqlite_db = is_sqlite_db(path)
         if not is_sqlite_db:
             raise RuntimeError(
                 "The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(path))

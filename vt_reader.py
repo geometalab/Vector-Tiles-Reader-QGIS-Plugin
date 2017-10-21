@@ -16,7 +16,16 @@ import traceback
 from log_helper import info, critical, debug, remove_key
 from tile_helper import get_all_tiles, get_code_from_epsg, clamp
 from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
-from file_helper import FileHelper
+from file_helper import (
+    get_cached_tile_file_name,
+    get_styles,
+    assure_temp_dirs_exist,
+    get_cached_tile, is_gzipped,
+    get_geojson_file_name,
+    get_plugin_directory,
+    get_icons_directory,
+    cache_tile
+)
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt4.QtGui import QApplication
@@ -44,7 +53,7 @@ class VtReader(QObject):
     message_changed = pyqtSignal('QString', name='messageChanged')
     title_changed = pyqtSignal('QString', name='titleChanged')
     show_progress_changed = pyqtSignal(bool, name='show_progress_changed')
-    loading_finished = pyqtSignal(int, object, name='loadingFinished')
+    loading_finished = pyqtSignal(int, dict, name='loadingFinished')
     tile_limit_reached = pyqtSignal(int, name='tile_limit_reached')
     cancelled = pyqtSignal(name='cancelled')
     add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
@@ -65,7 +74,7 @@ class VtReader(QObject):
     _DEFAULT_EXTENT = 4096
     _id = str(uuid.uuid4())
 
-    _styles = FileHelper.get_styles()
+    _styles = get_styles()
 
     flush_layers_of_other_zoom_level = False
 
@@ -83,7 +92,7 @@ class VtReader(QObject):
 
         self.source = self._create_source(path_or_url)
 
-        FileHelper.assure_temp_dirs_exist()
+        assure_temp_dirs_exist()
         self.iface = iface
         self.feature_collections_by_layer_name_and_geotype = {}
         self.cancel_requested = False
@@ -189,9 +198,6 @@ class VtReader(QObject):
         if self.source:
             self.source.cancel()
 
-    def _get_tile_cache_name(self, zoom_level, col, row):
-        return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
-
     def _get_clamped_zoom_level(self):
         zoom_level = self._loading_options["zoom_level"]
         min_zoom = self.source.min_zoom()
@@ -235,8 +241,8 @@ class VtReader(QObject):
                 if self.cancel_requested or (max_tiles and len(cached_tiles) >= max_tiles):
                     break
 
-                file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
-                tile = FileHelper.get_cached_tile(file_name)
+                file_name = get_cached_tile_file_name(self.source.name(), zoom_level, t[0], t[1])
+                tile = get_cached_tile(file_name)
                 if tile and tile.decoded_data:
                     cached_tiles.append(tile)
                     tiles_to_ignore.add((tile.column, tile.row))
@@ -252,7 +258,7 @@ class VtReader(QObject):
             if len(cached_tiles) > 0:
                 info("{} tiles in cache. Max. {} will be loaded additionally.", len(cached_tiles), remaining_nr_of_tiles)
                 if not self.cancel_requested:
-                    self._process_tiles(cached_tiles, layer_filter, do_not_cache=True)
+                    self._process_tiles(cached_tiles, layer_filter)
                     self._all_tiles.extend(cached_tiles)
 
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
@@ -264,6 +270,8 @@ class VtReader(QObject):
                 if len(tile_data_tuples) > 0 and not self.cancel_requested:
                     tiles = self._decode_tiles(tile_data_tuples)
                     self._process_tiles(tiles, layer_filter)
+                    for t in tiles:
+                        cache_tile(t, self.source.name())
                     self._all_tiles.extend(tiles)
             self._continue_loading()
 
@@ -341,6 +349,18 @@ class VtReader(QObject):
         _worker_thread.started.connect(self._load_tiles)
         _worker_thread.start()
 
+    @staticmethod
+    def _get_pool(cores=None):
+        nr_processors = 4
+        if cores:
+            nr_processors = cores
+        try:
+            nr_processors = mp.cpu_count()
+        except NotImplementedError:
+            info("CPU count cannot be retrieved. Falling back to default = 4")
+        pool = mp.Pool(nr_processors)
+        return pool
+
     def _decode_tiles(self, tiles_with_encoded_data):
         """
          * Decodes the PBF data from all the specified tiles and reports the progress
@@ -348,11 +368,6 @@ class VtReader(QObject):
         :param tiles_with_encoded_data:
         :return:
         """
-        nr_processors = 4
-        try:
-            nr_processors = mp.cpu_count()
-        except NotImplementedError:
-            info("CPU count cannot be retrieved. Falling back to default = 4")
 
         tiles_with_encoded_data = [(t[0], self._unzip(t[1])) for t in tiles_with_encoded_data]
 
@@ -369,11 +384,10 @@ class VtReader(QObject):
                 if tile.decoded_data:
                     tiles.append(tile)
         else:
-            pool = mp.Pool(nr_processors)
+            pool = self._get_pool()
             rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
             pool.close()
             current_progress = 0
-            pool = mp.Pool(nr_processors)
             nr_of_tiles = len(tiles_with_encoded_data)
             self._update_progress(max_progress=nr_of_tiles, msg="Decoding {} tiles...".format(nr_of_tiles))
             while not rs.ready() and not self.cancel_requested:
@@ -388,7 +402,6 @@ class VtReader(QObject):
                     if progress != current_progress:
                         current_progress = progress
                         self._update_progress(progress=progress)
-            pool.close()
             tiles = list(filter(lambda ti: ti.decoded_data is not None, tiles))
 
         info("Decoding finished, {} tiles with data", len(tiles))
@@ -411,8 +424,8 @@ class VtReader(QObject):
         :return:
         """
 
-        is_gzipped = FileHelper.is_gzipped(data)
-        if is_gzipped:
+        is_zipped = is_gzipped(data)
+        if is_zipped:
             file_content = GzipFile('', 'r', 0, StringIO(data)).read()
         else:
             file_content = data
@@ -421,7 +434,7 @@ class VtReader(QObject):
     def _process_tile(self, tile, layer_filter):
         self._add_features_to_feature_collection(tile, layer_filter)
 
-    def _process_tiles(self, tiles, layer_filter, do_not_cache=False):
+    def _process_tiles(self, tiles, layer_filter):
         """
          * Creates GeoJSON for all the specified tiles and reports the progress
         :param tiles: 
@@ -436,10 +449,6 @@ class VtReader(QObject):
             if tile.decoded_data:
                 self._all_tiles.append(tile)
                 self._add_features_to_feature_collection(tile, layer_filter=layer_filter)
-                if not do_not_cache:
-                    cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
-                    if not os.path.isfile(cache_file_name):
-                        FileHelper.cache_tile(tile, cache_file_name)
             self._update_progress(progress=index+1)
 
     def _get_geojson_filename(self, layer_name, geo_type):
@@ -476,7 +485,7 @@ class VtReader(QObject):
             zoom_level = feature_collection["zoom_level"]
 
             file_name = self._get_geojson_filename(layer_name, geo_type)
-            file_path = FileHelper.get_geojson_file_name(file_name)
+            file_path = get_geojson_file_name(file_name)
 
             layer = None
             if os.path.isfile(file_path):
@@ -568,7 +577,7 @@ class VtReader(QObject):
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
                 if style_name in VtReader._styles:
-                    style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
+                    style_path = os.path.join(get_plugin_directory(), "styles/{}".format(style_name))
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
                         layer.setCustomProperty("layerStyle", style_path)
@@ -738,7 +747,7 @@ class VtReader(QObject):
         """
 
         feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
-        root_path = FileHelper.get_icons_directory()
+        root_path = get_icons_directory()
         class_icon = "{}.svg".format(feature_class)
         class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
         icon_name = "poi.svg"

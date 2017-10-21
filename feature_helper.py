@@ -2,7 +2,7 @@ from builtins import str
 from builtins import object
 from qgis.core import QgsMapLayerRegistry, QgsField, QgsVectorLayer, QgsFeatureRequest, QgsSpatialIndex
 from PyQt4.QtCore import QVariant
-from file_helper import FileHelper
+from file_helper import *
 from log_helper import info, debug
 import processing
 import uuid
@@ -80,7 +80,7 @@ class FeatureMerger(object):
     @staticmethod
     def _dissolve(layer):
         debug("Dissolving layer")
-        target_file = FileHelper.get_unique_geojson_file_name()
+        target_file = get_unique_geojson_file_name()
         processing.runalg("qgis:dissolve", layer, False, "dissolveGroup", target_file)
         dissolved_layer = QgsVectorLayer(target_file, "Dissolved", "ogr")
         return dissolved_layer
