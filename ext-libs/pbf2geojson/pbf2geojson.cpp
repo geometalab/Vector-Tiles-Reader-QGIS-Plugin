@@ -39,20 +39,20 @@ struct my_geom_handler_linestrings {
 
 	int extent;
 	tile_location& loc;
-	bool& isMulti;
 	std::string& result;
 
+    bool alreadyBeenHere;
 	std::string temp;
 
 	int ringCounter;
 
     void linestring_begin(uint32_t count) {
-		if (++ringCounter > 1) {
-			isMulti = true;
+		if (alreadyBeenHere) {
 			temp = ",[";
 		} else {
 			temp = "[";
 		}
+		alreadyBeenHere = true;
     }
 
     void linestring_point(const vtzero::point point) {
@@ -81,20 +81,19 @@ struct my_geom_handler_linestrings {
 struct my_geom_handler_polygons {
 
     int extent;
-	bool& isMulti;
 	tile_location& loc;
 	std::string& result;
 
-	int ringCounter;
+	bool alreadyBeenHere;
 	std::string temp;
 
     void ring_begin(uint32_t count) {
-		if (++ringCounter > 1) {
-			isMulti = true;
-			temp = ",[[";
+		if (alreadyBeenHere) {
+			temp = ",[";
 		} else {
-			temp = "[[";
+			temp = "[";
 		}
+		alreadyBeenHere = true;
     }
 
     void ring_point(const vtzero::point point) {
@@ -112,7 +111,7 @@ struct my_geom_handler_polygons {
         if (temp.back() == ',') {
             temp.back() = ' ';
         }
-		temp += "]]";
+		temp += ']';
 		result += temp;
     }
 };
@@ -173,7 +172,6 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 		result << "\"type\":" << "\"Feature\",";
 
 		std::string coordinatesString("");
-		bool isMulti = false;
 		result << "\"geometry\":{\"coordinates\":";
 		switch (feature.geometry_type()) {
 			case vtzero::GeomType::POINT:
@@ -181,25 +179,14 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 				result << ", \"type\": \"Point\"";
 				break;
 			case vtzero::GeomType::LINESTRING:
-				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, loc, isMulti, coordinatesString});
-				if (isMulti) {
+				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, loc, coordinatesString});
 					result << '[' << coordinatesString << ']';
 					result << ",\"type\":\"MultiLineString\"";
-				} else {
-					result << coordinatesString;
-					result << ",\"type\":\"LineString\"";
-				}
-
 				break;
 			case vtzero::GeomType::POLYGON:
-				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, isMulti, loc, coordinatesString});
-				if (isMulti) {
-					result << '[' << coordinatesString << ']';
+				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, loc, coordinatesString});
+					result << "[[" << coordinatesString << "]]";
 					result << ",\"type\":\"MultiPolygon\"";
-				} else {
-					result << coordinatesString;
-					result << ",\"type\":\"Polygon\"";
-				}
 				break;
 			default:
 				result << "UNKNOWN GEOMETRY TYPE\n";
