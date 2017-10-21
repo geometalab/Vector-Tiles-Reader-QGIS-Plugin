@@ -264,12 +264,13 @@ class VtrPlugin(object):
         self.iface.mainWindow().statusBar().showMessage(msg)
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
-    def _add_path_to_icons(self):
+    @staticmethod
+    def _add_path_to_icons():
         icons_directory = get_icons_directory()
-        # current_paths = QgsApplication.instance().svgPaths()
-        # if icons_directory not in current_paths:
-        #     current_paths.append(icons_directory)
-        #     QgsApplication.instance().setDefaultSvgPaths(current_paths)
+        current_paths = QgsApplication.svgPaths()
+        if icons_directory not in current_paths:
+            current_paths.append(icons_directory)
+            QgsApplication.setDefaultSvgPaths(current_paths)
 
     @pyqtSlot()
     def _update_nr_of_tiles(self):

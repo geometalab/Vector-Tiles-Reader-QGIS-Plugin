@@ -661,6 +661,7 @@ class VtReader(QObject):
                     if geom_type.endswith("Polygon"):
                         geo_type = GeoTypes.POLYGON
                     elif geom_type.endswith("Point"):
+                        feature["properties"]["_symbol"] = self._get_poi_icon(feature)
                         geo_type = GeoTypes.POINT
                     elif geom_type.endswith("LineString"):
                         geo_type = GeoTypes.LINE_STRING
