@@ -363,43 +363,33 @@ class VtReader(QObject):
         tiles_with_encoded_data = [(t[0], self._unzip(t[1])) for t in tiles_with_encoded_data]
 
         if can_load_lib():
-            # info("Decoding native")
             decoder_func = decode_tile_native
         else:
-            # info("Decoding in python")
             decoder_func = decode_tile_python
 
-        tiles = []
-        # if is_windows and len(tiles_with_encoded_data) < 30:
-        for t in tiles_with_encoded_data:
-            if self.cancel_requested:
-                break
-            tile = decoder_func(t)
-            if tile.decoded_data:
-                tiles.append(tile)
-                self._add_features_to_feature_collection(tile, layer_filter=[])
-                cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
-                if not os.path.isfile(cache_file_name):
-                    FileHelper.cache_tile(tile, cache_file_name)
-            # progress = int(100.0 / total_nr_tiles * (index + 1))
-            # self._update_progress(progress=progress)
-        # else:
-        #     pool = mp.Pool(nr_processors)
-        #     count = 0
-        #     for t in pool.imap_unordered(decoder_func, tiles_with_encoded_data):
-        #         if self.cancel_requested:
-        #             break
-        #         count += 1
-        #         if t.decoded_data:
-        #             tiles.append(t)
-        #             self._add_features_to_feature_collection(t, layer_filter=[])
-        #             cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-        #             if not os.path.isfile(cache_file_name):
-        #                 FileHelper.cache_tile(t, cache_file_name)
-        #         progress = int(100.0 / total_nr_tiles * count)
-        #         # self._update_progress(progress=progress)
-        #     pool.close()
-        self._all_tiles.extend(tiles)
+        if is_windows and len(tiles_with_encoded_data) < 24:
+            for t in tiles_with_encoded_data:
+                tile = decoder_func(t)
+                if self.cancel_requested:
+                    break
+                self._handle_decoded_tile(tile)
+        else:
+            pool = mp.Pool(nr_processors)
+            count = 0
+            for tile in pool.imap_unordered(decoder_func, tiles_with_encoded_data):
+                if self.cancel_requested:
+                    break
+                count += 1
+                self._handle_decoded_tile(tile)
+            pool.close()
+
+    def _handle_decoded_tile(self, tile):
+        if tile.decoded_data:
+            self._all_tiles.append(tile)
+            self._add_features_to_feature_collection(tile, layer_filter=[])
+            cache_file_name = self._get_tile_cache_name(tile.zoom_level, tile.column, tile.row)
+            if not os.path.isfile(cache_file_name):
+                FileHelper.cache_tile(tile, cache_file_name)
 
     @staticmethod
     def _unzip(data):
