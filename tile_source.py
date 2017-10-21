@@ -23,7 +23,6 @@ class AbstractSource(QObject):
     max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
     message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
     tile_limit_reached = pyqtSignal(name='tile_limit_reached')
-    loading_result = pyqtSignal(bool, list, name='loading_result')
 
     def __init__(self):
         QObject.__init__(self)
@@ -170,7 +169,7 @@ class ServerSource(AbstractSource):
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
-        self._load_urls_async(zoom_level, urls)
+        return self._load_urls_async(zoom_level, urls)
 
     def _load_urls_async(self, zoom_level, urls_with_col_and_row):
         replies = [(FileHelper.load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
@@ -179,6 +178,7 @@ class ServerSource(AbstractSource):
         nr_finished_before = 0
         finished_tiles = set()
         nr_finished = 0
+        all_tiles = []
         while not all_finished and not self._cancelling:
             results = []
             new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
@@ -200,12 +200,14 @@ class ServerSource(AbstractSource):
                 nr_finished_before = nr_finished
                 self.progress_changed.emit(nr_finished)
                 tiles_with_data = [self._create_vector_tile_from_respond(zoom_level, r) for r in results]
-                self.loading_result.emit(all_finished, tiles_with_data)
+                all_tiles.extend(tiles_with_data)
         if not all_finished and self._cancelling:
             unfinished_requests = [r for r in replies if not r[0].isFinished]
             for r in unfinished_requests:
                 r.abort()
-            self.loading_result.emit(True, [])
+        if self._cancelling:
+            all_tiles = []
+        return all_tiles
 
     def _create_vector_tile_from_respond(self, zoom_level, r):
         content = r[0]
@@ -309,7 +311,7 @@ class MBTilesSource(AbstractSource):
                 tile, data = self._create_tile(row)
                 tile_data_tuples.append((tile, data))
                 self.progress_changed.emit(index+1)
-        self.loading_result.emit(True, tile_data_tuples)
+        return tile_data_tuples
 
     @staticmethod
     def _get_where_clause(tiles_to_load, zoom_level):
@@ -490,4 +492,4 @@ class TrexCacheSource(AbstractSource):
                 with open(full_path, 'rb') as f:
                     encoded_data = f.read()
                     tile_data_tuples.append((tile, encoded_data))
-        self.loading_result.emit(True, tile_data_tuples)
+        return tile_data_tuples

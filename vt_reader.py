@@ -19,6 +19,7 @@ from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, G
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+from PyQt4.QtGui import QApplication
 from io import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
@@ -104,7 +105,6 @@ class VtReader(QObject):
         source.max_progress_changed.connect(self._source_max_progress_changed)
         source.message_changed.connect(self._source_message_changed)
         source.tile_limit_reached.connect(self._source_tile_limit_reached)
-        source.loading_result.connect(self._loading_result)
         return source
 
     def shutdown(self):
@@ -112,19 +112,10 @@ class VtReader(QObject):
         self.source.progress_changed.disconnect()
         self.source.max_progress_changed.disconnect()
         self.source.message_changed.disconnect()
-        self.source.loading_result.disconnect()
         self.source.close_connection()
 
     def id(self):
         return self._id
-
-    @pyqtSlot(bool, list)
-    def _loading_result(self, loading_complete, loaded_tile_data_tuples):
-        if loaded_tile_data_tuples and len(loaded_tile_data_tuples) > 0 and not self.cancel_requested:
-            self._decode_and_process_tiles(loaded_tile_data_tuples)
-
-        if loading_complete:
-            self._continue_loading()
 
     @pyqtSlot(int)
     def _source_tile_limit_reached(self):
@@ -267,11 +258,12 @@ class VtReader(QObject):
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
 
             if remaining_nr_of_tiles > 0:
-                self.source.load_tiles(zoom_level=zoom_level,
-                                       tiles_to_load=tiles_to_load,
-                                       max_tiles=remaining_nr_of_tiles)
-            else:
-                self._continue_loading()
+                tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
+                                                          tiles_to_load=tiles_to_load,
+                                                          max_tiles=remaining_nr_of_tiles)
+                if len(tile_data_tuples) > 0 and not self.cancel_requested:
+                    self._decode_and_process_tiles(tile_data_tuples)
+            self._continue_loading()
 
         except Exception as e:
             critical("An exception occured: {}, {}", e, traceback.format_exc())
@@ -367,21 +359,35 @@ class VtReader(QObject):
         else:
             decoder_func = decode_tile_python
 
-        if is_windows and len(tiles_with_encoded_data) < 24:
-            for t in tiles_with_encoded_data:
-                tile = decoder_func(t)
-                if self.cancel_requested:
-                    break
-                self._handle_decoded_tile(tile)
-        else:
-            pool = mp.Pool(nr_processors)
-            count = 0
-            for tile in pool.imap_unordered(decoder_func, tiles_with_encoded_data):
-                if self.cancel_requested:
-                    break
-                count += 1
-                self._handle_decoded_tile(tile)
-            pool.close()
+        pool = mp.Pool(nr_processors)
+        tiles = []
+        rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
+        pool.close()
+        current_progress = 0
+        pool = mp.Pool(nr_processors)
+        nr_of_tiles = len(tiles_with_encoded_data)
+        self._update_progress(max_progress=nr_of_tiles, msg="Decoding {} tiles...".format(nr_of_tiles))
+        while not rs.ready() and not self.cancel_requested:
+            if self.cancel_requested:
+                pool.terminate()
+                break
+            else:
+                QApplication.processEvents()
+                remaining = rs._number_left
+                index = nr_of_tiles - remaining
+                progress = int(100.0 / nr_of_tiles * (index + 1))
+                if progress != current_progress:
+                    current_progress = progress
+                    self._update_progress(progress=progress)
+        pool.close()
+
+        tiles = list(filter(lambda ti: ti.decoded_data is not None, tiles))
+        info("Decoding finished, {} tiles with data", len(tiles))
+        for t in tiles:
+            if self.cancel_requested:
+                break
+            else:
+                self._handle_decoded_tile(t)
 
     def _handle_decoded_tile(self, tile):
         if tile.decoded_data:
@@ -629,7 +635,6 @@ class VtReader(QObject):
                 if layer_name not in layer_filter:
                     continue
 
-            tile_id = tile.id()
             for feature in layer["features"]:
                 # if self._is_duplicate_feature(geojson_feature, tile) or self.cancel_requested:
                 #     continue
@@ -654,8 +659,6 @@ class VtReader(QObject):
                 if geojson_features and len(geojson_features) > 0:
                     feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
                     feature_collection["features"].extend(geojson_features)
-                    if tile_id not in feature_collection["tiles"]:
-                        feature_collection["tiles"].append(tile_id)
 
     def _get_feature_collection(self, layer_name, geo_type, zoom_level):
         name_and_geotype = (layer_name, geo_type)
