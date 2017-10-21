@@ -31,7 +31,7 @@ from PyQt4.QtGui import (
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
-from file_helper import *
+from file_helper import get_icons_directory, get_home_directory, get_sample_data_directory, clear_cache
 from tile_helper import *
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 

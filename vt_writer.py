@@ -2,7 +2,7 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 from builtins import object
-from file_helper import *
+from file_helper import get_temp_dir, get_cached_tile_file_name, get_cached_tile
 import os
 import sys
 import json

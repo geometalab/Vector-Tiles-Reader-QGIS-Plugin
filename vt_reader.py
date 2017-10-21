@@ -29,7 +29,7 @@ from file_helper import (
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt4.QtGui import QApplication
-from io import StringIO
+from io import BytesIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
@@ -426,7 +426,7 @@ class VtReader(QObject):
 
         is_zipped = is_gzipped(data)
         if is_zipped:
-            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+            file_content = GzipFile('', 'r', 0, BytesIO(data)).read()
         else:
             file_content = data
         return file_content

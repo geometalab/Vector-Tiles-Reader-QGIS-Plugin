@@ -2,7 +2,7 @@ from builtins import str
 from builtins import object
 from qgis.core import QgsMapLayerRegistry, QgsField, QgsVectorLayer, QgsFeatureRequest, QgsSpatialIndex
 from PyQt4.QtCore import QVariant
-from file_helper import *
+from file_helper import get_unique_geojson_file_name
 from log_helper import info, debug
 import processing
 import uuid
