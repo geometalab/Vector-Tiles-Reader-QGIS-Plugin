@@ -1,3 +1,7 @@
+from __future__ import division
+from builtins import str
+from builtins import object
+from past.utils import old_div
 import sys
 import json
 import os
@@ -7,7 +11,7 @@ from tile_helper import get_tile_bounds, latlon_to_tile
 from file_helper import FileHelper
 
 
-class TileJSON:
+class TileJSON(object):
     """
      * Wrapper for TileJSON v2.2.0
      * https://github.com/mapbox/tilejson-spec/tree/master/2.2.0
@@ -63,8 +67,8 @@ class TileJSON:
         else:
             bounds = self.bounds_tile(self.max_zoom())
             if bounds:
-                center_x = int((bounds["x_min"] + bounds["x_max"]) / 2)
-                center_y = int((bounds["y_min"] + bounds["y_max"]) / 2)
+                center_x = int(old_div((bounds["x_min"] + bounds["x_max"]), 2))
+                center_y = int(old_div((bounds["y_min"] + bounds["y_max"]), 2))
                 center = (center_x, center_y)
         return center
 

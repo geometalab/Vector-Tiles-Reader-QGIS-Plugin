@@ -1,9 +1,13 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import os
 import glob
 import uuid
 import tempfile
 import sys
-import cPickle as pickle
+import pickle as pickle
 import time
 from log_helper import info, critical, warn, debug
 from qgis.core import QgsNetworkAccessManager
@@ -13,7 +17,7 @@ from PyQt4.QtCore import QUrl
 from PyQt4.QtNetwork import QNetworkRequest
 
 
-class FileHelper:
+class FileHelper(object):
 
     geojson_folder = "geojson"
     max_cache_age_minutes = 1440  # 24 hours

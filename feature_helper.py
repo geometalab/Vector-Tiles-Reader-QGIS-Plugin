@@ -1,13 +1,15 @@
+from builtins import str
+from builtins import object
 from qgis.core import QgsMapLayerRegistry, QgsField, QgsVectorLayer, QgsFeatureRequest, QgsSpatialIndex
 from PyQt4.QtCore import QVariant
 from file_helper import FileHelper
-from log_helper import info, warn, critical, debug
+from log_helper import info, debug
 import processing
 import uuid
 import numbers
 
 
-class FeatureMerger:
+class FeatureMerger(object):
     """
      * The class FeatureMerger can be used to merge features over tile boundaries.
     """
@@ -38,10 +40,10 @@ class FeatureMerger:
 
         # Build a spatial index
         index = QgsSpatialIndex()
-        for f in feature_dict.values():
+        for f in list(feature_dict.values()):
             index.insertFeature(f)
 
-        for f in feature_dict.values():
+        for f in list(feature_dict.values()):
             if f[_DISSOLVE_GROUP_FIELD]:
                 continue
             f[_DISSOLVE_GROUP_FIELD] = str(uuid.uuid4())
@@ -84,7 +86,7 @@ class FeatureMerger:
         return dissolved_layer
 
 
-class _GeoTypes:
+class _GeoTypes(object):
     def __init__(self):
         pass
 

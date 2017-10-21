@@ -1,7 +1,10 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
 import os
 import sys
 import sqlite3
-import urlparse
+import urllib.parse
 import json
 
 from PyQt4.QtGui import QApplication
@@ -120,7 +123,7 @@ class ServerSource(AbstractSource):
         if not name:
             name = self.json.id()
         if not name:
-            name = urlparse.urlsplit(self.url)[1]
+            name = urllib.parse.urlsplit(self.url)[1]
         return name
 
     def min_zoom(self):
@@ -151,9 +154,9 @@ class ServerSource(AbstractSource):
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
 
-        parameters = urlparse.parse_qs(urlparse.urlparse(self.url).query)
+        parameters = urllib.parse.parse_qs(urllib.parse.urlparse(self.url).query)
         api_key = ""
-        if "api_key" in parameters.keys():
+        if "api_key" in list(parameters.keys()):
             api_key = parameters["api_key"][0]
         for t in tiles_to_load:
             col = t[0]
@@ -170,7 +173,7 @@ class ServerSource(AbstractSource):
         self._load_urls_async(zoom_level, urls)
 
     def _load_urls_async(self, zoom_level, urls_with_col_and_row):
-        replies = map(lambda url: (FileHelper.load_url_async(url[0]), (url[1], url[2])), urls_with_col_and_row)
+        replies = [(FileHelper.load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
         total_nr_of_requests = len(replies)
         all_finished = False
         nr_finished_before = 0
@@ -178,7 +181,7 @@ class ServerSource(AbstractSource):
         nr_finished = 0
         while not all_finished and not self._cancelling:
             results = []
-            new_finished = filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies)
+            new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
             nr_finished += len(new_finished)
             for r in new_finished:
                 reply = r[0]
@@ -196,10 +199,10 @@ class ServerSource(AbstractSource):
             if nr_finished != nr_finished_before:
                 nr_finished_before = nr_finished
                 self.progress_changed.emit(nr_finished)
-                tiles_with_data = map(lambda r: self._create_vector_tile_from_respond(zoom_level, r), results)
-                self.loading_result.emit(all_finished, list(tiles_with_data))
+                tiles_with_data = [self._create_vector_tile_from_respond(zoom_level, r) for r in results]
+                self.loading_result.emit(all_finished, tiles_with_data)
         if not all_finished and self._cancelling:
-            unfinished_requests = filter(lambda r: not r[0].isFinished, replies)
+            unfinished_requests = [r for r in replies if not r[0].isFinished]
             for r in unfinished_requests:
                 r.abort()
             self.loading_result.emit(True, [])
@@ -250,7 +253,7 @@ class MBTilesSource(AbstractSource):
                 .replace("[", "")\
                 .replace("]", "")\
                 .split(",")
-            bounds = map(lambda s: float(s), bounds)
+            bounds = [float(s) for s in bounds]
         scheme = self.scheme()
         return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme)
 
@@ -318,7 +321,7 @@ class MBTilesSource(AbstractSource):
                 if tiles_to_load:
                     where_clause += " AND"
             if tiles_to_load:
-                tile_coords = str(map(lambda x: "{};{}".format(x[0], x[1]), tiles_to_load)).replace("[", "").replace(
+                tile_coords = str(["{};{}".format(x[0], x[1]) for x in tiles_to_load]).replace("[", "").replace(
                     "]", "")
                 where_clause += " tile_column || \";\" || tile_row IN ({})".format(tile_coords)
         return where_clause

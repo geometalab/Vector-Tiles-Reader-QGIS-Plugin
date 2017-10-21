@@ -62,7 +62,12 @@ I would like to know where it was used.
 
 Class is available under the open-source GDAL license (www.gdal.org).
 """
+from __future__ import division
 
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import math
     
 
@@ -177,7 +182,7 @@ class GlobalMercator(object):
         "Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913"
 
         mx = lon * self.originShift / 180.0
-        my = math.log(math.tan((90 + lat) * math.pi / 360.0)) / (math.pi / 180.0)
+        my = old_div(math.log(math.tan((90 + lat) * math.pi / 360.0)), (old_div(math.pi, 180.0)))
 
         my = my * self.originShift / 180.0
         return mx, my
@@ -185,10 +190,10 @@ class GlobalMercator(object):
     def MetersToLatLon(self, mx, my):
         "Converts XY point from Spherical Mercator EPSG:900913 to lat/lon in WGS84 Datum"
 
-        lon = (mx / self.originShift) * 180.0
-        lat = (my / self.originShift) * 180.0
+        lon = (old_div(mx, self.originShift)) * 180.0
+        lat = (old_div(my, self.originShift)) * 180.0
 
-        lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180.0)) - math.pi / 2.0)
+        lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180.0)) - old_div(math.pi, 2.0))
         return lat, lon
 
     def PixelsToMeters(self, px, py, zoom):
@@ -203,15 +208,15 @@ class GlobalMercator(object):
         "Converts EPSG:900913 to pyramid pixel coordinates in given zoom level"
 
         res = self.Resolution(zoom)
-        px = (mx + self.originShift) / res
-        py = (my + self.originShift) / res
+        px = old_div((mx + self.originShift), res)
+        py = old_div((my + self.originShift), res)
         return px, py
 
     def PixelsToTile(self, px, py):
         "Returns a tile covering region in given pixel coordinates"
 
-        tx = int(math.ceil(px / float(self.tileSize)) - 1)
-        ty = int(math.ceil(py / float(self.tileSize)) - 1)
+        tx = int(math.ceil(old_div(px, float(self.tileSize))) - 1)
+        ty = int(math.ceil(old_div(py, float(self.tileSize))) - 1)
         return tx, ty
 
     def PixelsToRaster(self, px, py, zoom):
@@ -246,7 +251,7 @@ class GlobalMercator(object):
         "Resolution (meters/pixel) for given zoom level (measured at Equator)"
 
         # return (2 * math.pi * 6378137) / (self.tileSize * 2**zoom)
-        return self.initialResolution / (2 ** zoom)
+        return old_div(self.initialResolution, (2 ** zoom))
 
     def ZoomForPixelSize(self, pixelSize):
         "Maximal scaledown zoom of the pyramid closest to the pixelSize."
@@ -322,15 +327,15 @@ class GlobalGeodetic(object):
         "Converts lat/lon to pixel coordinates in given zoom of the EPSG:4326 pyramid"
 
         res = 180 / 256.0 / 2 ** zoom
-        px = (180 + lat) / res
-        py = (90 + lon) / res
+        px = old_div((180 + lat), res)
+        py = old_div((90 + lon), res)
         return px, py
 
     def PixelsToTile(self, px, py):
         "Returns coordinates of the tile covering region in pixel coordinates"
 
-        tx = int(math.ceil(px / float(self.tileSize)) - 1)
-        ty = int(math.ceil(py / float(self.tileSize)) - 1)
+        tx = int(math.ceil(old_div(px, float(self.tileSize))) - 1)
+        ty = int(math.ceil(old_div(py, float(self.tileSize))) - 1)
         return tx, ty
 
     def Resolution(self, zoom):

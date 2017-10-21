@@ -1,3 +1,7 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 from file_helper import FileHelper
 import os
 import sys
@@ -6,7 +10,7 @@ import sqlite3
 import uuid
 import mapbox_vector_tile
 
-from cStringIO import StringIO
+from io import StringIO
 from gzip import GzipFile
 from log_helper import critical, info, debug
 from global_map_tiles import GlobalMercator
@@ -15,7 +19,7 @@ from feature_helper import geo_types, is_multi
 from PyQt4.QtGui import QMessageBox, QApplication
 
 
-class VtWriter:
+class VtWriter(object):
 
     def __init__(self, iface, file_destination, progress_handler):
         self.iface = iface
@@ -84,7 +88,7 @@ class VtWriter:
                             self._save_tile(t)
 
                         if not self._cancel_requested:
-                            layer_objects = map(lambda l: {"id": l}, self.layer_names)
+                            layer_objects = [{"id": l} for l in self.layer_names]
                             vector_layers = {"vector_layers": layer_objects}
                             self.metadata["json"] = json.dumps(vector_layers)
                             self._save_metadata()
@@ -127,7 +131,7 @@ class VtWriter:
     def _get_loaded_tile_names(self):
         all_layers = self._get_layers()
 
-        self.layers_to_export = map(lambda l: l.shortName(), all_layers)
+        self.layers_to_export = [l.shortName() for l in all_layers]
 
         source_to_export = None
         warning_shown = False
@@ -170,7 +174,7 @@ class VtWriter:
                     if not max_zoom or zoom_level > max_zoom:
                         self._set_metadata("maxzoom", zoom_level)
 
-                    collection_tiles = map(lambda t: (int(t.split(";")[0]), int(t.split(";")[1])), feature_collection["tiles"])
+                    collection_tiles = [(int(t.split(";")[0]), int(t.split(";")[1])) for t in feature_collection["tiles"]]
                     for t in collection_tiles:
                         cached_tile_name = FileHelper.get_cached_tile_file_name(source_name, zoom_level, t[0], t[1])
                         tile_names.add(cached_tile_name)
@@ -250,7 +254,7 @@ class VtWriter:
             "name": layer_name,
             "features": []}
         debug("current layer: {}", layer_name)
-        for k in layer.keys():
+        for k in list(layer.keys()):
             if k != "features":
                 converted_layer[k] = layer[k]
 
@@ -303,7 +307,7 @@ class VtWriter:
         """
 
         new_feature = {}
-        for k in f.keys():
+        for k in list(f.keys()):
             if k != "geometry":
                 new_feature[k] = f[k]
         return new_feature

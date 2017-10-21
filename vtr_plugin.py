@@ -13,6 +13,9 @@ of the License, or (at your option) any later version.
 
 """
 
+from builtins import map
+from builtins import str
+from builtins import object
 from log_helper import info, critical
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import (
@@ -66,7 +69,7 @@ omt_layer_ordering = [
 ]
 
 
-class VtrPlugin:
+class VtrPlugin(object):
     _dialog = None
     _model = None
     _reload_button_text = "Load features overlapping the view extent"
@@ -294,7 +297,7 @@ class VtrPlugin:
 
     def _get_all_own_layers(self):
         layers = []
-        for l in QgsMapLayerRegistry.instance().mapLayers().values():
+        for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
             data_url = l.dataUrl().lower()
             if data_url and self._current_reader.source.source().lower().startswith(data_url):
                 layers.append(l)
@@ -330,7 +333,7 @@ class VtrPlugin:
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
         extent = self._get_current_extent_as_wkt()
         splits = extent.split(", ")
-        new_extent = map(lambda x: map(float, x.split(" ")), splits)
+        new_extent = [list(map(float, x.split(" "))) for x in splits]
         min_extent = new_extent[0]
         max_extent = new_extent[1]
 
@@ -737,7 +740,7 @@ class VtrPlugin:
         root_group = root.findGroup(root_group_name)
         if not root_group:
             root_group = root.addGroup(root_group_name)
-        layers = map(lambda l: l["id"], self._current_reader.source.vector_layers())
+        layers = [l["id"] for l in self._current_reader.source.vector_layers()]
 
         if sort_layers:
             layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))

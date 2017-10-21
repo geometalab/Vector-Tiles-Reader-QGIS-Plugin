@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import filter
+from builtins import str
 import sys
 import os
 import json
@@ -14,7 +19,7 @@ from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, G
 from file_helper import FileHelper
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-from cStringIO import StringIO
+from io import StringIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
@@ -291,8 +296,8 @@ class VtReader(QObject):
 
     @staticmethod
     def _get_extent(tiles, zoom_level):
-        loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
-        loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
+        loaded_tiles_x = [t.coord()[0] for t in tiles]
+        loaded_tiles_y = [t.coord()[1] for t in tiles]
         if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
             return None
 
@@ -355,7 +360,7 @@ class VtReader(QObject):
         except NotImplementedError:
             info("CPU count cannot be retrieved. Falling back to default = 4")
 
-        tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
+        tiles_with_encoded_data = [(t[0], self._unzip(t[1])) for t in tiles_with_encoded_data]
 
         if can_load_lib():
             # info("Decoding native")
@@ -447,8 +452,8 @@ class VtReader(QObject):
         # self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), qgis_layers.iteritems())
-        own_layers = map(lambda (n, l): l, vt_qgis_name_layer_tuples)
+        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), iter(qgis_layers.items())))
+        own_layers = list(map(lambda (n, l): l, vt_qgis_name_layer_tuples))
         for l in own_layers:
             name = l.name()
             geo_type = l.customProperty("geo_type")
@@ -490,7 +495,7 @@ class VtReader(QObject):
 
         if len(new_layers) > 0:
             self._update_progress(msg="Adding new layers...")
-            only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], new_layers))
+            only_layers = list([layer_name_tuple[2] for layer_name_tuple in new_layers])
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in new_layers:
             self.add_layer_to_group.emit(layer)
@@ -539,7 +544,7 @@ class VtReader(QObject):
         :param layer_source_file: 
         :return: 
         """
-        layers = filter(lambda l: l.name() == layer_name and l.source() == layer_source_file, all_layers)
+        layers = [l for l in all_layers if l.name() == layer_name and l.source() == layer_source_file]
         if len(layers) > 0:
             return layers[0]
         return None

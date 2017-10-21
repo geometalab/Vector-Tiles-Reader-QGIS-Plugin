@@ -1,10 +1,16 @@
+from __future__ import division
+from builtins import str
+from builtins import map
+from builtins import range
+from past.utils import old_div
+from builtins import object
 from global_map_tiles import GlobalMercator
 from osgeo import osr
 import operator
 from log_helper import warn, debug
 
 
-class VectorTile:
+class VectorTile(object):
     
     decoded_data = None
 
@@ -205,12 +211,12 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
     if not nr_of_tiles or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles
 
-    min_x = min(map(lambda t: t[0], available_tiles))
-    min_y = min(map(lambda t: t[1], available_tiles))
-    max_x = max(map(lambda t: t[0], available_tiles))
-    max_y = max(map(lambda t: t[1], available_tiles))
+    min_x = min([t[0] for t in available_tiles])
+    min_y = min([t[1] for t in available_tiles])
+    max_x = max([t[0] for t in available_tiles])
+    max_y = max([t[1] for t in available_tiles])
 
-    center_tile_offset = (int(round((max_x-min_x)/2)), int(round((max_y-min_y)/2)))
+    center_tile_offset = (int(round(old_div((max_x-min_x),2))), int(round(old_div((max_y-min_y),2))))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
     if center_tile in available_tiles:
@@ -228,7 +234,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
             nr_of_steps += 1
 
         #  go nr_of_steps steps into the current direction
-        for s in xrange(nr_of_steps):
+        for s in range(nr_of_steps):
             current_tile = _sum_tiles(current_tile, _directions[current_direction])
             if current_tile in available_tiles:
                 selected_tiles.add(current_tile)
