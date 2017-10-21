@@ -209,9 +209,16 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     ])
 
     _OMT = "OpenMapTiles.com"
+    _MAPZEN = "Mapzen.com"
 
-    _predefined_connections = {_OMT: "https://free.tilehosting.com/data/v3.json?key={token}"}
-    _tokens = {_OMT: "6irhAXGgsi8TrIDL0211"}
+    _predefined_connections = {
+        _OMT: "https://free.tilehosting.com/data/v3.json?key={token}",
+        _MAPZEN: "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}"
+    }
+    _tokens = {
+        _OMT: "6irhAXGgsi8TrIDL0211",
+        _MAPZEN: "mapzen-7SNUCXx"
+    }
 
     def __init__(self, default_browse_directory):
         QtGui.QDialog.__init__(self)
