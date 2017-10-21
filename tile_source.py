@@ -13,6 +13,7 @@ from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
 from file_helper import FileHelper
 from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds
+from network_helper import load_url, url_exists, load_url_async
 
 _DEFAULT_CRS = "EPSG:3857"
 
@@ -96,7 +97,7 @@ class ServerSource(AbstractSource):
         if not url:
             raise RuntimeError("URL is required")
 
-        valid, error = FileHelper.url_exists(url)
+        valid, error = url_exists(url)
         if not valid:
             raise RuntimeError(error)
 
@@ -172,7 +173,7 @@ class ServerSource(AbstractSource):
         return self._load_urls_async(zoom_level, urls)
 
     def _load_urls_async(self, zoom_level, urls_with_col_and_row):
-        replies = [(FileHelper.load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
+        replies = [(load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
         total_nr_of_requests = len(replies)
         all_finished = False
         nr_finished_before = 0

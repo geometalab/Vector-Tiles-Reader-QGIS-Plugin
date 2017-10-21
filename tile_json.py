@@ -8,7 +8,7 @@ import os
 import ast
 from log_helper import critical, debug, info
 from tile_helper import get_tile_bounds, latlon_to_tile
-from file_helper import FileHelper
+from network_helper import load_url
 
 
 class TileJSON(object):
@@ -29,7 +29,7 @@ class TileJSON(object):
                 with open(self.url, 'r') as f:
                     data = f.read()
             else:
-                status, data = FileHelper.load_url(self.url)
+                status, data = load_url(self.url)
             self.json = json.loads(data)
             if self.json:
                 debug("TileJSON loaded")

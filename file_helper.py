@@ -10,11 +10,6 @@ import sys
 import pickle as pickle
 import time
 from log_helper import info, critical, warn, debug
-from qgis.core import QgsNetworkAccessManager
-
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import QUrl
-from PyQt4.QtNetwork import QNetworkRequest
 
 
 class FileHelper(object):
@@ -24,16 +19,6 @@ class FileHelper(object):
 
     def __init__(self):
         pass
-
-    @staticmethod
-    def url_exists(url):
-        status, data = FileHelper.load_url(url)
-        result = status == 200
-        error = None
-        if status != 200:
-            error = data
-
-        return result, error
 
     @staticmethod
     def get_plugin_directory():
@@ -117,31 +102,6 @@ class FileHelper(object):
             except:
                 warn("File could not be deleted: {}", f)
         info("Cache cleared")
-
-    @staticmethod
-    def load_url_async(url):
-        m = QgsNetworkAccessManager.instance()
-        req = QNetworkRequest(QUrl(url))
-        req.setRawHeader('User-Agent', 'Magic Browser')
-        reply = m.get(req)
-        return reply
-
-    @staticmethod
-    def load_url(url):
-        reply = FileHelper.load_url_async(url)
-        while not reply.isFinished():
-            QApplication.processEvents()
-
-        http_status_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
-        if http_status_code == 200:
-            content = reply.readAll().data()
-        else:
-            if http_status_code is None:
-                content = "Request failed: {}".format(reply.errorString())
-            else:
-                content = "Request failed: HTTP status {}".format(http_status_code)
-            warn(content)
-        return http_status_code, content
 
     @staticmethod
     def assure_temp_dirs_exist():
