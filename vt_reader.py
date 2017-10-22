@@ -608,8 +608,7 @@ class VtReader(QObject):
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
 
         if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-            layer = FeatureMerger().merge_features(layer)
-            layer.setName(layer_name)
+            FeatureMerger().merge_features(layer)
         return layer
 
     def _handle_geojson_features(self, tile, layer_name, features):
