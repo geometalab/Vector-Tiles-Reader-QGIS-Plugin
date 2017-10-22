@@ -1,4 +1,5 @@
 #include <vtzero/vector_tile.hpp>
+#include <vtzero/feature.hpp>
 
 #include <fstream>
 #include <getopt.h>
@@ -12,6 +13,30 @@ struct tile_location {
 	const double y;
 	const double spanX;
 	const double spanY;
+};
+
+struct Point {
+    double x;
+    double y;
+};
+
+struct BoundingBox {
+    Point min;
+    Point max;
+
+    bool intersects(const BoundingBox &other) const {
+      return
+        (min.x < other.max.x) && (max.x > other.min.x) &&
+        (min.y < other.max.y) && (max.y > other.min.y);
+    }
+
+    bool contains(const BoundingBox& other) const {
+        return
+            min.x <= other.min.x &&
+            max.x >= other.max.x &&
+            min.y <= other.min.y &&
+            max.y >= other.max.y;
+    }
 };
 
 struct my_geom_handler_points {
@@ -84,45 +109,53 @@ struct my_geom_handler_polygons {
 	tile_location& loc;
 	std::string& result;
 
+    std::vector<std::vector<Point>>& rings;
+
 	bool alreadyBeenHere;
 	std::string temp;
 
+    std::vector<Point> _currentRing;
+
     void ring_begin(uint32_t count) {
-		if (alreadyBeenHere) {
-			temp = ",[";
-		} else {
-			temp = "[";
-		}
-		alreadyBeenHere = true;
+        _currentRing = std::vector<Point>();
+//		if (alreadyBeenHere) {
+//			temp = ",[";
+//		} else {
+//			temp = "[";
+//		}
+//		alreadyBeenHere = true;
     }
 
     void ring_point(const vtzero::point point) {
 		auto absoluteX = loc.x + loc.spanX / extent * point.x;
 		auto absoluteY = loc.y + loc.spanY / extent * point.y;
 
-		temp += '[';
-		temp +=  std::to_string(absoluteX);
-        temp +=  ',';
-        temp +=  std::to_string(absoluteY);
-        temp +=  "],";
+        _currentRing.push_back(Point{absoluteX, absoluteY});
+
+//		temp += '[';
+//		temp +=  std::to_string(absoluteX);
+//        temp +=  ',';
+//        temp +=  std::to_string(absoluteY);
+//        temp +=  "],";
     }
 
     void ring_end(bool is_outer) {
-        if (temp.back() == ',') {
-            temp.back() = ' ';
-        }
-		temp += ']';
-		result += temp;
+        rings.push_back(_currentRing);
+//        if (temp.back() == ',') {
+//            temp.back() = ' ';
+//        }
+//		temp += ']';
+//		result += temp;
     }
 };
 
 struct my_print_value {
 
-	std::stringstream& output;
+	std::string& output;
 
     template <typename T>
     void operator()(const T& value) const {
-        output << value;
+        output += value;
     }
 
     void operator()(const vtzero::data_view& value) const {
@@ -147,9 +180,129 @@ struct my_print_value {
             }
         }
 
-        output << '"' << o.str() << '"';
+        output += '"';
+        output += o.str();
+        output += '"';
     }
 };
+
+BoundingBox getBoundingBox(std::vector<Point>& ring) {
+    int count = 0;
+    Point min;
+    Point max;
+    for (auto p : ring) {
+        if (count++ == 0) {
+            min.x = p.x;
+            min.y = p.y;
+            max.x = p.x;
+            max.y = p.y;
+        } else {
+            min.x = std::min(min.x, p.x);
+            min.y = std::min(min.y, p.y);
+            max.x = std::max(max.x, p.x);
+            max.y = std::max(max.y, p.y);
+        }
+    }
+    return BoundingBox{min, max};
+}
+
+void getFeature(const std::string& id, const std::string& coordinates) {
+    std::string result = "{\"id\":";
+    result += id;
+    result += ',';
+}
+
+std::string ringToString(std::vector<Point>& ring) {
+    std::string result("[");
+    int count = 0;
+    for(auto p : ring) {
+        if (count++>0) {
+            result += ",[";
+        } else {
+            result += '[';
+        }
+        result += std::to_string(p.x);
+        result += ',';
+        result += std::to_string(p.y);
+        result += ']';
+    }
+    result += ']';
+    return result;
+}
+
+std::string ringsToString(std::vector<std::vector<Point>>& rings) {
+    std::string result("[");
+    int count = 0;
+    for (auto r: rings) {
+        if (count++>0) {
+            result += ',';
+        }
+        result += ringToString(r);
+    }
+    result += ']';
+    return result;
+}
+
+std::string getPolygonFeatures(std::string& id, std::string& properties, std::vector<std::vector<Point>>& rings, const bool splitPolygons) {
+    if (rings.size() == 0)
+        return "";
+
+    std::string result;
+
+    std::vector<Point> mainRing = rings[0];
+
+    std::vector<std::vector<Point>> mainRings;
+    mainRings.push_back(mainRing);
+    auto mainBox = getBoundingBox(mainRing);
+    std::vector<std::vector<Point>> separateRings;
+
+    auto nrRings = int(rings.size());
+    if (!splitPolygons && nrRings > 1) {
+        for (int i=1;i<nrRings; i++) {
+            auto ring = rings[i];
+            mainRings.push_back(ring);
+        }
+    } else if (splitPolygons && nrRings > 1) {
+        for (int i=1;i<nrRings; i++) {
+            auto ring = rings[i];
+            auto newBox = getBoundingBox(ring);
+            if (mainBox.contains(newBox)) {
+                mainRings.push_back(ring);
+            } else {
+                separateRings.push_back(ring);
+            }
+        }
+    }
+
+    std::vector<std::string> coords;
+    auto mainFeatureCoords = ringsToString(mainRings);
+    coords.push_back(mainFeatureCoords);
+    if (int(separateRings.size()) > 0) {
+        for (auto r: separateRings) {
+            std::string newRingString = ringToString(r);
+            coords.push_back(newRingString);
+        }
+    }
+
+    int count = 0;
+    for (auto c: coords) {
+        if (count++>0) {
+            result += ',';
+        }
+        result += "{\"id\":";
+        result += id;
+        result += ",\"type\":\"Feature\",\"geometry\":{\"coordinates\":[";
+
+        result += c;
+        result += "],\n\"type\":\"MultiPolygon\"";
+        result += "},\"properties\":";
+        result += properties;
+        result += '}';
+    }
+
+    return result;
+}
+
 
 void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result) {
 	result << "\"" << std::string{layer.name()} << "\":{";
@@ -163,49 +316,59 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 		if (featureCount++ > 0) {
 			result << ',';
 		}
-		result << "{\"id\":";
-		if (feature.has_id()) {
-			result << feature.id() << ", ";
-		} else {
-			result << "0, ";
-		}
-		result << "\"type\":" << "\"Feature\",";
 
-		std::string coordinatesString("");
-		result << "\"geometry\":{\"coordinates\":";
-		switch (feature.geometry_type()) {
-			case vtzero::GeomType::POINT:
-				vtzero::decode_point_geometry(feature.geometry(), false, my_geom_handler_points{extent, loc, result});
-				result << ", \"type\": \"Point\"";
-				break;
-			case vtzero::GeomType::LINESTRING:
-				vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, loc, coordinatesString});
-					result << '[' << coordinatesString << ']';
-					result << ",\"type\":\"MultiLineString\"";
-				break;
-			case vtzero::GeomType::POLYGON:
-				vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, loc, coordinatesString});
-					result << "[[" << coordinatesString << "]]";
-					result << ",\"type\":\"MultiPolygon\"";
-				break;
-			default:
-				result << "UNKNOWN GEOMETRY TYPE\n";
+        std::string id;
+		if (feature.has_id()) {
+		    id = std::to_string(feature.id());
+		} else {
+		    id = "0,";
 		}
-		result << "},\"properties\": {";
 
 		int propertyCount = 0;
-		std::string propertyValue;
-		while (auto property = feature.next_property()) {
-			if (propertyCount++ > 0) {
-				result << ',';
-			}
-			result << "\"" << std::string(property.key()) << "\": ";
-			vtzero::apply_visitor(my_print_value{result}, property.value());
+		std::string properties = "{";
+//		while (auto property = feature.next_property()) {
+//			if (propertyCount++ > 0) {
+//				properties += ',';
+//			}
+//			properties += "\"";
+//			properties += std::string(property.key());
+//			properties += "\":";
+//			vtzero::apply_visitor(my_print_value{properties}, property.value());
+//		}
+		properties += '}';
+
+        std::string coordinatesString("");
+		if (feature.geometry_type() == vtzero::GeomType::POLYGON) {
+            // todo: create multipolygon here by using method getPolygonFeatures
+            std::vector<std::vector<Point>> rings;
+            vtzero::decode_polygon_geometry(feature.geometry(), false, my_geom_handler_polygons{extent, loc, coordinatesString, rings});
+            auto newFeatures = getPolygonFeatures(id, properties, rings, true);
+            for(auto f : newFeatures) {
+                result << f;
+            }
+		} else {
+		    // todo: create handle point and linestring feature here
+		    result << "{\"id\":" << id << ",\"type\":\"Feature\",\"properties\":" << properties << ",\"geometry\":{\"coordinates\":";
+		    switch (feature.geometry_type()) {
+                case vtzero::GeomType::POINT:
+                    vtzero::decode_point_geometry(feature.geometry(), false, my_geom_handler_points{extent, loc, result});
+                    result << ",\n\"type\": \"Point\"";
+                    break;
+                case vtzero::GeomType::LINESTRING:
+                    vtzero::decode_linestring_geometry(feature.geometry(), false, my_geom_handler_linestrings{extent, loc, coordinatesString});
+                        result << '[' << coordinatesString << ']';
+                        result << ",\n\"type\":\"MultiLineString\"";
+                    break;
+                default:
+                    result << "\"UNKNOWN GEOMETRY TYPE\"";
+		    }
+		    result << "}}";
 		}
-		result << "}}";
-		//break;
+
+
+//		break;
 	}
-	result << "]\n}";
+	result << "]}";
 }
 
 
