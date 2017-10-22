@@ -1,12 +1,15 @@
 from builtins import str
 from builtins import object
 from qgis.core import QgsMapLayerRegistry, QgsField, QgsVectorLayer, QgsFeatureRequest, QgsSpatialIndex
-from PyQt4.QtCore import QVariant
+from PyQt4.QtCore import *
 from file_helper import get_unique_geojson_file_name
 from log_helper import info, debug
 import processing
 import uuid
 import numbers
+
+from shapely.geometry.multipolygon import MultiPolygon
+from shapely import wkt
 
 
 class FeatureMerger(object):
@@ -23,9 +26,9 @@ class FeatureMerger(object):
         info("Merging features of layer: {}".format(layer_name))
 
         self._prepare_features_for_dissolvment(layer)
-        dissolved_layer = self._dissolve(layer)
-
-        return dissolved_layer
+        # dissolved_layer = self._dissolve(layer)
+        # return dissolved_layer
+        return layer
 
     @staticmethod
     def _prepare_features_for_dissolvment(layer):
@@ -43,36 +46,41 @@ class FeatureMerger(object):
         for f in list(feature_dict.values()):
             index.insertFeature(f)
 
+        handled_features = []
         for f in list(feature_dict.values()):
             if f[_DISSOLVE_GROUP_FIELD]:
                 continue
-            f[_DISSOLVE_GROUP_FIELD] = str(uuid.uuid4())
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(_DISSOLVE_GROUP_FIELD, index, f, [], feature_dict, feature_handler=lambda feat: layer.updateFeature(feat), feature_class_attr_index=idx)
+            f[_DISSOLVE_GROUP_FIELD] = "{}".format(uuid.uuid4())
+            handled_features.append(f.id())
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(handled_features, _DISSOLVE_GROUP_FIELD, index, f, [], feature_dict, feature_handler=lambda feat: layer.updateFeature(feat), feature_class_attr_index=idx)
             layer.updateFeature(f)
         layer.commitChanges()
         debug('Dissolvement complete: {}', layer.name())
         return
 
     @staticmethod
-    def _assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, f, neighbours, feature_dict, feature_handler, feature_class_attr_index):
+    def _assign_dissolve_group_to_neighbours_rec(handled_features, dissolve_gorup_field, index, f, neighbours, feature_dict, feature_handler, feature_class_attr_index):
         geom = f.geometry()
 
         if geom:
             intersecting_ids = index.intersects(geom.boundingBox())
+            for h in handled_features:
+                if h in intersecting_ids:
+                    intersecting_ids.remove(h)
         else:
             intersecting_ids = []
 
         new_neighbours = []
         for intersecting_id in intersecting_ids:
             intersecting_f = feature_dict[intersecting_id]
-            if f != intersecting_f and not intersecting_f.geometry().disjoint(geom) and f.attributes()[feature_class_attr_index] == intersecting_f.attributes()[feature_class_attr_index]:
-                if not intersecting_f[dissolve_gorup_field]:
-                    intersecting_f[dissolve_gorup_field] = f[dissolve_gorup_field]
-                    new_neighbours.append(intersecting_f)
-                    feature_handler(intersecting_f)
+            if not intersecting_f[dissolve_gorup_field] and not intersecting_f.geometry().disjoint(geom):
+                intersecting_f[dissolve_gorup_field] = "{}".format(f[dissolve_gorup_field])
+                handled_features.append(intersecting_id)
+                new_neighbours.append(intersecting_f)
+                feature_handler(intersecting_f)
 
         for n in new_neighbours:
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, n, neighbours, feature_dict, feature_handler, feature_class_attr_index)
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(handled_features, dissolve_gorup_field, index, n, neighbours, feature_dict, feature_handler, feature_class_attr_index)
 
         neighbours.extend(new_neighbours)
         return neighbours

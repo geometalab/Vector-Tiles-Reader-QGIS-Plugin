@@ -371,7 +371,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     def set_layers(self, layers):
         self.model.removeRows(0, self.model.rowCount())
-        for row_index, layer in enumerate(layers):
+
+        for row_index, layer in enumerate(sorted(layers)):
             for header_index, header in enumerate(self._table_headers.keys()):
                 header_value = self._table_headers[header]
                 if header_value in layer:
