@@ -206,12 +206,6 @@ BoundingBox getBoundingBox(std::vector<Point>& ring) {
     return BoundingBox{min, max};
 }
 
-void getFeature(const std::string& id, const std::string& coordinates) {
-    std::string result = "{\"id\":";
-    result += id;
-    result += ',';
-}
-
 std::string ringToString(std::vector<Point>& ring) {
     std::string result("[");
     int count = 0;
@@ -323,7 +317,7 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 		if (feature.has_id()) {
 		    id = std::to_string(feature.id());
 		} else {
-		    id = "0,";
+		    id = '0';
 		}
 
 		int propertyCount = 0;
