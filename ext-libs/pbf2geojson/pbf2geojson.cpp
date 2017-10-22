@@ -243,7 +243,7 @@ std::string ringsToString(std::vector<std::vector<Point>>& rings) {
     return result;
 }
 
-std::string getPolygonFeatures(std::string& id, std::string& properties, std::vector<std::vector<Point>>& rings, const bool splitPolygons) {
+std::string getPolygonFeatures(std::string& id, std::string& properties, std::vector<std::vector<Point>>& rings, const bool& splitPolygons) {
     if (rings.size() == 0)
         return "";
 
@@ -279,7 +279,9 @@ std::string getPolygonFeatures(std::string& id, std::string& properties, std::ve
     coords.push_back(mainFeatureCoords);
     if (int(separateRings.size()) > 0) {
         for (auto r: separateRings) {
-            std::string newRingString = ringToString(r);
+            std::string newRingString("[");
+             newRingString += ringToString(r);
+             newRingString += ']';
             coords.push_back(newRingString);
         }
     }
