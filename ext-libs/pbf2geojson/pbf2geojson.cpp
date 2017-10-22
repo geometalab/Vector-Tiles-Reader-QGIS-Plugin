@@ -155,7 +155,7 @@ struct my_print_value {
 
     template <typename T>
     void operator()(const T& value) const {
-        output += value;
+        output += std::to_string(value);
     }
 
     void operator()(const vtzero::data_view& value) const {
@@ -322,15 +322,15 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 
 		int propertyCount = 0;
 		std::string properties = "{";
-//		while (auto property = feature.next_property()) {
-//			if (propertyCount++ > 0) {
-//				properties += ',';
-//			}
-//			properties += "\"";
-//			properties += std::string(property.key());
-//			properties += "\":";
-//			vtzero::apply_visitor(my_print_value{properties}, property.value());
-//		}
+		while (auto property = feature.next_property()) {
+			if (propertyCount++ > 0) {
+				properties += ',';
+			}
+			properties += "\"";
+			properties += std::string(property.key());
+			properties += "\":";
+			vtzero::apply_visitor(my_print_value{properties}, property.value());
+		}
 		properties += '}';
 
         std::string coordinatesString("");
