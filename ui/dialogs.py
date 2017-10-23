@@ -76,24 +76,28 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     def _on_max_zoom_selected(self, enabled):
         self._zoom_change_handler()
 
+    def set_zoom_level(self, zoom_level):
+        self.zoomSpin.setValue(zoom_level)
+
     def set_nr_of_tiles(self, nr_tiles):
         self.lblNumberTilesInCurrentExtent.setText("(Current extent: {} tiles)".format(nr_tiles))
 
     def _reset_to_basemap_defaults(self):
-        self._set_settings(auto_zoom=True, tile_limit=32, styles_enabled=True, merging_enabled=False,
+        self._set_settings(auto_zoom=True, fix_zoom=False, tile_limit=32, styles_enabled=True, merging_enabled=False,
                            clip_tile_at_bounds=False)
 
     def _reset_to_analysis_defaults(self):
-        self._set_settings(auto_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
+        self._set_settings(auto_zoom=False, fix_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
                            clip_tile_at_bounds=True)
 
     def _reset_to_inspection_defaults(self):
-        self._set_settings(auto_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
+        self._set_settings(auto_zoom=False, fix_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
                            clip_tile_at_bounds=False)
 
-    def _set_settings(self, auto_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds):
-        self.rbZoomMax.setChecked(not auto_zoom)
+    def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds):
+        self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
         self.rbAutoZoom.setChecked(auto_zoom)
+        self.rbZoomManual.setChecked(fix_zoom)
         tile_limit_enabled = tile_limit is not None
         self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
         if tile_limit_enabled:
@@ -270,6 +274,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
 
+    def set_current_zoom_level(self, zoom_level):
+        self.options.set_zoom_level(zoom_level)
+
     def set_nr_of_tiles(self, nr_tiles):
         self.options.set_nr_of_tiles(nr_tiles)
 
@@ -408,7 +415,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if name in self.connections:
             enable_connect = True
             enable_edit = name not in self._predefined_connections
-            is_omt = name == "OpenMapTiles.com"
+            is_omt = name.startswith("OpenMapTiles.com")
             self.options.set_omt_styles_enabled(is_omt)
 
         self.btnConnect.setEnabled(enable_connect)

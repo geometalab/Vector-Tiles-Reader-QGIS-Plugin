@@ -303,6 +303,13 @@ class VtrPlugin(object):
         nr_of_tiles = bounds["width"] * bounds["height"]
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
+        map_scale_zoom = self._get_zoom_for_current_map_scale()
+        if self._current_reader:
+            min_zoom = self._current_reader.source.min_zoom()
+            max_zoom = self._current_reader.source.max_zoom()
+            map_scale_zoom = clamp(map_scale_zoom, low=min_zoom, high=max_zoom)
+        self.connections_dialog.set_current_zoom_level(map_scale_zoom)
+
     def _show_connections_dialog(self):
         self._update_nr_of_tiles()
         self.connections_dialog.show()
