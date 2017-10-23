@@ -208,7 +208,7 @@ class VtReader(QObject):
     def _load_tiles(self):
         try:
             if can_load_lib():
-                info("Native decoding supported")
+                info("Native decoding supported!!!")
             else:
                 bits = "32"
                 if sys.maxsize > 2**32:
