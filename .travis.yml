@@ -1,5 +1,12 @@
 sudo: required
 
+language: python
+
+python:
+  - "2.7"
+
+cache: pip
+
 services:
   - docker
 
@@ -10,6 +17,7 @@ before_install:
   - docker pull elpaso/qgis-testing-environment:latest
 
 install:
+    - pip install -r requirements.txt
     - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 elpaso/qgis-testing-environment
     - sleep 10
     # Setup qgis and enable the plugin
