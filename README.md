@@ -32,6 +32,12 @@ Acknowledgments:
 * Raphael Das Gupta
 * Carmelo Schumacher
 
+## Docker Tests
+docker build -t vtr-tests .
+docker run --name vtr-tests -d -v $(pwd):/vector-tiles-reader vtr-tests
+docker exec -it vtr-tests sh -c "qgis_testrunner.sh vector_tiles_reader.test_vtreader"
+
+
 ## Technical documentation
 
 Name conventions for Vector Tiles Reader QGIS Plugin:
