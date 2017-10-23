@@ -208,8 +208,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         ("Description", "description")
     ])
 
-    _OMT = "OpenMapTiles.com"
-    _MAPZEN = "Mapzen.com"
+    _OMT = "OpenMapTiles.com (default entry with credits)"
+    _MAPZEN = "Mapzen.com (default entry with credits)"
 
     _predefined_connections = {
         _OMT: "https://free.tilehosting.com/data/v3.json?key={token}",
