@@ -31,7 +31,11 @@ from PyQt4.QtGui import (
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
-from file_helper import get_icons_directory, get_home_directory, get_sample_data_directory, clear_cache
+from file_helper import (get_icons_directory,
+                         get_home_directory,
+                         get_sample_data_directory,
+                         clear_cache,
+                         get_plugin_directory)
 from tile_helper import *
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
@@ -39,6 +43,7 @@ import os
 import sys
 import site
 import traceback
+import re
 
 # try:
 #     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'
@@ -90,6 +95,7 @@ class VtrPlugin(object):
         iface.projectRead.connect(self._on_project_change)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
+        self._clear_cache_when_version_changed()
         self.connections_dialog = ConnectionsDialog(get_sample_data_directory())
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
@@ -118,6 +124,24 @@ class VtrPlugin(object):
         self._extent_to_load = None
         self.message_bar_item = None
         self.progress_bar = None
+
+    def _clear_cache_when_version_changed(self):
+        latest_version = self._get_plugin_version()
+        local_version = self.settings.value("vectortilereader/version", None)
+        if not local_version or local_version != latest_version:
+            clear_cache()
+        self.settings.setValue("vectortilereader/version", latest_version)
+
+    @staticmethod
+    def _get_plugin_version():
+        version = None
+        with open(os.path.join(get_plugin_directory(), 'metadata.txt'), 'r') as f:
+            content = f.read()
+        match = re.search(r"version=\d+\.\d+.\d+", content)
+        if match:
+            version = match.group().replace("version=", "")
+        return version
+
 
     def _on_project_change(self):
         self._debouncer.stop()

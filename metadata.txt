@@ -23,6 +23,7 @@ changelog=
     * A new predefined connection to Mapzen.com has been added
     * Feature merging improved
     * Tile clipping improved
+    * Cache is cleard if plugin version has changed
     ---1.1.0---
     * A new mode 'Basemap' has been added. Vector tiles are automatically reloaded upon zoom/pan.
     * The loading performance has been increased.
