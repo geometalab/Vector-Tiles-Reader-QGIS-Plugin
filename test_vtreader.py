@@ -21,6 +21,9 @@ def testIfaceisNotNote():
 #     assert src is not None
 #     assert path == src.source()
 
+def run_all():
+    pytest.main()
+
 
 if __name__ == "__main__":
-    pytest.main()
+    run_all()
