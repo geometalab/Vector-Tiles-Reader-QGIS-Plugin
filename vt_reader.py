@@ -494,10 +494,14 @@ class VtReader(QObject):
                 layer = self._get_layer_by_source(own_layers, layer_name, file_path)
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
+                    if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
+                        FeatureMerger().merge_features(layer)
 
             if not layer:
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(file_path, layer_name, zoom_level, merge_features, geo_type)
+                if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
+                    FeatureMerger().merge_features(layer)
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
@@ -606,9 +610,6 @@ class VtReader(QObject):
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors "
                                  u"(ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
-
-        if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-            FeatureMerger().merge_features(layer)
         return layer
 
     def _handle_geojson_features(self, tile, layer_name, features):
