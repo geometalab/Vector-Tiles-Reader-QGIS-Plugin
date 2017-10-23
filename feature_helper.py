@@ -1,13 +1,40 @@
-from qgis.core import QgsMapLayerRegistry, QgsField, QgsVectorLayer, QgsFeatureRequest, QgsSpatialIndex
-from PyQt4.QtCore import QVariant
-from file_helper import FileHelper
-from log_helper import info, warn, critical, debug
-import processing
+from builtins import str
+from builtins import object
+from qgis.core import (QgsMapLayerRegistry,
+                       QgsField,
+                       QgsVectorLayer,
+                       QgsFeatureRequest,
+                       QgsSpatialIndex,
+                       QgsGeometry,
+                       QgsRectangle)
+from PyQt4.QtCore import *
+from log_helper import info, debug
 import uuid
 import numbers
+from tile_helper import tile_to_latlon
 
 
-class FeatureMerger:
+def clip_features(layer, scheme):
+    layer.startEditing()
+    info("tile extent: {}")
+    for f in layer.getFeatures():
+        errors = f.geometry().validateGeometry()
+        if errors and len(errors) > 0:
+            continue
+
+        col = f.attribute("_col")
+        row = f.attribute("_row")
+        zoom_level = f.attribute("_zoom_level")
+        tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
+        rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
+
+        new_geom = f.geometry().intersection(rect)
+        f.setGeometry(new_geom)
+        layer.updateFeature(f)
+    layer.commitChanges()
+
+
+class FeatureMerger(object):
     """
      * The class FeatureMerger can be used to merge features over tile boundaries.
     """
@@ -17,13 +44,8 @@ class FeatureMerger:
 
     def merge_features(self, layer):
         layer_name = layer.name()
-
         info("Merging features of layer: {}".format(layer_name))
-
         self._prepare_features_for_dissolvment(layer)
-        dissolved_layer = self._dissolve(layer)
-
-        return dissolved_layer
 
     @staticmethod
     def _prepare_features_for_dissolvment(layer):
@@ -38,53 +60,75 @@ class FeatureMerger:
 
         # Build a spatial index
         index = QgsSpatialIndex()
-        for f in feature_dict.values():
+        for f in list(feature_dict.values()):
             index.insertFeature(f)
 
-        for f in feature_dict.values():
+        for f in list(feature_dict.values()):
             if f[_DISSOLVE_GROUP_FIELD]:
                 continue
-            f[_DISSOLVE_GROUP_FIELD] = str(uuid.uuid4())
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(_DISSOLVE_GROUP_FIELD, index, f, [], feature_dict, feature_handler=lambda feat: layer.updateFeature(feat), feature_class_attr_index=idx)
+            f[_DISSOLVE_GROUP_FIELD] = "{}".format(uuid.uuid4())
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(layer, _DISSOLVE_GROUP_FIELD, index, f, feature_dict, feature_handler=lambda feat: layer.updateFeature(feat), feature_class_attr_index=idx)
             layer.updateFeature(f)
         layer.commitChanges()
         debug('Dissolvement complete: {}', layer.name())
         return
 
     @staticmethod
-    def _assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, f, neighbours, feature_dict, feature_handler, feature_class_attr_index):
-        geom = f.geometry()
-
-        if geom:
-            intersecting_ids = index.intersects(geom.boundingBox())
+    def extract_poly_coords(geom):
+        if geom.type == 'Polygon':
+            exterior_coords = geom.exterior.coords[:]
+            interior_coords = []
+            for interior in geom.interiors:
+                interior_coords += interior.coords[:]
+        elif geom.type == 'MultiPolygon':
+            exterior_coords = []
+            interior_coords = []
+            for part in geom:
+                epc = FeatureMerger.extract_poly_coords(part)  # Recursive call
+                exterior_coords += epc['exterior_coords']
+                interior_coords += epc['interior_coords']
         else:
-            intersecting_ids = []
-
-        new_neighbours = []
-        for intersecting_id in intersecting_ids:
-            intersecting_f = feature_dict[intersecting_id]
-            if f != intersecting_f and not intersecting_f.geometry().disjoint(geom) and f.attributes()[feature_class_attr_index] == intersecting_f.attributes()[feature_class_attr_index]:
-                if not intersecting_f[dissolve_gorup_field]:
-                    intersecting_f[dissolve_gorup_field] = f[dissolve_gorup_field]
-                    new_neighbours.append(intersecting_f)
-                    feature_handler(intersecting_f)
-
-        for n in new_neighbours:
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(dissolve_gorup_field, index, n, neighbours, feature_dict, feature_handler, feature_class_attr_index)
-
-        neighbours.extend(new_neighbours)
-        return neighbours
+            raise ValueError('Unhandled geometry type: ' + repr(geom.type))
+        return {'exterior_coords': exterior_coords,
+                'interior_coords': interior_coords}
 
     @staticmethod
-    def _dissolve(layer):
-        debug("Dissolving layer")
-        target_file = FileHelper.get_unique_geojson_file_name()
-        processing.runalg("qgis:dissolve", layer, False, "dissolveGroup", target_file)
-        dissolved_layer = QgsVectorLayer(target_file, "Dissolved", "ogr")
-        return dissolved_layer
+    def _assign_dissolve_group_to_neighbours_rec(layer, dissolve_gorup_field, index, f, feature_dict, feature_handler, feature_class_attr_index):
+        geom = f.geometry()
+        if not geom:
+            return
+
+        index.deleteFeature(f)
+        intersecting_ids = index.intersects(geom.boundingBox())
+
+        new_neighbours = []
+        while len(intersecting_ids) > 0:
+            intersecting_id = intersecting_ids.pop(0)
+            intersecting_f = feature_dict[intersecting_id]
+            index.deleteFeature(intersecting_f)
+            if not intersecting_f[dissolve_gorup_field] and not intersecting_f.geometry().disjoint(geom):
+                intersecting_f[dissolve_gorup_field] = "{}".format(f[dissolve_gorup_field])
+                intersecting_geometry = intersecting_f.geometry()
+                errors = []
+                errors.extend(geom.validateGeometry())
+                errors.extend(intersecting_geometry.validateGeometry())
+                for i, e in enumerate(errors):
+                    info("err {}: {}", i, e.what())
+                if len(errors) > 0:
+                    continue
+
+                geom = geom.combine(intersecting_geometry)
+                layer.deleteFeature(intersecting_id)
+                f.setGeometry(geom)
+                new_neighbours.append(intersecting_f)
+                feature_handler(f)
+                intersecting_ids = index.intersects(geom.boundingBox())
+
+        for n in new_neighbours:
+            FeatureMerger._assign_dissolve_group_to_neighbours_rec(layer, dissolve_gorup_field, index, n, feature_dict, feature_handler, feature_class_attr_index)
 
 
-class _GeoTypes:
+class _GeoTypes(object):
     def __init__(self):
         pass
 

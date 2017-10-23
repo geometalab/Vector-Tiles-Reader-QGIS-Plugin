@@ -1,13 +1,17 @@
+from __future__ import division
+from builtins import str
+from builtins import object
+from past.utils import old_div
 import sys
 import json
 import os
 import ast
 from log_helper import critical, debug, info
 from tile_helper import get_tile_bounds, latlon_to_tile
-from file_helper import FileHelper
+from network_helper import load_url
 
 
-class TileJSON:
+class TileJSON(object):
     """
      * Wrapper for TileJSON v2.2.0
      * https://github.com/mapbox/tilejson-spec/tree/master/2.2.0
@@ -25,7 +29,7 @@ class TileJSON:
                 with open(self.url, 'r') as f:
                     data = f.read()
             else:
-                status, data = FileHelper.load_url(self.url)
+                status, data = load_url(self.url)
             self.json = json.loads(data)
             if self.json:
                 debug("TileJSON loaded")
@@ -63,8 +67,8 @@ class TileJSON:
         else:
             bounds = self.bounds_tile(self.max_zoom())
             if bounds:
-                center_x = int((bounds["x_min"] + bounds["x_max"]) / 2)
-                center_y = int((bounds["y_min"] + bounds["y_max"]) / 2)
+                center_x = int(old_div((bounds["x_min"] + bounds["x_max"]), 2))
+                center_y = int(old_div((bounds["y_min"] + bounds["y_max"]), 2))
                 center = (center_x, center_y)
         return center
 

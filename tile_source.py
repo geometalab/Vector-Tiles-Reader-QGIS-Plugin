@@ -1,15 +1,19 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+import sqlite3
+import urllib.parse
+import json
 import os
 import sys
-import sqlite3
-import urlparse
-import json
 
 from PyQt4.QtGui import QApplication
 from PyQt4.QtCore import QObject, pyqtSignal
-from log_helper import debug, critical, warn, info
 from tile_json import TileJSON
-from file_helper import FileHelper
+from log_helper import info, warn, critical, debug
 from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds
+from network_helper import url_exists, load_url_async
+from file_helper import is_sqlite_db
 
 _DEFAULT_CRS = "EPSG:3857"
 
@@ -93,7 +97,7 @@ class ServerSource(AbstractSource):
         if not url:
             raise RuntimeError("URL is required")
 
-        valid, error = FileHelper.url_exists(url)
+        valid, error = url_exists(url)
         if not valid:
             raise RuntimeError(error)
 
@@ -119,7 +123,7 @@ class ServerSource(AbstractSource):
         if not name:
             name = self.json.id()
         if not name:
-            name = urlparse.urlsplit(self.url)[1]
+            name = urllib.parse.urlsplit(self.url)[1]
         return name
 
     def min_zoom(self):
@@ -150,9 +154,9 @@ class ServerSource(AbstractSource):
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
 
-        parameters = urlparse.parse_qs(urlparse.urlparse(self.url).query)
+        parameters = urllib.parse.parse_qs(urllib.parse.urlparse(self.url).query)
         api_key = ""
-        if "api_key" in parameters.keys():
+        if "api_key" in list(parameters.keys()):
             api_key = parameters["api_key"][0]
         for t in tiles_to_load:
             col = t[0]
@@ -166,52 +170,52 @@ class ServerSource(AbstractSource):
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
+        return self._load_urls_async(zoom_level, urls)
 
-        page_size = 5
-        results = []
-        self._do_paged(page_size, urls, results, self._load_urls_async)
-
-        for r in results:
-            content = r[0]
-            col = r[1][0]
-            row = r[1][1]
-            tile = VectorTile(self.scheme(), zoom_level, col, row)
-            tile_data_tuples.append((tile, content))
-
-        return tile_data_tuples
-
-    def _load_urls_async(self, page_offset, urls_with_col_and_row):
-        replies = map(lambda url: (FileHelper.load_url_async(url[0]), (url[1], url[2])), urls_with_col_and_row)
+    def _load_urls_async(self, zoom_level, urls_with_col_and_row):
+        replies = [(load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
+        total_nr_of_requests = len(replies)
         all_finished = False
         nr_finished_before = 0
+        finished_tiles = set()
+        nr_finished = 0
+        all_tiles = []
         while not all_finished and not self._cancelling:
+            results = []
+            new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
+            nr_finished += len(new_finished)
+            for r in new_finished:
+                reply = r[0]
+                error = reply.error()
+                if error:
+                    info("Error during network request: {}", error)
+                else:
+                    content = reply.readAll().data()
+                    tile_coord = r[1]
+                    finished_tiles.add(tile_coord)
+                    results.append((content, tile_coord))
+                reply.deleteLater()
             QApplication.processEvents()
-            nr_finished = sum(map(lambda r: r[0].isFinished(), replies), 0)
+            all_finished = nr_finished == total_nr_of_requests
             if nr_finished != nr_finished_before:
-                self.progress_changed.emit(page_offset + nr_finished)
-            all_finished = nr_finished == len(replies)
+                nr_finished_before = nr_finished
+                self.progress_changed.emit(nr_finished)
+                tiles_with_data = [self._create_vector_tile_from_respond(zoom_level, r) for r in results]
+                all_tiles.extend(tiles_with_data)
+        if not all_finished and self._cancelling:
+            unfinished_requests = [r for r in replies if not r[0].isFinished]
+            for r in unfinished_requests:
+                r.abort()
+        if self._cancelling:
+            all_tiles = []
+        return all_tiles
 
-        results = []
-        for r in replies:
-            reply = r[0]
-            content = reply.readAll().data()
-            reply.deleteLater()
-            tile_coord = r[1]
-            results.append((content, tile_coord))
-
-        return results
-
-    def _do_paged(self, page_size, all_items, result_set, func, *args):
-        page_nr = 0
-        items = []
-        while page_nr == 0 or len(items) > 0:
-            items = all_items[page_nr:page_nr + page_size]
-            if self._cancelling or len(items) == 0:
-                break
-            page_offset = page_nr*page_size
-            results = func(page_offset, items, *args)
-            result_set.extend(results)
-            page_nr += page_size
+    def _create_vector_tile_from_respond(self, zoom_level, r):
+        content = r[0]
+        col = r[1][0]
+        row = r[1][1]
+        tile = VectorTile(self.scheme(), zoom_level, col, row)
+        return tile, content
 
 
 class MBTilesSource(AbstractSource):
@@ -220,8 +224,7 @@ class MBTilesSource(AbstractSource):
         if not os.path.isfile(path):
             raise RuntimeError("The file does not exist: {}".format(path))
 
-        is_sqlite_db = FileHelper.is_sqlite_db(path)
-        if not is_sqlite_db:
+        if not is_sqlite_db(path):
             raise RuntimeError(
                 "The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(path))
 
@@ -252,7 +255,7 @@ class MBTilesSource(AbstractSource):
                 .replace("[", "")\
                 .replace("]", "")\
                 .split(",")
-            bounds = map(lambda s: float(s), bounds)
+            bounds = [float(s) for s in bounds]
         scheme = self.scheme()
         return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme)
 
@@ -320,7 +323,7 @@ class MBTilesSource(AbstractSource):
                 if tiles_to_load:
                     where_clause += " AND"
             if tiles_to_load:
-                tile_coords = str(map(lambda x: "{};{}".format(x[0], x[1]), tiles_to_load)).replace("[", "").replace(
+                tile_coords = str(["{};{}".format(x[0], x[1]) for x in tiles_to_load]).replace("[", "").replace(
                     "]", "")
                 where_clause += " tile_column || \";\" || tile_row IN ({})".format(tile_coords)
         return where_clause
@@ -489,5 +492,4 @@ class TrexCacheSource(AbstractSource):
                 with open(full_path, 'rb') as f:
                     encoded_data = f.read()
                     tile_data_tuples.append((tile, encoded_data))
-
         return tile_data_tuples

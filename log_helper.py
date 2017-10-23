@@ -6,7 +6,7 @@ import importlib
 import tempfile
 import re
 
-_KEY_REGEX = re.compile(r"(\?|&)key=[^?&]*")
+_KEY_REGEX = re.compile(r"(\?|&)(api_)?key=[^\s?&]*")
 
 _DEBUG = "debug"
 _INFO = "info"
@@ -65,7 +65,7 @@ def _log_message(msg, level, *args):
         elif level == _WARN:
             _logger.warning(msg, *args)
         elif level == _CRITICAL:
-            _logger.critical(msg)
+            _logger.exception(msg)
         elif level == _DEBUG:
             _logger.debug(msg)
 

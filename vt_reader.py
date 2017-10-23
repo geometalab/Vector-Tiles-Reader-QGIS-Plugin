@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import filter
+from builtins import str
 import sys
 import os
 import json
@@ -8,23 +13,33 @@ import math
 import uuid
 import traceback
 
-from log_helper import info, warn, critical, debug, remove_key
-from tile_helper import get_all_tiles, change_zoom, get_code_from_epsg, clamp
-from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
-from file_helper import FileHelper
+from log_helper import info, critical, debug, remove_key
+from tile_helper import get_all_tiles, get_code_from_epsg, clamp
+from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types, clip_features
+from file_helper import (
+    get_cached_tile_file_name,
+    get_styles,
+    assure_temp_dirs_exist,
+    get_cached_tile, is_gzipped,
+    get_geojson_file_name,
+    get_plugin_directory,
+    get_icons_directory,
+    cache_tile
+)
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
-from PyQt4.QtGui import QMessageBox, QApplication
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-from cStringIO import StringIO
+from PyQt4.QtGui import QApplication
+from io import BytesIO
 from gzip import GzipFile
 from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 
-from mp_helper import decode_tile
+from mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 
 import multiprocessing as mp
-import platform
 
-if platform.system() == "Windows":
+is_windows = sys.platform.startswith("win32")
+
+if is_windows:
     # OSGeo4W does not bundle python in exec_prefix for python
     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
     mp.set_executable(path)
@@ -37,28 +52,11 @@ class VtReader(QObject):
     max_progress_changed = pyqtSignal(int, name='maxProgressChanged')
     message_changed = pyqtSignal('QString', name='messageChanged')
     title_changed = pyqtSignal('QString', name='titleChanged')
-    show_progress_changed = pyqtSignal(bool, name='titleChanged')
-    loading_finished = pyqtSignal(int, object, name='loadingFinished')
+    show_progress_changed = pyqtSignal(bool, name='show_progress_changed')
+    loading_finished = pyqtSignal(int, dict, name='loadingFinished')
     tile_limit_reached = pyqtSignal(int, name='tile_limit_reached')
     cancelled = pyqtSignal(name='cancelled')
-
-    omt_layer_ordering = [
-        "place",
-        "mountain_peak",
-        "housenumber",
-        "water_name",
-        "transportation_name",
-        "poi",
-        "boundary",
-        "transportation",
-        "building",
-        "aeroway",
-        "park",
-        "water",
-        "waterway",
-        "landcover",
-        "landuse"
-    ]
+    add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
 
     _loading_options = {
             'zoom_level': None,
@@ -76,9 +74,11 @@ class VtReader(QObject):
     _DEFAULT_EXTENT = 4096
     _id = str(uuid.uuid4())
 
-    _styles = FileHelper.get_styles()
+    _styles = get_styles()
 
     flush_layers_of_other_zoom_level = False
+
+    _all_tiles = []
 
     def __init__(self, iface, path_or_url):
         """
@@ -92,15 +92,13 @@ class VtReader(QObject):
 
         self.source = self._create_source(path_or_url)
 
-        FileHelper.assure_temp_dirs_exist()
+        assure_temp_dirs_exist()
         self.iface = iface
         self.feature_collections_by_layer_name_and_geotype = {}
-        self._qgis_layer_groups_by_name = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds = None
         self._always_overwrite_geojson = False
-        self._root_group_name = None
         self._flush = False
 
     def _create_source(self, path_or_url):
@@ -143,9 +141,6 @@ class VtReader(QObject):
     @pyqtSlot('QString')
     def _source_message_changed(self, msg):
         self._update_progress(msg=msg)
-
-    def set_root_group_name(self, name):
-        self._root_group_name = name
 
     def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
         if progress is not None:
@@ -203,134 +198,136 @@ class VtReader(QObject):
         if self.source:
             self.source.cancel()
 
-    def _get_tile_cache_name(self, zoom_level, col, row):
-        return FileHelper.get_cached_tile_file_name(self.source.name(), zoom_level, col, row)
+    def _get_clamped_zoom_level(self):
+        zoom_level = self._loading_options["zoom_level"]
+        min_zoom = self.source.min_zoom()
+        max_zoom = self.source.max_zoom()
+        zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
+        return zoom_level
 
     def _load_tiles(self):
         try:
+            if can_load_lib():
+                info("Native decoding supported")
+            else:
+                bits = "32"
+                if sys.maxsize > 2**32:
+                    bits = "64"
+                info("Native decoding not supported: {}, {}bit", sys.platform, bits)
+
+            self._all_tiles = []
             # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
             self.source = self._create_source(self.source.source())
-            zoom_level = self._loading_options["zoom_level"]
             bounds = self._loading_options["bounds"]
-            load_mask_layer = self._loading_options["load_mask_layer"]
-            merge_tiles = self._loading_options["merge_tiles"]
             clip_tiles = self._loading_options["clip_tiles"]
-            apply_styles = self._loading_options["apply_styles"]
             max_tiles = self._loading_options["max_tiles"]
             layer_filter = self._loading_options["layer_filter"]
 
             self.cancel_requested = False
             self.feature_collections_by_layer_name_and_geotype = {}
-            self._qgis_layer_groups_by_name = {}
             self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
             self._clip_tiles_at_tile_bounds = clip_tiles
 
-            min_zoom = self.source.min_zoom()
-            max_zoom = self.source.max_zoom()
-            zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
+            zoom_level = self._get_clamped_zoom_level()
 
             all_tiles = get_all_tiles(
                 bounds=bounds,
                 is_cancel_requested_handler=lambda: self.cancel_requested,
             )
             tiles_to_load = set()
-            tiles = []
+            cached_tiles = []
             tiles_to_ignore = set()
             for t in all_tiles:
-                if self.cancel_requested or (max_tiles and len(tiles) >= max_tiles):
+                if self.cancel_requested or (max_tiles and len(cached_tiles) >= max_tiles):
                     break
 
-                file_name = self._get_tile_cache_name(zoom_level, t[0], t[1])
-                tile = FileHelper.get_cached_tile(file_name)
+                file_name = get_cached_tile_file_name(self.source.name(), zoom_level, t[0], t[1])
+                tile = get_cached_tile(file_name)
                 if tile and tile.decoded_data:
-                    tiles.append(tile)
+                    cached_tiles.append(tile)
                     tiles_to_ignore.add((tile.column, tile.row))
                 else:
                     tiles_to_load.add(t)
 
             remaining_nr_of_tiles = len(tiles_to_load)
             if max_tiles:
-                if len(tiles) + len(tiles_to_load) >= max_tiles:
-                    remaining_nr_of_tiles = max_tiles - len(tiles)
+                if len(cached_tiles) + len(tiles_to_load) >= max_tiles:
+                    remaining_nr_of_tiles = max_tiles - len(cached_tiles)
                     if remaining_nr_of_tiles < 0:
                         remaining_nr_of_tiles = 0
-            debug("{} cache hits. {} may potentially be loaded.", len(tiles), remaining_nr_of_tiles)
+            if len(cached_tiles) > 0:
+                info("{} tiles in cache. Max. {} will be loaded additionally.", len(cached_tiles), remaining_nr_of_tiles)
+                if not self.cancel_requested:
+                    self._process_tiles(cached_tiles, layer_filter)
+                    self._all_tiles.extend(cached_tiles)
 
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
 
-            tile_data_tuples = []
             if remaining_nr_of_tiles > 0:
                 tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
                                                           tiles_to_load=tiles_to_load,
                                                           max_tiles=remaining_nr_of_tiles)
-            if len(tiles) == 0 and (not tile_data_tuples or len(tile_data_tuples) == 0):
-                QMessageBox.information(None, "No tiles found", "What a pity, no tiles could be found!")
-
-            if load_mask_layer:
-                mask_level = self.source.mask_level()
-                if mask_level is not None and mask_level != zoom_level:
-                    debug("Mapping {} tiles to mask level", len(all_tiles))
-                    scheme = self.source.scheme()
-                    mask_tiles = map(
-                        lambda t: change_zoom(zoom_level, int(mask_level), t, scheme),
-                        all_tiles)
-                    debug("Mapping done")
-
-                    mask_tiles_to_load = set()
-                    for t in mask_tiles:
-                        file_name = self._get_tile_cache_name(mask_level, t[0], t[1])
-                        tile = FileHelper.get_cached_tile(file_name)
-                        if tile and tile.decoded_data:
-                            tiles.append(tile)
-                        else:
-                            mask_tiles_to_load.add(t)
-
-                    debug("Loading mask layer (zoom_level={})", mask_level)
-                    tile_data_tuples = []
-                    if len(mask_tiles_to_load) > 0:
-                        mask_layer_data = self.source.load_tiles(zoom_level=mask_level,
-                                                                 tiles_to_load=mask_tiles_to_load,
-                                                                 max_tiles=max_tiles)
-                        debug("Mask layer loaded")
-                        tile_data_tuples.extend(mask_layer_data)
-
-            if tile_data_tuples and len(tile_data_tuples) > 0:
-                if not self.cancel_requested:
-                    decoded_tiles = self._decode_tiles(tile_data_tuples)
-                    tiles.extend(decoded_tiles)
-            if len(tiles) > 0:
-                if not self.cancel_requested:
+                if len(tile_data_tuples) > 0 and not self.cancel_requested:
+                    tiles = self._decode_tiles(tile_data_tuples)
                     self._process_tiles(tiles, layer_filter)
-                if not self.cancel_requested:
-                    self._create_qgis_layers(merge_features=merge_tiles,
-                                             apply_styles=apply_styles)
+                    for t in tiles:
+                        cache_tile(t, self.source.name())
+                    self._all_tiles.extend(tiles)
+            self._continue_loading()
 
-            self._update_progress(show_dialog=False)
-            if self.cancel_requested:
-                info("Import cancelled")
-                self.cancelled.emit()
-            else:
-                info("Import complete")
-                loaded_tiles_x = map(lambda t: t.coord()[0], tiles)
-                loaded_tiles_y = map(lambda t: t.coord()[1], tiles)
-                if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
-                    return None
-
-                loaded_extent = {"x_min": int(min(loaded_tiles_x)),
-                                 "x_max": int(max(loaded_tiles_x)),
-                                 "y_min": int(min(loaded_tiles_y)),
-                                 "y_max": int(max(loaded_tiles_y)),
-                                 "zoom": int(zoom_level)
-                                 }
-                loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
-                loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
-                self.loading_finished.emit(zoom_level, loaded_extent)
         except Exception as e:
             critical("An exception occured: {}, {}", e, traceback.format_exc())
             self.cancelled.emit()
 
+    def _continue_loading(self):
+        zoom_level = self._loading_options["zoom_level"]
+        merge_tiles = self._loading_options["merge_tiles"]
+        apply_styles = self._loading_options["apply_styles"]
+        clip_tiles = self._loading_options["clip_tiles"]
+        if not self.cancel_requested:
+            self._create_qgis_layers(merge_features=merge_tiles,
+                                     apply_styles=apply_styles,
+                                     clip_tiles=clip_tiles)
+
+        self._update_progress(show_dialog=False)
+        if self.cancel_requested:
+            info("Import cancelled")
+            self.cancelled.emit()
+        else:
+            info("Import complete")
+            loaded_extent = self._get_extent(self._all_tiles, zoom_level)
+            self.loading_finished.emit(zoom_level, loaded_extent)
+
+    @staticmethod
+    def _get_extent(tiles, zoom_level):
+        loaded_tiles_x = [t.coord()[0] for t in tiles]
+        loaded_tiles_y = [t.coord()[1] for t in tiles]
+        if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
+            return None
+
+        loaded_extent = {"x_min": int(min(loaded_tiles_x)),
+                         "x_max": int(max(loaded_tiles_x)),
+                         "y_min": int(min(loaded_tiles_y)),
+                         "y_max": int(max(loaded_tiles_y)),
+                         "zoom": int(zoom_level)
+                         }
+        loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
+        loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
+        return loaded_extent
+
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
                     apply_styles=True, max_tiles=None, layer_filter=None):
+        """
+         * Specify the reader options
+        :param load_mask_layer:  If True the mask layer will also be loaded
+        :param merge_tiles: If True neighbouring tiles and features will be merged
+        :param clip_tiles: If True the features located outside the tile will be removed
+        :param apply_styles: If True the default styles will be applied
+        :param max_tiles: The maximum number of tiles to load
+        :param layer_filter: A list of layers. If any layers are set, only these will be loaded. If the list is empty,
+            all available layers will be loaded
+        :return:
+        """
         self._loading_options = {
             'load_mask_layer': load_mask_layer,
             'merge_tiles': merge_tiles,
@@ -343,14 +340,7 @@ class VtReader(QObject):
     def load_tiles_async(self, zoom_level, bounds):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
-        :param clip_tiles: 
         :param zoom_level: The zoom level to load
-        :param layer_filter: A list of layers. If any layers are set, only these will be loaded. If the list is empty,
-            all available layers will be loaded
-        :param load_mask_layer: If True the mask layer will also be loaded
-        :param merge_tiles: If True neighbouring tiles and features will be merged
-        :param apply_styles: If True the default styles will be applied
-        :param max_tiles: The maximum number of tiles to load
         :param bounds:
         :return: 
         """
@@ -361,6 +351,18 @@ class VtReader(QObject):
         _worker_thread.started.connect(self._load_tiles)
         _worker_thread.start()
 
+    @staticmethod
+    def _get_pool(cores=None):
+        nr_processors = 4
+        if cores:
+            nr_processors = cores
+        try:
+            nr_processors = mp.cpu_count()
+        except NotImplementedError:
+            info("CPU count cannot be retrieved. Falling back to default = 4")
+        pool = mp.Pool(nr_processors)
+        return pool
+
     def _decode_tiles(self, tiles_with_encoded_data):
         """
          * Decodes the PBF data from all the specified tiles and reports the progress
@@ -368,59 +370,71 @@ class VtReader(QObject):
         :param tiles_with_encoded_data:
         :return:
         """
-        total_nr_tiles = len(tiles_with_encoded_data)
-        self._update_progress(progress=0, max_progress=100, msg="Decoding {} tiles...".format(total_nr_tiles))
 
-        nr_processors = 4
-        try:
-            nr_processors = mp.cpu_count()
-        except NotImplementedError:
-            info("CPU count cannot be retrieved. Falling back to default = 4")
+        tiles_with_encoded_data = [(t[0], self._unzip(t[1])) for t in tiles_with_encoded_data]
 
-        tiles_with_encoded_data = map(lambda t: (t[0], self._unzip(t[1])), tiles_with_encoded_data)
+        if can_load_lib():
+            decoder_func = decode_tile_native
+        else:
+            decoder_func = decode_tile_python
 
-        pool = mp.Pool(nr_processors)
         tiles = []
-        rs = pool.map_async(decode_tile, tiles_with_encoded_data, callback=tiles.extend)
-        pool.close()
-        current_progress = 0
-        while not rs.ready() and not self.cancel_requested:
-            if self.cancel_requested:
-                pool.terminate()
-                break
-            else:
-                QApplication.processEvents()
-                remaining = rs._number_left
-                index = total_nr_tiles - remaining
-                progress = int(100.0 / total_nr_tiles * (index + 1))
-                if progress != current_progress:
-                    current_progress = progress
-                    self._update_progress(progress=progress)
 
-        tiles = filter(lambda ti: ti.decoded_data is not None, tiles)
-        for t in tiles:
-            if self.cancel_requested:
-                break
-            else:
-                cache_file_name = self._get_tile_cache_name(t.zoom_level, t.column, t.row)
-                if not os.path.isfile(cache_file_name):
-                    FileHelper.cache_tile(t, cache_file_name)
+        if len(tiles_with_encoded_data) < 30:
+            for t in tiles_with_encoded_data:
+                tile = decoder_func(t)
+                if tile.decoded_data:
+                    tiles.append(tile)
+        else:
+            pool = self._get_pool()
+            rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
+            pool.close()
+            current_progress = 0
+            nr_of_tiles = len(tiles_with_encoded_data)
+            self._update_progress(max_progress=nr_of_tiles, msg="Decoding {} tiles...".format(nr_of_tiles))
+            while not rs.ready() and not self.cancel_requested:
+                if self.cancel_requested:
+                    pool.terminate()
+                    break
+                else:
+                    QApplication.processEvents()
+                    remaining = rs._number_left
+                    index = nr_of_tiles - remaining
+                    progress = int(100.0 / nr_of_tiles * (index + 1))
+                    if progress != current_progress:
+                        current_progress = progress
+                        self._update_progress(progress=progress)
+            tiles = list(filter(lambda ti: ti.decoded_data is not None, tiles))
 
+        info("Decoding finished, {} tiles with data", len(tiles))
         return tiles
 
-    def _unzip(self, data):
+    @staticmethod
+    def _get_feature_count(tiles):
+        total_nr_of_features = 0
+        for tile in tiles:
+            for layer_name in tile.decoded_data:
+                layer = tile.decoded_data[layer_name]
+                total_nr_of_features += len(layer["features"])
+        return total_nr_of_features
+
+    @staticmethod
+    def _unzip(data):
         """
          * If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
         :param data:
         :return:
         """
 
-        is_gzipped = FileHelper.is_gzipped(data)
-        if is_gzipped:
-            file_content = GzipFile('', 'r', 0, StringIO(data)).read()
+        is_zipped = is_gzipped(data)
+        if is_zipped:
+            file_content = GzipFile('', 'r', 0, BytesIO(data)).read()
         else:
             file_content = data
         return file_content
+
+    def _process_tile(self, tile, layer_filter):
+        self._add_features_to_feature_collection(tile, layer_filter)
 
     def _process_tiles(self, tiles, layer_filter):
         """
@@ -428,82 +442,40 @@ class VtReader(QObject):
         :param tiles: 
         :return: 
         """
-        total_nr_tiles = len(tiles)
-        info("Processing {} tiles", total_nr_tiles)
-        self._update_progress(progress=0, max_progress=100, msg="Processing features...")
-        current_progress = -1
+        nr_of_features = self._get_feature_count(tiles)
+        self._update_progress(msg="Processing {} features of {} tiles...".format(nr_of_features, len(tiles)),
+                              max_progress=len(tiles))
         for index, tile in enumerate(tiles):
             if self.cancel_requested:
                 break
-            self._create_geojson(tile, layer_filter)
-            progress = int(100.0 / total_nr_tiles * (index + 1))
-            if progress != current_progress:
-                current_progress = progress
-                self._update_progress(progress=progress)
-
-    def _get_omt_layer_sort_id(self, layer_name):
-        """
-         * Returns the cartographic sort id for the specified layer.
-         * This sort id is the position of the layer in the omt_layer_ordering collection.
-         * If the layer isn't present in the collection, the sort id wil be 999 and therefore the layer will be added at the bottom.
-        :param layer_name: 
-        :return: 
-        """
-
-        sort_id = 999
-        if layer_name in self.omt_layer_ordering:
-            sort_id = self.omt_layer_ordering.index(layer_name)
-        return sort_id
-
-    def _assure_qgis_groups_exist(self, manual_layer_name=None, sort_layers=False):
-        """
-         * Createss a group for each layer that is given by the layer source scheme
-         >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
-         >> TileJSON: value 'vector_layers'
-        :return: 
-        """
-
-        root = QgsProject.instance().layerTreeRoot()
-        name = self._root_group_name
-        if not name:
-            name = self.source.name()
-        root_group = root.findGroup(name)
-        if not root_group:
-            root_group = root.addGroup(name)
-        if not manual_layer_name:
-            layers = map(lambda l: l["id"], self.source.vector_layers())
-        else:
-            layers = [manual_layer_name]
-
-        if sort_layers:
-            layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
-        for index, layer_name in enumerate(layers):
-            group = root_group.findGroup(layer_name)
-            if not group:
-                group = root_group.addGroup(layer_name)
-            self._qgis_layer_groups_by_name[layer_name] = group
+            if tile.decoded_data:
+                self._all_tiles.append(tile)
+                self._add_features_to_feature_collection(tile, layer_filter=layer_filter)
+            self._update_progress(progress=index+1)
 
     def _get_geojson_filename(self, layer_name, geo_type):
         return "{}.{}.{}".format(self.source.name().replace(" ", "_"), layer_name, geo_type)
 
-    def _create_qgis_layers(self, merge_features, apply_styles):
+    def _create_qgis_layers(self, merge_features, apply_styles, clip_tiles):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
         debug("Creating hierarchy in QGIS")
 
-        self._assure_qgis_groups_exist(sort_layers=apply_styles)
+        # self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), qgis_layers.iteritems())
-        own_layers = map(lambda (n, l): l, vt_qgis_name_layer_tuples)
+        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), iter(qgis_layers.items())))
+        own_layers = list(map(lambda (n, l): l, vt_qgis_name_layer_tuples))
         for l in own_layers:
             name = l.name()
             geo_type = l.customProperty("geo_type")
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
 
-        self._update_progress(progress=0, max_progress=len(self.feature_collections_by_layer_name_and_geotype), msg="Creating layers...")
+        self._update_progress(progress=0,
+                              max_progress=len(self.feature_collections_by_layer_name_and_geotype),
+                              msg="Creating layers...")
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
@@ -512,10 +484,10 @@ class VtReader(QObject):
                 break
 
             feature_collection = self.feature_collections_by_layer_name_and_geotype[(layer_name, geo_type)]
-            zoom_level = feature_collection
+            zoom_level = feature_collection["zoom_level"]
 
             file_name = self._get_geojson_filename(layer_name, geo_type)
-            file_path = FileHelper.get_geojson_file_name(file_name)
+            file_path = get_geojson_file_name(file_name)
 
             layer = None
             if os.path.isfile(file_path):
@@ -524,21 +496,30 @@ class VtReader(QObject):
                 layer = self._get_layer_by_source(own_layers, layer_name, file_path)
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
+                    if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
+                        FeatureMerger().merge_features(layer)
+                    if clip_tiles:
+                        clip_features(layer=layer, scheme=self.source.scheme())
 
             if not layer:
                 self._update_layer_source(file_path, feature_collection)
-                layer = self._create_named_layer(file_path, layer_name, zoom_level, merge_features, geo_type)
+                layer = self._create_named_layer(file_path, layer_name, zoom_level)
+                if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
+                    FeatureMerger().merge_features(layer)
+                if clip_tiles:
+                    clip_features(layer=layer, scheme=self.source.scheme())
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
+        self._update_progress(msg="Refresh layers...")
         QgsMapLayerRegistry.instance().reloadAllLayers()
 
         if len(new_layers) > 0:
-            only_layers = list(map(lambda layer_name_tuple: layer_name_tuple[2], new_layers))
+            self._update_progress(msg="Adding new layers...")
+            only_layers = list([layer_name_tuple[2] for layer_name_tuple in new_layers])
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in new_layers:
-            target_group = self._qgis_layer_groups_by_name[name]
-            target_group.addLayer(layer)
+            self.add_layer_to_group.emit(layer)
 
         if apply_styles:
             count = 0
@@ -550,11 +531,12 @@ class VtReader(QObject):
                 VtReader._apply_named_style(layer, geo_type)
                 self._update_progress(progress=count)
 
-    def _update_layer_source(self, layer_source, feature_collection):
+    @staticmethod
+    def _update_layer_source(layer_source, feature_collection):
         """
          * Updates the layers GeoJSON source file
-        :param layer_source: 
-        :param feature_collections_by_tile_coord: 
+        :param layer_source: The path to the geoJSON file that is the source of the layer
+        :param feature_collection: The feature collection to dump
         :return: 
         """
         with open(layer_source, "w") as f:
@@ -583,7 +565,7 @@ class VtReader(QObject):
         :param layer_source_file: 
         :return: 
         """
-        layers = filter(lambda l: l.name() == layer_name and l.source() == layer_source_file, all_layers)
+        layers = [l for l in all_layers if l.name() == layer_name and l.source() == layer_source_file]
         if len(layers) > 0:
             return layers[0]
         return None
@@ -592,8 +574,8 @@ class VtReader(QObject):
     def _apply_named_style(layer, geo_type):
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
-        :param layer: 
-        :param layer_path: e.g. 'transportation.service' or 'transportation_name.path'
+        :param layer: The layer to which the style shall be applied
+        :param geo_type: The geo type of the features on the layer (point, linestring or polygon)
         :return: 
         """
         try:
@@ -605,7 +587,7 @@ class VtReader(QObject):
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
                 if style_name in VtReader._styles:
-                    style_path = os.path.join(FileHelper.get_plugin_directory(), "styles/{}".format(style_name))
+                    style_path = os.path.join(get_plugin_directory(), "styles/{}".format(style_name))
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
                         layer.setCustomProperty("layerStyle", style_path)
@@ -615,31 +597,47 @@ class VtReader(QObject):
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _create_named_layer(self, json_src, layer_name, zoom_level, merge_features, geo_type):
+    def _create_named_layer(self, json_src, layer_name, zoom_level):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
-        # layer_with_zoom = "{}{}{}".format(layer_name, VtReader._zoom_level_delimiter, zoom_level)
+        source_url = self.source.source()
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
-        layer.setCustomProperty("vector_tile_source", self.source.source())
+        layer.setCustomProperty("vector_tile_source", source_url)
         layer.setCustomProperty("zoom_level", zoom_level)
         layer.setShortName(layer_name)
-        layer.setDataUrl(self.source.source())
+        layer.setDataUrl(source_url)
 
+        layer.setDataUrl(remove_key(source_url))
         if self.source.name() and "openmaptiles" in self.source.name().lower():
-            layer.setDataUrl(remove_key(self.source.source()))
-            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors (ODbL)")
+            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors "
+                                 u"(ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
-
-        if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-            layer = FeatureMerger().merge_features(layer)
-            layer.setName(layer_name)
         return layer
 
-    def _create_geojson(self, tile, layer_filter):
+    def _handle_geojson_features(self, tile, layer_name, features):
+        tile_id = tile.id()
+        for geojson_feature in features:
+            geo_type = None
+            geom_type = str(geojson_feature["geometry"]["type"])
+            if geom_type.endswith("Polygon"):
+                geo_type = GeoTypes.POLYGON
+            elif geom_type.endswith("Point"):
+                geo_type = GeoTypes.POINT
+            elif geom_type.endswith("LineString"):
+                geo_type = GeoTypes.LINE_STRING
+            assert geo_type is not None
+
+            feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
+
+            feature_collection["features"].append(geojson_feature)
+            if tile_id not in feature_collection["tiles"]:
+                feature_collection["tiles"].append(tile_id)
+
+    def _add_features_to_feature_collection(self, tile, layer_filter):
         """
          * Transforms all features of the specified tile into GeoJSON
          * The resulting GeoJSON feature will be applied to the features of the corresponding GeoJSON FeatureCollection
@@ -647,32 +645,54 @@ class VtReader(QObject):
         :return:
         """
         for layer_name in tile.decoded_data:
+            layer = tile.decoded_data[layer_name]
+            is_geojson_already = False
+            if "isGeojson" in layer:
+                is_geojson_already = layer["isGeojson"]
             if layer_filter and len(layer_filter) > 0:
                 if layer_name not in layer_filter:
                     continue
 
-            layer = tile.decoded_data[layer_name]
-            if "extent" in layer:
-                extent = layer["extent"]
-            else:
-                extent = self._DEFAULT_EXTENT
-            tile_features = layer["features"]
             tile_id = tile.id()
+            for feature in layer["features"]:
+                if is_geojson_already:
+                    geojson_features = [feature]
+                    geo_type = None
+                    geom_type = str(feature["geometry"]["type"])
+                    if geom_type.endswith("Polygon"):
+                        geo_type = GeoTypes.POLYGON
+                    elif geom_type.endswith("Point"):
+                        feature["properties"]["_symbol"] = self._get_poi_icon(feature)
+                        geo_type = GeoTypes.POINT
+                    elif geom_type.endswith("LineString"):
+                        geo_type = GeoTypes.LINE_STRING
+                    assert geo_type is not None
+                else:
+                    if "extent" in layer:
+                        extent = layer["extent"]
+                    else:
+                        extent = self._DEFAULT_EXTENT
+                    geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
 
-            for feature in tile_features:
-                if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
-                    continue
-
-                geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
                 if geojson_features and len(geojson_features) > 0:
-                    name_and_geotype = (layer_name, geo_type)
-                    if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
-                        self.feature_collections_by_layer_name_and_geotype[name_and_geotype] = self._get_empty_feature_collection(tile.zoom_level, layer_name)
-                    feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
+                    if self._loading_options["clip_tiles"]:
+                        for f in geojson_features:
+                            f["properties"]["_col"] = tile.column
+                            f["properties"]["_row"] = tile.row
+                            f["properties"]["_zoom_level"] = tile.zoom_level
 
+                    feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
                     feature_collection["features"].extend(geojson_features)
                     if tile_id not in feature_collection["tiles"]:
                         feature_collection["tiles"].append(tile_id)
+
+    def _get_feature_collection(self, layer_name, geo_type, zoom_level):
+        name_and_geotype = (layer_name, geo_type)
+        if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
+            self.feature_collections_by_layer_name_and_geotype[
+                name_and_geotype] = self._get_empty_feature_collection(zoom_level, layer_name)
+        feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
+        return feature_collection
 
     @staticmethod
     def _get_feature_class_and_subclass(feature):
@@ -697,8 +717,6 @@ class VtReader(QObject):
         geo_type = geo_types[feature["type"]]
         coordinates = feature["geometry"]
         properties = feature["properties"]
-        properties["_col"] = tile.column
-        properties["_row"] = tile.row
         if "id" in properties and properties["id"] < 0:
             properties["id"] = 0
 
@@ -710,9 +728,10 @@ class VtReader(QObject):
         all_out_of_bounds = []
         coordinates = map_coordinates_recursive(coordinates=coordinates,
                                                 tile_extent=current_layer_tile_extent,
-                                                mapper_func=lambda coords: VtReader._get_absolute_coordinates(coords,
-                                                                                                              tile,
-                                                                                                              current_layer_tile_extent),
+                                                mapper_func=lambda coords: self._get_absolute_coordinates(
+                                                    coordinates=coords,
+                                                    tile=tile,
+                                                    extent=current_layer_tile_extent),
                                                 all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(
                                                     out_of_bounds))
 
@@ -720,7 +739,10 @@ class VtReader(QObject):
             return None, None
 
         split_geometries = self._loading_options["merge_tiles"]
-        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_geometries)
+        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type=geo_type,
+                                                                             coordinates=coordinates,
+                                                                             properties=properties,
+                                                                             split_multi_geometries=split_geometries)
 
         return geojson_features, geo_type
 
@@ -733,7 +755,7 @@ class VtReader(QObject):
         """
 
         feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
-        root_path = FileHelper.get_icons_directory()
+        root_path = get_icons_directory()
         class_icon = "{}.svg".format(feature_class)
         class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
         icon_name = "poi.svg"
@@ -742,38 +764,6 @@ class VtReader(QObject):
         elif os.path.isfile(os.path.join(root_path, class_icon)):
             icon_name = class_icon
         return icon_name
-
-    def _is_duplicate_feature(self, feature, tile):
-        """
-         * Returns true if the same feature has already been loaded
-         * If the feature has not been loaded, it is marked as loaded by calling this function
-         * A feature is identified by the tuple: (feature_name, feature_class, feature_subclass)
-         * A feature is only loaded if the same feature identifier doesn't occur on the same or a neighbouring tile
-        :param feature: 
-        :param tile: 
-        :return: 
-        """
-        geo_type = geo_types[feature["type"]]
-        is_poi = geo_type == GeoTypes.POINT
-
-        is_loaded = False
-        if is_poi and VtReader._feature_name(feature):
-            feature_id = VtReader._feature_id(feature)
-            if feature_id in self._loaded_pois_by_id:
-                locations = self._loaded_pois_by_id[feature_id]
-                for loc in locations:
-                    distance_x = math.fabs(loc["col"] - tile.column)
-                    distance_y = math.fabs(loc["row"] - tile.row)
-                    distance_threshold = 2
-                    is_loaded = distance_x <= distance_threshold and distance_y <= distance_threshold
-                    if is_loaded:
-                        break
-            if not is_loaded:
-                if feature_id not in self._loaded_pois_by_id:
-                    self._loaded_pois_by_id[feature_id] = []
-                self._loaded_pois_by_id[feature_id].append({'col': tile.column, 'row': tile.row})
-
-        return is_loaded
 
     @staticmethod
     def _feature_id(feature):

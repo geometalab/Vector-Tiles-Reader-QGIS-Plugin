@@ -13,13 +13,25 @@ of the License, or (at your option) any later version.
 
 """
 
-from log_helper import debug, info, warn, critical
+from builtins import map
+from builtins import str
+from builtins import object
+from log_helper import info, critical
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
-from PyQt4.QtGui import QAction, QIcon, QMenu, QToolButton,  QMessageBox, QColor, QFileDialog, QApplication
+from PyQt4.QtGui import (
+    QAction,
+    QIcon,
+    QMenu,
+    QToolButton,
+    QMessageBox,
+    QColor,
+    QFileDialog,
+    QProgressBar,
+    QPushButton)
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 
-from file_helper import FileHelper
+from file_helper import get_icons_directory, get_home_directory, get_sample_data_directory, clear_cache
 from tile_helper import *
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
@@ -38,7 +50,26 @@ import traceback
 #     pass
 
 
-class VtrPlugin:
+omt_layer_ordering = [
+    "place",
+    "mountain_peak",
+    "housenumber",
+    "water_name",
+    "transportation_name",
+    "poi",
+    "boundary",
+    "transportation",
+    "building",
+    "aeroway",
+    "park",
+    "water",
+    "waterway",
+    "landcover",
+    "landuse"
+]
+
+
+class VtrPlugin(object):
     _dialog = None
     _model = None
     _reload_button_text = "Load features overlapping the view extent"
@@ -59,7 +90,7 @@ class VtrPlugin:
         iface.projectRead.connect(self._on_project_change)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
-        self.connections_dialog = ConnectionsDialog(FileHelper.get_sample_data_directory())
+        self.connections_dialog = ConnectionsDialog(get_sample_data_directory())
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
@@ -70,13 +101,14 @@ class VtrPlugin:
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
+        self._currrent_connection_name = None
         self._current_zoom = None
         self._current_scale = None
         self._loaded_extent = None
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-        self._debouncer = SignalDebouncer(timeout=1000,
+        self._debouncer = SignalDebouncer(timeout=500,
                                           signals=[self.iface.mapCanvas().scaleChanged,
                                                    self.iface.mapCanvas().extentsChanged],
                                           predicate=self._have_extent_or_scale_changed)
@@ -84,8 +116,11 @@ class VtrPlugin:
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
+        self.message_bar_item = None
+        self.progress_bar = None
 
     def _on_project_change(self):
+        self._debouncer.stop()
         self._cancel_export()
         self._cancel_load()
         self.connections_dialog.set_layers([])
@@ -99,7 +134,7 @@ class VtrPlugin:
                                                            self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
         self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
-        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", FileHelper.clear_cache)
+        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
@@ -229,13 +264,15 @@ class VtrPlugin:
         self.iface.mainWindow().statusBar().showMessage(msg)
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
-    def _add_path_to_icons(self):
-        icons_directory = FileHelper.get_icons_directory()
-        # current_paths = QgsApplication.instance().svgPaths()
-        # if icons_directory not in current_paths:
-        #     current_paths.append(icons_directory)
-        #     QgsApplication.instance().setDefaultSvgPaths(current_paths)
+    @staticmethod
+    def _add_path_to_icons():
+        icons_directory = get_icons_directory()
+        current_paths = QgsApplication.svgPaths()
+        if icons_directory not in current_paths:
+            current_paths.append(icons_directory)
+            QgsApplication.setDefaultSvgPaths(current_paths)
 
+    @pyqtSlot()
     def _update_nr_of_tiles(self):
         zoom = self._get_current_zoom()
         bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
@@ -248,7 +285,7 @@ class VtrPlugin:
 
     def _export_tiles(self):
         from vt_writer import VtWriter
-        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", FileHelper.get_home_directory(), "mbtiles (*.mbtiles)")
+        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", get_home_directory(), "mbtiles (*.mbtiles)")
         if file_name:
             self.export_action.setDisabled(True)
             try:
@@ -261,7 +298,7 @@ class VtrPlugin:
 
     def _get_all_own_layers(self):
         layers = []
-        for l in QgsMapLayerRegistry.instance().mapLayers().values():
+        for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
             data_url = l.dataUrl().lower()
             if data_url and self._current_reader.source.source().lower().startswith(data_url):
                 layers.append(l)
@@ -271,7 +308,7 @@ class VtrPlugin:
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
-            self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
+            # self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
             scheme = self._current_reader.source.scheme()
             zoom = self._get_current_zoom()
             auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
@@ -297,7 +334,7 @@ class VtrPlugin:
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
         extent = self._get_current_extent_as_wkt()
         splits = extent.split(", ")
-        new_extent = map(lambda x: map(float, x.split(" ")), splits)
+        new_extent = [list(map(float, x.split(" "))) for x in splits]
         min_extent = new_extent[0]
         max_extent = new_extent[1]
 
@@ -312,7 +349,9 @@ class VtrPlugin:
         debug("Current extent: {}", tile_bounds)
         return tile_bounds
 
+    @pyqtSlot('QString', 'QString')
     def _on_connect(self, connection_name, path_or_url):
+        self._currrent_connection_name = connection_name
         debug("Connect to path_or_url: {}", path_or_url)
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
         try:
@@ -326,7 +365,6 @@ class VtrPlugin:
                 self._current_reader = None
             if not self._current_reader:
                 reader = self._create_reader(path_or_url)
-                reader.set_root_group_name(connection_name)
                 self._current_reader = reader
             if self._current_reader:
                 layers = self._current_reader.source.vector_layers()
@@ -340,22 +378,24 @@ class VtrPlugin:
         except:
             QMessageBox.critical(None, "Unexpected Error", "An unexpected error occured. {}".format(str(sys.exc_info()[1])))
 
-    def show_about(self):
+    @staticmethod
+    def show_about():
         AboutDialog().show()
 
     def _is_valid_qgis_extent(self, extent_to_load, zoom):
         source_bounds = self._current_reader.source.bounds_tile(zoom)
         info("bounds: {}", source_bounds)
-        if not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
+        if source_bounds and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]:
                 return False
         return True
 
-    def is_extent_within_bounds(self, extent, bounds):
+    @staticmethod
+    def is_extent_within_bounds(extent, bounds):
         is_within = True
-        if bounds:
+        if bounds and extent:
             x_min_within = extent['x_min'] >= bounds['x_min']
             y_min_within = extent['y_min'] >= bounds['y_min']
             x_max_within = extent['x_max'] <= bounds['x_max']
@@ -365,8 +405,10 @@ class VtrPlugin:
             debug("Bounds not available on source. Assuming extent is within bounds")
         return is_within
 
-    def _on_add_layer(self, path_or_url, selected_layers):
+    @pyqtSlot('QString', 'QString', list)
+    def _on_add_layer(self, connection_name, path_or_url, selected_layers):
         assert path_or_url
+        self._assure_qgis_groups_exist(connection_name, True)
 
         crs_string = self._current_reader.source.crs()
         self._init_qgis_map(crs_string)
@@ -538,8 +580,7 @@ class VtrPlugin:
     def reader_cancelled(self):
         info("cancelled")
         self._is_loading = False
-        if self.progress_dialog:
-            self.progress_dialog.hide()
+        self.handle_progress_update(show_progress=False)
         if self._auto_zoom:
             extent = self._extent_to_load
             reload_immediate = self._scale_to_load is not None or extent
@@ -581,16 +622,35 @@ class VtrPlugin:
             reader.loading_finished.connect(self.reader_loading_finished)
             reader.tile_limit_reached.connect(self.reader_limit_exceeded_message)
             reader.cancelled.connect(self.reader_cancelled)
+            reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
             QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
 
+    @pyqtSlot(list)
+    def add_layers(self, layers):
+        info("add layers: {}", layers)
+        QgsMapLayerRegistry.instance().addMapLayers(layers, False)
+
+    @pyqtSlot('QString', object)
+    def add_layer_to_group(self, layer):
+        root_group_name = self._currrent_connection_name
+        root = QgsProject.instance().layerTreeRoot()
+        root_group = root.findGroup(root_group_name)
+        if not root_group:
+            root_group = root.addGroup(root_group_name)
+        layer_group = root_group.findGroup(layer.name())
+        if not layer_group:
+            layer_group = root_group.addGroup(layer.name())
+        layer_group.addLayer(layer)
+
     @pyqtSlot(object)
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
         self._loaded_extent = loaded_extent
-        if self.progress_dialog:
-            self.progress_dialog.hide()
+        self.handle_progress_update(show_progress=False)
+        # if self.progress_dialog:
+        #     self.progress_dialog.hide()
 
         auto_zoom = self._auto_zoom
 
@@ -628,23 +688,85 @@ class VtrPlugin:
     def reader_show_progress_changed(self, show_progress):
         self.handle_progress_update(show_progress=show_progress)
 
+    def _create_message_bar(self):
+        message_bar_item = self.iface.messageBar().createMessage("")
+        progress_bar = QProgressBar()
+        progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        cancel_button = QPushButton()
+        cancel_button.setText('Cancel')
+        cancel_button.clicked.connect(self._cancel_load)
+        message_bar_item.layout().addWidget(progress_bar)
+        message_bar_item.layout().addWidget(cancel_button)
+        self.iface.messageBar().pushWidget(message_bar_item, self.iface.messageBar().INFO)
+        self.message_bar_item = message_bar_item
+        self.progress_bar = progress_bar
+
     def handle_progress_update(self, title=None, progress=None, max_progress=None, msg=None, show_progress=None):
         if show_progress:
-            self.progress_dialog.open()
+            if not self.message_bar_item:
+                self._create_message_bar()
+            # self.progress_dialog.open()
         elif show_progress is False:
-            self.progress_dialog.hide()
-            self.progress_dialog.set_message(None)
+            info("hide progress")
+            self.iface.messageBar().popWidget(self.message_bar_item)
+            self.message_bar_item = None
+            self.progress_bar = None
+            # self.progress_dialog.hide()
+            # self.progress_dialog.set_message(None)
         if title:
-            self.progress_dialog.setWindowTitle(title)
+            pass
+            # self.message_bar_item.setTitle(title)
+            # self.progress_dialog.setWindowTitle(title)
         if max_progress is not None:
-            self.progress_dialog.set_maximum(max_progress)
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(max_progress)
+            # self.progress_dialog.set_maximum(max_progress)
         if msg:
             info(msg)
-            self.progress_dialog.set_message(msg)
+            self.message_bar_item.setTitle(msg)
+            # self.progress_dialog.set_message(msg)
         if progress is not None:
-            self.progress_dialog.set_progress(progress)
+            self.progress_bar.setValue(progress)
+            # self.progress_dialog.set_progress(progress)
 
-    def _add_path_to_dependencies_to_syspath(self):
+    def _assure_qgis_groups_exist(self, root_group_name, sort_layers=False):
+        """
+         * Createss a group for each layer that is given by the layer source scheme
+         >> mbtiles: value 'JSON' in metadata table, array 'vector_layers'
+         >> TileJSON: value 'vector_layers'
+        :return:
+        """
+
+        root = QgsProject.instance().layerTreeRoot()
+        root_group = root.findGroup(root_group_name)
+        if not root_group:
+            root_group = root.addGroup(root_group_name)
+        layers = [l["id"] for l in self._current_reader.source.vector_layers()]
+
+        if sort_layers:
+            layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
+        for index, layer_name in enumerate(layers):
+            group = root_group.findGroup(layer_name)
+            if not group:
+                root_group.addGroup(layer_name)
+
+    @staticmethod
+    def _get_omt_layer_sort_id(layer_name):
+        """
+         * Returns the cartographic sort id for the specified layer.
+         * This sort id is the position of the layer in the omt_layer_ordering collection.
+         * If the layer isn't present in the collection, the sort id wil be 999 and therefore the layer will be added at the bottom.
+        :param layer_name:
+        :return:
+        """
+
+        sort_id = 999
+        if layer_name in omt_layer_ordering:
+            sort_id = omt_layer_ordering.index(layer_name)
+        return sort_id
+
+    @staticmethod
+    def _add_path_to_dependencies_to_syspath():
         """
          * Adds the path to the external libraries to the sys.path if not already added
         """

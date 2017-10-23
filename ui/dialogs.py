@@ -81,7 +81,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True, tile_limit=32, styles_enabled=True, merging_enabled=False,
-                           clip_tile_at_bounds=True)
+                           clip_tile_at_bounds=False)
 
     def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
@@ -101,6 +101,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setChecked(styles_enabled)
         self.chkMergeTiles.setChecked(merging_enabled)
         self.chkClipTiles.setChecked(clip_tile_at_bounds)
+
+    def set_omt_styles_enabled(self, enabled):
+        self.chkApplyStyles.setChecked(enabled)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom:
@@ -192,8 +195,8 @@ class ProgressDialog(QtGui.QDialog, Ui_DlgProgress):
 
 class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
-    on_connect = pyqtSignal(str, str)
-    on_add = pyqtSignal(str, list)
+    on_connect = pyqtSignal('QString', 'QString')
+    on_add = pyqtSignal('QString', 'QString', list)
     on_connection_change = pyqtSignal()
     on_zoom_change = pyqtSignal()
 
@@ -206,9 +209,16 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     ])
 
     _OMT = "OpenMapTiles.com"
+    _MAPZEN = "Mapzen.com"
 
-    _predefined_connections = {_OMT: "https://free.tilehosting.com/data/v3.json?key={token}"}
-    _tokens = {_OMT: "6irhAXGgsi8TrIDL0211"}
+    _predefined_connections = {
+        _OMT: "https://free.tilehosting.com/data/v3.json?key={token}",
+        _MAPZEN: "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}"
+    }
+    _tokens = {
+        _OMT: "6irhAXGgsi8TrIDL0211",
+        _MAPZEN: "mapzen-7SNUCXx"
+    }
 
     def __init__(self, default_browse_directory):
         QtGui.QDialog.__init__(self)
@@ -267,7 +277,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
         name, url = self._get_current_connection()
-        self.on_add.emit(url, selected_layers)
+        self.on_add.emit(name, url, selected_layers)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -361,7 +371,8 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     def set_layers(self, layers):
         self.model.removeRows(0, self.model.rowCount())
-        for row_index, layer in enumerate(layers):
+
+        for row_index, layer in enumerate(sorted(layers)):
             for header_index, header in enumerate(self._table_headers.keys()):
                 header_value = self._table_headers[header]
                 if header_value in layer:
@@ -397,6 +408,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if name in self.connections:
             enable_connect = True
             enable_edit = name not in self._predefined_connections
+            is_omt = name == "OpenMapTiles.com"
+            self.options.set_omt_styles_enabled(is_omt)
+
         self.btnConnect.setEnabled(enable_connect)
         self.btnEdit.setEnabled(enable_edit)
         self.btnDelete.setEnabled(enable_edit)
