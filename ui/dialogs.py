@@ -357,10 +357,12 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.txtPath.setText("")
 
     def _get_current_connection(self):
-        if self.tabServer.isEnabled():
+
+        active_tab = self.tabConnections.currentWidget()
+        if active_tab == self.tabServer:
             name = self.cbxConnections.currentText()
             url = self.connections[name]
-        elif self.tabFile.isEnabled():
+        elif active_tab == self.tabFile:
             url = self.txtPath.text()
             name = os.path.basename(url)
         else:
