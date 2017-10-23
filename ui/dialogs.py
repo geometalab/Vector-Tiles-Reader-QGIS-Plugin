@@ -81,7 +81,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True, tile_limit=32, styles_enabled=True, merging_enabled=False,
-                           clip_tile_at_bounds=True)
+                           clip_tile_at_bounds=False)
 
     def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,

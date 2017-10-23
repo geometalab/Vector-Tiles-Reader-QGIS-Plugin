@@ -621,9 +621,6 @@ class VtReader(QObject):
     def _handle_geojson_features(self, tile, layer_name, features):
         tile_id = tile.id()
         for geojson_feature in features:
-            # if self._is_duplicate_feature(feature, tile) or self.cancel_requested:
-            #     continue
-
             geo_type = None
             geom_type = str(geojson_feature["geometry"]["type"])
             if geom_type.endswith("Polygon"):
@@ -658,8 +655,6 @@ class VtReader(QObject):
 
             tile_id = tile.id()
             for feature in layer["features"]:
-                # if self._is_duplicate_feature(geojson_feature, tile) or self.cancel_requested:
-                #     continue
                 if is_geojson_already:
                     geojson_features = [feature]
                     geo_type = None
@@ -769,38 +764,6 @@ class VtReader(QObject):
         elif os.path.isfile(os.path.join(root_path, class_icon)):
             icon_name = class_icon
         return icon_name
-
-    def _is_duplicate_feature(self, feature, tile):
-        """
-         * Returns true if the same feature has already been loaded
-         * If the feature has not been loaded, it is marked as loaded by calling this function
-         * A feature is identified by the tuple: (feature_name, feature_class, feature_subclass)
-         * A feature is only loaded if the same feature identifier doesn't occur on the same or a neighbouring tile
-        :param feature: 
-        :param tile: 
-        :return: 
-        """
-        geo_type = geo_types[feature["type"]]
-        is_poi = geo_type == GeoTypes.POINT
-
-        is_loaded = False
-        if is_poi and VtReader._feature_name(feature):
-            feature_id = VtReader._feature_id(feature)
-            if feature_id in self._loaded_pois_by_id:
-                locations = self._loaded_pois_by_id[feature_id]
-                for loc in locations:
-                    distance_x = math.fabs(loc["col"] - tile.column)
-                    distance_y = math.fabs(loc["row"] - tile.row)
-                    distance_threshold = 2
-                    is_loaded = distance_x <= distance_threshold and distance_y <= distance_threshold
-                    if is_loaded:
-                        break
-            if not is_loaded:
-                if feature_id not in self._loaded_pois_by_id:
-                    self._loaded_pois_by_id[feature_id] = []
-                self._loaded_pois_by_id[feature_id].append({'col': tile.column, 'row': tile.row})
-
-        return is_loaded
 
     @staticmethod
     def _feature_id(feature):
