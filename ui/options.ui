@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>752</width>
-    <height>602</height>
+    <height>275</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,12 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>275</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Options</string>
@@ -101,15 +107,29 @@
     </widget>
    </item>
    <item row="11" column="0" colspan="2">
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="2" column="3">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="btnResetToBasemapDefaults">
+       <property name="text">
+        <string>Base Map Defaults</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnResetToAnalysisDefaults">
+       <property name="text">
+        <string>Analysis Defaults</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnResetToInspectionDefaults">
        <property name="text">
         <string>Inspection Defaults</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item>
       <spacer name="horizontalSpacer_2">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -121,20 +141,6 @@
         </size>
        </property>
       </spacer>
-     </item>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="btnResetToAnalysisDefaults">
-       <property name="text">
-        <string>Analysis Defaults</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QPushButton" name="btnResetToBasemapDefaults">
-       <property name="text">
-        <string>Base Map Defaults</string>
-       </property>
-      </widget>
      </item>
     </layout>
    </item>
