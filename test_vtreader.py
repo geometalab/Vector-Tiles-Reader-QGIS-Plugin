@@ -8,7 +8,6 @@ import sys
 from qgis.core import *
 from qgis.utils import iface
 from PyQt4.QtCore import *
-from tile_source import MBTilesSource
 
 
 class IfaceTests(unittest.TestCase):
@@ -27,12 +26,7 @@ class IfaceTests(unittest.TestCase):
     def testIfaceisNotNote(self):
         global iface
         self.assertIsNotNone(iface)
-
-    def testMbtilesSourceCreation(self):
-        path = os.path.join(os.path.dirname(__file__), 'sample_data', 'uster_zh.mbtiles')
-        src = MBTilesSource(path)
-        self.assertIsNotNone(src)
-        self.assertEqual(path, src.source())
+	self.assertEqual(True, False)
 
 
 def suite():
