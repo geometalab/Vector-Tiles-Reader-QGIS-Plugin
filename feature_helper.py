@@ -1,10 +1,37 @@
 from builtins import str
 from builtins import object
-from qgis.core import QgsMapLayerRegistry, QgsField, QgsVectorLayer, QgsFeatureRequest, QgsSpatialIndex, QgsGeometry
+from qgis.core import (QgsMapLayerRegistry,
+                       QgsField,
+                       QgsVectorLayer,
+                       QgsFeatureRequest,
+                       QgsSpatialIndex,
+                       QgsGeometry,
+                       QgsRectangle)
 from PyQt4.QtCore import *
 from log_helper import info, debug
 import uuid
 import numbers
+from tile_helper import tile_to_latlon
+
+
+def clip_features(layer, scheme):
+    layer.startEditing()
+    info("tile extent: {}")
+    for f in layer.getFeatures():
+        errors = f.geometry().validateGeometry()
+        if errors and len(errors) > 0:
+            continue
+
+        col = f.attribute("_col")
+        row = f.attribute("_row")
+        zoom_level = f.attribute("_zoom_level")
+        tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
+        rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
+
+        new_geom = f.geometry().intersection(rect)
+        f.setGeometry(new_geom)
+        layer.updateFeature(f)
+    layer.commitChanges()
 
 
 class FeatureMerger(object):

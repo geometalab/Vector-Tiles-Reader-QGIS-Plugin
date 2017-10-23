@@ -15,7 +15,7 @@ import traceback
 
 from log_helper import info, critical, debug, remove_key
 from tile_helper import get_all_tiles, get_code_from_epsg, clamp
-from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types
+from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types, clip_features
 from file_helper import (
     get_cached_tile_file_name,
     get_styles,
@@ -283,9 +283,11 @@ class VtReader(QObject):
         zoom_level = self._loading_options["zoom_level"]
         merge_tiles = self._loading_options["merge_tiles"]
         apply_styles = self._loading_options["apply_styles"]
+        clip_tiles = self._loading_options["clip_tiles"]
         if not self.cancel_requested:
             self._create_qgis_layers(merge_features=merge_tiles,
-                                     apply_styles=apply_styles)
+                                     apply_styles=apply_styles,
+                                     clip_tiles=clip_tiles)
 
         self._update_progress(show_dialog=False)
         if self.cancel_requested:
@@ -454,7 +456,7 @@ class VtReader(QObject):
     def _get_geojson_filename(self, layer_name, geo_type):
         return "{}.{}.{}".format(self.source.name().replace(" ", "_"), layer_name, geo_type)
 
-    def _create_qgis_layers(self, merge_features, apply_styles):
+    def _create_qgis_layers(self, merge_features, apply_styles, clip_tiles):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
@@ -496,12 +498,16 @@ class VtReader(QObject):
                     self._update_layer_source(file_path, feature_collection)
                     if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                         FeatureMerger().merge_features(layer)
+                    if clip_tiles:
+                        clip_features(layer=layer, scheme=self.source.scheme())
 
             if not layer:
                 self._update_layer_source(file_path, feature_collection)
-                layer = self._create_named_layer(file_path, layer_name, zoom_level, merge_features, geo_type)
+                layer = self._create_named_layer(file_path, layer_name, zoom_level)
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                     FeatureMerger().merge_features(layer)
+                if clip_tiles:
+                    clip_features(layer=layer, scheme=self.source.scheme())
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
@@ -591,7 +597,7 @@ class VtReader(QObject):
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _create_named_layer(self, json_src, layer_name, zoom_level, merge_features, geo_type):
+    def _create_named_layer(self, json_src, layer_name, zoom_level):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
@@ -674,6 +680,12 @@ class VtReader(QObject):
                     geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
 
                 if geojson_features and len(geojson_features) > 0:
+                    if self._loading_options["clip_tiles"]:
+                        for f in geojson_features:
+                            f["properties"]["_col"] = tile.column
+                            f["properties"]["_row"] = tile.row
+                            f["properties"]["_zoom_level"] = tile.zoom_level
+
                     feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
                     feature_collection["features"].extend(geojson_features)
                     if tile_id not in feature_collection["tiles"]:
