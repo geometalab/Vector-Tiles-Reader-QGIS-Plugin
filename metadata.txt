@@ -21,6 +21,8 @@ changelog=
     ---1.2.0---
     * The loading performance has been increased.
     * A new predefined connection to Mapzen.com has been added
+    * Feature merging improved
+    * Tile clipping improved
     ---1.1.0---
     * A new mode 'Basemap' has been added. Vector tiles are automatically reloaded upon zoom/pan.
     * The loading performance has been increased.
