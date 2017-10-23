@@ -9,10 +9,13 @@ from qgis.core import *
 from qgis.utils import iface
 from PyQt4.QtCore import *
 
+from tile_source import MBTilesSource
+
+
 class IfaceTests(unittest.TestCase):
-    '''
+    """
     Tests for Iface
-    '''
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -27,9 +30,31 @@ class IfaceTests(unittest.TestCase):
         self.assertIsNotNone(iface)
 
 
+class MbtilesSourceTests(unittest.TestCase):
+    """
+    Tests for MBTilesSource
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    def testMbtilesSourceCreation(self):
+        path = os.path.join(os.path.dirname(__file__), 'sample_data', 'uster_zh.mbtiles')
+        src = MBTilesSource(path)
+        self.assertEqual(path, src.source())
+
+
 def suite():
-    suite = unittest.makeSuite(IfaceTests, 'test')
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(IfaceTests))
+    # suite = unittest.makeSuite(IfaceTests, 'test')
     return suite
+
 
 # run all tests using unittest skipping nose or testplugin
 def run_all():
