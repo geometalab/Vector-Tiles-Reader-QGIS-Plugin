@@ -17,7 +17,7 @@ def testIfaceisNotNote():
     assert iface is not None
 
 
-def testMbtilesSourceCreation(self):
+def testMbtilesSourceCreation():
     path = os.path.join(os.path.dirname(__file__), 'sample_data', 'uster_zh.mbtiles')
     src = MBTilesSource(path)
     assert src is not None

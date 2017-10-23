@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin.svg?branch=master)](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin)
+
 # Vector Tiles Reader QGIS-Plugin
 
 This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a t-rex cache.
