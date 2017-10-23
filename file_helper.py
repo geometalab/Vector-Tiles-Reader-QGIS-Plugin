@@ -69,7 +69,7 @@ def cache_tile(tile, source_name):
 
 
 def get_sample_data_directory():
-    return os.path.join(get_plugin_directory(), "sample_data")
+    return os.path.join(os.path.abspath(os.curdir))
 
 
 def get_home_directory():
