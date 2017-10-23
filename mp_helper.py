@@ -40,7 +40,7 @@ def can_load_lib():
 def load_lib():
     lib = None
     path = get_lib_for_current_platform()
-    if path:
+    if path and os.path.isfile(path):
         try:
             lib = cdll.LoadLibrary(path)
             lib.decodeMvtToJson.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
