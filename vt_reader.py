@@ -9,7 +9,6 @@ from builtins import str
 import sys
 import os
 import json
-import math
 import uuid
 import traceback
 
@@ -100,6 +99,7 @@ class VtReader(QObject):
         self._clip_tiles_at_tile_bounds = None
         self._always_overwrite_geojson = False
         self._flush = False
+        self._feature_count = None
 
     def _create_source(self, path_or_url):
         is_web_source = path_or_url.lower().startswith("http://") or path_or_url.lower().startswith("https://")
@@ -215,6 +215,7 @@ class VtReader(QObject):
                     bits = "64"
                 info("Native decoding not supported: {}, {}bit", sys.platform, bits)
 
+            self._feature_count = 0
             self._all_tiles = []
             # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
             self.source = self._create_source(self.source.source())
@@ -676,9 +677,11 @@ class VtReader(QObject):
 
                 if geojson_features and len(geojson_features) > 0:
                     for f in geojson_features:
+                        f["properties"]["_id"] = self._feature_count
                         f["properties"]["_col"] = tile.column
                         f["properties"]["_row"] = tile.row
                         f["properties"]["_zoom_level"] = tile.zoom_level
+                        self._feature_count += 1
 
                     feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
                     feature_collection["features"].extend(geojson_features)
