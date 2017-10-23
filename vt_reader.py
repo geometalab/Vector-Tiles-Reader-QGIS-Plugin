@@ -675,11 +675,10 @@ class VtReader(QObject):
                     geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
 
                 if geojson_features and len(geojson_features) > 0:
-                    if self._loading_options["clip_tiles"]:
-                        for f in geojson_features:
-                            f["properties"]["_col"] = tile.column
-                            f["properties"]["_row"] = tile.row
-                            f["properties"]["_zoom_level"] = tile.zoom_level
+                    for f in geojson_features:
+                        f["properties"]["_col"] = tile.column
+                        f["properties"]["_row"] = tile.row
+                        f["properties"]["_zoom_level"] = tile.zoom_level
 
                     feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
                     feature_collection["features"].extend(geojson_features)
