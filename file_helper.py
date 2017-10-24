@@ -6,7 +6,6 @@ import sys
 import cPickle as pickle
 import time
 from log_helper import info, critical, warn, debug
-from ctypes import create_unicode_buffer, windll
 
 
 geojson_folder = "geojson"
@@ -25,6 +24,7 @@ def _normalize_path(path):
     path = os.path.normpath(os.path.abspath(path))
     if sys.platform.startswith("win32"):
         try:
+            from ctypes import create_unicode_buffer, windll
             BUFFER_SIZE = 500
             buffer = create_unicode_buffer(BUFFER_SIZE)
             get_long_path_name = windll.kernel32.GetLongPathNameW
