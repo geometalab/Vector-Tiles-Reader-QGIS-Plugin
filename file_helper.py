@@ -16,6 +16,24 @@ def get_plugin_directory():
     return os.path.abspath(os.path.dirname(__file__))
 
 
+def paths_equal(path1, path2):
+    return _normalize_path(path1) == _normalize_path(path2)
+
+
+def _normalize_path(path):
+    path = os.path.normpath(os.path.abspath(path))
+    if sys.platform.startswith("win32"):
+        try:
+            from ctypes import create_unicode_buffer, windll
+            BUFFER_SIZE = 500
+            buffer = create_unicode_buffer(BUFFER_SIZE)
+            get_long_path_name = windll.kernel32.GetLongPathNameW
+            get_long_path_name(unicode(path), buffer, BUFFER_SIZE)
+            path = os.path.normpath(buffer.value)
+        except:
+            info("failed: {}", sys.exc_info()[1])
+    return path
+
 def get_styles():
     folder = os.path.join(get_plugin_directory(), "styles")
     styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]

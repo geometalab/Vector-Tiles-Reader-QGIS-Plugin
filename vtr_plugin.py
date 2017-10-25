@@ -35,7 +35,8 @@ from file_helper import (get_icons_directory,
                          get_home_directory,
                          get_sample_data_directory,
                          clear_cache,
-                         get_plugin_directory)
+                         get_plugin_directory,
+                         paths_equal)
 from tile_helper import *
 from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
 
@@ -96,7 +97,7 @@ class VtrPlugin(object):
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
-        self.connections_dialog = ConnectionsDialog(get_sample_data_directory())
+        self.connections_dialog = ConnectionsDialog(self._get_initial_browse_directory())
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
@@ -124,6 +125,21 @@ class VtrPlugin(object):
         self._extent_to_load = None
         self.message_bar_item = None
         self.progress_bar = None
+
+    @staticmethod
+    def _get_initial_browse_directory():
+        """
+         * If qgis is started in a specific folder, this folder will be used as initial directory when browsing sources
+          Otherwise, the sample data folder will be opened.
+        :return:
+        """
+
+        qgis_path = QgsApplication.pkgDataPath().replace("/apps/qgis", "/bin")
+        open_path = get_sample_data_directory()
+        cwd = os.getcwd()
+        if not paths_equal(cwd, qgis_path):
+            open_path = cwd
+        return open_path
 
     def _clear_cache_when_version_changed(self):
         latest_version = self._get_plugin_version()
