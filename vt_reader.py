@@ -89,7 +89,8 @@ class VtReader(QObject):
         if not path_or_url:
             raise RuntimeError("The datasource is required")
 
-        self.source = self._create_source(path_or_url)
+        self._source = self._create_source(path_or_url)
+        self._external_source = self._create_source(path_or_url)
 
         assure_temp_dirs_exist()
         self.iface = iface
@@ -100,6 +101,17 @@ class VtReader(QObject):
         self._always_overwrite_geojson = False
         self._flush = False
         self._feature_count = None
+
+    def get_source(self):
+        """
+         * Returns the source being used of the current reader. This method is intended for external use,
+         i.e. from outside of this reader. SQlite objects must only be used in the thread they were created.
+         As a result of this, each reader creates two identical connections, but one is created within and one
+         outisde of the thread.
+        :return:
+        """
+
+        return self._external_source
 
     def _create_source(self, path_or_url):
         is_web_source = path_or_url.lower().startswith("http://") or path_or_url.lower().startswith("https://")
@@ -118,10 +130,10 @@ class VtReader(QObject):
 
     def shutdown(self):
         info("Shutdown reader")
-        self.source.progress_changed.disconnect()
-        self.source.max_progress_changed.disconnect()
-        self.source.message_changed.disconnect()
-        self.source.close_connection()
+        self._source.progress_changed.disconnect()
+        self._source.max_progress_changed.disconnect()
+        self._source.message_changed.disconnect()
+        self._source.close_connection()
 
     def id(self):
         return self._id
@@ -160,7 +172,7 @@ class VtReader(QObject):
         """
         # todo: when improving CRS handling: the correct CRS of the source has to be set here
 
-        source_crs = self.source.crs()
+        source_crs = self._source.crs()
         if source_crs:
             epsg_id = get_code_from_epsg(source_crs)
         else:
@@ -173,8 +185,8 @@ class VtReader(QObject):
 
         return {
             "tiles": [],
-            "source": self.source.name(),
-            "scheme": self.source.scheme(),
+            "source": self._source.name(),
+            "scheme": self._source.scheme(),
             "layer": layer_name,
             "zoom_level": zoom_level,
             "type": "FeatureCollection",
@@ -196,16 +208,19 @@ class VtReader(QObject):
         """
         self.cancel_requested = True
         if self.source:
-            self.source.cancel()
+            self._source.cancel()
 
     def _get_clamped_zoom_level(self):
         zoom_level = self._loading_options["zoom_level"]
-        min_zoom = self.source.min_zoom()
-        max_zoom = self.source.max_zoom()
+        min_zoom = self._source.min_zoom()
+        max_zoom = self._source.max_zoom()
         zoom_level = clamp(zoom_level, low=min_zoom, high=max_zoom)
         return zoom_level
 
     def _load_tiles(self):
+        # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
+        self.source = self._create_source(self._source.source())
+
         try:
             if can_load_lib():
                 info("Native decoding supported!!!")
@@ -217,8 +232,7 @@ class VtReader(QObject):
 
             self._feature_count = 0
             self._all_tiles = []
-            # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
-            self.source = self._create_source(self.source.source())
+
             bounds = self._loading_options["bounds"]
             clip_tiles = self._loading_options["clip_tiles"]
             max_tiles = self._loading_options["max_tiles"]
@@ -226,7 +240,7 @@ class VtReader(QObject):
 
             self.cancel_requested = False
             self.feature_collections_by_layer_name_and_geotype = {}
-            self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self.source.name())))
+            self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self._source.name())))
             self._clip_tiles_at_tile_bounds = clip_tiles
 
             zoom_level = self._get_clamped_zoom_level()
@@ -242,7 +256,7 @@ class VtReader(QObject):
                 if self.cancel_requested or (max_tiles and len(cached_tiles) >= max_tiles):
                     break
 
-                file_name = get_cached_tile_file_name(self.source.name(), zoom_level, t[0], t[1])
+                file_name = get_cached_tile_file_name(self._source.name(), zoom_level, t[0], t[1])
                 tile = get_cached_tile(file_name)
                 if tile and tile.decoded_data:
                     cached_tiles.append(tile)
@@ -262,17 +276,17 @@ class VtReader(QObject):
                     self._process_tiles(cached_tiles, layer_filter)
                     self._all_tiles.extend(cached_tiles)
 
-            debug("Loading data for zoom level '{}' source '{}'", zoom_level, self.source.name())
+            debug("Loading data for zoom level '{}' source '{}'", zoom_level, self._source.name())
 
             if remaining_nr_of_tiles > 0:
-                tile_data_tuples = self.source.load_tiles(zoom_level=zoom_level,
+                tile_data_tuples = self._source.load_tiles(zoom_level=zoom_level,
                                                           tiles_to_load=tiles_to_load,
                                                           max_tiles=remaining_nr_of_tiles)
                 if len(tile_data_tuples) > 0 and not self.cancel_requested:
                     tiles = self._decode_tiles(tile_data_tuples)
                     self._process_tiles(tiles, layer_filter)
                     for t in tiles:
-                        cache_tile(t, self.source.name())
+                        cache_tile(t, self._source.name())
                     self._all_tiles.extend(tiles)
             self._continue_loading()
 
@@ -455,7 +469,7 @@ class VtReader(QObject):
             self._update_progress(progress=index+1)
 
     def _get_geojson_filename(self, layer_name, geo_type):
-        return "{}.{}.{}".format(self.source.name().replace(" ", "_"), layer_name, geo_type)
+        return "{}.{}.{}".format(self._source.name().replace(" ", "_"), layer_name, geo_type)
 
     def _create_qgis_layers(self, merge_features, apply_styles, clip_tiles):
         """
@@ -466,7 +480,7 @@ class VtReader(QObject):
         # self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("vector_tile_source") == self.source.source(), iter(qgis_layers.items())))
+        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
         own_layers = list(map(lambda (n, l): l, vt_qgis_name_layer_tuples))
         for l in own_layers:
             name = l.name()
@@ -500,7 +514,7 @@ class VtReader(QObject):
                     if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                         FeatureMerger().merge_features(layer)
                     if clip_tiles:
-                        clip_features(layer=layer, scheme=self.source.scheme())
+                        clip_features(layer=layer, scheme=self._source.scheme())
 
             if not layer:
                 self._update_layer_source(file_path, feature_collection)
@@ -508,7 +522,7 @@ class VtReader(QObject):
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                     FeatureMerger().merge_features(layer)
                 if clip_tiles:
-                    clip_features(layer=layer, scheme=self.source.scheme())
+                    clip_features(layer=layer, scheme=self._source.scheme())
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
@@ -604,7 +618,7 @@ class VtReader(QObject):
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
-        source_url = self.source.source()
+        source_url = self._source.source()
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
         layer.setCustomProperty("vector_tile_source", source_url)
@@ -613,7 +627,7 @@ class VtReader(QObject):
         layer.setDataUrl(source_url)
 
         layer.setDataUrl(remove_key(source_url))
-        if self.source.name() and "openmaptiles" in self.source.name().lower():
+        if self._source.name() and "openmaptiles" in self._source.name().lower():
             layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors "
                                  u"(ODbL)")
             layer.setAttributionUrl("https://openmaptiles.com/hosting/")
