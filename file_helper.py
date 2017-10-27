@@ -34,6 +34,7 @@ def _normalize_path(path):
             info("failed: {}", sys.exc_info()[1])
     return path
 
+
 def get_styles():
     folder = os.path.join(get_plugin_directory(), "styles")
     styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]

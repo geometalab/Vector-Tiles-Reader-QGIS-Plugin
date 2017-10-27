@@ -39,6 +39,33 @@ def clamp(value, low=None, high=None):
     return value
 
 
+def clamp_bounds(bounds_to_clamp, clamp_values):
+    x_min = clamp(bounds_to_clamp["x_min"], low=clamp_values["x_min"])
+    y_min = clamp(bounds_to_clamp["y_min"], low=clamp_values["y_min"])
+    x_max = clamp(bounds_to_clamp["x_max"], high=clamp_values["x_max"])
+    y_max = clamp(bounds_to_clamp["y_max"], high=clamp_values["y_max"])
+    return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max)
+
+
+def extent_overlap_bounds(extent, bounds):
+    return (bounds["x_min"] <= extent["x_min"] <= bounds["x_max"] or
+            bounds["x_min"] <= extent["x_max"] <= bounds["x_max"]) and\
+            (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
+             bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
+
+
+def create_bounds(zoom, x_min, x_max, y_min, y_max):
+    return {
+        "zoom": int(zoom),
+        "x_min": int(x_min),
+        "x_max": int(x_max),
+        "y_min": int(y_min),
+        "y_max": int(y_max),
+        "width": int(x_max - x_min + 1),
+        "height": int(y_max - y_min + 1)
+    }
+
+
 def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
@@ -138,15 +165,7 @@ def get_tile_bounds(zoom, bounds, scheme="xyz"):
         y_min = int(min(xy_min[1], xy_max[1]))
         y_max = int(max(xy_min[1], xy_max[1]))
 
-        tile_bounds = {
-            "zoom": int(zoom),
-            "x_min": int(x_min),
-            "x_max": int(x_max),
-            "y_min": int(y_min),
-            "y_max": int(y_max),
-            "width": int(x_max-x_min+1),
-            "height": int(y_max-y_min+1)
-        }
+        tile_bounds = create_bounds(zoom, x_min, x_max, y_min, y_max)
     return tile_bounds
 
 

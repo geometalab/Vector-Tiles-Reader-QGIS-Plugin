@@ -98,6 +98,7 @@ class VtrPlugin(object):
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
         self.connections_dialog = ConnectionsDialog(self._get_initial_browse_directory())
+        self.connections_dialog.on_directory_change.connect(self._on_browse_dir_change)
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
@@ -126,27 +127,27 @@ class VtrPlugin(object):
         self.message_bar_item = None
         self.progress_bar = None
 
-    @staticmethod
-    def _get_initial_browse_directory():
+    def _on_browse_dir_change(self, diretory_path):
+        self.settings.setValue("last_directory", diretory_path)
+
+    def _get_initial_browse_directory(self):
         """
          * If qgis is started in a specific folder, this folder will be used as initial directory when browsing sources
           Otherwise, the sample data folder will be opened.
         :return:
         """
-
-        qgis_path = QgsApplication.pkgDataPath().replace("/apps/qgis", "/bin")
-        open_path = get_sample_data_directory()
-        cwd = os.getcwd()
-        if not paths_equal(cwd, qgis_path):
-            open_path = cwd
-        return open_path
+        last_browse_directory = self.settings.value("last_directory", None)
+        if not last_browse_directory:
+            last_browse_directory = os.path.expanduser("~")
+        return last_browse_directory
 
     def _clear_cache_when_version_changed(self):
         latest_version = self._get_plugin_version()
-        local_version = self.settings.value("vectortilereader/version", None)
+        local_version = self.settings.value("version", None)
         if not local_version or local_version != latest_version:
+            info("Plugin version changed from '{}' to '{}'. Cache will be cleared...", local_version, latest_version)
             clear_cache()
-        self.settings.setValue("vectortilereader/version", latest_version)
+        self.settings.setValue("version", latest_version)
 
     @staticmethod
     def _get_plugin_version():
@@ -173,13 +174,13 @@ class VtrPlugin(object):
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
                                                            self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
-        self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
+        # self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
         self.popupMenu.addAction(self.reload_action)
-        self.popupMenu.addAction(self.export_action)
+        # self.popupMenu.addAction(self.export_action)
         self.popupMenu.addAction(self.clear_cache_action)
         self.popupMenu.addAction(self.about_action)
         self.toolButton = QToolButton()
@@ -189,7 +190,7 @@ class VtrPlugin(object):
         self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
+        # self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
@@ -218,20 +219,25 @@ class VtrPlugin(object):
             self._cancel_load()
 
     def _has_extent_changed(self):
-        scheme = self._current_reader.source.scheme()
+        scheme = self._current_reader.get_source().scheme()
         scale = self._scale_to_load
         if not scale:
             scale = self._get_current_map_scale()
 
+        bounds = None
         if self._extent_to_load:
             new_extent = self._extent_to_load
         else:
             zoom = get_zoom_by_scale(scale)
-            max_zoom = self._current_reader.source.max_zoom()
-            min_zoom = self._current_reader.source.min_zoom()
+            max_zoom = self._current_reader.get_source().max_zoom()
+            min_zoom = self._current_reader.get_source().min_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
             new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+            bounds = self._current_reader.get_source().bounds_tile(zoom)
+            new_extent = clamp_bounds(new_extent, bounds)
         has_changed = new_extent != self._loaded_extent
+        if has_changed:
+            info("changed from: {} to {}, bounds: {}", self._loaded_extent, new_extent, bounds)
         return has_changed, new_extent
 
     def _has_scale_changed(self):
@@ -261,8 +267,8 @@ class VtrPlugin(object):
             old_scale = self._loaded_scale
 
             new_zoom = self._get_zoom_for_current_map_scale()
-            min_zoom = self._current_reader.source.min_zoom()
-            max_zoom = self._current_reader.source.max_zoom()
+            min_zoom = self._current_reader.get_source().min_zoom()
+            max_zoom = self._current_reader.get_source().max_zoom()
             new_zoom = clamp(new_zoom, low=min_zoom, high=max_zoom)
 
             has_zoom_changed = new_zoom != self._current_zoom
@@ -285,7 +291,7 @@ class VtrPlugin(object):
     def _handle_scale_change(self, new_scale):
         scale_increased = self._current_scale is None or new_scale > self._current_scale
         self._current_scale = new_scale
-        max_zoom = self._current_reader.source.max_zoom()
+        max_zoom = self._current_reader.get_source().max_zoom()
         new_zoom = get_zoom_by_scale(new_scale)
         if new_zoom > max_zoom:
             new_zoom = max_zoom
@@ -321,8 +327,8 @@ class VtrPlugin(object):
 
         map_scale_zoom = self._get_zoom_for_current_map_scale()
         if self._current_reader:
-            min_zoom = self._current_reader.source.min_zoom()
-            max_zoom = self._current_reader.source.max_zoom()
+            min_zoom = self._current_reader.get_source().min_zoom()
+            max_zoom = self._current_reader.get_source().max_zoom()
             map_scale_zoom = clamp(map_scale_zoom, low=min_zoom, high=max_zoom)
         self.connections_dialog.set_current_zoom_level(map_scale_zoom)
 
@@ -337,7 +343,6 @@ class VtrPlugin(object):
             self.export_action.setDisabled(True)
             try:
                 self._current_writer = VtWriter(self.iface, file_name, progress_handler=self.handle_progress_update)
-                self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_export)
                 self._current_writer.export()
             except:
                 critical("Error during export: {}", sys.exc_info())
@@ -347,7 +352,7 @@ class VtrPlugin(object):
         layers = []
         for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
             data_url = l.dataUrl().lower()
-            if data_url and self._current_reader.source.source().lower().startswith(data_url):
+            if data_url and self._current_reader.get_source().source().lower().startswith(data_url):
                 layers.append(l)
         return layers
 
@@ -355,8 +360,7 @@ class VtrPlugin(object):
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
-            # self._create_progress_dialog(self.iface.mainWindow(), on_cancel=self._cancel_load)
-            scheme = self._current_reader.source.scheme()
+            scheme = self._current_reader.get_source().scheme()
             zoom = self._get_current_zoom()
             auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
             flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom
@@ -402,7 +406,7 @@ class VtrPlugin(object):
         debug("Connect to path_or_url: {}", path_or_url)
         self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
         try:
-            if self._current_reader and self._current_reader.source.source() != path_or_url:
+            if self._current_reader and self._current_reader.get_source().source() != path_or_url:
                 self._current_reader.shutdown()
                 self._current_reader.progress_changed.disconnect()
                 self._current_reader.max_progress_changed.disconnect()
@@ -414,9 +418,9 @@ class VtrPlugin(object):
                 reader = self._create_reader(path_or_url)
                 self._current_reader = reader
             if self._current_reader:
-                layers = self._current_reader.source.vector_layers()
+                layers = self._current_reader.get_source().vector_layers()
                 self.connections_dialog.set_layers(layers)
-                self.connections_dialog.options.set_zoom(self._current_reader.source.min_zoom(), self._current_reader.source.max_zoom())
+                self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(), self._current_reader.get_source().max_zoom())
                 self.reload_action.setEnabled(True)
             else:
                 self.connections_dialog.set_layers([])
@@ -430,7 +434,7 @@ class VtrPlugin(object):
         AboutDialog().show()
 
     def _is_valid_qgis_extent(self, extent_to_load, zoom):
-        source_bounds = self._current_reader.source.bounds_tile(zoom)
+        source_bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("bounds: {}", source_bounds)
         if source_bounds and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
@@ -457,15 +461,15 @@ class VtrPlugin(object):
         assert path_or_url
         self._assure_qgis_groups_exist(connection_name, True)
 
-        crs_string = self._current_reader.source.crs()
+        crs_string = self._current_reader.get_source().crs()
         self._init_qgis_map(crs_string)
 
-        scheme = self._current_reader.source.scheme()
+        scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
         extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
 
-        bounds = self._current_reader.source.bounds_tile(zoom)
+        bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
@@ -473,7 +477,7 @@ class VtrPlugin(object):
             pass
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
-            extent = self._current_reader.source.bounds_tile(zoom)
+            extent = self._current_reader.get_source().bounds_tile(zoom)
 
         keep_dialog_open = self.connections_dialog.keep_dialog_open()
         if keep_dialog_open:
@@ -481,7 +485,6 @@ class VtrPlugin(object):
         else:
             dialog_owner = self.iface.mainWindow()
             self.connections_dialog.close()
-        self._create_progress_dialog(dialog_owner, on_cancel=self._cancel_load)
         self._load_tiles(options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
                          bounds=extent)
@@ -490,7 +493,7 @@ class VtrPlugin(object):
     def _get_current_zoom(self):
         zoom = 14
         if self._current_reader:
-            zoom = self._current_reader.source.max_zoom()
+            zoom = self._current_reader.get_source().max_zoom()
         if zoom is None:
             zoom = 14
         manual_zoom = self.connections_dialog.options.manual_zoom()
@@ -522,11 +525,6 @@ class VtrPlugin(object):
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
         self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
 
-    def _create_progress_dialog(self, owner, on_cancel):
-        self.progress_dialog = ProgressDialog(owner)
-        if on_cancel:
-            self.progress_dialog.on_cancel.connect(on_cancel)
-
     def _cancel_load(self):
         if self._current_reader:
             self._current_reader.cancel()
@@ -540,12 +538,6 @@ class VtrPlugin(object):
         new_action.triggered.connect(callback)
         new_action.setEnabled(is_enabled)
         return new_action
-
-    def _extent_overlap_bounds(self, extent, bounds):
-        return (bounds["x_min"] <= extent["x_min"] <= bounds["x_max"] or
-                bounds["x_min"] <= extent["x_max"] <= bounds["x_max"]) and\
-                (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
-                 bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
 
     def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False):
         if self._debouncer.is_running():
@@ -569,8 +561,8 @@ class VtrPlugin(object):
             self._is_loading = False
         else:
             try:
-                max_zoom = reader.source.max_zoom()
-                min_zoom = reader.source.min_zoom()
+                max_zoom = reader.get_source().max_zoom()
+                min_zoom = reader.get_source().min_zoom()
                 if self._auto_zoom:
                     zoom = self._get_zoom_for_current_map_scale()
                     zoom = clamp(zoom, low=min_zoom, high=max_zoom)
@@ -580,10 +572,11 @@ class VtrPlugin(object):
                         zoom = manual_zoom
                 self._current_zoom = zoom
 
-                source_bounds = reader.source.bounds_tile(zoom)
-                if source_bounds and not self._extent_overlap_bounds(bounds, source_bounds):
-                    info("The current extent '{}' is not within the bounds of the source '{}'. The extent to load "
-                         "will be set to the bounds of the source", bounds, source_bounds)
+                source_bounds = reader.get_source().bounds_tile(zoom)
+                if source_bounds and not extent_overlap_bounds(bounds, source_bounds) \
+                        and not extent_overlap_bounds(source_bounds, bounds):
+                    info("The current map extent and is not within the bounds of the source. The extent to load "
+                         "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds, source_bounds)
                     bounds = source_bounds
 
                 reader.set_options(layer_filter=layers_to_load,
@@ -605,8 +598,6 @@ class VtrPlugin(object):
                     "Something went horribly wrong. Please have a look at the log.",
                     level=QgsMessageBar.CRITICAL,
                     duration=5)
-                if self.progress_dialog:
-                    self.progress_dialog.hide()
                 self._is_loading = False
 
     def _set_background_color(self):
@@ -664,7 +655,6 @@ class VtrPlugin(object):
             reader.progress_changed.connect(self.reader_progress_changed)
             reader.max_progress_changed.connect(self.reader_max_progress_changed)
             reader.show_progress_changed.connect(self.reader_show_progress_changed)
-            reader.title_changed.connect(self.reader_title_changed)
             reader.message_changed.connect(self.reader_message_changed)
             reader.loading_finished.connect(self.reader_loading_finished)
             reader.tile_limit_reached.connect(self.reader_limit_exceeded_message)
@@ -696,8 +686,6 @@ class VtrPlugin(object):
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
         self._loaded_extent = loaded_extent
         self.handle_progress_update(show_progress=False)
-        # if self.progress_dialog:
-        #     self.progress_dialog.hide()
 
         auto_zoom = self._auto_zoom
 
@@ -705,9 +693,9 @@ class VtrPlugin(object):
         self.refresh_layers()
         info("Loading of zoom level {} complete! Loaded extent: {}", loaded_zoom_level, loaded_extent)
         if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
-            scheme = self._current_reader.source.scheme()
+            scheme = self._current_reader.get_source().scheme()
             visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
-            overlap = self._extent_overlap_bounds(visible_extent, loaded_extent)
+            overlap = extent_overlap_bounds(visible_extent, loaded_extent)
             if not overlap:
                 self._set_qgis_extent(zoom=loaded_zoom_level, scheme=scheme, bounds=loaded_extent)
 
@@ -722,10 +710,6 @@ class VtrPlugin(object):
     @pyqtSlot(int)
     def reader_max_progress_changed(self, max_progress):
         self.handle_progress_update(max_progress=max_progress)
-
-    @pyqtSlot('QString')
-    def reader_title_changed(self, title):
-        self.handle_progress_update(title=title)
 
     @pyqtSlot('QString')
     def reader_message_changed(self, msg):
@@ -748,33 +732,23 @@ class VtrPlugin(object):
         self.message_bar_item = message_bar_item
         self.progress_bar = progress_bar
 
-    def handle_progress_update(self, title=None, progress=None, max_progress=None, msg=None, show_progress=None):
+    def handle_progress_update(self, progress=None, max_progress=None, msg=None, show_progress=None):
         if show_progress:
             if not self.message_bar_item:
                 self._create_message_bar()
-            # self.progress_dialog.open()
         elif show_progress is False:
             info("hide progress")
             self.iface.messageBar().popWidget(self.message_bar_item)
             self.message_bar_item = None
             self.progress_bar = None
-            # self.progress_dialog.hide()
-            # self.progress_dialog.set_message(None)
-        if title:
-            pass
-            # self.message_bar_item.setTitle(title)
-            # self.progress_dialog.setWindowTitle(title)
         if max_progress is not None:
             self.progress_bar.setMinimum(0)
             self.progress_bar.setMaximum(max_progress)
-            # self.progress_dialog.set_maximum(max_progress)
         if msg:
             info(msg)
             self.message_bar_item.setTitle(msg)
-            # self.progress_dialog.set_message(msg)
         if progress is not None:
             self.progress_bar.setValue(progress)
-            # self.progress_dialog.set_progress(progress)
 
     def _assure_qgis_groups_exist(self, root_group_name, sort_layers=False):
         """
@@ -788,7 +762,7 @@ class VtrPlugin(object):
         root_group = root.findGroup(root_group_name)
         if not root_group:
             root_group = root.addGroup(root_group_name)
-        layers = [l["id"] for l in self._current_reader.source.vector_layers()]
+        layers = [l["id"] for l in self._current_reader.get_source().vector_layers()]
 
         if sort_layers:
             layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
@@ -823,7 +797,7 @@ class VtrPlugin(object):
 
     def unload(self):
         if self._current_reader:
-            self._current_reader.source.close_connection()
+            self._current_reader.get_source().close_connection()
             self._current_reader = None
         try:
             self._disconnect_map_scale_changed()
@@ -837,7 +811,7 @@ class VtrPlugin(object):
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.export_action)
+        # self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)
         try:

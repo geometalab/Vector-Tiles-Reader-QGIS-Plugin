@@ -9,6 +9,7 @@ import json
 import sqlite3
 import uuid
 import mapbox_vector_tile
+import traceback
 
 from io import StringIO
 from gzip import GzipFile
@@ -43,9 +44,9 @@ class VtWriter(object):
         self._cancel_requested = False
         self.layer_names = set()
 
-    def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
+    def _update_progress(self, show_dialog=None, progress=None, max_progress=None, msg=None):
         if self.progress_handler:
-            self.progress_handler(title, progress, max_progress, msg, show_dialog)
+            self.progress_handler(progress, max_progress, msg, show_dialog)
 
     def _get_metadata(self, field):
         return self.metadata[field]
@@ -76,12 +77,11 @@ class VtWriter(object):
                     tile_names = self._get_loaded_tile_names()
                     if tile_names:
                         tiles = self._load_tiles(tile_names)
-                        nr_tiles = len(tiles)
                         for index, t in enumerate(tiles):
                             if self._cancel_requested:
                                 break
 
-                            self._update_progress(title="Export tile {}/{}".format(index+1, nr_tiles), show_dialog=True)
+                            self._update_progress(show_dialog=True)
                             QApplication.processEvents()
                             self._update_bounds(t)
                             debug("layers to export: {}", self.layers_to_export)
@@ -98,10 +98,10 @@ class VtWriter(object):
                             debug("export cancelled")
                             self.iface.messageBar().pushInfo(u'Vector Tiles Reader', u'mbtiles export cancelled')
                 self.conn.close()
-            except:
+            except Exception as e:
                 if self.conn:
                     self.conn.close()
-                critical("Export failed: {}", sys.exc_info())
+                critical("Export failed: {}, {}", e, traceback.format_exc())
                 raise
         self._update_progress(show_dialog=False)
 

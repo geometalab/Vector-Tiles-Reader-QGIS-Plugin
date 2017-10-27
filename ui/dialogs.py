@@ -203,6 +203,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     on_add = pyqtSignal('QString', 'QString', list)
     on_connection_change = pyqtSignal()
     on_zoom_change = pyqtSignal()
+    on_directory_change = pyqtSignal("QString")
 
     _connections_array = "connections"
     _table_headers = OrderedDict([
@@ -269,6 +270,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.browse_path = path
         self.open_path = path
         name = os.path.basename(path)
+        self.on_directory_change.emit(os.path.dirname(path))
         self.on_connect.emit(name, path)
 
     def _on_zoom_change(self):

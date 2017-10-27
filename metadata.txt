@@ -8,7 +8,7 @@ qgisMinimumVersion=2.18
 qgisMaximumVersion=2.99
 description=Read Mapbox vector tiles from MBTiles file
 about=This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a t-rex cache.
-version=1.2.1
+version=1.2.2
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -18,6 +18,11 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---1.2.2---
+    * SQLite multithreading issue fixed
+    * Remember last used path in connections dialog
+    * Endless reload loop fixed, which occured under specific circumstances
+    * Export temporarily removed. Will be reimplemented soon.
     ---1.2.1---
     * Layout of dialog changed
     * Initial browse folder determination improved
