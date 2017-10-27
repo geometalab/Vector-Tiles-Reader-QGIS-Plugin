@@ -31,4 +31,4 @@ install:
     - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory /root/.qgis2/python/plugins/vector_tiles_reader"
 
 script:
-    - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.test_vtreader"
+    - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
