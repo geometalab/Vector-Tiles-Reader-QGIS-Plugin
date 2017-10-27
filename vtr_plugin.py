@@ -582,7 +582,7 @@ class VtrPlugin(object):
                 self._current_zoom = zoom
 
                 source_bounds = reader.get_source().bounds_tile(zoom)
-                if source_bounds and not self._extent_overlap_bounds(bounds, source_bounds):
+                if source_bounds and not self._extent_overlap_bounds(source_bounds, bounds):
                     info("The current extent '{}' is not within the bounds of the source '{}'. The extent to load "
                          "will be set to the bounds of the source", bounds, source_bounds)
                     bounds = source_bounds
