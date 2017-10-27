@@ -224,6 +224,7 @@ class VtrPlugin(object):
         if not scale:
             scale = self._get_current_map_scale()
 
+        bounds = None
         if self._extent_to_load:
             new_extent = self._extent_to_load
         else:
@@ -232,7 +233,11 @@ class VtrPlugin(object):
             min_zoom = self._current_reader.get_source().min_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
             new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+            bounds = self._current_reader.get_source().bounds_tile(zoom)
+            new_extent = clamp_bounds(new_extent, bounds)
         has_changed = new_extent != self._loaded_extent
+        if has_changed:
+            info("changed from: {} to {}, bounds: {}", self._loaded_extent, new_extent, bounds)
         return has_changed, new_extent
 
     def _has_scale_changed(self):
@@ -542,7 +547,8 @@ class VtrPlugin(object):
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _extent_overlap_bounds(self, extent, bounds):
+    @staticmethod
+    def _extent_overlap_bounds(extent, bounds):
         return (bounds["x_min"] <= extent["x_min"] <= bounds["x_max"] or
                 bounds["x_min"] <= extent["x_max"] <= bounds["x_max"]) and\
                 (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
@@ -582,9 +588,10 @@ class VtrPlugin(object):
                 self._current_zoom = zoom
 
                 source_bounds = reader.get_source().bounds_tile(zoom)
-                if source_bounds and not self._extent_overlap_bounds(source_bounds, bounds):
-                    info("The current extent '{}' is not within the bounds of the source '{}'. The extent to load "
-                         "will be set to the bounds of the source", bounds, source_bounds)
+                if source_bounds and not self._extent_overlap_bounds(bounds, source_bounds) \
+                        and not self._extent_overlap_bounds(source_bounds, bounds):
+                    info("The current map extent and is not within the bounds of the source. The extent to load "
+                         "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds, source_bounds)
                     bounds = source_bounds
 
                 reader.set_options(layer_filter=layers_to_load,
