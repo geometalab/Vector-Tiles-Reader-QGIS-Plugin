@@ -47,6 +47,13 @@ def clamp_bounds(bounds_to_clamp, clamp_values):
     return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max)
 
 
+def extent_overlap_bounds(extent, bounds):
+    return (bounds["x_min"] <= extent["x_min"] <= bounds["x_max"] or
+            bounds["x_min"] <= extent["x_max"] <= bounds["x_max"]) and\
+            (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
+             bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
+
+
 def create_bounds(zoom, x_min, x_max, y_min, y_max):
     return {
         "zoom": int(zoom),

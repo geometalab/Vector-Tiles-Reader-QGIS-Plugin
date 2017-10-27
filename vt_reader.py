@@ -50,7 +50,6 @@ class VtReader(QObject):
     progress_changed = pyqtSignal(int, name='progressChanged')
     max_progress_changed = pyqtSignal(int, name='maxProgressChanged')
     message_changed = pyqtSignal('QString', name='messageChanged')
-    title_changed = pyqtSignal('QString', name='titleChanged')
     show_progress_changed = pyqtSignal(bool, name='show_progress_changed')
     loading_finished = pyqtSignal(int, dict, name='loadingFinished')
     tile_limit_reached = pyqtSignal(int, name='tile_limit_reached')
@@ -154,13 +153,11 @@ class VtReader(QObject):
     def _source_message_changed(self, msg):
         self._update_progress(msg=msg)
 
-    def _update_progress(self, title=None, show_dialog=None, progress=None, max_progress=None, msg=None):
+    def _update_progress(self, show_dialog=None, progress=None, max_progress=None, msg=None):
         if progress is not None:
             self.progress_changed.emit(progress)
         if max_progress is not None:
             self.max_progress_changed.emit(max_progress)
-        if title:
-            self.title_changed.emit(title)
         if msg:
             self.message_changed.emit(msg)
         if show_dialog:
@@ -240,7 +237,7 @@ class VtReader(QObject):
 
             self.cancel_requested = False
             self.feature_collections_by_layer_name_and_geotype = {}
-            self._update_progress(show_dialog=True, title="Loading '{}'".format(os.path.basename(self._source.name())))
+            self._update_progress(show_dialog=True)
             self._clip_tiles_at_tile_bounds = clip_tiles
 
             zoom_level = self._get_clamped_zoom_level()
@@ -646,7 +643,9 @@ class VtReader(QObject):
                 geo_type = GeoTypes.LINE_STRING
             assert geo_type is not None
 
-            feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
+            feature_collection = self._get_feature_collection(layer_name=layer_name,
+                                                              geo_type=geo_type,
+                                                              zoom_level=tile.zoom_level)
 
             feature_collection["features"].append(geojson_feature)
             if tile_id not in feature_collection["tiles"]:
@@ -697,7 +696,9 @@ class VtReader(QObject):
                         f["properties"]["_zoom_level"] = tile.zoom_level
                         self._feature_count += 1
 
-                    feature_collection = self._get_feature_collection(layer_name, geo_type, tile.zoom_level)
+                    feature_collection = self._get_feature_collection(layer_name=layer_name,
+                                                                      geo_type=geo_type,
+                                                                      zoom_level=tile.zoom_level)
                     feature_collection["features"].extend(geojson_features)
                     if tile_id not in feature_collection["tiles"]:
                         feature_collection["tiles"].append(tile_id)
@@ -706,7 +707,7 @@ class VtReader(QObject):
         name_and_geotype = (layer_name, geo_type)
         if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
             self.feature_collections_by_layer_name_and_geotype[
-                name_and_geotype] = self._get_empty_feature_collection(zoom_level, layer_name)
+                name_and_geotype] = self._get_empty_feature_collection(zoom_level=zoom_level, layer_name=layer_name)
         feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
         return feature_collection
 
