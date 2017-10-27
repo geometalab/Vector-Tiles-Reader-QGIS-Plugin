@@ -216,25 +216,53 @@ class ServerSource(AbstractSource):
         tile = VectorTile(self.scheme(), zoom_level, col, row)
         return tile, content
 
+
 class PostGISSource(AbstractSource):
-    def __init__(self, host, user, pw):
+    def __init__(self, host, user, password):
         AbstractSource.__init__(self)
         self.host = host
-        self.user = user
-        self.pw = pw
+        self._user = user
+        self._password = password
         self.table = None
         self.geom_column = None
-        self.conn = pg8000.connect(user="postgres", password="admin", database="zurich")
+        self.database = None
+        self._conn = None
+        self._cursor = None
+        self._layers = None
+        self._connect()
+
+    def source(self):
+        if self.database:
+            return "pg_{}_{}".format(self.host, self.database)
+        return self.host
+
+    def _connect(self):
+        self._conn = pg8000.connect(user=self._user, password=self._password, database=self.database)
+        self._cursor = self.conn.cursor()
+        self._layers = None
+
+    def databases(self):
+        query = """
+        SELECT datname "name"
+        FROM pg_database
+        WHERE datistemplate = false;
+        """
+        databases = self._fetch_all(query)
+        names = map(lambda db: db["name"], databases)
+        return names
+
+    def set_database(self, name):
+        self.database = name
+        self._connect()
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         if not self.table:
             raise "Choose a table first"
 
-        geom_column = self.get_geom_column()
+        geom_column = self._get_geom_column()
         if not geom_column:
             raise "No geometry column found in table '{}'".format(self.table)
 
-        cur = self.conn.cursor()
         query = """
         SELECT ST_AsMVT(tile)
         FROM (
@@ -256,7 +284,47 @@ class PostGISSource(AbstractSource):
     def set_table(self, table_name):
         self.table = table_name
 
-    def get_geom_column(self):
+    def vector_layers(self):
+        if self._layers:
+            return self._layers
+
+        query = """
+        select f_table_name as "layer_name"
+        from geometry_columns
+        order by f_table_name
+        """
+        layers = self._fetch_all(query)
+        self._layers = map(lambda l: l["layer_name"], layers)
+        return self._layers
+
+    def close_connection(self):
+        self._cursor.close()
+        self._conn.close()
+
+    def name(self):
+        if self.database:
+            return self.database
+        return self.host
+
+    def min_zoom(self):
+        return 0
+
+    def max_zoom(self):
+        return 14
+
+    def mask_level(self):
+        return None
+
+    def scheme(self):
+        return "xyz"
+
+    def bounds_tile(self, zoom):
+        raise NotImplemented
+
+    def crs(self):
+        raise NotImplemented
+
+    def _get_geom_column(self):
         name = None
         query = """
             SELECT f_geometry_column
@@ -264,14 +332,32 @@ class PostGISSource(AbstractSource):
             WHERE f_table_name = '{}'
             LIMIT 1
         """.format(self.table_name)
-        cur = self.conn.cursor()
-        cur.execute(query)
-        res = cur.fetchone()
+        self._cursor.execute(query)
+        res = self._cursor.fetchone()
         if res:
             name = res[0]
         if not name:
-            raise "No geometry column found in table '{}'".format(table_name)
+            raise "No geometry column found in table '{}'".format(self.table)
         return name
+
+    def _fetch_one(self, query):
+        self._cursor.execute(query)
+        res = self._cursor.fetchone()
+        if res:
+            res = res[0]
+        return res
+
+    def _fetch_all(self, query):
+        self._cursor.execute(query)
+        res = self._cursor.fetchall()
+        desc = self._cursor.description
+        objects = []
+        for r in res:
+            obj = {}
+            for index, value in enumerate(r):
+                obj[desc[index][0]] = value
+            objects.append(obj)
+        return objects
 
 
 class MBTilesSource(AbstractSource):
