@@ -21,6 +21,8 @@ changelog=
     ---1.2.2---
     * SQLite multithreading issue fixed
     * Remember last used path in connections dialog
+    * Endless reload loop fixed, which occured under specific circumstances
+    * Export temporarily removed. Will be reimplemented soon.
     ---1.2.1---
     * Layout of dialog changed
     * Initial browse folder determination improved
