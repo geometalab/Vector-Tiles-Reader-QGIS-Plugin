@@ -6,6 +6,7 @@ import urllib.parse
 import json
 import os
 import sys
+import pg8000
 
 from PyQt4.QtGui import QApplication
 from PyQt4.QtCore import QObject, pyqtSignal
@@ -147,9 +148,7 @@ class ServerSource(AbstractSource):
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         self._cancelling = False
         base_url = self.json.tiles()[0]
-        tile_data_tuples = []
         urls = []
-
         if len(tiles_to_load) > max_tiles:
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
@@ -216,6 +215,63 @@ class ServerSource(AbstractSource):
         row = r[1][1]
         tile = VectorTile(self.scheme(), zoom_level, col, row)
         return tile, content
+
+class PostGISSource(AbstractSource):
+    def __init__(self, host, user, pw):
+        AbstractSource.__init__(self)
+        self.host = host
+        self.user = user
+        self.pw = pw
+        self.table = None
+        self.geom_column = None
+        self.conn = pg8000.connect(user="postgres", password="admin", database="zurich")
+
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
+        if not self.table:
+            raise "Choose a table first"
+
+        geom_column = self.get_geom_column()
+        if not geom_column:
+            raise "No geometry column found in table '{}'".format(self.table)
+
+        cur = self.conn.cursor()
+        query = """
+        SELECT ST_AsMVT(tile)
+        FROM (
+            SELECT 
+            ST_AsMVTGeom(
+                    {},
+                    ST_Makebox2d(
+                        ST_transform(ST_SetSrid(ST_MakePoint(%s, %s),4326),3857),
+                        ST_transform(ST_SetSrid(ST_MakePoint(%s, %s),4326),3857)
+                        ),
+                    4096, -- tile extent
+                    256,  -- buffer size pixel
+                    false  -- clip
+                ) AS geom 
+            FROM {}
+        ) AS tile;
+        """.format(geom_column, self.table)
+
+    def set_table(self, table_name):
+        self.table = table_name
+
+    def get_geom_column(self):
+        name = None
+        query = """
+            SELECT f_geometry_column
+            FROM geometry_columns 
+            WHERE f_table_name = '{}'
+            LIMIT 1
+        """.format(self.table_name)
+        cur = self.conn.cursor()
+        cur.execute(query)
+        res = cur.fetchone()
+        if res:
+            name = res[0]
+        if not name:
+            raise "No geometry column found in table '{}'".format(table_name)
+        return name
 
 
 class MBTilesSource(AbstractSource):
