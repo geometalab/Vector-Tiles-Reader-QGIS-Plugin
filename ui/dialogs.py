@@ -1,4 +1,5 @@
 import os
+import copy
 import webbrowser
 import csv
 import resources_rc  # don't remove this import, otherwise the icons won't be working
@@ -8,12 +9,13 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, QSettings
 from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem, QApplication
 from dlg_connections import Ui_DlgConnections
-from dlg_edit_connection import Ui_DlgEditConnection
+from dlg_edit_tilejson_connection import Ui_DlgEditTileJSONConnection
+from dlg_edit_postgis_connection import Ui_DlgEditPostgisConnection
 from dlg_about import Ui_DlgAbout
 from options import Ui_OptionsGroup
 from connections_group import Ui_ConnectionsGroup
-from edit_postgis_connection import Ui_PostgisConnectionGroup
 from ..log_helper import *
+from ..connection import ConnectionTypes
 
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
@@ -51,16 +53,24 @@ class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
 
 class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
 
-    on_connect = pyqtSignal('QString', 'QString')
+    on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal('QString')
 
-    def __init__(self, target_groupbox, settings_key, settings, predefined_connections=None, connection_tokens=None):
+    def __init__(self, target_groupbox, edit_dialog, connection_template, settings_key, settings, predefined_connections=None):
         super(QtGui.QGroupBox, self).__init__()
+
+        self._connection_template = connection_template
+        cloned_predefined_connections = {}
+        if predefined_connections:
+            for name in predefined_connections:
+                predefined_connection = predefined_connections[name]
+                clone = self._apply_template_connection(predefined_connection)
+                cloned_predefined_connections[name] = clone
+
         self.setupUi(target_groupbox)
         self._settings = settings
         self._settings_key = settings_key
-        self._predefined_connections = predefined_connections
-        self._connection_tokens = connection_tokens
+        self._predefined_connections = cloned_predefined_connections
         self.btnConnect.clicked.connect(self._handle_connect)
         self.btnEdit.clicked.connect(self._edit_connection)
         self.btnDelete.clicked.connect(self._delete_connection)
@@ -71,23 +81,29 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         self.connections = {}
         self.selected_connection = None
         self._load_connections()
-        self._add_loaded_connections()
+        self._add_loaded_connections_to_combobox()
+        self.edit_connection_dialog = edit_dialog
+
+    def _apply_template_connection(self, connection):
+        clone = copy.deepcopy(self._connection_template)
+        for key in clone:
+            if key in connection and connection[key]:
+                clone[key] = connection[key]
+        return clone
 
     def _handle_connect(self):
         conn = self._get_current_connection()
-        name = conn[0]
-        url = conn[1]
-        self.on_connect.emit(name, url)
+        self.on_connect.emit(conn)
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
         if file_name:
             with open(file_name, 'w') as csvfile:
-                fieldnames = ['name', 'url']
+                fieldnames = self._connection_template.keys()
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 for name in self.connections:
-                    writer.writerow({'name': name, 'url': self.connections[name]})
+                    writer.writerow(self.connections[name])
 
     def _import_connections(self):
         file_name = QFileDialog.getOpenFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -95,24 +111,29 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
             with open(file_name, 'r') as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
-                    self._set_connection_url(row['name'], row['url'])
-            self._add_loaded_connections()
+                    new_connection = copy.deepcopy(self._connection_template)
+                    for key in new_connection:
+                        new_connection[key] = row[key]
+                    self.connections[new_connection["name"]] = new_connection
+            self._add_loaded_connections_to_combobox()
 
     def _load_connections(self):
         settings = self._settings
         connections = settings.beginReadArray(self._settings_key)
         for i in range(connections):
             settings.setArrayIndex(i)
-            name = settings.value("name")
-            url = settings.value("url")
-            self._set_connection_url(name, url)
+            new_connection = self._apply_template_connection({})
+            for key in new_connection:
+                val = settings.value(key)
+                if val:
+                    new_connection[key] = val
+            self.connections[new_connection["name"]] = new_connection
         settings.endArray()
 
-    def _add_loaded_connections(self):
+    def _add_loaded_connections_to_combobox(self):
         if self._predefined_connections:
-            for index, name in enumerate(self._predefined_connections.keys()):
-                url = self._predefined_connections[name]
-                self._set_connection_url(name, url)
+            for index, name in enumerate(self._predefined_connections):
+                self.connections[name] = self._predefined_connections[name]
 
         for name in sorted(self.connections):
             is_already_added = self.cbxConnections.findText(name) != -1
@@ -134,10 +155,11 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
     def _save_connections(self):
         settings = self._settings
         settings.beginWriteArray(self._settings_key)
-        for index, key in enumerate(self.connections):
+        for index, connection_name in enumerate(self.connections):
+            connection = self.connections[connection_name]
             settings.setArrayIndex(index)
-            settings.setValue("name", key)
-            settings.setValue("url", self.connections[key])
+            for key in self._connection_template:
+                settings.setValue(key, connection[key])
         settings.endArray()
 
     def _edit_connection(self):
@@ -172,14 +194,11 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
 
     def _get_current_connection(self):
         name = self.cbxConnections.currentText()
-        url = self.connections[name]
+        connection = copy.deepcopy(self.connections[name])
 
-        if self._predefined_connections and self._connection_tokens and name in self._predefined_connections:
-            url = url.replace("{token}", self._connection_tokens[name])
-        return name, url
-
-    def _set_connection_url(self, name, url):
-        self.connections[name] = url
+        if self._predefined_connections and name in self._predefined_connections:
+            connection["url"] = connection["url"].replace("{token}", connection["token"])
+        return connection
 
 
 class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
@@ -289,9 +308,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
 class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
-    on_connect = pyqtSignal('QString', 'QString')
+    on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
-    on_add = pyqtSignal('QString', 'QString', list)
+    on_add = pyqtSignal(dict, list)
     on_zoom_change = pyqtSignal()
     on_directory_change = pyqtSignal("QString")
 
@@ -302,16 +321,37 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         ("Description", "description")
     ])
 
+    _TILEJSON_CONNECTION_TEMPLATE = {
+        "name": None,
+        "url": None,
+        "token": None,
+        "type": ConnectionTypes.TileJSON
+    }
+
+    _POSTGIS_CONNECTION_TEMPLATE = {
+        "name": None,
+        "host": None,
+        "port": 5432,
+        "username": "postgres",
+        "password": None,
+        "database": None,
+        "type": ConnectionTypes.PostGIS
+    }
+
     _OMT = "OpenMapTiles.com (default entry with credits)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
 
     _predefined_tilejson_connections = {
-        _OMT: "https://free.tilehosting.com/data/v3.json?key={token}",
-        _MAPZEN: "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}"
-    }
-    _tilejson_tokens = {
-        _OMT: "6irhAXGgsi8TrIDL0211",
-        _MAPZEN: "mapzen-7SNUCXx"
+        _OMT: {
+            "name": _OMT,
+            "url": "https://free.tilehosting.com/data/v3.json?key={token}",
+            "token": "6irhAXGgsi8TrIDL0211"
+        },
+        _MAPZEN: {
+            "name": _MAPZEN,
+            "url": "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}",
+            "token": "mapzen-7SNUCXx"
+        }
     }
 
     def __init__(self, default_browse_directory):
@@ -320,11 +360,14 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.options = OptionsGroup(self.grpOptions, self._on_zoom_change)
         settings = QSettings("VtrSettings")
         self.tilejson_connections = ConnectionsGroup(target_groupbox=self.grpTilejsonConnections,
+                                                     edit_dialog=EditTilejsonConnectionDialog(),
+                                                     connection_template=self._TILEJSON_CONNECTION_TEMPLATE,
                                                      settings_key="connections",
                                                      settings=settings,
-                                                     predefined_connections=self._predefined_tilejson_connections,
-                                                     connection_tokens=self._tilejson_tokens)
+                                                     predefined_connections=self._predefined_tilejson_connections)
         self.postgis_connections = ConnectionsGroup(target_groupbox=self.grpPostgisConnections,
+                                                    edit_dialog=Ui_DlgEditPostgisConnection(),
+                                                    connection_template=self._POSTGIS_CONNECTION_TEMPLATE,
                                                     settings_key="PostGISConnections",
                                                     settings=settings)
 
@@ -344,13 +387,11 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.model = QStandardItemModel()
         self.model.setHorizontalHeaderLabels(self._table_headers.keys())
         self.tblLayers.setModel(self.model)
-
-        self.edit_connection_dialog = EditConnectionDialog()
         _update_size(self)
 
-    def _handle_connect(self, name, url):
-        self._current_connection = (name, url)
-        self.on_connect.emit(name, url)
+    def _handle_connect(self, connection):
+        self._current_connection = connection
+        self.on_connect.emit(connection)
         active_tab = self.tabConnections.currentWidget()
         if active_tab != self.tabFile:
             self.txtPath.setText("")
@@ -392,8 +433,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
-        name, url = self._current_connection
-        self.on_add.emit(name, url, selected_layers)
+        self.on_add.emit(self._current_connection, selected_layers)
 
     def show(self):
         self.exec_()
@@ -415,7 +455,21 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.btnAdd.setEnabled(add_enabled)
 
 
-class EditConnectionDialog(QtGui.QDialog, Ui_DlgEditConnection):
+class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
+
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.setupUi(self)
+        _update_size(self)
+
+
+class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
+
+    new_connection_template = {
+        "name": None,
+        "url": None
+    }
+
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)

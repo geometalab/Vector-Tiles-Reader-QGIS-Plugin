@@ -30,7 +30,8 @@ from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt4.QtGui import QApplication
 from io import BytesIO
 from gzip import GzipFile
-from tile_source import ServerSource, MBTilesSource, TrexCacheSource
+from tile_source import ServerSource, MBTilesSource, TrexCacheSource, PostGISSource
+from connection import ConnectionTypes
 
 from mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 
@@ -78,18 +79,19 @@ class VtReader(QObject):
 
     _all_tiles = []
 
-    def __init__(self, iface, path_or_url):
+    def __init__(self, iface, connectionn):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
         :param path_or_url: 
         """
         QObject.__init__(self)
-        if not path_or_url:
+        if not connectionn:
             raise RuntimeError("The datasource is required")
 
-        self._source = self._create_source(path_or_url)
-        self._external_source = self._create_source(path_or_url)
+        self._connection = connectionn
+        self._source = self._create_source(connectionn)
+        self._external_source = self._create_source(connectionn)
 
         assure_temp_dirs_exist()
         self.iface = iface
@@ -100,6 +102,9 @@ class VtReader(QObject):
         self._always_overwrite_geojson = False
         self._flush = False
         self._feature_count = None
+
+    def connection(self):
+        return self._connection
 
     def get_source(self):
         """
@@ -112,15 +117,20 @@ class VtReader(QObject):
 
         return self._external_source
 
-    def _create_source(self, path_or_url):
-        is_web_source = path_or_url.lower().startswith("http://") or path_or_url.lower().startswith("https://")
-        if is_web_source:
-            source = ServerSource(url=path_or_url)
+    def _create_source(self, connection):
+        conn_type = connection["type"]
+        if conn_type == ConnectionTypes.TileJSON:
+            source = ServerSource(url=connection["url"])
+        elif conn_type == ConnectionTypes.MBTiles:
+            source = MBTilesSource(path=connection["path"])
+        elif conn_type == ConnectionTypes.Trex:
+            source = TrexCacheSource(path=connection["path"])
+        elif conn_type == ConnectionTypes.PostGIS:
+            source = PostGISSource(host=connection["host"],
+                                   user=connection["user"],
+                                   password=connection["password"])
         else:
-            if os.path.isfile(path_or_url):
-                source = MBTilesSource(path=path_or_url)
-            else:
-                source = TrexCacheSource(path=path_or_url)
+            raise RuntimeError("Type not set on connection")
         source.progress_changed.connect(self._source_progress_changed)
         source.max_progress_changed.connect(self._source_max_progress_changed)
         source.message_changed.connect(self._source_message_changed)
@@ -216,7 +226,7 @@ class VtReader(QObject):
 
     def _load_tiles(self):
         # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
-        self.source = self._create_source(self._source.source())
+        self.source = self._create_source(self.connection())
 
         try:
             if can_load_lib():

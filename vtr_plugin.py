@@ -407,13 +407,12 @@ class VtrPlugin(object):
         debug("Current extent: {}", tile_bounds)
         return tile_bounds
 
-    @pyqtSlot('QString', 'QString')
-    def _on_connect(self, connection_name, path_or_url):
-        self._currrent_connection_name = connection_name
-        debug("Connect to path_or_url: {}", path_or_url)
-        self.reload_action.setText("{} ({})".format(self._reload_button_text, connection_name))
+    @pyqtSlot(dict)
+    def _on_connect(self, connection):
+        self._currrent_connection_name = connection["name"]
+        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
         try:
-            if self._current_reader and self._current_reader.get_source().source() != path_or_url:
+            if self._current_reader and self._current_reader.connection() != connection:
                 self._current_reader.shutdown()
                 self._current_reader.progress_changed.disconnect()
                 self._current_reader.max_progress_changed.disconnect()
@@ -422,7 +421,7 @@ class VtrPlugin(object):
                 self._current_reader.show_progress_changed.disconnect()
                 self._current_reader = None
             if not self._current_reader:
-                reader = self._create_reader(path_or_url)
+                reader = self._create_reader(connection=connection)
                 self._current_reader = reader
             if self._current_reader:
                 layers = self._current_reader.get_source().vector_layers()
@@ -464,9 +463,9 @@ class VtrPlugin(object):
         return is_within
 
     @pyqtSlot('QString', 'QString', list)
-    def _on_add_layer(self, connection_name, path_or_url, selected_layers):
-        assert path_or_url
-        self._assure_qgis_groups_exist(connection_name, True)
+    def _on_add_layer(self, connection, selected_layers):
+        assert connection
+        self._assure_qgis_groups_exist(connection["name"], True)
 
         crs_string = self._current_reader.get_source().crs()
         self._init_qgis_map(crs_string)
@@ -653,12 +652,12 @@ class VtrPlugin(object):
                 level=QgsMessageBar.WARNING,
                 duration=5)
 
-    def _create_reader(self, path_or_url):
+    def _create_reader(self, connection):
         # A lazy import is required because the vtreader depends on the external libs
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface, path_or_url=path_or_url)
+            reader = VtReader(self.iface, connectionn=connection)
             reader.progress_changed.connect(self.reader_progress_changed)
             reader.max_progress_changed.connect(self.reader_max_progress_changed)
             reader.show_progress_changed.connect(self.reader_show_progress_changed)

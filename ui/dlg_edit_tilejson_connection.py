@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'dlg_edit_connection.ui'
+# Form implementation generated from reading ui file 'dlg_edit_tilejson_connection.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -22,13 +22,13 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
-class Ui_DlgEditConnection(object):
-    def setupUi(self, DlgEditConnection):
-        DlgEditConnection.setObjectName(_fromUtf8("DlgEditConnection"))
-        DlgEditConnection.resize(562, 131)
-        self.verticalLayout_3 = QtGui.QVBoxLayout(DlgEditConnection)
+class Ui_DlgEditTileJSONConnection(object):
+    def setupUi(self, DlgEditTileJSONConnection):
+        DlgEditTileJSONConnection.setObjectName(_fromUtf8("DlgEditTileJSONConnection"))
+        DlgEditTileJSONConnection.resize(562, 131)
+        self.verticalLayout_3 = QtGui.QVBoxLayout(DlgEditTileJSONConnection)
         self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
-        self.groupBox = QtGui.QGroupBox(DlgEditConnection)
+        self.groupBox = QtGui.QGroupBox(DlgEditTileJSONConnection)
         self.groupBox.setObjectName(_fromUtf8("groupBox"))
         self.gridLayout = QtGui.QGridLayout(self.groupBox)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
@@ -52,28 +52,28 @@ class Ui_DlgEditConnection(object):
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
-        self.btnSave = QtGui.QPushButton(DlgEditConnection)
+        self.btnSave = QtGui.QPushButton(DlgEditTileJSONConnection)
         self.btnSave.setEnabled(False)
         self.btnSave.setCheckable(False)
         self.btnSave.setObjectName(_fromUtf8("btnSave"))
         self.horizontalLayout.addWidget(self.btnSave)
-        self.btnCancel = QtGui.QPushButton(DlgEditConnection)
+        self.btnCancel = QtGui.QPushButton(DlgEditTileJSONConnection)
         self.btnCancel.setObjectName(_fromUtf8("btnCancel"))
         self.horizontalLayout.addWidget(self.btnCancel)
         self.verticalLayout_3.addLayout(self.horizontalLayout)
         self.verticalLayout_3.setStretch(1, 1)
 
-        self.retranslateUi(DlgEditConnection)
-        QtCore.QObject.connect(self.btnCancel, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditConnection.reject)
-        QtCore.QObject.connect(self.btnSave, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditConnection.accept)
-        QtCore.QMetaObject.connectSlotsByName(DlgEditConnection)
+        self.retranslateUi(DlgEditTileJSONConnection)
+        QtCore.QObject.connect(self.btnCancel, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditTileJSONConnection.reject)
+        QtCore.QObject.connect(self.btnSave, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgEditTileJSONConnection.accept)
+        QtCore.QMetaObject.connectSlotsByName(DlgEditTileJSONConnection)
 
-    def retranslateUi(self, DlgEditConnection):
-        DlgEditConnection.setWindowTitle(_translate("DlgEditConnection", "Edit Connection", None))
-        self.groupBox.setTitle(_translate("DlgEditConnection", "Connection", None))
-        self.txtUrl.setToolTip(_translate("DlgEditConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
-        self.label.setText(_translate("DlgEditConnection", "Name", None))
-        self.lblTileJsonUrl.setText(_translate("DlgEditConnection", "TileJSON URL", None))
-        self.btnSave.setText(_translate("DlgEditConnection", "Save", None))
-        self.btnCancel.setText(_translate("DlgEditConnection", "Cancel", None))
+    def retranslateUi(self, DlgEditTileJSONConnection):
+        DlgEditTileJSONConnection.setWindowTitle(_translate("DlgEditTileJSONConnection", "Edit Connection", None))
+        self.groupBox.setTitle(_translate("DlgEditTileJSONConnection", "Connection", None))
+        self.txtUrl.setToolTip(_translate("DlgEditTileJSONConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
+        self.label.setText(_translate("DlgEditTileJSONConnection", "Name", None))
+        self.lblTileJsonUrl.setText(_translate("DlgEditTileJSONConnection", "TileJSON URL", None))
+        self.btnSave.setText(_translate("DlgEditTileJSONConnection", "Save", None))
+        self.btnCancel.setText(_translate("DlgEditTileJSONConnection", "Cancel", None))
 
