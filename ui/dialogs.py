@@ -78,7 +78,6 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         name = conn[0]
         url = conn[1]
         self.on_connect.emit(name, url)
-        self.txtPath.setText("")
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -172,16 +171,9 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         self.on_connection_change.emit(name)
 
     def _get_current_connection(self):
-        active_tab = self.tabConnections.currentWidget()
-        if active_tab == self.tabServer:
-            name = self.cbxConnections.currentText()
-            url = self.connections[name]
-        elif active_tab == self.tabFile:
-            url = self.txtPath.text()
-            name = os.path.basename(url)
-        else:
-            url = self.txtTrexCachePath.text()
-            name = os.path.basename(url)
+        name = self.cbxConnections.currentText()
+        url = self.connections[name]
+
         if self._predefined_connections and self._connection_tokens and name in self._predefined_connections:
             url = url.replace("{token}", self._connection_tokens[name])
         return name, url
@@ -357,7 +349,11 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         _update_size(self)
 
     def _handle_connect(self, name, url):
+        self._current_connection = (name, url)
         self.on_connect.emit(name, url)
+        active_tab = self.tabConnections.currentWidget()
+        if active_tab != self.tabFile:
+            self.txtPath.setText("")
 
     def _handle_connection_change(self, name):
         self.set_layers([])
@@ -396,7 +392,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
-        name, url = self._get_current_connection()
+        name, url = self._current_connection
         self.on_add.emit(name, url, selected_layers)
 
     def show(self):
