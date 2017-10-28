@@ -164,19 +164,21 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
 
     def _edit_connection(self):
         conn = self._get_current_connection()
-        self._create_or_update_connection(name=conn[0], url=conn[1])
+        self._create_or_update_connection(conn)
 
     def _create_connection(self):
-        self._create_or_update_connection("", "")
+        self._create_or_update_connection(copy.deepcopy(self._connection_template))
 
-    def _create_or_update_connection(self, name=None, url=None):
-        self.edit_connection_dialog.set_name_and_path(name, url)
+    def _create_or_update_connection(self, connection):
+        name = connection["name"]
+        self.edit_connection_dialog.set_connection(connection)
         result = self.edit_connection_dialog.exec_()
         if result == QtGui.QDialog.Accepted:
-            newname, newurl = self.edit_connection_dialog.get_connection()
-            self._set_connection_url(newname, newurl)
-            if newname != name:
-                self.cbxConnections.addItem(newname)
+            new_connection = self.edit_connection_dialog.get_connection()
+            new_name = new_connection["name"]
+            self.connections[new_name] = new_connection
+            if new_name != name:
+                self.cbxConnections.addItem(new_name)
                 self.cbxConnections.setCurrentIndex(len(self.connections)-1)
             self._save_connections()
 
@@ -465,19 +467,19 @@ class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
 
 class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
 
-    new_connection_template = {
-        "name": None,
-        "url": None
-    }
-
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self.txtName.textChanged.connect(self._update_save_btn_state)
         self.txtUrl.textChanged.connect(self._update_save_btn_state)
+        self._connection = None
         _update_size(self)
 
-    def set_name_and_path(self, name, path_or_url):
+    def set_connection(self, connection):
+        self._connection = copy.deepcopy(connection)
+        self._set_name_and_path(connection["name"], connection["url"])
+
+    def _set_name_and_path(self, name, path_or_url):
         if name is not None:
             self.txtName.setText(name)
         if path_or_url is not None:
@@ -502,5 +504,7 @@ class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
         self.btnSave.setEnabled(enable)
 
     def get_connection(self):
-        return self.txtName.text(), self.txtUrl.text()
+        self._connection["name"] = self.txtName.text()
+        self._connection["url"] = self.txtUrl.text()
+        return self._connection
 
