@@ -28,7 +28,14 @@ from PyQt4.QtGui import (
     QFileDialog,
     QProgressBar,
     QPushButton)
-from qgis.core import *
+from qgis.core import (
+    QgsApplication,
+    QgsPoint,
+    QgsRectangle,
+    QgsMapLayerRegistry,
+    QgsCoordinateReferenceSystem,
+    QgsProject
+)
 from qgis.gui import QgsMessageBar
 
 from file_helper import (get_icons_directory,
@@ -38,7 +45,7 @@ from file_helper import (get_icons_directory,
                          get_plugin_directory,
                          paths_equal)
 from tile_helper import *
-from ui.dialogs import AboutDialog, ProgressDialog, ConnectionsDialog
+from ui.dialogs import AboutDialog, ConnectionsDialog
 
 import os
 import sys
