@@ -15,7 +15,12 @@ from dlg_about import Ui_DlgAbout
 from options import Ui_OptionsGroup
 from connections_group import Ui_ConnectionsGroup
 from ..log_helper import *
-from ..connection import ConnectionTypes
+from ..connection import (
+    ConnectionTypes,
+    MBTILES_CONNECTION_TEMPLATE,
+    POSTGIS_CONNECTION_TEMPLATE,
+    TILEJSON_CONNECTION_TEMPLATE,
+    TREX_CONNECTION_TEMPLATE)
 
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
@@ -103,6 +108,9 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 for name in self.connections:
+                    connection = self.connections[name]
+                    if connection["type"] == ConnectionTypes.PostGIS and not connection["save_password"]:
+                        connection["password"] = None
                     writer.writerow(self.connections[name])
 
     def _import_connections(self):
@@ -157,6 +165,8 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         settings.beginWriteArray(self._settings_key)
         for index, connection_name in enumerate(self.connections):
             connection = self.connections[connection_name]
+            if connection["type"] == ConnectionTypes.PostGIS and not connection["save_password"]:
+                connection["password"] = None
             settings.setArrayIndex(index)
             for key in self._connection_template:
                 settings.setValue(key, connection[key])
@@ -323,35 +333,6 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         ("Description", "description")
     ])
 
-    _MBTILES_CONNECTION_TEMPLATE = {
-        "name": None,
-        "path": None,
-        "type": ConnectionTypes.MBTiles
-    }
-
-    _TREX_CONNECTION_TEMPLATE = {
-        "name": None,
-        "path": None,
-        "type": ConnectionTypes.Trex
-    }
-
-    _TILEJSON_CONNECTION_TEMPLATE = {
-        "name": None,
-        "url": None,
-        "token": None,
-        "type": ConnectionTypes.TileJSON
-    }
-
-    _POSTGIS_CONNECTION_TEMPLATE = {
-        "name": None,
-        "host": None,
-        "port": 5432,
-        "username": "postgres",
-        "password": None,
-        "database": None,
-        "type": ConnectionTypes.PostGIS
-    }
-
     _OMT = "OpenMapTiles.com (default entry with credits)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
 
@@ -375,13 +356,13 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         settings = QSettings("VtrSettings")
         self.tilejson_connections = ConnectionsGroup(target_groupbox=self.grpTilejsonConnections,
                                                      edit_dialog=EditTilejsonConnectionDialog(),
-                                                     connection_template=self._TILEJSON_CONNECTION_TEMPLATE,
+                                                     connection_template=TILEJSON_CONNECTION_TEMPLATE,
                                                      settings_key="connections",
                                                      settings=settings,
                                                      predefined_connections=self._predefined_tilejson_connections)
         self.postgis_connections = ConnectionsGroup(target_groupbox=self.grpPostgisConnections,
-                                                    edit_dialog=Ui_DlgEditPostgisConnection(),
-                                                    connection_template=self._POSTGIS_CONNECTION_TEMPLATE,
+                                                    edit_dialog=EditPostgisConnectionDialog(),
+                                                    connection_template=POSTGIS_CONNECTION_TEMPLATE,
                                                     settings_key="PostGISConnections",
                                                     settings=settings)
 
@@ -422,7 +403,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if open_file_name and os.path.isfile(open_file_name):
             self.txtPath.setText(open_file_name)
 
-            connection = copy.deepcopy(self._MBTILES_CONNECTION_TEMPLATE)
+            connection = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
 
@@ -433,7 +414,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if open_file_name and os.path.isdir(open_file_name):
             self.txtTrexCachePath.setText(open_file_name)
 
-            connection = copy.deepcopy(self._TREX_CONNECTION_TEMPLATE)
+            connection = copy.deepcopy(TREX_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
 
@@ -491,13 +472,25 @@ class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
 
     def set_connection(self, connection):
         self._connection = copy.deepcopy(connection)
+        self.txtpgName.setText(self._connection["name"])
+        self.txtpgHost.setText(self._connection["host"])
+        self.spinpgPort.setValue(self._connection["port"])
+        self.txtpgUsername.setText(self._connection["username"])
+        self.txtpgPassword.setText(self._connection["password"])
+        self.txtpgDatabase.setText(self._connection["database"])
+        if self._connection["save_password"]:
+            self.chkpgStorePassword.setChecked(True)
+        else:
+            self.chkpgStorePassword.setChecked(False)
 
     def get_connection(self):
         self._connection["name"] = self.txtpgName.text()
         self._connection["host"] = self.txtpgHost.text()
         self._connection["username"] = self.txtpgUsername.text()
         self._connection["password"] = self.txtpgPassword.text()
-        self._connection["port"] = self.txtpgPort.text()
+        self._connection["port"] = self.spinpgPort.value()
+        self._connection["database"] = self.txtpgDatabase.text()
+        self._connection["save_password"] = self.chkpgStorePassword.isChecked()
         return self._connection
 
 

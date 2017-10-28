@@ -114,6 +114,17 @@ class Ui_OptionsGroup(object):
 
         self.retranslateUi(OptionsGroup)
         QtCore.QMetaObject.connectSlotsByName(OptionsGroup)
+        OptionsGroup.setTabOrder(self.chkLimitNrOfTiles, self.spinNrOfLoadedTiles)
+        OptionsGroup.setTabOrder(self.spinNrOfLoadedTiles, self.chkMergeTiles)
+        OptionsGroup.setTabOrder(self.chkMergeTiles, self.chkClipTiles)
+        OptionsGroup.setTabOrder(self.chkClipTiles, self.rbAutoZoom)
+        OptionsGroup.setTabOrder(self.rbAutoZoom, self.rbZoomMax)
+        OptionsGroup.setTabOrder(self.rbZoomMax, self.rbZoomManual)
+        OptionsGroup.setTabOrder(self.rbZoomManual, self.zoomSpin)
+        OptionsGroup.setTabOrder(self.zoomSpin, self.chkApplyStyles)
+        OptionsGroup.setTabOrder(self.chkApplyStyles, self.btnResetToBasemapDefaults)
+        OptionsGroup.setTabOrder(self.btnResetToBasemapDefaults, self.btnResetToAnalysisDefaults)
+        OptionsGroup.setTabOrder(self.btnResetToAnalysisDefaults, self.btnResetToInspectionDefaults)
 
     def retranslateUi(self, OptionsGroup):
         OptionsGroup.setWindowTitle(_translate("OptionsGroup", "Options", None))

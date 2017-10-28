@@ -127,8 +127,9 @@ class VtReader(QObject):
             source = TrexCacheSource(path=connection["path"])
         elif conn_type == ConnectionTypes.PostGIS:
             source = PostGISSource(host=connection["host"],
-                                   user=connection["user"],
-                                   password=connection["password"])
+                                   user=connection["username"],
+                                   password=connection["password"],
+                                   database=connection["database"])
         else:
             raise RuntimeError("Type not set on connection")
         source.progress_changed.connect(self._source_progress_changed)

@@ -254,6 +254,20 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>chkLimitNrOfTiles</tabstop>
+  <tabstop>spinNrOfLoadedTiles</tabstop>
+  <tabstop>chkMergeTiles</tabstop>
+  <tabstop>chkClipTiles</tabstop>
+  <tabstop>rbAutoZoom</tabstop>
+  <tabstop>rbZoomMax</tabstop>
+  <tabstop>rbZoomManual</tabstop>
+  <tabstop>zoomSpin</tabstop>
+  <tabstop>chkApplyStyles</tabstop>
+  <tabstop>btnResetToBasemapDefaults</tabstop>
+  <tabstop>btnResetToAnalysisDefaults</tabstop>
+  <tabstop>btnResetToInspectionDefaults</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -7,19 +7,49 @@
     <x>0</x>
     <y>0</y>
     <width>523</width>
-    <height>256</height>
+    <height>253</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
+   <item row="1" column="2">
+    <widget class="QPushButton" name="btnCancel">
+     <property name="text">
+      <string>Cancel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="btnSave">
+     <property name="text">
+      <string>Save</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="0" column="0" colspan="3">
     <widget class="QGroupBox" name="Connection">
      <property name="title">
       <string>GroupBox</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="2">
+       <widget class="QLineEdit" name="txtpgName"/>
+      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="lblpgHost">
         <property name="text">
@@ -34,10 +64,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="txtpgPort"/>
-      </item>
-      <item row="3" column="1">
+      <item row="3" column="2">
        <widget class="QLineEdit" name="txtpgUsername"/>
       </item>
       <item row="2" column="0">
@@ -47,7 +74,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="1" column="2">
        <widget class="QLineEdit" name="txtpgHost"/>
       </item>
       <item row="5" column="0">
@@ -57,9 +84,6 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
-       <widget class="QComboBox" name="comboBox"/>
-      </item>
       <item row="4" column="0">
        <widget class="QLabel" name="lblpgPassword">
         <property name="text">
@@ -67,23 +91,21 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
+      <item row="0" column="0">
+       <widget class="QLabel" name="lblpgName">
+        <property name="text">
+         <string>Name</string>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>23</height>
-         </size>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QLineEdit" name="txtpgPassword">
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
         </property>
-       </spacer>
+       </widget>
       </item>
-      <item row="4" column="1">
-       <widget class="QLineEdit" name="txtpgPassword"/>
-      </item>
-      <item row="6" column="0" colspan="2">
+      <item row="6" column="0" colspan="3">
        <widget class="QCheckBox" name="chkpgStorePassword">
         <property name="text">
          <string>Save Password</string>
@@ -93,21 +115,70 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="txtpgName"/>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="lblpgName">
-        <property name="text">
-         <string>Name</string>
+      <item row="2" column="2">
+       <widget class="QSpinBox" name="spinpgPort">
+        <property name="buttonSymbols">
+         <enum>QAbstractSpinBox::NoButtons</enum>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>65535</number>
         </property>
        </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QLineEdit" name="txtpgDatabase"/>
       </item>
      </layout>
     </widget>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>txtpgName</tabstop>
+  <tabstop>txtpgHost</tabstop>
+  <tabstop>spinpgPort</tabstop>
+  <tabstop>txtpgUsername</tabstop>
+  <tabstop>txtpgPassword</tabstop>
+  <tabstop>chkpgStorePassword</tabstop>
+  <tabstop>btnSave</tabstop>
+  <tabstop>btnCancel</tabstop>
+ </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>btnCancel</sender>
+   <signal>clicked()</signal>
+   <receiver>DlgEditPostgisConnection</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>476</x>
+     <y>296</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>158</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btnSave</sender>
+   <signal>clicked()</signal>
+   <receiver>DlgEditPostgisConnection</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>395</x>
+     <y>232</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>126</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

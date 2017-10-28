@@ -123,6 +123,15 @@ class Ui_DlgConnections(object):
         self.tabConnections.setCurrentIndex(0)
         QtCore.QObject.connect(self.btnClose, QtCore.SIGNAL(_fromUtf8("clicked()")), DlgConnections.reject)
         QtCore.QMetaObject.connectSlotsByName(DlgConnections)
+        DlgConnections.setTabOrder(self.tabConnections, self.tblLayers)
+        DlgConnections.setTabOrder(self.tblLayers, self.chkKeepOpen)
+        DlgConnections.setTabOrder(self.chkKeepOpen, self.btnAdd)
+        DlgConnections.setTabOrder(self.btnAdd, self.btnClose)
+        DlgConnections.setTabOrder(self.btnClose, self.btnHelp)
+        DlgConnections.setTabOrder(self.btnHelp, self.txtPath)
+        DlgConnections.setTabOrder(self.txtPath, self.btnBrowse)
+        DlgConnections.setTabOrder(self.btnBrowse, self.txtTrexCachePath)
+        DlgConnections.setTabOrder(self.txtTrexCachePath, self.btnBrowseTrexCache)
 
     def retranslateUi(self, DlgConnections):
         DlgConnections.setWindowTitle(_translate("DlgConnections", "Add Layer(s) from a Vector Tile Source", None))

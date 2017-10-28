@@ -228,6 +228,18 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>tabConnections</tabstop>
+  <tabstop>tblLayers</tabstop>
+  <tabstop>chkKeepOpen</tabstop>
+  <tabstop>btnAdd</tabstop>
+  <tabstop>btnClose</tabstop>
+  <tabstop>btnHelp</tabstop>
+  <tabstop>txtPath</tabstop>
+  <tabstop>btnBrowse</tabstop>
+  <tabstop>txtTrexCachePath</tabstop>
+  <tabstop>btnBrowseTrexCache</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

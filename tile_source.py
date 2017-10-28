@@ -218,11 +218,12 @@ class ServerSource(AbstractSource):
 
 
 class PostGISSource(AbstractSource):
-    def __init__(self, host, user, password):
+    def __init__(self, host, user, password, database):
         AbstractSource.__init__(self)
         self.host = host
         self._user = user
         self._password = password
+        self._database = database
         self.table = None
         self.geom_column = None
         self.database = None
@@ -237,8 +238,8 @@ class PostGISSource(AbstractSource):
         return self.host
 
     def _connect(self):
-        self._conn = pg8000.connect(user=self._user, password=self._password, database=self.database)
-        self._cursor = self.conn.cursor()
+        self._conn = pg8000.connect(user=self._user, password=self._password, database=self._database)
+        self._cursor = self._conn.cursor()
         self._layers = None
 
     def databases(self):
