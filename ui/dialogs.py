@@ -323,6 +323,18 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         ("Description", "description")
     ])
 
+    _MBTILES_CONNECTION_TEMPLATE = {
+        "name": None,
+        "path": None,
+        "type": ConnectionTypes.MBTiles
+    }
+
+    _TREX_CONNECTION_TEMPLATE = {
+        "name": None,
+        "path": None,
+        "type": ConnectionTypes.Trex
+    }
+
     _TILEJSON_CONNECTION_TEMPLATE = {
         "name": None,
         "url": None,
@@ -390,6 +402,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.model.setHorizontalHeaderLabels(self._table_headers.keys())
         self.tblLayers.setModel(self.model)
         _update_size(self)
+        self._current_connection = None
 
     def _handle_connect(self, connection):
         self._current_connection = connection
@@ -408,20 +421,31 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
         if open_file_name and os.path.isfile(open_file_name):
             self.txtPath.setText(open_file_name)
-            self._handle_path_or_folder_selection(open_file_name)
+
+            connection = copy.deepcopy(self._MBTILES_CONNECTION_TEMPLATE)
+            connection["name"] = os.path.basename(open_file_name)
+            connection["path"] = open_file_name
+
+            self._handle_path_or_folder_selection(connection)
 
     def _select_trex_cache_folder(self):
         open_file_name = QFileDialog.getExistingDirectory(None, "Select t-rex Cache directory", self.browse_path)
         if open_file_name and os.path.isdir(open_file_name):
             self.txtTrexCachePath.setText(open_file_name)
-            self._handle_path_or_folder_selection(open_file_name)
 
-    def _handle_path_or_folder_selection(self, path):
+            connection = copy.deepcopy(self._TREX_CONNECTION_TEMPLATE)
+            connection["name"] = os.path.basename(open_file_name)
+            connection["path"] = open_file_name
+
+            self._handle_path_or_folder_selection(connection)
+
+    def _handle_path_or_folder_selection(self, connection):
+        self._current_connection = connection
+        path = connection["path"]
         self.browse_path = path
         self.open_path = path
-        name = os.path.basename(path)
         self.on_directory_change.emit(os.path.dirname(path))
-        self.on_connect.emit(name, path)
+        self.on_connect.emit(connection)
 
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
@@ -463,6 +487,18 @@ class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         _update_size(self)
+        self._connection = None
+
+    def set_connection(self, connection):
+        self._connection = copy.deepcopy(connection)
+
+    def get_connection(self):
+        self._connection["name"] = self.txtpgName.text()
+        self._connection["host"] = self.txtpgHost.text()
+        self._connection["username"] = self.txtpgUsername.text()
+        self._connection["password"] = self.txtpgPassword.text()
+        self._connection["port"] = self.txtpgPort.text()
+        return self._connection
 
 
 class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
