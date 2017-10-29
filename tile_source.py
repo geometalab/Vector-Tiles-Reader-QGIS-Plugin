@@ -12,7 +12,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 from PyQt4.QtSql import QSqlDatabase, QSqlQuery
 from tile_json import TileJSON
 from log_helper import info, warn, critical, debug
-from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds, tile_to_latlon, epsg3857_to_wgs84_lonlat
+from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds, tile_to_latlon, epsg3857_to_wgs84_lonlat, convert_coordinate
 from network_helper import url_exists, load_url_async
 from file_helper import is_sqlite_db
 
@@ -274,8 +274,8 @@ class PostGISSource(AbstractSource):
             ST_AsMVTGeom(
                     st_transform({}, 3857),
                     ST_Makebox2d(
-                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),4326),3857),
-                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),4326),3857)
+                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),3857),3857),
+                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),3857),3857)
                         ),
                     4096, -- tile extent
                     256,  -- buffer size pixel
@@ -301,14 +301,13 @@ class PostGISSource(AbstractSource):
 
         queries = map(lambda l: self._get_table_tile_query(geom_column="geom", table=l), layer_names)
         joined_query = " union all ".join(queries)
-        # info("joined query: {}", joined_query)
-
         for t in tiles_to_load:
             tile_col = t[0]
             tile_row = t[1]
-            latlon = tile_to_latlon(zoom_level, tile_col,tile_row, self.scheme())
-            x_min, y_min = epsg3857_to_wgs84_lonlat(latlon[0], latlon[1])
-            x_max, y_max = epsg3857_to_wgs84_lonlat(latlon[2], latlon[3])
+            latlon = tile_to_latlon(zoom_level, tile_col, tile_row, self.scheme())
+
+            x_min, y_min = latlon[0], latlon[1]
+            x_max, y_max = latlon[2], latlon[3]
 
             query = """
             SELECT ST_AsMVT(tile, 'address_p') as "mvt"
@@ -351,7 +350,7 @@ class PostGISSource(AbstractSource):
         return 0
 
     def max_zoom(self):
-        return 23
+        return 14
 
     def mask_level(self):
         return None
@@ -374,6 +373,7 @@ class PostGISSource(AbstractSource):
         if bounds:
             coords = bounds["extent"].replace("BOX(", "").replace(")", "").replace(" ", ",").split(",")
             bounds = map(lambda c: float(c), coords)
+        self._bounds = bounds
         return bounds
 
     def bounds_tile(self, zoom):
