@@ -294,39 +294,45 @@ class PostGISSource(AbstractSource):
 
         tile_data_tuples = []
         layer_names = map(lambda v: v["id"], self.vector_layers())
+        info("layer names: {} count={}", layer_names, len(layer_names))
+
+        queries = map(lambda l: self._get_table_tile_query(geom_column="geom", table=l), layer_names)
+        joined_query = " union all ".join(queries)
+        info("joined query: {}", joined_query)
+
         for t in tiles_to_load:
             tile_col = t[0]
             tile_row = t[1]
             latlon = tile_to_latlon(zoom_level, tile_col,tile_row, self.scheme())
             x_min, y_min = epsg3857_to_wgs84_lonlat(latlon[0], latlon[1])
             x_max, y_max = epsg3857_to_wgs84_lonlat(latlon[2], latlon[3])
-            queries = map(lambda l: self._get_table_tile_query(geom_column="geom", table=l), layer_names)
-            joined_query = " union all ".join(queries)
-            info("joined query: {}", joined_query)
 
             query = """
-            SELECT ST_AsMVT(tile)
+            SELECT ST_AsMVT(tile) as "mvt"
             FROM ({}) AS tile;
             """.format(joined_query)
 
             info("query: {}", query)
             info("query params: {}", (x_min, y_max, x_max, y_min))
 
-            pbf = self._fetch_all(query, (x_min, y_min, x_max, y_max)*len(layer_names))
+            record = self._fetch_one(query, (x_min, y_min, x_max, y_max)*len(layer_names), binary_result=True)
             tile = VectorTile(self.scheme(), zoom_level, tile_col, tile_row)
-            tile_data_tuples.append((tile, pbf))
+            tile_data_tuples.append((tile, record["mvt"]))
         return tile_data_tuples
 
     def vector_layers(self):
+        return [{"id": "address_p"}]
+
         if self._layers:
             return self._layers
 
         query = """
         select f_table_name as "layer_name"
         from geometry_columns
+        where ?=?
         order by f_table_name
         """
-        layers = self._fetch_all(query)
+        layers = self._fetch_all(query, params=[1,1])
         self._layers = map(lambda l: {"id": l["layer_name"]}, layers)
         return self._layers
 
@@ -342,7 +348,7 @@ class PostGISSource(AbstractSource):
         return 0
 
     def max_zoom(self):
-        return 14
+        return 23
 
     def mask_level(self):
         return None
@@ -363,7 +369,7 @@ class PostGISSource(AbstractSource):
         """.format(self.vector_layers()[0]["id"])
         bounds = self._fetch_one(query)
         if bounds:
-            coords = bounds.replace("BOX(", "").replace(")", "").replace(" ", ",").split(",")
+            coords = bounds["extent"].replace("BOX(", "").replace(")", "").replace(" ", ",").split(",")
             bounds = map(lambda c: float(c), coords)
         return bounds
 
@@ -393,31 +399,36 @@ class PostGISSource(AbstractSource):
             raise "No geometry column found in table '{}'".format(self.table)
         return name
 
-    def _fetch_one(self, sql, params=None):
+    def _fetch_one(self, sql, params=None, binary_result=False):
         result = None
-        rows = self._fetch_all(sql, params)
+        rows = self._fetch_all(sql, params, binary_result)
         if rows and len(rows) > 0:
             result = rows[0]
         return result
 
-    def _fetch_all(self, sql, params=None):
+    def _fetch_all(self, sql, params=None, binary_result=False):
         if not params:
             params = ()
 
         query = QSqlQuery(self._db)
+        query.prepare(sql)
         if not query:
             info("Database Error: {}", self.db.lastError().text())
 
-        for p in params:
-            query.addBindValue(p)
-        query.exec_(sql)
+        for index, p in enumerate(params):
+            query.bindValue(index, p)
+        query.exec_()
         rows = []
         while query.next():
             obj = {}
             nr_fields = query.record().count()
             for i in range(0, nr_fields):
-                obj[query.record().fieldName(i)] = query.value(i)
+                val = query.value(i)
+                if binary_result:
+                    val = bytes(val)
+                obj[query.record().fieldName(i)] = val
             rows.append(obj)
+        query.finish()
         return rows
 
 
