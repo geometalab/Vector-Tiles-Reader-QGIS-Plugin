@@ -270,8 +270,9 @@ class PostGISSource(AbstractSource):
     def _get_table_tile_query(self, geom_column, table):
         return """
             SELECT 
+            osm_id,name,label,st_asewkt(geom) as "wkt",
             ST_AsMVTGeom(
-                    {},
+                    st_transform({}, 3857),
                     ST_Makebox2d(
                         ST_transform(ST_SetSrid(ST_MakePoint(?, ?),4326),3857),
                         ST_transform(ST_SetSrid(ST_MakePoint(?, ?),4326),3857)
@@ -281,6 +282,8 @@ class PostGISSource(AbstractSource):
                     false  -- clip
                 ) AS geom 
             FROM {}
+            where name is not null
+            limit 10
         """.format(geom_column, table)
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
@@ -308,7 +311,7 @@ class PostGISSource(AbstractSource):
             x_max, y_max = epsg3857_to_wgs84_lonlat(latlon[2], latlon[3])
 
             query = """
-            SELECT ST_AsMVT(tile) as "mvt"
+            SELECT ST_AsMVT(tile, 'address_p') as "mvt"
             FROM ({}) AS tile;
             """.format(joined_query)
 
@@ -348,7 +351,7 @@ class PostGISSource(AbstractSource):
         return 0
 
     def max_zoom(self):
-        return 23
+        return 14
 
     def mask_level(self):
         return None
