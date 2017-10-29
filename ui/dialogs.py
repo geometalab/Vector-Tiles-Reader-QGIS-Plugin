@@ -286,7 +286,6 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     def _set_option(self, key, value):
         self._options[key] = value
         self.settings.setValue("options/{}".format(key), value)
-        info("options: {}", self._options)
 
     def _on_manual_zoom_selected(self, enabled):
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
