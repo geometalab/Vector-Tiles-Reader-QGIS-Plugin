@@ -5,9 +5,13 @@ from builtins import range
 from past.utils import old_div
 from builtins import object
 from global_map_tiles import GlobalMercator
-from osgeo import osr
 import operator
 from log_helper import warn, debug
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsPoint
+)
 
 
 class VectorTile(object):
@@ -101,12 +105,11 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
     target_crs = get_code_from_epsg(target_crs)
 
-    src = osr.SpatialReference()
-    tgt = osr.SpatialReference()
-    src.ImportFromEPSG(source_crs)
-    tgt.ImportFromEPSG(target_crs)
-    transform = osr.CoordinateTransformation(src, tgt)
-    return transform.TransformPoint(lng, lat)
+    crs_src = QgsCoordinateReferenceSystem(source_crs)
+    crs_dest = QgsCoordinateReferenceSystem(target_crs)
+    xform = QgsCoordinateTransform(crs_src, crs_dest)
+    pt = xform.transform(QgsPoint(lat, lng))
+    return pt
 
 
 def get_code_from_epsg(epsg_string):

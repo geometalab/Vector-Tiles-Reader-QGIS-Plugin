@@ -13,7 +13,7 @@ import uuid
 import traceback
 
 from log_helper import info, critical, debug, remove_key
-from tile_helper import get_all_tiles, get_code_from_epsg, clamp
+from tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
 from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types, clip_features
 from file_helper import (
     get_cached_tile_file_name,
@@ -332,15 +332,12 @@ class VtReader(QObject):
         if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
             return None
 
-        loaded_extent = {"x_min": int(min(loaded_tiles_x)),
-                         "x_max": int(max(loaded_tiles_x)),
-                         "y_min": int(min(loaded_tiles_y)),
-                         "y_max": int(max(loaded_tiles_y)),
-                         "zoom": int(zoom_level)
-                         }
-        loaded_extent["width"] = loaded_extent["x_max"] - loaded_extent["x_min"] + 1
-        loaded_extent["height"] = loaded_extent["y_max"] - loaded_extent["y_min"] + 1
-        return loaded_extent
+        bounds = create_bounds(zoom=zoom_level,
+                               x_min=min(loaded_tiles_x),
+                               x_max=max(loaded_tiles_x),
+                               y_min=min(loaded_tiles_y),
+                               y_max=max(loaded_tiles_y))
+        return bounds
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
                     apply_styles=True, max_tiles=None, layer_filter=None):

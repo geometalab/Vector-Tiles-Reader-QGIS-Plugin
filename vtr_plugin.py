@@ -34,7 +34,8 @@ from qgis.core import (
     QgsRectangle,
     QgsMapLayerRegistry,
     QgsCoordinateReferenceSystem,
-    QgsProject
+    QgsProject,
+    QgsCoordinateTransform
 )
 from qgis.gui import QgsMessageBar
 
@@ -309,18 +310,17 @@ class VtrPlugin(object):
             self.iface.mapCanvas().zoomScale(new_scale)
 
     def _handle_mouse_move(self, pos):
-        self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
         zoom = self._get_zoom_for_current_map_scale()
         if self._current_reader:
             min_zoom = self._current_reader.get_source().min_zoom()
             max_zoom = self._current_reader.get_source().max_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
 
-        lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
-        tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
+        lat_lon = convert_coordinate(3857, 4326, pos[0],pos[1])
+
+        tile = latlon_to_tile(zoom, lat_lon[1], lat_lon[0])
         msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
         self.iface.mainWindow().statusBar().showMessage(msg)
-        self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
 
     @staticmethod
     def _add_path_to_icons():
@@ -334,7 +334,6 @@ class VtrPlugin(object):
     def _update_nr_of_tiles(self):
         zoom = self._get_current_zoom()
         bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
-        info("qgis extent: zoom={}, {}", zoom, bounds)
         nr_of_tiles = bounds["width"] * bounds["height"]
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
@@ -396,21 +395,19 @@ class VtrPlugin(object):
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
-        extent = self._get_current_extent_as_wkt()
-        splits = extent.split(", ")
-        new_extent = [list(map(float, x.split(" "))) for x in splits]
-        min_extent = new_extent[0]
-        max_extent = new_extent[1]
+        extent = self.iface.mapCanvas().extent()
+        x_min = extent.xMinimum()
+        x_max = extent.xMaximum()
+        y_min = extent.yMinimum()
+        y_max = extent.yMaximum()
 
-        min_proj = epsg3857_to_wgs84_lonlat(min_extent[0], min_extent[1])
-        max_proj = epsg3857_to_wgs84_lonlat(max_extent[0], max_extent[1])
+        min_extent = convert_coordinate(3857, 4326, x_min, y_min)
+        max_extent = convert_coordinate(3857, 4326, x_max, y_max)
 
         bounds = []
-        bounds.extend(min_proj)
-        bounds.extend(max_proj)
+        bounds.extend(min_extent)
+        bounds.extend(max_extent)
         tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme)
-
-        debug("Current extent: {}", tile_bounds)
         return tile_bounds
 
     @pyqtSlot(dict)
@@ -585,7 +582,7 @@ class VtrPlugin(object):
                         and not extent_overlap_bounds(source_bounds, bounds):
                     info("The current map extent and is not within the bounds of the source. The extent to load "
                          "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds, source_bounds)
-                    bounds = source_bounds
+                    # bounds = source_bounds
 
                 reader.set_options(layer_filter=layers_to_load,
                                    load_mask_layer=load_mask_layer,
