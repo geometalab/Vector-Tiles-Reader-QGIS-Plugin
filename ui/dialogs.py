@@ -6,7 +6,7 @@ import resources_rc  # don't remove this import, otherwise the icons won't be wo
 
 from collections import OrderedDict
 from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignal, QSettings
+from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
 from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem, QApplication
 from dlg_connections import Ui_DlgConnections
 from dlg_edit_tilejson_connection import Ui_DlgEditTileJSONConnection
@@ -217,28 +217,88 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
 
     on_zoom_change = pyqtSignal()
 
-    def __init__(self, target_groupbox, zoom_change_handler):
+    _TILE_LIMIT_ENABLED = "tile_limit_enabled"
+    _TILE_LIMIT = "tile_limit"
+    _MERGE_TILES = "merge_tiles"
+    _CLIP_TILES = "clip_tiles"
+    _AUTO_ZOOM = "auto_zoom"
+    _MAX_ZOOM = "max_zoom"
+    _FIX_ZOOM_ENABLED = "fix_zoom_enabled"
+    _FIX_ZOOM = "fix_zoom"
+    _APPLY_STYLES = "apply_styles"
+
+    _options = {
+        _TILE_LIMIT_ENABLED: True,
+        _TILE_LIMIT: 32,
+        _MERGE_TILES: False,
+        _CLIP_TILES: False,
+        _AUTO_ZOOM: True,
+        _MAX_ZOOM: False,
+        _FIX_ZOOM_ENABLED: False,
+        _FIX_ZOOM: 0,
+        _APPLY_STYLES: True
+    }
+
+    def __init__(self, settings, target_groupbox, zoom_change_handler):
         super(QtGui.QGroupBox, self).__init__()
-        self._zoom_change_handler = zoom_change_handler
         self.setupUi(target_groupbox)
+        self._reset_to_basemap_defaults()
+        self.settings = settings
+        self._zoom_change_handler = zoom_change_handler
         self.lblZoomRange.setText("")
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
+        self.chkMergeTiles.toggled.connect(lambda enabled: self._set_option(self._MERGE_TILES, enabled))
+        self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
+        self.chkApplyStyles.toggled.connect(lambda enabled: self._set_option(self._APPLY_STYLES, enabled))
+        self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
+        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
         self.rbZoomManual.toggled.connect(self._on_manual_zoom_selected)
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
         self.zoomSpin.valueChanged.connect(self._on_zoom_change)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
-        self._reset_to_basemap_defaults()
+        self._load_options()
+
+    def _load_options(self):
+        opt = self._options
+        for key in self._options:
+            self._options[key] = self.settings.value("options/{}".format(key), None)
+        if opt[self._TILE_LIMIT_ENABLED]:
+            self.chkLimitNrOfTiles.setChecked(opt[self._TILE_LIMIT_ENABLED] == True or opt[self._TILE_LIMIT_ENABLED] == "true")
+        if opt[self._TILE_LIMIT]:
+            self.spinNrOfLoadedTiles.setValue(opt[self._TILE_LIMIT])
+        if opt[self._MERGE_TILES]:
+            self.chkMergeTiles.setChecked(opt[self._MERGE_TILES] == True or opt[self._MERGE_TILES] == "true")
+        if opt[self._CLIP_TILES]:
+            self.chkClipTiles.setChecked(opt[self._CLIP_TILES] == True or opt[self._CLIP_TILES] == "true")
+        if opt[self._AUTO_ZOOM]:
+            self.rbAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
+        if opt[self._MAX_ZOOM]:
+            self.rbZoomMax.setChecked(opt[self._MAX_ZOOM] == True or opt[self._MAX_ZOOM] == "true")
+        if opt[self._FIX_ZOOM_ENABLED]:
+            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
+        if opt[self._FIX_ZOOM]:
+            self.zoomSpin.setValue(opt[self._FIX_ZOOM])
+        if opt[self._APPLY_STYLES]:
+            self.chkApplyStyles.setChecked(opt[self._APPLY_STYLES] == True or opt[self._APPLY_STYLES] == "true")
+
+    def _set_option(self, key, value):
+        self._options[key] = value
+        self.settings.setValue("options/{}".format(key), value)
+        info("options: {}", self._options)
 
     def _on_manual_zoom_selected(self, enabled):
+        self._set_option(self._FIX_ZOOM_ENABLED, enabled)
         self.zoomSpin.setEnabled(enabled)
         self._zoom_change_handler()
 
     def _on_zoom_change(self):
+        self._set_option(self._FIX_ZOOM, self.zoomSpin.value())
         self._zoom_change_handler()
 
     def _on_max_zoom_selected(self, enabled):
+        self._set_option(self._MAX_ZOOM, enabled)
         self._zoom_change_handler()
 
     def set_zoom_level(self, zoom_level):
@@ -272,6 +332,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkClipTiles.setChecked(clip_tile_at_bounds)
 
     def set_omt_styles_enabled(self, enabled):
+        self._set_option(self._APPLY_STYLES, enabled)
         self.chkApplyStyles.setChecked(enabled)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
@@ -293,26 +354,42 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.lblZoomRange.setText(zoom_range_text)
 
     def clip_tiles(self):
-        return self.chkClipTiles.isChecked()
+        enabled = self.chkClipTiles.isChecked()
+        self._set_option(self._CLIP_TILES, enabled)
+        return enabled
 
     def auto_zoom_enabled(self):
-        return self.rbAutoZoom.isChecked()
+        enabled = self.rbAutoZoom.isChecked()
+        self._set_option(self._AUTO_ZOOM, enabled)
+        return enabled
 
     def manual_zoom(self):
-        if not self.rbZoomManual.isChecked():
+        enabled = self.rbZoomManual.isChecked()
+        fix_zoom = self.zoomSpin.value()
+        self._set_option(self._FIX_ZOOM_ENABLED, enabled)
+        self._set_option(self._FIX_ZOOM, fix_zoom)
+        if not enabled:
             return None
-        return self.zoomSpin.value()
+        return fix_zoom
 
     def tile_number_limit(self):
-        if not self.chkLimitNrOfTiles.isChecked():
+        enabled = self.chkLimitNrOfTiles.isChecked()
+        tile_limit = self.spinNrOfLoadedTiles.value()
+        self._set_option(self._TILE_LIMIT_ENABLED, enabled)
+        self._set_option(self._TILE_LIMIT, tile_limit)
+        if not enabled:
             return None
-        return self.spinNrOfLoadedTiles.value()
+        return tile_limit
 
     def apply_styles_enabled(self):
-        return self.chkApplyStyles.isChecked()
+        enabled = self.chkApplyStyles.isChecked()
+        self._set_option(self._APPLY_STYLES, enabled)
+        return enabled
 
     def merge_tiles_enabled(self):
-        return self.chkMergeTiles.isChecked()
+        enabled = self.chkMergeTiles.isChecked()
+        self._set_option(self._MERGE_TILES, enabled)
+        return enabled
 
     def load_mask_layer_enabled(self):
         return False
@@ -349,23 +426,27 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         }
     }
 
+    _CONNECTIONS_TAB = "selected_connections_tab"
+
     def __init__(self, default_browse_directory):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
-        self.options = OptionsGroup(self.grpOptions, self._on_zoom_change)
-        settings = QSettings("VtrSettings")
+        self.settings = QSettings("VtrSettings")
+        self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
+        last_tab = self.settings.value(self._CONNECTIONS_TAB, 0)
+        self.tabConnections.setCurrentIndex(last_tab)
         self.tilejson_connections = ConnectionsGroup(target_groupbox=self.grpTilejsonConnections,
                                                      edit_dialog=EditTilejsonConnectionDialog(),
                                                      connection_template=TILEJSON_CONNECTION_TEMPLATE,
                                                      settings_key="connections",
-                                                     settings=settings,
+                                                     settings=self.settings,
                                                      predefined_connections=self._predefined_tilejson_connections)
         self.postgis_connections = ConnectionsGroup(target_groupbox=self.grpPostgisConnections,
                                                     edit_dialog=EditPostgisConnectionDialog(),
                                                     connection_template=POSTGIS_CONNECTION_TEMPLATE,
                                                     settings_key="PostGISConnections",
-                                                    settings=settings)
-
+                                                    settings=self.settings)
+        self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)
         self.postgis_connections.on_connect.connect(self._handle_connect)
@@ -385,6 +466,11 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         _update_size(self)
         self._current_connection = None
 
+    @pyqtSlot(int)
+    def _handle_tab_change(self, current_index):
+        self.settings.setValue(self._CONNECTIONS_TAB, current_index)
+
+    @pyqtSlot(dict)
     def _handle_connect(self, connection):
         self._current_connection = connection
         self.on_connect.emit(connection)
@@ -392,6 +478,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if active_tab != self.tabFile:
             self.txtPath.setText("")
 
+    @pyqtSlot('QString')
     def _handle_connection_change(self, name):
         self.set_layers([])
         is_omt = name.startswith("OpenMapTiles.com")
