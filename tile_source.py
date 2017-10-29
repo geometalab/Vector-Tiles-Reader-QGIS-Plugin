@@ -6,13 +6,13 @@ import urllib.parse
 import json
 import os
 import sys
-import pg8000
 
 from PyQt4.QtGui import QApplication
 from PyQt4.QtCore import QObject, pyqtSignal
+from PyQt4.QtSql import QSqlDatabase, QSqlQuery
 from tile_json import TileJSON
 from log_helper import info, warn, critical, debug
-from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds
+from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds, tile_to_latlon, epsg3857_to_wgs84_lonlat
 from network_helper import url_exists, load_url_async
 from file_helper import is_sqlite_db
 
@@ -149,7 +149,7 @@ class ServerSource(AbstractSource):
         self._cancelling = False
         base_url = self.json.tiles()[0]
         urls = []
-        if len(tiles_to_load) > max_tiles:
+        if max_tiles and len(tiles_to_load) > max_tiles:
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
 
@@ -218,9 +218,10 @@ class ServerSource(AbstractSource):
 
 
 class PostGISSource(AbstractSource):
-    def __init__(self, host, user, password, database):
+    def __init__(self, host, port, user, password, database):
         AbstractSource.__init__(self)
         self.host = host
+        self.port = port
         self._user = user
         self._password = password
         self._database = database
@@ -230,6 +231,8 @@ class PostGISSource(AbstractSource):
         self._conn = None
         self._cursor = None
         self._layers = None
+        self._bounds = None
+        self._db = None
         self._connect()
 
     def source(self):
@@ -238,8 +241,16 @@ class PostGISSource(AbstractSource):
         return self.host
 
     def _connect(self):
-        self._conn = pg8000.connect(user=self._user, password=self._password, database=self._database)
-        self._cursor = self._conn.cursor()
+        db = QSqlDatabase.addDatabase("QPSQL")
+        db.setHostName(self.host)
+        db.setPort(int(self.port))
+        db.setDatabaseName(self._database)
+        db.setUserName(self._user)
+        db.setPassword(self._password)
+        ok = db.open()
+        if not ok:
+            info("Connection to database failed...")
+        self._db = db
         self._layers = None
 
     def databases(self):
@@ -256,34 +267,55 @@ class PostGISSource(AbstractSource):
         self.database = name
         self._connect()
 
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
-        if not self.table:
-            raise "Choose a table first"
-
-        geom_column = self._get_geom_column()
-        if not geom_column:
-            raise "No geometry column found in table '{}'".format(self.table)
-
-        query = """
-        SELECT ST_AsMVT(tile)
-        FROM (
+    def _get_table_tile_query(self, geom_column, table):
+        return """
             SELECT 
             ST_AsMVTGeom(
                     {},
                     ST_Makebox2d(
-                        ST_transform(ST_SetSrid(ST_MakePoint(%s, %s),4326),3857),
-                        ST_transform(ST_SetSrid(ST_MakePoint(%s, %s),4326),3857)
+                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),4326),3857),
+                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),4326),3857)
                         ),
                     4096, -- tile extent
                     256,  -- buffer size pixel
                     false  -- clip
                 ) AS geom 
             FROM {}
-        ) AS tile;
-        """.format(geom_column, self.table)
+        """.format(geom_column, table)
 
-    def set_table(self, table_name):
-        self.table = table_name
+    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
+        # geom_column = self._get_geom_column()
+        # if not geom_column:
+        #     raise "No geometry column found in table '{}'".format(self.table)
+
+        if max_tiles and len(tiles_to_load) > max_tiles:
+            tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
+            self.tile_limit_reached.emit()
+
+        tile_data_tuples = []
+        layer_names = map(lambda v: v["id"], self.vector_layers())
+        for t in tiles_to_load:
+            tile_col = t[0]
+            tile_row = t[1]
+            latlon = tile_to_latlon(zoom_level, tile_col,tile_row, self.scheme())
+            x_min, y_min = epsg3857_to_wgs84_lonlat(latlon[0], latlon[1])
+            x_max, y_max = epsg3857_to_wgs84_lonlat(latlon[2], latlon[3])
+            queries = map(lambda l: self._get_table_tile_query(geom_column="geom", table=l), layer_names)
+            joined_query = " union all ".join(queries)
+            info("joined query: {}", joined_query)
+
+            query = """
+            SELECT ST_AsMVT(tile)
+            FROM ({}) AS tile;
+            """.format(joined_query)
+
+            info("query: {}", query)
+            info("query params: {}", (x_min, y_max, x_max, y_min))
+
+            pbf = self._fetch_all(query, (x_min, y_min, x_max, y_max)*len(layer_names))
+            tile = VectorTile(self.scheme(), zoom_level, tile_col, tile_row)
+            tile_data_tuples.append((tile, pbf))
+        return tile_data_tuples
 
     def vector_layers(self):
         if self._layers:
@@ -295,12 +327,11 @@ class PostGISSource(AbstractSource):
         order by f_table_name
         """
         layers = self._fetch_all(query)
-        self._layers = map(lambda l: l["layer_name"], layers)
+        self._layers = map(lambda l: {"id": l["layer_name"]}, layers)
         return self._layers
 
     def close_connection(self):
-        self._cursor.close()
-        self._conn.close()
+        pass
 
     def name(self):
         if self.database:
@@ -319,11 +350,32 @@ class PostGISSource(AbstractSource):
     def scheme(self):
         return "xyz"
 
+    def bounds(self):
+        if not self.vector_layers() or len(self.vector_layers()) == 0:
+            return None
+
+        if self._bounds:
+            return self._bounds
+
+        query = """
+        select ST_Extent(ST_Transform(geom,4326)) AS extent
+        from {}
+        """.format(self.vector_layers()[0]["id"])
+        bounds = self._fetch_one(query)
+        if bounds:
+            coords = bounds.replace("BOX(", "").replace(")", "").replace(" ", ",").split(",")
+            bounds = map(lambda c: float(c), coords)
+        return bounds
+
     def bounds_tile(self, zoom):
-        raise NotImplemented
+        if not self.vector_layers() or len(self.vector_layers()) == 0:
+            return None
+
+        bounds = self.bounds()
+        return get_tile_bounds(zoom, bounds)
 
     def crs(self):
-        raise NotImplemented
+        return 3857
 
     def _get_geom_column(self):
         name = None
@@ -341,24 +393,32 @@ class PostGISSource(AbstractSource):
             raise "No geometry column found in table '{}'".format(self.table)
         return name
 
-    def _fetch_one(self, query):
-        self._cursor.execute(query)
-        res = self._cursor.fetchone()
-        if res:
-            res = res[0]
-        return res
+    def _fetch_one(self, sql, params=None):
+        result = None
+        rows = self._fetch_all(sql, params)
+        if rows and len(rows) > 0:
+            result = rows[0]
+        return result
 
-    def _fetch_all(self, query):
-        self._cursor.execute(query)
-        res = self._cursor.fetchall()
-        desc = self._cursor.description
-        objects = []
-        for r in res:
+    def _fetch_all(self, sql, params=None):
+        if not params:
+            params = ()
+
+        query = QSqlQuery(self._db)
+        if not query:
+            info("Database Error: {}", self.db.lastError().text())
+
+        for p in params:
+            query.addBindValue(p)
+        query.exec_(sql)
+        rows = []
+        while query.next():
             obj = {}
-            for index, value in enumerate(r):
-                obj[desc[index][0]] = value
-            objects.append(obj)
-        return objects
+            nr_fields = query.record().count()
+            for i in range(0, nr_fields):
+                obj[query.record().fieldName(i)] = query.value(i)
+            rows.append(obj)
+        return rows
 
 
 class MBTilesSource(AbstractSource):

@@ -127,6 +127,7 @@ class VtReader(QObject):
             source = TrexCacheSource(path=connection["path"])
         elif conn_type == ConnectionTypes.PostGIS:
             source = PostGISSource(host=connection["host"],
+                                   port=connection["port"],
                                    user=connection["username"],
                                    password=connection["password"],
                                    database=connection["database"])
