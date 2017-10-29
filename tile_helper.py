@@ -96,6 +96,7 @@ def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
     y = clamp(y, low=0)
     return int(x), int(y)
 
+
 def convert_coordinate(source_crs, target_crs, lat, lng):
     source_crs = get_code_from_epsg(source_crs)
     target_crs = get_code_from_epsg(target_crs)
@@ -116,10 +117,8 @@ def get_code_from_epsg(epsg_string):
 
 
 def epsg3857_to_wgs84_lonlat(x, y):
-    gm = GlobalMercator()
-    wgs84 = gm.MetersToLatLon(x, y)
-    # change latlon to lonlat
-    return [wgs84[1], wgs84[0]]
+    wgs84 = convert_coordinate(3857, 4326, x, y)
+    return wgs84[1], wgs84[0]
 
 
 def tile_to_latlon(zoom, x, y, scheme="tms"):

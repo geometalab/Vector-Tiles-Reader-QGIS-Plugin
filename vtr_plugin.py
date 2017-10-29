@@ -310,7 +310,12 @@ class VtrPlugin(object):
 
     def _handle_mouse_move(self, pos):
         self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
-        zoom = self._get_current_zoom()
+        zoom = self._get_zoom_for_current_map_scale()
+        if self._current_reader:
+            min_zoom = self._current_reader.get_source().min_zoom()
+            max_zoom = self._current_reader.get_source().max_zoom()
+            zoom = clamp(zoom, low=min_zoom, high=max_zoom)
+
         lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
         tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
         msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
@@ -329,6 +334,7 @@ class VtrPlugin(object):
     def _update_nr_of_tiles(self):
         zoom = self._get_current_zoom()
         bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
+        info("qgis extent: zoom={}, {}", zoom, bounds)
         nr_of_tiles = bounds["width"] * bounds["height"]
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
@@ -739,17 +745,16 @@ class VtrPlugin(object):
             if not self.message_bar_item:
                 self._create_message_bar()
         elif show_progress is False:
-            info("hide progress")
             self.iface.messageBar().popWidget(self.message_bar_item)
             self.message_bar_item = None
             self.progress_bar = None
-        if max_progress is not None:
+        if max_progress is not None and self.progress_bar:
             self.progress_bar.setMinimum(0)
             self.progress_bar.setMaximum(max_progress)
-        if msg:
+        if msg and self.message_bar_item:
             info(msg)
             self.message_bar_item.setTitle(msg)
-        if progress is not None:
+        if progress is not None and self.progress_bar:
             self.progress_bar.setValue(progress)
 
     def _assure_qgis_groups_exist(self, root_group_name, sort_layers=False):

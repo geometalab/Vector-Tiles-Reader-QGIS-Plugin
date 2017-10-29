@@ -283,7 +283,7 @@ class PostGISSource(AbstractSource):
                 ) AS geom 
             FROM {}
             where name is not null
-            limit 10
+            --limit 10
         """.format(geom_column, table)
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
@@ -301,7 +301,7 @@ class PostGISSource(AbstractSource):
 
         queries = map(lambda l: self._get_table_tile_query(geom_column="geom", table=l), layer_names)
         joined_query = " union all ".join(queries)
-        info("joined query: {}", joined_query)
+        # info("joined query: {}", joined_query)
 
         for t in tiles_to_load:
             tile_col = t[0]
@@ -315,8 +315,8 @@ class PostGISSource(AbstractSource):
             FROM ({}) AS tile;
             """.format(joined_query)
 
-            info("query: {}", query)
-            info("query params: {}", (x_min, y_max, x_max, y_min))
+            # info("query: {}", query)
+            # info("query params: {}", (x_min, y_max, x_max, y_min))
 
             record = self._fetch_one(query, (x_min, y_min, x_max, y_max)*len(layer_names), binary_result=True)
             tile = VectorTile(self.scheme(), zoom_level, tile_col, tile_row)
@@ -351,7 +351,7 @@ class PostGISSource(AbstractSource):
         return 0
 
     def max_zoom(self):
-        return 14
+        return 23
 
     def mask_level(self):
         return None

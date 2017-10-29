@@ -300,7 +300,10 @@ class VtReader(QObject):
             self._continue_loading()
 
         except Exception as e:
-            critical("An exception occured: {}, {}", e, traceback.format_exc())
+            tb = ""
+            if traceback:
+                tb = traceback.format_exc()
+            critical("An exception occured: {}, {}", e, tb)
             self.cancelled.emit()
 
     def _continue_loading(self):
