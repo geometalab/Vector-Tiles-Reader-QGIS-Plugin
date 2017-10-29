@@ -109,9 +109,10 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
                 writer.writeheader()
                 for name in self.connections:
                     connection = self.connections[name]
-                    if connection["type"] == ConnectionTypes.PostGIS and not connection["save_password"]:
-                        connection["password"] = None
-                    writer.writerow(self.connections[name])
+                    if connection["name"] and len(connection["name"]) > 0:
+                        if connection["type"] == ConnectionTypes.PostGIS and not connection["save_password"]:
+                            connection["password"] = None
+                        writer.writerow(self.connections[name])
 
     def _import_connections(self):
         file_name = QFileDialog.getOpenFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
@@ -122,7 +123,9 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
                     new_connection = copy.deepcopy(self._connection_template)
                     for key in new_connection:
                         new_connection[key] = row[key]
-                    self.connections[new_connection["name"]] = new_connection
+                    name = new_connection["name"]
+                    if name and len(name) > 0:
+                        self.connections[name] = new_connection
             self._add_loaded_connections_to_combobox()
 
     def _load_connections(self):
@@ -135,7 +138,8 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
                 val = settings.value(key)
                 if val:
                     new_connection[key] = val
-            self.connections[new_connection["name"]] = new_connection
+            if new_connection["name"]:
+                self.connections[new_connection["name"]] = new_connection
         settings.endArray()
 
     def _add_loaded_connections_to_combobox(self):
