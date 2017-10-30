@@ -167,7 +167,6 @@ class VtrPlugin(object):
             version = match.group().replace("version=", "")
         return version
 
-
     def _on_project_change(self):
         self._debouncer.stop()
         self._cancel_export()
@@ -181,7 +180,7 @@ class VtrPlugin(object):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
                                                            self._show_connections_dialog)
-        self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._reload_tiles, False)
+        self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._load_features_overlapping_tile_extent, False)
         # self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
@@ -202,6 +201,9 @@ class VtrPlugin(object):
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
+
+    def _load_features_overlapping_tile_extent(self):
+        self._reload_tiles(ignore_limit=True)
 
     def _have_extent_or_scale_changed(self):
         has_scale_changed = self._has_scale_changed()[0]
@@ -368,7 +370,7 @@ class VtrPlugin(object):
                 layers.append(l)
         return layers
 
-    def _reload_tiles(self, overwrite_extent=None):
+    def _reload_tiles(self, overwrite_extent=None, ignore_limit=False):
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
@@ -384,12 +386,15 @@ class VtrPlugin(object):
             if overwrite_extent:
                 bounds = overwrite_extent
 
+            info("ignore reload limit: {}", ignore_limit)
+
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
             self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
-                             ignore_limit=True)
+                             ignore_limit=ignore_limit
+                             )
 
     def _get_current_extent_as_wkt(self):
         return self.iface.mapCanvas().extent().asWktCoordinates()

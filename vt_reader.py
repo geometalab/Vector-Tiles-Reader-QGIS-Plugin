@@ -247,7 +247,7 @@ class VtReader(QObject):
             clip_tiles = self._loading_options["clip_tiles"]
             max_tiles = self._loading_options["max_tiles"]
             layer_filter = self._loading_options["layer_filter"]
-
+            info("Tile limit enabled: {}", max_tiles is not None and max_tiles > 0)
             self.cancel_requested = False
             self.feature_collections_by_layer_name_and_geotype = {}
             self._update_progress(show_dialog=True)
@@ -361,6 +361,7 @@ class VtReader(QObject):
             'max_tiles': max_tiles,
             'layer_filter': layer_filter
         }
+        info("options: {}", self._loading_options)
 
     def load_tiles_async(self, zoom_level, bounds):
         """

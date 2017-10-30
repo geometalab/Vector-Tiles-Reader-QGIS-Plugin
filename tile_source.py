@@ -297,28 +297,35 @@ class PostGISSource(AbstractSource):
         self.database = name
         self._connect()
 
-    def _get_table_tile_query(self, geom_column, table):
+    def _get_table_tile_query(self, geom_column, table, zoom_level, x, y):
         return """
             SELECT 
             osm_id,name,label,st_asewkt(geom) as "wkt",
             ST_AsMVTGeom(
-                    st_transform({}, 3857),
-                    tilebbox(?,?,?),
+                    st_transform({column}, 3857),
+                    tilebbox({zoom_level},{x},{y}),
                     4096, -- tile extent
                     256,  -- buffer size pixel
                     false  -- clip
                 ) AS geom 
-            FROM {}
+            FROM {table}
             WHERE ST_Intersects(
                     st_transform( geom, 3857), 
-                    (SELECT st_setsrid(st_envelope( st_extent(tilebbox(?,?,?))),3857))
+                    (SELECT st_setsrid(st_envelope( st_extent(tilebbox({zoom_level},{x},{y}))),3857))
                   )
-        """.format(geom_column, table)
+        """.format(column=geom_column,
+                   table=table,
+                   zoom_level=zoom_level,
+                   x=x,
+                   y=y)
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
+        self._cancelling = False
         # geom_column = self._get_geom_column()
         # if not geom_column:
         #     raise "No geometry column found in table '{}'".format(self.table)
+
+        info("max tiles: {}", max_tiles)
 
         if max_tiles and len(tiles_to_load) > max_tiles:
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
@@ -328,20 +335,31 @@ class PostGISSource(AbstractSource):
         layer_names = map(lambda v: v["id"], self.vector_layers())
         # info("layer names: {} count={}", layer_names, len(layer_names))
 
+        self.max_progress_changed.emit(max_tiles*len(layer_names))
+        self.message_changed.emit("Loading {} tiles...".format(len(tiles_to_load)))
+
+        queries = []
         for tile_col, tile_row in tiles_to_load:
-            tile = VectorTile(self.scheme(), zoom_level, tile_col, tile_row)
-            query_params = (zoom_level, tile_col, tile_row)
             for layer in layer_names:
-                table_query = self._get_table_tile_query(geom_column="geom", table=layer)
+                table_query = self._get_table_tile_query(geom_column="geom",
+                                                         table=layer,
+                                                         zoom_level=zoom_level,
+                                                         x=tile_col,
+                                                         y=tile_row)
                 query = """
-                            SELECT ST_AsMVT(tile, '{}') as "mvt"
-                            FROM ({}) AS tile;
-                            """.format(layer, table_query)
-                info("query: {}", query)
-                info("query params: {}", query_params)
-                record = self._fetch_one(query, query_params * 2, binary_result=True)
-                if record:
-                    tile_data_tuples.append((tile, record["mvt"]))
+                            SELECT {col} as "col", {row} as "row", ST_AsMVT(tile, '{layer_name}') as "mvt"
+                            FROM ({subquery}) AS tile
+                            """.format(col=tile_col, row=tile_row, layer_name=layer, subquery=table_query)
+                queries.append(query)
+
+        main_query = " union all ".join(queries)
+        info("query: {}", main_query)
+
+        records = self._fetch_all(main_query)
+        for r in records:
+            tile = VectorTile(self.scheme(), zoom_level, r["col"], r["row"])
+            tile_data_tuples.append((tile, r["mvt"]))
+
         return tile_data_tuples
 
     def vector_layers(self):
