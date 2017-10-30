@@ -31,7 +31,7 @@ from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt4.QtGui import QApplication
 from io import BytesIO
 from gzip import GzipFile
-from tile_source import ServerSource, MBTilesSource, TrexCacheSource, PostGISSource
+from tile_source import ServerSource, MBTilesSource, TrexCacheSource
 from connection import ConnectionTypes
 
 from mp_helper import decode_tile_native, decode_tile_python, can_load_lib
@@ -126,12 +126,6 @@ class VtReader(QObject):
             source = MBTilesSource(path=connection["path"])
         elif conn_type == ConnectionTypes.Trex:
             source = TrexCacheSource(path=connection["path"])
-        elif conn_type == ConnectionTypes.PostGIS:
-            source = PostGISSource(host=connection["host"],
-                                   port=connection["port"],
-                                   user=connection["username"],
-                                   password=connection["password"],
-                                   database=connection["database"])
         else:
             raise RuntimeError("Type not set on connection")
         source.progress_changed.connect(self._source_progress_changed)

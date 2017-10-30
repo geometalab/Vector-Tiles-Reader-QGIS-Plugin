@@ -319,6 +319,10 @@ class VtrPlugin(object):
             self._reload_tiles()
             self.iface.mapCanvas().zoomScale(new_scale)
 
+    def _get_qgis_crs(self):
+        canvas = self.iface.mapCanvas()
+        return get_code_from_epsg(canvas.mapSettings().destinationCrs().authid())
+
     def _handle_mouse_move(self, pos):
         zoom = self._get_zoom_for_current_map_scale()
         if self._current_reader:
@@ -326,9 +330,12 @@ class VtrPlugin(object):
             max_zoom = self._current_reader.get_source().max_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
 
-        lat_lon = convert_coordinate(3857, 4326, pos[0], pos[1])
+        lon = pos[0]
+        lat = pos[1]
 
-        tile = latlon_to_tile(zoom, lat_lon[1], lat_lon[0])
+        current_crs = self._get_qgis_crs()
+        tile = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=current_crs)
+
         msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
         self.iface.mainWindow().statusBar().showMessage(msg)
 
@@ -413,13 +420,9 @@ class VtrPlugin(object):
         y_min = extent.yMinimum()
         y_max = extent.yMaximum()
 
-        min_extent = convert_coordinate(3857, 4326, x_min, y_min)
-        max_extent = convert_coordinate(3857, 4326, x_max, y_max)
-
-        bounds = []
-        bounds.extend(min_extent)
-        bounds.extend(max_extent)
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme)
+        current_crs = self._get_qgis_crs()
+        bounds = [x_min, y_min, x_max, y_max]
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=current_crs)
         return tile_bounds
 
     @pyqtSlot(dict)
@@ -492,9 +495,11 @@ class VtrPlugin(object):
         info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
+            info("setting qgis extent ")
             self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
+            info("QGIS extent is not valid, replacing by source bounds")
             extent = self._current_reader.get_source().bounds_tile(zoom)
 
         keep_dialog_open = self.connections_dialog.keep_dialog_open()
@@ -528,8 +533,11 @@ class VtrPlugin(object):
          * Sets the current extent of the QGIS map canvas to the specified bounds
         :return: 
         """
-        min_pos = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
-        max_pos = tile_to_latlon(zoom, bounds["x_max"], bounds["y_max"], scheme=scheme)
+        min_x, min_y = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
+        max_x, max_y = tile_to_latlon(zoom, bounds["x_max"], bounds["y_max"], scheme=scheme)
+        min_pos = convert_coordinate(900913, self._get_qgis_crs(), lat=min_y, lng=min_x)
+        max_pos = convert_coordinate(900913, self._get_qgis_crs(), lat=max_y, lng=max_x)
+
         map_min_pos = QgsPoint(min_pos[0], min_pos[1])
         map_max_pos = QgsPoint(max_pos[0], max_pos[1])
         rect = QgsRectangle(map_min_pos, map_max_pos)

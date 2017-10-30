@@ -210,7 +210,6 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
             enable_connect = True
             can_edit = False
             is_predefined_connection = name in self._predefined_connections
-            info("is predefined: {}, {}", name, is_predefined_connection)
             if is_predefined_connection:
                 predefined_connection = self._predefined_connections[name]
                 can_edit = "can_edit" in predefined_connection and predefined_connection["can_edit"]

@@ -9,10 +9,11 @@ import sys
 
 from PyQt4.QtGui import QApplication
 from PyQt4.QtCore import QObject, pyqtSignal
-from PyQt4.QtSql import QSqlDatabase, QSqlQuery
 from tile_json import TileJSON
 from log_helper import info, warn, critical, debug
-from tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds, tile_to_latlon, epsg3857_to_wgs84_lonlat, convert_coordinate
+from tile_helper import (VectorTile,
+                         get_tiles_from_center,
+                         get_tile_bounds)
 from network_helper import url_exists, load_url_async
 from file_helper import is_sqlite_db
 
@@ -140,9 +141,11 @@ class ServerSource(AbstractSource):
         return self.json.scheme()
 
     def bounds_tile(self, zoom):
-        return self.json.bounds_tile(zoom)
+        lng_lat = self.json.bounds_longlat()
+        return get_tile_bounds(zoom=zoom, scheme=self.scheme(), bounds=lng_lat, source_crs=4326)
 
     def crs(self):
+        # return 21781
         return self.json.crs()
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
@@ -168,6 +171,7 @@ class ServerSource(AbstractSource):
             urls.append((load_url, col, row))
 
         self.max_progress_changed.emit(len(urls))
+        info("tiles to load: {}", tiles_to_load)
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
         return self._load_urls_async(zoom_level, urls)
 
@@ -217,269 +221,6 @@ class ServerSource(AbstractSource):
         return tile, content
 
 
-class PostGISSource(AbstractSource):
-    def __init__(self, host, port, user, password, database):
-        AbstractSource.__init__(self)
-        self.host = host
-        self.port = port
-        self._user = user
-        self._password = password
-        self._database = database
-        self.table = None
-        self.geom_column = None
-        self.database = None
-        self._conn = None
-        self._cursor = None
-        self._layers = None
-        self._bounds = None
-        self._db = None
-        self._connect()
-
-    def source(self):
-        if self.database:
-            return "pg_{}_{}".format(self.host, self.database)
-        return self.host
-
-    def _connect(self):
-        db = QSqlDatabase.addDatabase("QPSQL")
-        db.setHostName(self.host)
-        db.setPort(int(self.port))
-        db.setDatabaseName(self._database)
-        db.setUserName(self._user)
-        db.setPassword(self._password)
-        ok = db.open()
-        self._db = db
-        if not ok:
-            info("Connection to database failed...")
-        else:
-            self._init_db()
-        self._layers = None
-
-    def _init_db(self):
-        query = """
-        create or replace function TileBBox (z int, x int, y int, srid int = 3857)
-            returns geometry
-            language plpgsql immutable as
-        $func$
-        declare
-            max numeric := 20037508.34;
-            res numeric := (max*2)/(2^z);
-            bbox geometry;
-        begin
-            bbox := ST_MakeEnvelope(
-                -max + (x * res),
-                max - (y * res),
-                -max + (x * res) + res,
-                max - (y * res) - res,
-                3857
-            );
-            if srid = 3857 then
-                return bbox;
-            else
-                return ST_Transform(bbox, srid);
-            end if;
-        end;
-        $func$;
-        """
-        self._execute(query)
-
-    def databases(self):
-        query = """
-        SELECT datname "name"
-        FROM pg_database
-        WHERE datistemplate = false;
-        """
-        databases = self._fetch_all(query)
-        names = map(lambda db: db["name"], databases)
-        return names
-
-    def set_database(self, name):
-        self.database = name
-        self._connect()
-
-    def _get_table_tile_query(self, geom_column, table, zoom_level, x, y):
-        return """
-            SELECT 
-            osm_id,name,label,st_asewkt(geom) as "wkt",
-            ST_AsMVTGeom(
-                    st_transform({column}, 3857),
-                    tilebbox({zoom_level},{x},{y}),
-                    4096, -- tile extent
-                    256,  -- buffer size pixel
-                    false  -- clip
-                ) AS geom 
-            FROM {table}
-            WHERE ST_Intersects(
-                    st_transform( geom, 3857), 
-                    (SELECT st_setsrid(st_envelope( st_extent(tilebbox({zoom_level},{x},{y}))),3857))
-                  )
-        """.format(column=geom_column,
-                   table=table,
-                   zoom_level=zoom_level,
-                   x=x,
-                   y=y)
-
-    def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
-        self._cancelling = False
-        # geom_column = self._get_geom_column()
-        # if not geom_column:
-        #     raise "No geometry column found in table '{}'".format(self.table)
-
-        info("max tiles: {}", max_tiles)
-
-        if max_tiles and len(tiles_to_load) > max_tiles:
-            tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
-            self.tile_limit_reached.emit()
-
-        tile_data_tuples = []
-        layer_names = map(lambda v: v["id"], self.vector_layers())
-        # info("layer names: {} count={}", layer_names, len(layer_names))
-
-        self.max_progress_changed.emit(max_tiles*len(layer_names))
-        self.message_changed.emit("Loading {} tiles...".format(len(tiles_to_load)))
-
-        queries = []
-        for tile_col, tile_row in tiles_to_load:
-            for layer in layer_names:
-                table_query = self._get_table_tile_query(geom_column="geom",
-                                                         table=layer,
-                                                         zoom_level=zoom_level,
-                                                         x=tile_col,
-                                                         y=tile_row)
-                query = """
-                            SELECT {col} as "col", {row} as "row", ST_AsMVT(tile, '{layer_name}') as "mvt"
-                            FROM ({subquery}) AS tile
-                            """.format(col=tile_col, row=tile_row, layer_name=layer, subquery=table_query)
-                queries.append(query)
-
-        main_query = " union all ".join(queries)
-        info("query: {}", main_query)
-
-        records = self._fetch_all(main_query)
-        for r in records:
-            if r["mvt"]:
-                tile = VectorTile(self.scheme(), zoom_level, r["col"], r["row"])
-                tile_data_tuples.append((tile, r["mvt"]))
-
-        return tile_data_tuples
-
-    def vector_layers(self):
-        # return [{"id": "address_p"}]
-
-        if self._layers:
-            return self._layers
-
-        query = """
-        select f_table_name as "layer_name"
-        from geometry_columns
-        where ?=?
-        order by f_table_name
-        """
-        layers = self._fetch_all(query, params=[1,1])
-        self._layers = map(lambda l: {"id": l["layer_name"]}, layers)
-        return self._layers
-
-    def close_connection(self):
-        pass
-
-    def name(self):
-        if self.database:
-            return self.database
-        return self.host
-
-    def min_zoom(self):
-        return 0
-
-    def max_zoom(self):
-        return 16
-
-    def mask_level(self):
-        return None
-
-    def scheme(self):
-        return "xyz"
-
-    def bounds(self):
-        if not self.vector_layers() or len(self.vector_layers()) == 0:
-            return None
-
-        if self._bounds:
-            return self._bounds
-
-        query = """
-        select ST_Extent(ST_Transform(geom,4326)) AS extent
-        from {}
-        """.format(self.vector_layers()[0]["id"])
-        bounds = self._fetch_one(query)
-        if bounds:
-            coords = bounds["extent"].replace("BOX(", "").replace(")", "").replace(" ", ",").split(",")
-            bounds = map(lambda c: float(c), coords)
-        self._bounds = bounds
-        return bounds
-
-    def bounds_tile(self, zoom):
-        if not self.vector_layers() or len(self.vector_layers()) == 0:
-            return None
-
-        bounds = self.bounds()
-        return get_tile_bounds(zoom, bounds)
-
-    def crs(self):
-        return 3857
-
-    def _get_geom_column(self):
-        name = None
-        query = """
-            SELECT f_geometry_column
-            FROM geometry_columns 
-            WHERE f_table_name = '{}'
-            LIMIT 1
-        """.format(self.table_name)
-        self._cursor.execute(query)
-        res = self._cursor.fetchone()
-        if res:
-            name = res[0]
-        if not name:
-            raise "No geometry column found in table '{}'".format(self.table)
-        return name
-
-    def _fetch_one(self, sql, params=None, binary_result=False):
-        result = None
-        rows = self._fetch_all(sql, params, binary_result)
-        if rows and len(rows) > 0:
-            result = rows[0]
-        return result
-
-    def _fetch_all(self, sql, params=None, binary_result=False):
-        query = self._execute(sql, params)
-        rows = []
-        while query.next():
-            obj = {}
-            nr_fields = query.record().count()
-            for i in range(0, nr_fields):
-                val = query.value(i)
-                if binary_result:
-                    val = bytes(val)
-                obj[query.record().fieldName(i)] = val
-            rows.append(obj)
-        query.finish()
-        return rows
-
-    def _execute(self, sql, params=None):
-        if not params:
-            params = ()
-
-        query = QSqlQuery(self._db)
-        query.prepare(sql)
-        if not query:
-            info("Database Error: {}", self.db.lastError().text())
-
-        for index, p in enumerate(params):
-            query.bindValue(index, p)
-        query.exec_()
-        return query
-
-
 class MBTilesSource(AbstractSource):
     def __init__(self, path):
         AbstractSource.__init__(self)
@@ -519,7 +260,7 @@ class MBTilesSource(AbstractSource):
                 .split(",")
             bounds = [float(s) for s in bounds]
         scheme = self.scheme()
-        return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme)
+        return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
 
     def name(self):
         base_name = os.path.splitext(os.path.basename(self.path))[0]

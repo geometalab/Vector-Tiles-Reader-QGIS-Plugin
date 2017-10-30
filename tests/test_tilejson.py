@@ -1,6 +1,5 @@
-from tile_json import TileJSON
-import pytest
-from tile_helper import get_tile_bounds, latlon_to_tile, epsg3857_to_wgs84_lonlat, tile_to_latlon
+from ..tile_json import TileJSON
+from ..tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon
 
 def test_load():
     tj = _get_loaded()
@@ -74,10 +73,6 @@ def _get_loaded(json=None):
         tj.json = _get_test_tilejson()
     return tj
 
-def test_epsg3857towgs84():
-    a = [915107.5592417066, 5977040.352606636]
-    b = epsg3857_to_wgs84_lonlat(a[0], a[1])
-    assert b == [8.220551070801354, 47.21379138314561]
 
 def _get_test_tilejson():
     return {

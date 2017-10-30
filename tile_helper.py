@@ -6,7 +6,7 @@ from past.utils import old_div
 from builtins import object
 from global_map_tiles import GlobalMercator
 import operator
-from log_helper import warn, debug
+from log_helper import warn, debug, info
 from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
@@ -70,7 +70,7 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max):
     }
 
 
-def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
+def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
     :param zoom:
@@ -84,6 +84,8 @@ def latlon_to_tile(zoom, lat, lng, scheme="xyz"):
         raise RuntimeError("latitude is required")
     if lng is None:
         raise RuntimeError("Longitude is required")
+
+    lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
 
     max_lat = 85.05112878
     max_lng = 180
@@ -108,8 +110,8 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
     crs_src = QgsCoordinateReferenceSystem(source_crs)
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
     xform = QgsCoordinateTransform(crs_src, crs_dest)
-    pt = xform.transform(QgsPoint(lat, lng))
-    return pt
+    x, y = xform.transform(QgsPoint(lng, lat))
+    return x, y
 
 
 def get_code_from_epsg(epsg_string):
@@ -117,11 +119,6 @@ def get_code_from_epsg(epsg_string):
     if code.startswith("EPSG:"):
         code = code.replace("EPSG:", "")
     return int(code)
-
-
-def epsg3857_to_wgs84_lonlat(x, y):
-    wgs84 = convert_coordinate(3857, 4326, x, y)
-    return wgs84[1], wgs84[0]
 
 
 def tile_to_latlon(zoom, x, y, scheme="tms"):
@@ -140,13 +137,14 @@ def tile_to_latlon(zoom, x, y, scheme="tms"):
     return gm.TileBounds(x, y, zoom)
 
 
-def get_tile_bounds(zoom, bounds, scheme="xyz"):
+def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
     """
      * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param scheme: 
     :param zoom: 
     :param bounds: 
-    :return: 
+    :param source_crs:
+    :return:
     """
     if scheme not in ["xyz", "tms"]:
         raise RuntimeError("Scheme not supported: {}".format(scheme))
@@ -159,30 +157,16 @@ def get_tile_bounds(zoom, bounds, scheme="xyz"):
         lng_max = bounds[2]
         lat_max = bounds[3]
 
-        xy_min = latlon_to_tile(zoom, lat_max, lng_min, scheme)
-        xy_max = latlon_to_tile(zoom, lat_min, lng_max, scheme)
+        xy_min = latlon_to_tile(zoom=zoom, lat=lat_min, lng=lng_min, source_crs=source_crs, scheme=scheme)
+        xy_max = latlon_to_tile(zoom=zoom, lat=lat_max, lng=lng_max, source_crs=source_crs, scheme=scheme)
 
-        x_min = int(min(xy_min[0], xy_max[0]))
-        x_max = int(max(xy_min[0], xy_max[0]))
-        y_min = int(min(xy_min[1], xy_max[1]))
-        y_max = int(max(xy_min[1], xy_max[1]))
+        x_min = min(xy_min[0], xy_max[0])
+        x_max = max(xy_min[0], xy_max[0])
+        y_min = min(xy_min[1], xy_max[1])
+        y_max = max(xy_min[1], xy_max[1])
 
-        tile_bounds = create_bounds(zoom, x_min, x_max, y_min, y_max)
+        tile_bounds = create_bounds(zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max)
     return tile_bounds
-
-
-def change_zoom(source_zoom, target_zoom, tile, scheme):
-    """
-    * Converts tile coordinates from one zoom-level to another
-    :param source_zoom: 
-    :param target_zoom: 
-    :param tile: 
-    :param scheme: 
-    :return:
-    """
-    lat_lon = tile_to_latlon(source_zoom, tile[0], tile[1], scheme)
-    new_tile = latlon_to_tile(target_zoom, lat_lon[1], lat_lon[0], scheme)
-    return new_tile
 
 
 def get_all_tiles(bounds, is_cancel_requested_handler):

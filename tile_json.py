@@ -63,7 +63,7 @@ class TileJSON(object):
             lng = center[0]
             lat = center[1]
             zoom = center[2]
-            center = latlon_to_tile(zoom, lat, lng, self.scheme())
+            center = latlon_to_tile(zoom=zoom, lat=lat, lng=lng, source_crs=self.crs(), scheme=self.scheme())
         else:
             bounds = self.bounds_tile(self.max_zoom())
             if bounds:
@@ -92,7 +92,8 @@ class TileJSON(object):
         :return:         """
         bounds = self.bounds_longlat()
         scheme = self.scheme()
-        return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme)
+        tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+        return tile_bounds
 
     def vector_layers(self):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
@@ -102,7 +103,7 @@ class TileJSON(object):
         val = self._get_value(key)
         return val
 
-    def crs(self, default="EPSG:3857"):
+    def crs(self, default=3857):
         crs = self._get_value("crs")
         if not crs:
             crs = self._get_value("srs")
