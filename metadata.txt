@@ -19,7 +19,9 @@ email=geometalab@gmail.com
 # Uncomment the following line and add your changelog:
 changelog=
     ---1.2.3---
-    * Metadata updated
+    * Plugin description updated
+    * Bugfix: an error occured when connection to a TileJSON server after being already connected to another
+    * Bugfix: show the correct tile coordinates in the statusbar
     ---1.2.2---
     * SQLite multithreading issue fixed
     * Remember last used path in connections dialog
