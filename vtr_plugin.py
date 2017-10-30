@@ -304,8 +304,8 @@ class VtrPlugin(object):
     def _handle_mouse_move(self, pos):
         self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
         zoom = self._get_current_zoom()
-        lat_lon = epsg3857_to_wgs84_lonlat(pos[1], pos[0])
-        tile = latlon_to_tile(zoom, lat_lon[0], lat_lon[1])
+        lat_lon = epsg3857_to_wgs84_lonlat(pos[0], pos[1])
+        tile = latlon_to_tile(zoom, lat_lon[1], lat_lon[0])
         msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
         self.iface.mainWindow().statusBar().showMessage(msg)
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
@@ -410,7 +410,6 @@ class VtrPlugin(object):
                 self._current_reader.shutdown()
                 self._current_reader.progress_changed.disconnect()
                 self._current_reader.max_progress_changed.disconnect()
-                self._current_reader.title_changed.disconnect()
                 self._current_reader.message_changed.disconnect()
                 self._current_reader.show_progress_changed.disconnect()
                 self._current_reader = None
