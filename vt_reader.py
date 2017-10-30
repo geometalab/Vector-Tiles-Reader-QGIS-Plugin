@@ -6,6 +6,7 @@ standard_library.install_aliases()
 from builtins import map
 from builtins import filter
 from builtins import str
+from itertools import *
 import sys
 import os
 import json
@@ -404,14 +405,16 @@ class VtReader(QObject):
 
         tiles = []
 
+        tile_data_tuples = []
+
         if len(tiles_with_encoded_data) < 30:
             for t in tiles_with_encoded_data:
-                tile = decoder_func(t)
-                if tile.decoded_data:
-                    tiles.append(tile)
+                tile, decoded_data = decoder_func(t)
+                if decoded_data:
+                    tile_data_tuples.append((tile, decoded_data))
         else:
             pool = self._get_pool()
-            rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tiles.extend)
+            rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tile_data_tuples.extend)
             pool.close()
             current_progress = 0
             nr_of_tiles = len(tiles_with_encoded_data)
@@ -428,7 +431,20 @@ class VtReader(QObject):
                     if progress != current_progress:
                         current_progress = progress
                         self._update_progress(progress=progress)
-            tiles = list(filter(lambda ti: ti.decoded_data is not None, tiles))
+                        tile_data_tuples = list(filter(lambda ti: t[1] is not None, tile_data_tuples))
+
+        tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
+        groups = groupby(tile_data_tuples, lambda t: t[0].id())
+        for key, group in groups:
+            tile = None
+            data = {}
+            for t, decoded_data in list(group):
+                if not tile:
+                    tile = t
+                for layer_name in decoded_data:
+                    data[layer_name] = decoded_data[layer_name]
+            tile.decoded_data = data
+            tiles.append(tile)
 
         info("Decoding finished, {} tiles with data", len(tiles))
         return tiles

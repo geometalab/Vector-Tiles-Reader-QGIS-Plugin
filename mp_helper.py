@@ -10,9 +10,10 @@ from log_helper import info, warn
 def decode_tile_python(tile_data_tuple):
     tile = tile_data_tuple[0]
     encoded_data = tile_data_tuple[1]
+    decoded_data = None
     if encoded_data and not tile.decoded_data:
-        tile.decoded_data = mapbox_vector_tile.decode(encoded_data)
-    return tile
+        decoded_data = mapbox_vector_tile.decode(encoded_data)
+    return tile, decoded_data
 
 
 def get_lib_for_current_platform():
@@ -56,8 +57,8 @@ def load_lib():
 
 def decode_tile_native(tile_data_tuple):
     tile = tile_data_tuple[0]
+    decoded_data = None
     if not tile.decoded_data:
-        decoded_data = None
         try:
             # with open(r"c:\temp\uster.pbf", 'wb') as f:
             #     f.write(tile_data_tuple[1])
@@ -77,9 +78,9 @@ def decode_tile_native(tile_data_tuple):
 
             # with open(r"c:\temp\output.txt", 'w') as f:
             #     f.write(decoded_data)
-            tile.decoded_data = json.loads(decoded_data)
+            decoded_data = json.loads(decoded_data)
         except:
             info("Decoding failed: {}", sys.exc_info()[1])
             # with open(r"c:\temp\output.txt", 'w') as f:
             #     f.write(decoded_data)
-    return tile
+    return tile, decoded_data

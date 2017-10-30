@@ -283,7 +283,6 @@ class PostGISSource(AbstractSource):
                     st_transform( geom, 3857), 
                     (SELECT st_setsrid(st_envelope( st_extent(tilebbox(?,?,?))),3857))
                   )
-            --limit 10
         """.format(geom_column, table)
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
@@ -297,31 +296,25 @@ class PostGISSource(AbstractSource):
 
         tile_data_tuples = []
         layer_names = map(lambda v: v["id"], self.vector_layers())
-        info("layer names: {} count={}", layer_names, len(layer_names))
+        # info("layer names: {} count={}", layer_names, len(layer_names))
 
-        queries = map(lambda l: self._get_table_tile_query(geom_column="geom", table=l), layer_names)
-        joined_query = " union all ".join(queries)
-        for t in tiles_to_load:
-            tile_col = t[0]
-            tile_row = t[1]
-            latlon = tile_to_latlon(zoom_level, tile_col, tile_row, self.scheme())
-
-            query = """
-            SELECT ST_AsMVT(tile, 'address_p') as "mvt"
-            FROM ({}) AS tile;
-            """.format(joined_query)
-
-            query_params = (zoom_level, tile_col, tile_row)
-            info("query: {}", query)
-            info("query params: {}", query_params)
-
-            record = self._fetch_one(query, query_params*len(layer_names)*2, binary_result=True)
+        for tile_col, tile_row in tiles_to_load:
             tile = VectorTile(self.scheme(), zoom_level, tile_col, tile_row)
-            tile_data_tuples.append((tile, record["mvt"]))
+            query_params = (zoom_level, tile_col, tile_row)
+            for layer in layer_names:
+                table_query = self._get_table_tile_query(geom_column="geom", table=layer)
+                query = """
+                            SELECT ST_AsMVT(tile, '{}') as "mvt"
+                            FROM ({}) AS tile;
+                            """.format(layer, table_query)
+                # info("query: {}", query)
+                # info("query params: {}", query_params)
+                record = self._fetch_one(query, query_params * 2, binary_result=True)
+                tile_data_tuples.append((tile, record["mvt"]))
         return tile_data_tuples
 
     def vector_layers(self):
-        return [{"id": "address_p"}]
+        # return [{"id": "address_p"}]
 
         if self._layers:
             return self._layers
