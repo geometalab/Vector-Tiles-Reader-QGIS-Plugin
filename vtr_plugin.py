@@ -533,10 +533,10 @@ class VtrPlugin(object):
          * Sets the current extent of the QGIS map canvas to the specified bounds
         :return: 
         """
-        min_x, min_y = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
-        max_x, max_y = tile_to_latlon(zoom, bounds["x_max"], bounds["y_max"], scheme=scheme)
-        min_pos = convert_coordinate(900913, self._get_qgis_crs(), lat=min_y, lng=min_x)
-        max_pos = convert_coordinate(900913, self._get_qgis_crs(), lat=max_y, lng=max_x)
+        min_xy = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
+        max_xy = tile_to_latlon(zoom, bounds["x_max"], bounds["y_max"], scheme=scheme)
+        min_pos = convert_coordinate(900913, self._get_qgis_crs(), lat=min_xy[1], lng=min_xy[0])
+        max_pos = convert_coordinate(900913, self._get_qgis_crs(), lat=min_xy[1], lng=max_xy[0])
 
         map_min_pos = QgsPoint(min_pos[0], min_pos[1])
         map_max_pos = QgsPoint(max_pos[0], max_pos[1])
