@@ -89,6 +89,12 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         self._add_loaded_connections_to_combobox()
         self.edit_connection_dialog = edit_dialog
 
+    def select_connection(self, name):
+        if name:
+            index = self.cbxConnections.findText(name)
+            if index:
+                self.cbxConnections.setCurrentIndex(index)
+
     def _apply_template_connection(self, connection):
         clone = copy.deepcopy(self._connection_template)
         for key in clone:
@@ -199,20 +205,30 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
     def _handle_connection_change(self, name):
         enable_connect = False
         enable_edit = False
+        is_predefined_connection = False
         if name in self.connections:
             enable_connect = True
-            enable_edit = self._predefined_connections is None or name not in self._predefined_connections
-
+            can_edit = False
+            is_predefined_connection = name in self._predefined_connections
+            info("is predefined: {}, {}", name, is_predefined_connection)
+            if is_predefined_connection:
+                predefined_connection = self._predefined_connections[name]
+                can_edit = "can_edit" in predefined_connection and predefined_connection["can_edit"]
+            enable_edit = not is_predefined_connection or can_edit is not None and (can_edit == "true" or can_edit == True)
         self.btnConnect.setEnabled(enable_connect)
         self.btnEdit.setEnabled(enable_edit)
-        self.btnDelete.setEnabled(enable_edit)
+        self.btnDelete.setEnabled(not is_predefined_connection)
         self.on_connection_change.emit(name)
 
     def _get_current_connection(self):
+        """
+        * Returns the currently selected connection.
+        * The {token} in the URL is replaced, so that the URL can be used.
+        :return:
+        """
         name = self.cbxConnections.currentText()
         connection = copy.deepcopy(self.connections[name])
-
-        if self._predefined_connections and name in self._predefined_connections:
+        if self._predefined_connections and name in self._predefined_connections and connection["token"]:
             connection["url"] = connection["url"].replace("{token}", connection["token"])
         return connection
 
@@ -414,6 +430,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     ])
 
     _OMT = "OpenMapTiles.com (default entry with credits)"
+    _OMT_CUSTOM_KEY = "OpenMapTiles.com (with custom key)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
 
     _predefined_tilejson_connections = {
@@ -421,6 +438,11 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
             "token": "6irhAXGgsi8TrIDL0211"
+        },
+        _OMT_CUSTOM_KEY: {
+            "name": _OMT_CUSTOM_KEY,
+            "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
+            "can_edit": True
         },
         _MAPZEN: {
             "name": _MAPZEN,
@@ -430,6 +452,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     }
 
     _CONNECTIONS_TAB = "selected_connections_tab"
+    _CURRENT_ONLINE_CONNECTION = "current_online_connection"
 
     def __init__(self, default_browse_directory):
         QtGui.QDialog.__init__(self)
@@ -444,6 +467,10 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
                                                      settings_key="connections",
                                                      settings=self.settings,
                                                      predefined_connections=self._predefined_tilejson_connections)
+        connection_to_select = self.settings.value(self._CURRENT_ONLINE_CONNECTION, None)
+        if not connection_to_select:
+            connection_to_select = self._OMT
+        self.tilejson_connections.select_connection(connection_to_select)
         self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)
@@ -476,6 +503,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     @pyqtSlot('QString')
     def _handle_connection_change(self, name):
+        self.settings.setValue(self._CURRENT_ONLINE_CONNECTION, name)
         self.set_layers([])
         is_omt = name.startswith("OpenMapTiles.com")
         self.options.set_omt_styles_enabled(is_omt)

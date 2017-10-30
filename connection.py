@@ -26,7 +26,8 @@ TILEJSON_CONNECTION_TEMPLATE = {
     "name": None,
     "url": None,
     "token": None,
-    "type": ConnectionTypes.TileJSON
+    "type": ConnectionTypes.TileJSON,
+    "can_edit": None
 }
 
 POSTGIS_CONNECTION_TEMPLATE = {
