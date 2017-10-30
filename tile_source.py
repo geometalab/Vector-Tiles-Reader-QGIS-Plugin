@@ -248,10 +248,40 @@ class PostGISSource(AbstractSource):
         db.setUserName(self._user)
         db.setPassword(self._password)
         ok = db.open()
+        self._db = db
         if not ok:
             info("Connection to database failed...")
-        self._db = db
+        else:
+            self._init_db()
         self._layers = None
+
+    def _init_db(self):
+        query = """
+        create or replace function TileBBox (z int, x int, y int, srid int = 3857)
+            returns geometry
+            language plpgsql immutable as
+        $func$
+        declare
+            max numeric := 20037508.34;
+            res numeric := (max*2)/(2^z);
+            bbox geometry;
+        begin
+            bbox := ST_MakeEnvelope(
+                -max + (x * res),
+                max - (y * res),
+                -max + (x * res) + res,
+                max - (y * res) - res,
+                3857
+            );
+            if srid = 3857 then
+                return bbox;
+            else
+                return ST_Transform(bbox, srid);
+            end if;
+        end;
+        $func$;
+        """
+        self._execute(query)
 
     def databases(self):
         query = """
@@ -307,10 +337,11 @@ class PostGISSource(AbstractSource):
                             SELECT ST_AsMVT(tile, '{}') as "mvt"
                             FROM ({}) AS tile;
                             """.format(layer, table_query)
-                # info("query: {}", query)
-                # info("query params: {}", query_params)
+                info("query: {}", query)
+                info("query params: {}", query_params)
                 record = self._fetch_one(query, query_params * 2, binary_result=True)
-                tile_data_tuples.append((tile, record["mvt"]))
+                if record:
+                    tile_data_tuples.append((tile, record["mvt"]))
         return tile_data_tuples
 
     def vector_layers(self):
@@ -401,17 +432,7 @@ class PostGISSource(AbstractSource):
         return result
 
     def _fetch_all(self, sql, params=None, binary_result=False):
-        if not params:
-            params = ()
-
-        query = QSqlQuery(self._db)
-        query.prepare(sql)
-        if not query:
-            info("Database Error: {}", self.db.lastError().text())
-
-        for index, p in enumerate(params):
-            query.bindValue(index, p)
-        query.exec_()
+        query = self._execute(sql, params)
         rows = []
         while query.next():
             obj = {}
@@ -424,6 +445,20 @@ class PostGISSource(AbstractSource):
             rows.append(obj)
         query.finish()
         return rows
+
+    def _execute(self, sql, params=None):
+        if not params:
+            params = ()
+
+        query = QSqlQuery(self._db)
+        query.prepare(sql)
+        if not query:
+            info("Database Error: {}", self.db.lastError().text())
+
+        for index, p in enumerate(params):
+            query.bindValue(index, p)
+        query.exec_()
+        return query
 
 
 class MBTilesSource(AbstractSource):
