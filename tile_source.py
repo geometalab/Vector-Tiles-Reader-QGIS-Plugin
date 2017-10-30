@@ -357,8 +357,9 @@ class PostGISSource(AbstractSource):
 
         records = self._fetch_all(main_query)
         for r in records:
-            tile = VectorTile(self.scheme(), zoom_level, r["col"], r["row"])
-            tile_data_tuples.append((tile, r["mvt"]))
+            if r["mvt"]:
+                tile = VectorTile(self.scheme(), zoom_level, r["col"], r["row"])
+                tile_data_tuples.append((tile, r["mvt"]))
 
         return tile_data_tuples
 
