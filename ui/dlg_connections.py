@@ -62,6 +62,8 @@ class Ui_DlgConnections(object):
         self.tblLayers.setSortingEnabled(True)
         self.tblLayers.setCornerButtonEnabled(True)
         self.tblLayers.setObjectName(_fromUtf8("tblLayers"))
+        self.tblLayers.horizontalHeader().setMinimumSectionSize(140)
+        self.tblLayers.horizontalHeader().setStretchLastSection(True)
         self.tblLayers.verticalHeader().setVisible(False)
         self.gridLayout.addWidget(self.tblLayers, 1, 0, 1, 1)
         self.tabConnections = QtGui.QTabWidget(DlgConnections)

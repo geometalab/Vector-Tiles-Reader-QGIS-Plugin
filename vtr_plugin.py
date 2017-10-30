@@ -113,7 +113,6 @@ class VtrPlugin(object):
         self.progress_dialog = None
         self._current_reader = None
         self._current_writer = None
-        self._current_options = None
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
@@ -180,7 +179,8 @@ class VtrPlugin(object):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
                                                            self._show_connections_dialog)
-        self.reload_action = self._create_action(self._reload_button_text, "reload.svg", self._load_features_overlapping_tile_extent, False)
+        self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
+                                                 self._load_features_overlapping_tile_extent, False)
         # self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
@@ -245,7 +245,10 @@ class VtrPlugin(object):
             new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
             bounds = self._current_reader.get_source().bounds_tile(zoom)
             new_extent = clamp_bounds(new_extent, bounds)
-        has_changed = new_extent != self._loaded_extent
+
+        has_changed = new_extent["zoom"] != self._loaded_extent["zoom"] \
+                      or new_extent["x_min"] != self._loaded_extent["x_min"] \
+                      or new_extent["y_min"] != self._loaded_extent["y_min"]
         if has_changed:
             info("changed from: {} to {}, bounds: {}", self._loaded_extent, new_extent, bounds)
         return has_changed, new_extent
@@ -267,12 +270,16 @@ class VtrPlugin(object):
 
             self._scale_to_load = None
             self._extent_to_load = None
-            
+
             is_new_extent_within_loaded_extent = self._loaded_extent \
-                and self._loaded_extent["x_min"] <= new_extent["x_min"] <= self._loaded_extent["x_max"] \
-                and self._loaded_extent["x_min"] <= new_extent["x_max"] <= self._loaded_extent["x_max"] \
-                and self._loaded_extent["y_min"] <= new_extent["y_min"] <= self._loaded_extent["y_max"] \
-                and self._loaded_extent["y_min"] <= new_extent["y_max"] <= self._loaded_extent["y_max"]
+                                                 and self._loaded_extent["x_min"] <= new_extent["x_min"] <= \
+                                                     self._loaded_extent["x_max"] \
+                                                 and self._loaded_extent["x_min"] <= new_extent["x_max"] <= \
+                                                     self._loaded_extent["x_max"] \
+                                                 and self._loaded_extent["y_min"] <= new_extent["y_min"] <= \
+                                                     self._loaded_extent["y_max"] \
+                                                 and self._loaded_extent["y_min"] <= new_extent["y_max"] <= \
+                                                     self._loaded_extent["y_max"]
 
             old_scale = self._loaded_scale
 
@@ -288,7 +295,8 @@ class VtrPlugin(object):
 
                 info("current zoom: {}", self._current_zoom)
                 info("new zoom: {}", new_zoom)
-                info("Reloading due to scale change from '{}' (zoom {}) to '{}' (zoom {})", old_scale, self._current_zoom, new_scale, new_zoom)
+                info("Reloading due to scale change from '{}' (zoom {}) to '{}' (zoom {})", old_scale,
+                     self._current_zoom, new_scale, new_zoom)
                 self._handle_scale_change(new_scale)
             elif has_extent_changed and not is_new_extent_within_loaded_extent:
                 self._loaded_scale = new_scale
@@ -318,7 +326,7 @@ class VtrPlugin(object):
             max_zoom = self._current_reader.get_source().max_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
 
-        lat_lon = convert_coordinate(3857, 4326, pos[0],pos[1])
+        lat_lon = convert_coordinate(3857, 4326, pos[0], pos[1])
 
         tile = latlon_to_tile(zoom, lat_lon[1], lat_lon[0])
         msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
@@ -352,7 +360,8 @@ class VtrPlugin(object):
 
     def _export_tiles(self):
         from vt_writer import VtWriter
-        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", get_home_directory(), "mbtiles (*.mbtiles)")
+        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", get_home_directory(),
+                                                "mbtiles (*.mbtiles)")
         if file_name:
             self.export_action.setDisabled(True)
             try:
@@ -433,13 +442,13 @@ class VtrPlugin(object):
         if self._current_reader:
             layers = self._current_reader.get_source().vector_layers()
             self.connections_dialog.set_layers(layers)
-            self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(), self._current_reader.get_source().max_zoom())
+            self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(),
+                                                     self._current_reader.get_source().max_zoom())
             self.reload_action.setEnabled(True)
         else:
             self.connections_dialog.set_layers([])
             self.reload_action.setEnabled(False)
             self.reload_action.setText(self._reload_button_text)
-
 
     @staticmethod
     def show_about():
@@ -452,7 +461,7 @@ class VtrPlugin(object):
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]:
-                return False
+            return False
         return True
 
     @staticmethod
@@ -588,7 +597,8 @@ class VtrPlugin(object):
                 if source_bounds and not extent_overlap_bounds(bounds, source_bounds) \
                         and not extent_overlap_bounds(source_bounds, bounds):
                     info("The current map extent and is not within the bounds of the source. The extent to load "
-                         "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds, source_bounds)
+                         "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds,
+                         source_bounds)
                     # bounds = source_bounds
 
                 reader.set_options(layer_filter=layers_to_load,
@@ -703,7 +713,11 @@ class VtrPlugin(object):
 
         self._loaded_scale = self._get_current_map_scale()
         self.refresh_layers()
-        info("Loading of zoom level {} complete! Loaded extent: {}", loaded_zoom_level, loaded_extent)
+        if loaded_extent:
+            info("Loading of zoom level {} complete! Loaded extent: {}", loaded_zoom_level, loaded_extent)
+        else:
+            info("Loading of zoom level {} complete! No extent loaded.", loaded_zoom_level)
+
         if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
             scheme = self._current_reader.get_source().scheme()
             visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
