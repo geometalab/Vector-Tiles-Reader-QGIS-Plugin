@@ -444,16 +444,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
                                                      settings_key="connections",
                                                      settings=self.settings,
                                                      predefined_connections=self._predefined_tilejson_connections)
-        self.postgis_connections = ConnectionsGroup(target_groupbox=self.grpPostgisConnections,
-                                                    edit_dialog=EditPostgisConnectionDialog(),
-                                                    connection_template=POSTGIS_CONNECTION_TEMPLATE,
-                                                    settings_key="PostGISConnections",
-                                                    settings=self.settings)
         self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)
-        self.postgis_connections.on_connect.connect(self._handle_connect)
-        self.postgis_connections.on_connection_change.connect(self._handle_connection_change)
 
         self.selected_layer_id = None
 

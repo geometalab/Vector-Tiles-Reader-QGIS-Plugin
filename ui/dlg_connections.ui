@@ -130,7 +130,7 @@
      </property>
      <widget class="QWidget" name="tabServer">
       <attribute name="title">
-       <string>Server</string>
+       <string>Online</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
@@ -144,7 +144,7 @@
      </widget>
      <widget class="QWidget" name="tabFile">
       <attribute name="title">
-       <string>File</string>
+       <string>MBTile</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
        <item row="0" column="0">
@@ -176,23 +176,9 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabPostgis">
-      <attribute name="title">
-       <string>PostGIS</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="7" column="0">
-        <widget class="QGroupBox" name="grpPostgisConnections">
-         <property name="title">
-          <string>Connections</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="tabTrexCache">
       <attribute name="title">
-       <string>t-rex Cache</string>
+       <string>Directory</string>
       </attribute>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
