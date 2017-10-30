@@ -273,16 +273,16 @@ class PostGISSource(AbstractSource):
             osm_id,name,label,st_asewkt(geom) as "wkt",
             ST_AsMVTGeom(
                     st_transform({}, 3857),
-                    ST_Makebox2d(
-                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),3857),3857),
-                        ST_transform(ST_SetSrid(ST_MakePoint(?, ?),3857),3857)
-                        ),
+                    tilebbox(?,?,?),
                     4096, -- tile extent
                     256,  -- buffer size pixel
                     false  -- clip
                 ) AS geom 
             FROM {}
-            where name is not null
+            WHERE ST_Intersects(
+                    st_transform( geom, 3857), 
+                    (SELECT st_setsrid(st_envelope( st_extent(tilebbox(?,?,?))),3857))
+                  )
             --limit 10
         """.format(geom_column, table)
 
@@ -306,18 +306,16 @@ class PostGISSource(AbstractSource):
             tile_row = t[1]
             latlon = tile_to_latlon(zoom_level, tile_col, tile_row, self.scheme())
 
-            x_min, y_min = latlon[0], latlon[1]
-            x_max, y_max = latlon[2], latlon[3]
-
             query = """
             SELECT ST_AsMVT(tile, 'address_p') as "mvt"
             FROM ({}) AS tile;
             """.format(joined_query)
 
-            # info("query: {}", query)
-            # info("query params: {}", (x_min, y_max, x_max, y_min))
+            query_params = (zoom_level, tile_col, tile_row)
+            info("query: {}", query)
+            info("query params: {}", query_params)
 
-            record = self._fetch_one(query, (x_min, y_min, x_max, y_max)*len(layer_names), binary_result=True)
+            record = self._fetch_one(query, query_params*len(layer_names)*2, binary_result=True)
             tile = VectorTile(self.scheme(), zoom_level, tile_col, tile_row)
             tile_data_tuples.append((tile, record["mvt"]))
         return tile_data_tuples
@@ -350,7 +348,7 @@ class PostGISSource(AbstractSource):
         return 0
 
     def max_zoom(self):
-        return 14
+        return 16
 
     def mask_level(self):
         return None

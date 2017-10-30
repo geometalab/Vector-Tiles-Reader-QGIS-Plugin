@@ -348,7 +348,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
             self.zoomSpin.setMaximum(max_zoom)
             max_zoom_text += " ({})".format(max_zoom)
         else:
-            self.zoomSpin.setMaximum(99)
+            self.zoomSpin.setMaximum(23)
         self.rbZoomMax.setText(max_zoom_text)
 
         zoom_range_text = ""
