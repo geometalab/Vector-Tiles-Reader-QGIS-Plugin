@@ -361,7 +361,6 @@ class VtReader(QObject):
             'max_tiles': max_tiles,
             'layer_filter': layer_filter
         }
-        info("options: {}", self._loading_options)
 
     def load_tiles_async(self, zoom_level, bounds):
         """

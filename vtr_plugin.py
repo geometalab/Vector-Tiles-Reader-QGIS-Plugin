@@ -395,8 +395,6 @@ class VtrPlugin(object):
             if overwrite_extent:
                 bounds = overwrite_extent
 
-            info("ignore reload limit: {}", ignore_limit)
-
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
             self._load_tiles(options=self.connections_dialog.options,
@@ -494,17 +492,13 @@ class VtrPlugin(object):
         info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
-            # todo: set the current QGIS map extent inside the available bounds of the source
-            pass
+            self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
             extent = self._current_reader.get_source().bounds_tile(zoom)
 
         keep_dialog_open = self.connections_dialog.keep_dialog_open()
-        if keep_dialog_open:
-            dialog_owner = self.connections_dialog
-        else:
-            dialog_owner = self.iface.mainWindow()
+        if not keep_dialog_open:
             self.connections_dialog.close()
         self._load_tiles(options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
@@ -512,19 +506,21 @@ class VtrPlugin(object):
         self._current_layer_filter = selected_layers
 
     def _get_current_zoom(self):
-        zoom = 14
+        zoom = None
+        min_zoom = None
+        max_zoom = None
         if self._current_reader:
-            zoom = self._current_reader.get_source().max_zoom()
+            min_zoom = self._current_reader.get_source().min_zoom()
+            max_zoom = self._current_reader.get_source().max_zoom()
+            zoom = max_zoom
         if zoom is None:
             zoom = 14
         manual_zoom = self.connections_dialog.options.manual_zoom()
         if manual_zoom is not None:
             zoom = manual_zoom
         if self.connections_dialog.options.auto_zoom_enabled():
-            scale_based_zoom = self._get_zoom_for_current_map_scale()
-            if scale_based_zoom > zoom:
-                scale_based_zoom = zoom
-            zoom = scale_based_zoom
+            zoom = self._get_zoom_for_current_map_scale()
+        zoom = clamp(zoom, low=min_zoom, high=max_zoom)
         return zoom
 
     def _set_qgis_extent(self, zoom, scheme, bounds):
