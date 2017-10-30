@@ -414,25 +414,27 @@ class VtrPlugin(object):
     def _on_connect(self, connection):
         self._currrent_connection_name = connection["name"]
         self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
-        if self._current_reader and self._current_reader.connection() != connection:
-            self._current_reader.shutdown()
-            self._current_reader.progress_changed.disconnect()
-            self._current_reader.max_progress_changed.disconnect()
-            self._current_reader.message_changed.disconnect()
-            self._current_reader.show_progress_changed.disconnect()
-            self._current_reader = None
-        if not self._current_reader:
-            reader = self._create_reader(connection=connection)
-            self._current_reader = reader
-        if self._current_reader:
-            layers = self._current_reader.get_source().vector_layers()
-            self.connections_dialog.set_layers(layers)
-            self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(), self._current_reader.get_source().max_zoom())
-            self.reload_action.setEnabled(True)
-        else:
-            self.connections_dialog.set_layers([])
-            self.reload_action.setEnabled(False)
-            self.reload_action.setText(self._reload_button_text)
+            if self._current_reader and self._current_reader.connection() != connection:
+                self._current_reader.shutdown()
+                self._current_reader.progress_changed.disconnect()
+                self._current_reader.max_progress_changed.disconnect()
+
+                self._current_reader.message_changed.disconnect()
+                self._current_reader.show_progress_changed.disconnect()
+                self._current_reader = None
+            if not self._current_reader:
+                reader = self._create_reader(connection=connection)
+                self._current_reader = reader
+            if self._current_reader:
+                layers = self._current_reader.get_source().vector_layers()
+                self.connections_dialog.set_layers(layers)
+                self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(), self._current_reader.get_source().max_zoom())
+                self.reload_action.setEnabled(True)
+            else:
+                self.connections_dialog.set_layers([])
+                self.reload_action.setEnabled(False)
+                self.reload_action.setText(self._reload_button_text)
+
 
     @staticmethod
     def show_about():
