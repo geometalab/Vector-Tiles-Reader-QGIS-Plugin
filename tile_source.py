@@ -6,6 +6,7 @@ import urllib.parse
 import json
 import os
 import sys
+import traceback
 
 from PyQt4.QtGui import QApplication
 from PyQt4.QtCore import QObject, pyqtSignal
@@ -13,7 +14,8 @@ from tile_json import TileJSON
 from log_helper import info, warn, critical, debug
 from tile_helper import (VectorTile,
                          get_tiles_from_center,
-                         get_tile_bounds)
+                         get_tile_bounds,
+                         WORLD_BOUNDS)
 from network_helper import url_exists, load_url_async
 from file_helper import is_sqlite_db
 
@@ -248,11 +250,13 @@ class MBTilesSource(AbstractSource):
             json_data = json.loads(data)
             if "vector_layers" in json_data:
                 layers = json_data["vector_layers"]
+        else:
+            warn("No json found in metadata table")
         return layers
 
     def bounds_tile(self, zoom):
-        bounds = self._get_metadata_value("bounds")
-        if bounds:
+        bounds = self._get_metadata_value("bounds", default=WORLD_BOUNDS)
+        if bounds and isinstance(bounds, basestring):
             bounds = bounds\
                 .replace(" ", "")\
                 .replace("[", "")\
@@ -373,10 +377,12 @@ class MBTilesSource(AbstractSource):
         else:
             order = "asc"
 
-        query = ("select zoom_level as 'zoom_level'"
-                 "from tiles"
-                 "order by zoom_level {}"
-                 "limit 1").format(order)
+        query = """
+            select zoom_level as 'zoom_level'
+            from tiles
+            order by zoom_level {}
+            limit 1
+        """.format(order)
         return self._get_single_value(sql_query=query, field_name="zoom_level")
 
     def _get_metadata_value(self, field_name, default=None):
@@ -416,8 +422,13 @@ class MBTilesSource(AbstractSource):
             cur = self.conn.cursor()
             cur.execute(sql)
             return cur.fetchall()
+        except sqlite3.OperationalError:
+            critical("Getting data from db failed: {}", sql)
         except:
-            critical("Getting data from db failed: {}", sys.exc_info())
+            tb = ""
+            if traceback:
+                tb = traceback.format_exc()
+            critical("Getting data from db failed: {}, {}", sys.exc_info(), tb)
 
     def _connect_to_db(self):
         """

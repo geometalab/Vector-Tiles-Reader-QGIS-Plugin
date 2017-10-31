@@ -211,7 +211,7 @@ class VtReader(QObject):
         :return: 
         """
         self.cancel_requested = True
-        if self.source:
+        if self._source:
             self._source.cancel()
 
     def _get_clamped_zoom_level(self):
@@ -223,7 +223,7 @@ class VtReader(QObject):
 
     def _load_tiles(self):
         # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
-        self.source = self._create_source(self.connection())
+        self._source = self._create_source(self.connection())
 
         try:
             if can_load_lib():

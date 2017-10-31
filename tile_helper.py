@@ -14,6 +14,9 @@ from qgis.core import (
 )
 
 
+WORLD_BOUNDS = [-180, -85.05112878, 180, 85.05112878]
+
+
 class VectorTile(object):
     
     decoded_data = None
@@ -87,10 +90,8 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
 
     lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
 
-    max_lat = 85.05112878
-    max_lng = 180
-    lat = clamp(lat, -max_lat, max_lat)
-    lng = clamp(lng, -max_lng, max_lng)
+    lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
+    lng = clamp(lng, WORLD_BOUNDS[0], WORLD_BOUNDS[2])
 
     gm = GlobalMercator()
     m = gm.LatLonToMeters(lat, lng)

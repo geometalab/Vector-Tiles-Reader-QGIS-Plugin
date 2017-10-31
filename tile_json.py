@@ -7,7 +7,7 @@ import json
 import os
 import ast
 from log_helper import critical, debug, info
-from tile_helper import get_tile_bounds, latlon_to_tile
+from tile_helper import get_tile_bounds, latlon_to_tile, WORLD_BOUNDS
 from network_helper import load_url
 
 
@@ -82,6 +82,8 @@ class TileJSON(object):
         bounds = self._get_value("bounds", is_array=True)
         if bounds:
             assert len(bounds) == 4
+        else:
+            bounds = WORLD_BOUNDS
         return bounds
 
     def bounds_tile(self, zoom):
