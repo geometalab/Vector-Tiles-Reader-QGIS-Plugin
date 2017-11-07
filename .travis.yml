@@ -31,8 +31,11 @@ matrix:
       compiler:
         - gcc
       script:
-      - git clone https://github.com/mapbox/vtzero.git ../vtzero
       - git clone https://github.com/mapbox/protozero.git ../protozero
+      - git clone https://github.com/mapbox/vtzero.git ../vtzero
+      - cd ../vtzero
+      - git submodule update --init
+      - cd $TRAVIS_BUILD_DIR
       - make linux
 
 notifications:
