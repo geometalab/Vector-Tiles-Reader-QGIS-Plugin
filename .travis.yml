@@ -4,6 +4,11 @@ matrix:
       sudo: required
       python:
         - "2.7"
+        - "3.2"
+        - "3.3"
+        - "3.4"
+        - "3.5"
+        - "3.6"
       cache: pip
       services:
         - docker
@@ -13,16 +18,16 @@ matrix:
         # or just pull it:
         - docker pull elpaso/qgis-testing-environment:latest
       install:
-          - pip install -r requirements.txt
-          - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 elpaso/qgis-testing-environment
-          - sleep 10
-          # Setup qgis and enable the plugin
-          - docker exec -it qgis-testing-environment sh -c "qgis_setup.sh vector_tiles_reader"
-          # If needd additional steps (for example make or paver setup, place it here)
-          # Link the plugin to the tests_directory
-          - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory /root/.qgis2/python/plugins/vector_tiles_reader"
+        - pip install -r requirements.txt
+        - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 elpaso/qgis-testing-environment
+        - sleep 10
+        # Setup qgis and enable the plugin
+        - docker exec -it qgis-testing-environment sh -c "qgis_setup.sh vector_tiles_reader"
+        # If needd additional steps (for example make or paver setup, place it here)
+        # Link the plugin to the tests_directory
+        - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory /root/.qgis2/python/plugins/vector_tiles_reader"
       script:
-          - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
+        - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
 
     - language: cpp
       os:
@@ -30,6 +35,9 @@ matrix:
       - osx
       compiler:
         - gcc
+      before_script:
+        - sudo apt-get update -qq
+        - sudo apt-get install gcc-multilib g++-multilib -y
       script:
       - git clone https://github.com/mapbox/protozero.git ../protozero
       - git clone https://github.com/mapbox/vtzero.git ../vtzero
