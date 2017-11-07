@@ -138,6 +138,15 @@ class _GeoTypes(object):
 
 GeoTypes = _GeoTypes()
 
+geo_types_by_name = {
+    "Point": GeoTypes.POINT,
+    "MultiPoint": GeoTypes.POINT,
+    "Polygon": GeoTypes.POLYGON,
+    "MultiPolygon": GeoTypes.POLYGON,
+    "LineString": GeoTypes.LINE_STRING,
+    "MultiLineString": GeoTypes.LINE_STRING,
+}
+
 geo_types = {
     1: GeoTypes.POINT,
     2: GeoTypes.LINE_STRING,

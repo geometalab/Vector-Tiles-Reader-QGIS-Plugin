@@ -15,17 +15,21 @@ import traceback
 
 from log_helper import info, critical, debug, remove_key
 from tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
-from feature_helper import FeatureMerger, is_multi, map_coordinates_recursive, GeoTypes, geo_types, clip_features
-from file_helper import (
-    get_cached_tile_file_name,
-    get_styles,
-    assure_temp_dirs_exist,
-    get_cached_tile, is_gzipped,
-    get_geojson_file_name,
-    get_plugin_directory,
-    get_icons_directory,
-    cache_tile
-)
+from feature_helper import (FeatureMerger,
+                            geo_types_by_name,
+                            geo_types,
+                            is_multi,
+                            map_coordinates_recursive,
+                            GeoTypes,
+                            clip_features)
+from file_helper import (get_cached_tile_file_name,
+                         get_styles,
+                         assure_temp_dirs_exist,
+                         get_cached_tile, is_gzipped,
+                         get_geojson_file_name,
+                         get_plugin_directory,
+                         get_icons_directory,
+                         cache_tile)
 from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt4.QtGui import QApplication
@@ -425,7 +429,6 @@ class VtReader(QObject):
                     if progress != current_progress:
                         current_progress = progress
                         self._update_progress(progress=progress)
-                        tile_data_tuples = list(filter(lambda ti: t[1] is not None, tile_data_tuples))
 
         tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
         groups = groupby(tile_data_tuples, lambda t: t[0].id())
@@ -433,6 +436,9 @@ class VtReader(QObject):
             tile = None
             data = {}
             for t, decoded_data in list(group):
+                if not decoded_data:
+                    continue
+
                 if not tile:
                     tile = t
                 for layer_name in decoded_data:
@@ -618,6 +624,7 @@ class VtReader(QObject):
                 "{}.{}".format(name, geo_type.lower()),
                 name
             ]
+            info("style names: {}", styles)
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
                 if style_name in VtReader._styles:
@@ -693,15 +700,9 @@ class VtReader(QObject):
             for feature in layer["features"]:
                 if is_geojson_already:
                     geojson_features = [feature]
-                    geo_type = None
-                    geom_type = str(feature["geometry"]["type"])
-                    if geom_type.endswith("Polygon"):
-                        geo_type = GeoTypes.POLYGON
-                    elif geom_type.endswith("Point"):
+                    geo_type = geo_types_by_name[feature["geometry"]["type"]]
+                    if geo_type == GeoTypes.POINT:
                         feature["properties"]["_symbol"] = self._get_poi_icon(feature)
-                        geo_type = GeoTypes.POINT
-                    elif geom_type.endswith("LineString"):
-                        geo_type = GeoTypes.LINE_STRING
                     assert geo_type is not None
                 else:
                     if "extent" in layer:

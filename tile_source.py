@@ -173,7 +173,6 @@ class ServerSource(AbstractSource):
             urls.append((load_url, col, row))
 
         self.max_progress_changed.emit(len(urls))
-        info("tiles to load: {}", tiles_to_load)
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
         return self._load_urls_async(zoom_level, urls)
 
