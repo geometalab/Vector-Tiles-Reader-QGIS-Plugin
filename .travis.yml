@@ -1,34 +1,41 @@
-sudo: required
+matrix:
+  include:
+    - language: python
+      sudo: required
+      python:
+        - "2.7"
+      cache: pip
+      services:
+        - docker
+      before_install:
+        # Build this docker:
+        # - cd qgis-testing-environment && docker build -t qgis-testing-environment .
+        # or just pull it:
+        - docker pull elpaso/qgis-testing-environment:latest
+      install:
+          - pip install -r requirements.txt
+          - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 elpaso/qgis-testing-environment
+          - sleep 10
+          # Setup qgis and enable the plugin
+          - docker exec -it qgis-testing-environment sh -c "qgis_setup.sh vector_tiles_reader"
+          # If needd additional steps (for example make or paver setup, place it here)
+          # Link the plugin to the tests_directory
+          - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory /root/.qgis2/python/plugins/vector_tiles_reader"
+      script:
+          - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
 
-language: python
-
-python:
-  - "2.7"
-
-cache: pip
+    - language: cpp
+      os:
+      - linux
+      - osx
+      compiler:
+        - gcc
+      script:
+      - git clone https://github.com/mapbox/vtzero.git ../vtzero
+      - git clone https://github.com/mapbox/protozero.git ../protozero
+      - make linux
 
 notifications:
     on_success: never # default: change
     on_failure: always # default: always
 
-services:
-  - docker
-
-before_install:
-  # Build this docker:
-  # - cd qgis-testing-environment && docker build -t qgis-testing-environment .
-  # or just pull it:
-  - docker pull elpaso/qgis-testing-environment:latest
-
-install:
-    - pip install -r requirements.txt
-    - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 elpaso/qgis-testing-environment
-    - sleep 10
-    # Setup qgis and enable the plugin
-    - docker exec -it qgis-testing-environment sh -c "qgis_setup.sh vector_tiles_reader"
-    # If needd additional steps (for example make or paver setup, place it here)
-    # Link the plugin to the tests_directory
-    - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory /root/.qgis2/python/plugins/vector_tiles_reader"
-
-script:
-    - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
