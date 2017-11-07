@@ -1,14 +1,16 @@
 matrix:
+  allow_failures:
+    - os: osx
   include:
     - language: python
       sudo: required
       python:
-        - "2.7"
-        - "3.2"
-        - "3.3"
-        - "3.4"
-        - "3.5"
-        - "3.6"
+        - 2.7
+#        - 3.2
+#        - 3.3
+#        - 3.4
+#        - 3.5
+#        - 3.6
       cache: pip
       services:
         - docker
@@ -35,6 +37,7 @@ matrix:
       - osx
       compiler:
         - gcc
+        - clang
       before_script:
         - sudo apt-get update -qq
         - sudo apt-get install gcc-multilib g++-multilib -y
@@ -45,6 +48,7 @@ matrix:
       - git submodule update --init
       - cd $TRAVIS_BUILD_DIR
       - make linux
+      - make osx
 
 notifications:
     on_success: never # default: change
