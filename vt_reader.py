@@ -624,7 +624,6 @@ class VtReader(QObject):
                 "{}.{}".format(name, geo_type.lower()),
                 name
             ]
-            info("style names: {}", styles)
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
                 if style_name in VtReader._styles:
