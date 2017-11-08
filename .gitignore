@@ -12,6 +12,7 @@ deprecated/
 data/*
 .vscode/*
 ui/*.pyc
+setup.cfg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

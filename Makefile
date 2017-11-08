@@ -18,11 +18,11 @@ endif
 
 
 windows32:
-	x86_64-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
-	
-windows64:
 	i686-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
-	
+
+windows64:
+	x86_64-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
+
 windows: windows32 windows64
 
 linux:
