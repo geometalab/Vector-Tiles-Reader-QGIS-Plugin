@@ -13,32 +13,32 @@ import json
 import uuid
 import traceback
 
-from log_helper import info, critical, debug, remove_key
-from tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
-from feature_helper import (FeatureMerger,
-                            geo_types_by_name,
-                            geo_types,
-                            is_multi,
-                            map_coordinates_recursive,
-                            GeoTypes,
-                            clip_features)
-from file_helper import (get_cached_tile_file_name,
-                         get_styles,
-                         assure_temp_dirs_exist,
-                         get_cached_tile, is_gzipped,
-                         get_geojson_file_name,
-                         get_plugin_directory,
-                         get_icons_directory,
-                         cache_tile)
-from qgis.core import QgsVectorLayer, QgsProject, QgsMapLayerRegistry, QgsExpressionContextUtils
+from qgis.core import QgsVectorLayer, QgsMapLayerRegistry
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt4.QtGui import QApplication
+
+from util.log_helper import info, critical, debug, remove_key
+from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
+from util.feature_helper import (FeatureMerger,
+                                 geo_types_by_name,
+                                 geo_types,
+                                 is_multi,
+                                 map_coordinates_recursive,
+                                 GeoTypes,
+                                 clip_features)
+from util.file_helper import (get_cached_tile_file_name,
+                              get_styles,
+                              assure_temp_dirs_exist,
+                              get_cached_tile, is_gzipped,
+                              get_geojson_file_name,
+                              get_plugin_directory,
+                              get_icons_directory,
+                              cache_tile)
 from io import BytesIO
 from gzip import GzipFile
-from tile_source import ServerSource, MBTilesSource, TrexCacheSource
-from connection import ConnectionTypes
-
-from mp_helper import decode_tile_native, decode_tile_python, can_load_lib
+from util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
+from util.connection import ConnectionTypes
+from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 
 import multiprocessing as mp
 

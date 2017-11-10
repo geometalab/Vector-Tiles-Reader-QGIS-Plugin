@@ -13,7 +13,7 @@ max_cache_age_minutes = 1440  # 24 hours
 
 
 def get_plugin_directory():
-    return os.path.abspath(os.path.dirname(__file__))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 def paths_equal(path1, path2):

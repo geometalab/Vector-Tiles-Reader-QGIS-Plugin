@@ -30,7 +30,7 @@ def get_lib_for_current_platform():
     elif sys.platform.startswith("darwin"):
         pass
     if lib:
-        lib = os.path.join(os.path.abspath(os.path.dirname(__file__)), "ext-libs", "pbf2geojson", lib)
+        lib = os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "ext-libs", "pbf2geojson", lib)
     return lib
 
 

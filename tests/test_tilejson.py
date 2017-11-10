@@ -1,9 +1,11 @@
-from ..tile_json import TileJSON
-from ..tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon
+from util.tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon
+from util.tile_json import TileJSON
+
 
 def test_load():
     tj = _get_loaded()
     assert tj.json
+
 
 def test_bounds():
     tj = _get_loaded()
@@ -11,9 +13,11 @@ def test_bounds():
     assert b
     assert len(b) == 4
 
+
 def test_tile_to_latlon():
     latlon = tile_to_latlon(14, 8568, 5747, scheme="xyz")
     assert latlon == (919690.3243272416, 5977987.108127065, 922136.3092323653, 5980433.093032189)
+
 
 def test_manual_bounds_xyz():
     # boundary for mbtiles zurich 4 tiles in bottom left corner
@@ -22,6 +26,7 @@ def test_manual_bounds_xyz():
     assert t[0] == (8568, 5746)
     assert t[1] == (8569, 5747)
 
+
 def test_manual_bounds_tms():
     # boundary for mbtiles zurich 4 tiles in bottom left corner
     b = [8.268328, 47.222658, 8.298712, 47.243988]
@@ -29,11 +34,13 @@ def test_manual_bounds_tms():
     assert t[0] == (8568, 10637)
     assert t[1] == (8569, 10636)
 
+
 def test_tile_bounds():
     b = latlon_to_tile(14, 47.22541, 8.27173)  # hitzkirch coordinates
     assert b
     assert b[0] == 8568
     assert b[1] == 5747
+
 
 def test_tile_bounds_world():
     tj = _get_loaded()
@@ -45,6 +52,7 @@ def test_tile_bounds_world():
     assert b_min == (-1, -1)
     assert b_max == (16383, 16383)
 
+
 def test_center_tile():
     json = {
         "center": [8.27187, 47.22550, 14],
@@ -55,6 +63,7 @@ def test_center_tile():
     print center
     assert center == (8568, 5747)
 
+
 def test_center_tile_from_bounds():
     json = {
         "maxzoom": 14,
@@ -64,6 +73,7 @@ def test_center_tile_from_bounds():
     tj = _get_loaded(json)
     center = tj.center_tile()
     assert center == (8568, 5747)
+
 
 def _get_loaded(json=None):
     tj = TileJSON("")
