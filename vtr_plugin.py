@@ -13,46 +13,52 @@ of the License, or (at your option) any later version.
 
 """
 
-from builtins import map
-from builtins import str
-from builtins import object
-from log_helper import info, critical
+import os
+import re
+import site
+import sys
+import traceback
+
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import (
+    QApplication,
+    QStyle,
     QAction,
     QIcon,
     QMenu,
     QToolButton,
     QMessageBox,
     QColor,
-    QFileDialog,
     QProgressBar,
     QPushButton)
+from builtins import map
+from builtins import object
+from builtins import str
+from util.log_helper import info, critical, debug
 from qgis.core import (
     QgsApplication,
     QgsPoint,
     QgsRectangle,
     QgsMapLayerRegistry,
     QgsCoordinateReferenceSystem,
-    QgsProject,
-    QgsCoordinateTransform
+    QgsProject
 )
 from qgis.gui import QgsMessageBar
+from util.tile_helper import (
+    latlon_to_tile,
+    get_zoom_by_scale,
+    clamp,
+    get_code_from_epsg,
+    get_tile_bounds,
+    tile_to_latlon,
+    extent_overlap_bounds,
+    clamp_bounds,
+    convert_coordinate)
 
-from file_helper import (get_icons_directory,
-                         get_home_directory,
-                         get_sample_data_directory,
-                         clear_cache,
-                         get_plugin_directory,
-                         paths_equal)
-from tile_helper import *
 from ui.dialogs import AboutDialog, ConnectionsDialog
-
-import os
-import sys
-import site
-import traceback
-import re
+from util.file_helper import (get_icons_directory,
+                              clear_cache,
+                              get_plugin_directory)
 
 # try:
 #     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'
@@ -181,7 +187,6 @@ class VtrPlugin(object):
                                                            self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
                                                  self._load_features_overlapping_tile_extent, False)
-        # self.export_action = self._create_action("Export selected layers", "save.svg", self._export_tiles)
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
@@ -364,19 +369,6 @@ class VtrPlugin(object):
     def _show_connections_dialog(self):
         self._update_nr_of_tiles()
         self.connections_dialog.show()
-
-    def _export_tiles(self):
-        from vt_writer import VtWriter
-        file_name = QFileDialog.getSaveFileName(None, "Export Vector Tiles", get_home_directory(),
-                                                "mbtiles (*.mbtiles)")
-        if file_name:
-            self.export_action.setDisabled(True)
-            try:
-                self._current_writer = VtWriter(self.iface, file_name, progress_handler=self.handle_progress_update)
-                self._current_writer.export()
-            except:
-                critical("Error during export: {}", sys.exc_info())
-            self.export_action.setEnabled(True)
 
     def _get_all_own_layers(self):
         layers = []
@@ -826,7 +818,7 @@ class VtrPlugin(object):
         """
          * Adds the path to the external libraries to the sys.path if not already added
         """
-        ext_libs_path = os.path.abspath(os.path.dirname(__file__) + '/ext-libs')
+        ext_libs_path = os.path.join(get_plugin_directory(), 'ext-libs')
         if ext_libs_path not in sys.path:
             site.addsitedir(ext_libs_path)
 
@@ -846,7 +838,6 @@ class VtrPlugin(object):
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
-        # self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)
         try:

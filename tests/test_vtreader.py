@@ -34,7 +34,6 @@ class IfaceTests(unittest.TestCase):
     #     self.assertEqual(path, src.source())
 
 
-
 def suite():
     suite = unittest.makeSuite(IfaceTests, 'test')
     return suite

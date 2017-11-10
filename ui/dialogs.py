@@ -1,29 +1,31 @@
-import os
 import copy
-import webbrowser
 import csv
+import os
+import webbrowser
+from collections import OrderedDict
 import resources_rc  # don't remove this import, otherwise the icons won't be working
 
-from collections import OrderedDict
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
 from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem, QApplication
-from dlg_connections import Ui_DlgConnections
-from dlg_edit_tilejson_connection import Ui_DlgEditTileJSONConnection
-from dlg_edit_postgis_connection import Ui_DlgEditPostgisConnection
-from dlg_about import Ui_DlgAbout
-from options import Ui_OptionsGroup
+
 from connections_group import Ui_ConnectionsGroup
-from ..log_helper import *
-from ..connection import (
+from dlg_about import Ui_DlgAbout
+from dlg_connections import Ui_DlgConnections
+from dlg_edit_postgis_connection import Ui_DlgEditPostgisConnection
+from dlg_edit_tilejson_connection import Ui_DlgEditTileJSONConnection
+from options import Ui_OptionsGroup
+from ..util.connection import (
     ConnectionTypes,
     MBTILES_CONNECTION_TEMPLATE,
-    POSTGIS_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
     TREX_CONNECTION_TEMPLATE)
-
+from ..util.log_helper import info
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
+
+if not resources_rc:
+    info("Resources are required, otherwise no icons will be shown")
 
 
 def _update_size(dialog, fix_size=False):
