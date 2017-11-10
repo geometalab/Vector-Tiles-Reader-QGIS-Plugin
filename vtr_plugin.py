@@ -818,7 +818,7 @@ class VtrPlugin(object):
         """
          * Adds the path to the external libraries to the sys.path if not already added
         """
-        ext_libs_path = os.path.abspath(os.path.join(get_plugin_directory(), '/ext-libs'))
+        ext_libs_path = os.path.join(get_plugin_directory(), 'ext-libs')
         if ext_libs_path not in sys.path:
             site.addsitedir(ext_libs_path)
 
