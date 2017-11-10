@@ -10,6 +10,7 @@ services:
       dockerfile: Dockerfile
       args:
         TAG: "release-2_18"
+        QGIS_PLUGINS_DIR: "/root/.qgis2/python/plugins"
     volumes:
       - .:/vector-tiles-reader
       - .:/tests_directory

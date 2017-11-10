@@ -8,6 +8,7 @@ import sys
 from qgis.core import *
 from qgis.utils import iface
 from PyQt4.QtCore import *
+from ..util.tile_source import MBTilesSource
 
 
 class IfaceTests(unittest.TestCase):

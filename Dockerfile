@@ -1,6 +1,7 @@
 FROM mnboos/qgis-testing-environment:release-2_18
 MAINTAINER Martin Boos
 
+ARG QGIS_PLUGINS_DIR
 #ARG QGIS_BRANCH
 #ENV LEGACY='true'
 
@@ -11,7 +12,5 @@ RUN DISPLAY=:99
 ENV DISPLAY=:99
 
 RUN qgis_setup.sh vector_tiles_reader
-RUN rm -rf /root/.qgis2/python/plugins/vector_tiles_reader
-RUN ln -s /vector-tiles-reader /root/.qgis2/python/plugins/vector_tiles_reader
-#RUN ln -s /vector-tiles-reader /tests_directory
-#RUN qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader
+RUN rm -rf $QGIS_PLUGINS_DIR/vector_tiles_reader
+RUN ln -s /vector-tiles-reader $QGIS_PLUGINS_DIR/vector_tiles_reader
