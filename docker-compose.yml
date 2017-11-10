@@ -9,9 +9,10 @@ services:
       context: ./
       dockerfile: Dockerfile
       args:
-        QGIS_BRANCH: "release-2_18"
+        TAG: "release-2_18"
     volumes:
-      - ./:/vector-tiles-reader
+      - .:/vector-tiles-reader
+      - .:/tests_directory
 #  qgis-latest:
 #    build:
 #      context: ./
