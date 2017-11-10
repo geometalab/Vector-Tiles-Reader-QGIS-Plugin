@@ -286,7 +286,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         if opt[self._TILE_LIMIT_ENABLED]:
             self.chkLimitNrOfTiles.setChecked(opt[self._TILE_LIMIT_ENABLED] == True or opt[self._TILE_LIMIT_ENABLED] == "true")
         if opt[self._TILE_LIMIT]:
-            self.spinNrOfLoadedTiles.setValue(opt[self._TILE_LIMIT])
+            self.spinNrOfLoadedTiles.setValue(int(opt[self._TILE_LIMIT]))
         if opt[self._MERGE_TILES]:
             self.chkMergeTiles.setChecked(opt[self._MERGE_TILES] == True or opt[self._MERGE_TILES] == "true")
         if opt[self._CLIP_TILES]:
@@ -298,7 +298,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         if opt[self._FIX_ZOOM_ENABLED]:
             self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._FIX_ZOOM]:
-            self.zoomSpin.setValue(opt[self._FIX_ZOOM])
+            self.zoomSpin.setValue(int(opt[self._FIX_ZOOM]))
         if opt[self._APPLY_STYLES]:
             self.chkApplyStyles.setChecked(opt[self._APPLY_STYLES] == True or opt[self._APPLY_STYLES] == "true")
 
