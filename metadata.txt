@@ -7,8 +7,8 @@ name=Vector Tiles Reader
 qgisMinimumVersion=2.18
 qgisMaximumVersion=2.99
 description=Vector tiles reader which supports server connections, MBTiles file and other sources
-about=Reads vector tiles according to Mapbox Vector Tiles specification as layers in a group. Sources can be an internet server, from an MBTiles file or from a t-rex cache. This Python plugin uses prebuild C++ binaries for performance reasons.
-version=1.2.3
+about=Reads vector tiles according to Mapbox Vector Tiles specification as layers in a group. Sources can be an internet server, from an MBTiles file or from a directory. This Python plugin uses prebuild C++ binaries for performance reasons.
+version=1.2.4
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -18,6 +18,10 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---1.2.4---
+    * The user settings are persisted
+    * Stability improvements
+    * Feature processing performance increased
     ---1.2.3---
     * Plugin description updated
     * Bugfix: an error occured when connection to a TileJSON server after being already connected to another
