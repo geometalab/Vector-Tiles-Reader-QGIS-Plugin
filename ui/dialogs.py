@@ -3,6 +3,7 @@ import csv
 import os
 import webbrowser
 from collections import OrderedDict
+import resources_rc  # don't remove this import, otherwise the icons won't be working
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
@@ -19,8 +20,12 @@ from ..util.connection import (
     MBTILES_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
     TREX_CONNECTION_TEMPLATE)
+from ..util.log_helper import info
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
+
+if not resources_rc:
+    info("Resources are required, otherwise no icons will be shown")
 
 
 def _update_size(dialog, fix_size=False):

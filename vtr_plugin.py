@@ -21,6 +21,8 @@ import traceback
 
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import (
+    QApplication,
+    QStyle,
     QAction,
     QIcon,
     QMenu,

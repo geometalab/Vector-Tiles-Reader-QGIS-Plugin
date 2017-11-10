@@ -1,2 +1,3 @@
 pyrcc4 -o resources_rc.py resources.qrc
-pause
+if NOT ["%errorlevel%"]==["0"] pause
+exit
