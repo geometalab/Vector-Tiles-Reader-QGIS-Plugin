@@ -9,9 +9,15 @@ matrix:
         - docker
       before_install:
         # Build this docker:
-        # - cd qgis-testing-environment && docker build -t qgis-testing-environment .
+        - git clone https://github.com/boundlessgeo/qgis-testing-environment-docker.git qgis-testing-environment
+        - cd qgis-testing-environment
+        - |
+          docker build -t qgis-testing-environment \
+          --build-arg QGIS_REPOSITORY='https://github.com/qgis/QGIS.git' \
+          --build-arg QGIS_BRANCH='release-2_18' \
+          --build-arg LEGACY='true' .
         # or just pull it:
-        - docker pull elpaso/qgis-testing-environment:latest
+        # - docker pull elpaso/qgis-testing-environment:latest
       install:
         - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 elpaso/qgis-testing-environment
         - sleep 10
