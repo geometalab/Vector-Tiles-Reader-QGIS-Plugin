@@ -4,11 +4,7 @@
 #
 import unittest
 import coverage
-import os
 import sys
-from qgis.core import *
-from qgis.utils import iface
-from PyQt4.QtCore import *
 
 from test_mbtiles_source import MbtileSourceTests
 from test_tilehelper import TileHelperTests
@@ -27,7 +23,7 @@ def suites():
 
 # run all tests using unittest skipping nose or testplugin
 def run_all():
-    cov = coverage.Coverage()
+    cov = coverage.Coverage(omit=['*/usr/*', '*global_map_tiles*', '/vector-tiles-reader/tests/*', '*__init__.py'])
     cov.start()
     for s in suites():
         print("----------------------------------------------------------------------")

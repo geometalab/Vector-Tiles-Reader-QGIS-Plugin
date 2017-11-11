@@ -36,3 +36,6 @@ class TileHelperTests(unittest.TestCase):
     def test_get_zoom_by_scale_max(self):
         zoom = get_zoom_by_scale(10000000000)
         self.assertEqual(0, zoom)
+
+    def test_get_epsg(self):
+        self.assertEqual(3857, get_code_from_epsg("epsg:3857"))
