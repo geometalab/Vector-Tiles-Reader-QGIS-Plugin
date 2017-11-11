@@ -17,17 +17,20 @@ from test_tilejson import TileJsonTests
 
 def suites():
     return [
-        unittest.makeSuite(MbtileSourceTests, 'test'),
-        unittest.makeSuite(TileHelperTests, 'test'),
-        unittest.makeSuite(IfaceTests, 'test'),
-        unittest.makeSuite(TileJsonTests, 'test'),
+        unittest.makeSuite(MbtileSourceTests),
+        unittest.makeSuite(TileHelperTests),
+        unittest.makeSuite(IfaceTests),
+        unittest.makeSuite(TileJsonTests),
     ]
 
 
 # run all tests using unittest skipping nose or testplugin
 def run_all():
     for s in suites():
+        print("----------------------------------------------------------------------")
+        print("")
         unittest.TextTestRunner(verbosity=3, stream=sys.stdout).run(s)
+        print("")
 
 
 if __name__ == "__main__":

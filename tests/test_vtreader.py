@@ -23,7 +23,7 @@ class IfaceTests(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
-    def testIfaceisNotNote(self):
+    def testIfaceisNotNone(self):
         global iface
         self.assertIsNotNone(iface)
 

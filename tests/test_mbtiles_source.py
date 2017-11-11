@@ -5,15 +5,12 @@
 import unittest
 import os
 import sys
-from qgis.core import *
-from qgis.utils import iface
-from PyQt4.QtCore import *
 from ..util.tile_source import MBTilesSource
 
 
 class MbtileSourceTests(unittest.TestCase):
     """
-    Tests for Iface
+    Tests for MBTilesSource
     """
 
     @classmethod
@@ -25,10 +22,32 @@ class MbtileSourceTests(unittest.TestCase):
         pass
 
     def test_mbtiles_source_creation(self):
-        path = os.path.join(os.path.dirname(__file__), "..", 'sample_data', 'uster_zh.mbtiles')
-        src = MBTilesSource(path)
+        src = _create('uster_zh.mbtiles', directory=_sample_dir())
         self.assertIsNotNone(src)
-        self.assertEqual(path, src.source())
+
+    def test_non_mbtiles(self):
+        path = _get_path("textfile.txt")
+        with self.assertRaises(RuntimeError) as ctx:
+            MBTilesSource(path)
+        error = "The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(path)
+        self.assertTrue(error in ctx.exception)
+
+
+def _sample_dir():
+    return os.path.join(os.path.dirname(__file__), "..", 'sample_data')
+
+
+def _get_path(mbtiles_file, directory=None):
+    if directory:
+        path = os.path.join(directory, mbtiles_file)
+    else:
+        path = os.path.join(os.path.dirname(__file__), "data", mbtiles_file)
+    return path
+
+
+def _create(mbtiles_file, directory=None):
+    path = _get_path(mbtiles_file=mbtiles_file, directory=directory)
+    return MBTilesSource(path)
 
 
 def suite():
