@@ -20,24 +20,12 @@ def remove_key(text):
 
 
 def get_temp_dir(path_extension=None):
-    temp_dir = os.path.join(tempfile.gettempdir(), "vector_tiles_reader")
+    vtr_temp_dir = os.path.join(tempfile.gettempdir(), "vector_tiles_reader")
+    if not os.path.isdir(vtr_temp_dir):
+        os.makedirs(vtr_temp_dir)
     if path_extension:
-        temp_dir = os.path.join(temp_dir, path_extension)
-
-    return temp_dir
-
-
-try:
-    log_path = get_temp_dir("log.txt")
-    if not os.path.isfile(log_path):
-        open(log_path, 'a').close()
-    logging.basicConfig(
-        filename=log_path,
-        format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
-except IOError:
-    print("Creating logging config failed: {}".format(sys.exc_info()))
-
-_logger = logging.getLogger("Vector-Tile-Reader")
+        vtr_temp_dir = os.path.join(vtr_temp_dir, path_extension)
+    return vtr_temp_dir
 
 
 def info(msg, *args):
@@ -69,13 +57,10 @@ def _log_message(msg, level, *args):
         elif level == _DEBUG:
             _logger.debug(msg)
 
-        # print(msg)
-
         _log_to_qgis(msg, level)
     except:
         _logger.info("Unexpected error during logging: {}", sys.exc_info()[1])
         _logger.info("Original message: '{}', params: '{}'", args)
-
 
 
 def _import_qgis():
@@ -101,3 +86,18 @@ def _log_to_qgis(msg, level):
 
     if qgis_level is not None:
         qgis.QgsMessageLog.logMessage(msg, 'Vector Tile Reader', qgis_level)
+
+
+try:
+    log_path = get_temp_dir("log.txt")
+    temp_dir = os.path.dirname(log_path)
+    if not os.path.isfile(log_path):
+        open(log_path, 'a').close()
+    logging.basicConfig(
+        filename=log_path,
+        format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
+except IOError:
+    _log_to_qgis("Creating logging config failed: {}".format(sys.exc_info(), _WARN))
+
+
+_logger = logging.getLogger("Vector-Tile-Reader")

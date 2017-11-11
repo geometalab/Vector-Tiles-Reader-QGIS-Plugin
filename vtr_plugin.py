@@ -35,6 +35,7 @@ from builtins import map
 from builtins import object
 from builtins import str
 from util.log_helper import info, critical, debug
+import logging
 from qgis.core import (
     QgsApplication,
     QgsPoint,
@@ -840,6 +841,7 @@ class VtrPlugin(object):
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)
+        logging.shutdown()
         try:
             self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
         except:
