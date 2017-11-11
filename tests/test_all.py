@@ -6,13 +6,15 @@ import unittest
 import coverage
 import sys
 
-from test_mbtiles_source import MbtileSourceTests
-from test_tilehelper import TileHelperTests
-from test_vtreader import IfaceTests
-from test_tilejson import TileJsonTests
+
 
 
 def suites():
+    from test_mbtiles_source import MbtileSourceTests
+    from test_tilehelper import TileHelperTests
+    from test_vtreader import IfaceTests
+    from test_tilejson import TileJsonTests
+
     return [
         unittest.makeSuite(MbtileSourceTests),
         unittest.makeSuite(TileHelperTests),

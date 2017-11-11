@@ -1,5 +1,5 @@
 import unittest
-from util.tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon
+from util.tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon, WORLD_BOUNDS
 from util.tile_json import TileJSON
 
 
@@ -76,6 +76,17 @@ class TileJsonTests(unittest.TestCase):
         }
         self.assertIsNotNone(b)
         self.assertEqual(bounds_expected, b)
+
+    def test_no_bounds(self):
+        js = {
+            "scheme": "xyz"
+        }
+
+        tj = _get_loaded(js)
+        b = tj.bounds_tile(14)
+        self.assertIsNotNone(b)
+        world_bounds_tile = get_tile_bounds(zoom=14, source_crs=4326, scheme="xyz", bounds=WORLD_BOUNDS)
+        self.assertEqual(world_bounds_tile, b)
 
 
 def _get_loaded(json=None):
