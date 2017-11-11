@@ -88,20 +88,20 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     if lng is None:
         raise RuntimeError("Longitude is required")
 
-    lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
+    if get_code_from_epsg(source_crs) != 4326:
+        lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
 
-    lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
     lng = clamp(lng, WORLD_BOUNDS[0], WORLD_BOUNDS[2])
+    lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
 
     gm = GlobalMercator()
-    m = gm.LatLonToMeters(lat, lng)
-    tile = gm.MetersToTile(m[0], m[1], zoom)
-    x = clamp(tile[0], low=0)
-    y = tile[1]
+    mx, my = gm.LatLonToMeters(lat=lat, lon=lng)
+    col, row = gm.MetersToTile(mx=mx, my=my, zoom=zoom)
+    col = clamp(col, low=0)
+    row = clamp(row, low=0)
     if scheme != "tms":
-        y = change_scheme(zoom, y)
-    y = clamp(y, low=0)
-    return int(x), int(y)
+        row = change_scheme(zoom, row)
+    return int(col), int(row)
 
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
