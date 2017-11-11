@@ -18,6 +18,7 @@ matrix:
         # Link the plugin to the tests_directory
         - docker exec -it qgis-testing-environment sh -c "rm -rf /root/.qgis2/python/plugins/vector_tiles_reader"
         - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory /root/.qgis2/python/plugins/vector_tiles_reader"
+        - docker exec -it qgis-testing-environment sh -c "pip install coverage"
       script:
         - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
 

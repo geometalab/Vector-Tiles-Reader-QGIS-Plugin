@@ -14,3 +14,4 @@ ENV DISPLAY=:99
 RUN qgis_setup.sh vector_tiles_reader
 RUN rm -rf $QGIS_PLUGINS_DIR/vector_tiles_reader
 RUN ln -s /vector-tiles-reader $QGIS_PLUGINS_DIR/vector_tiles_reader
+RUN apt-get install python-pip && pip install coverage
