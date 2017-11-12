@@ -9,7 +9,7 @@ matrix:
         - docker
       before_install:
 #        - docker pull mnboos/qgis-testing-environment:release-2_18
-        - docker-compose build --build-arg COVERALLS_REPO_TOKEN=$COVERALLS_REPO_TOKEN
+        - docker-compose build
       install:
 #        - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 mnboos/qgis-testing-environment:release-2_18
         - pip install coveralls
