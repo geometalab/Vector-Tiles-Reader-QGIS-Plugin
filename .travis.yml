@@ -12,7 +12,7 @@ matrix:
         - docker-compose build
       install:
 #        - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 mnboos/qgis-testing-environment:release-2_18
-        - pip install coveralls
+#        - pip install coveralls
         - docker-compose run -d --name qgis2 qgis2
         - sleep 10
         # Setup qgis and enable the plugin
@@ -25,8 +25,8 @@ matrix:
       script:
 #        - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
-#        - docker exec -it qgis2 sh -c "export COVERALLS_REPO_TOKEN=$COVERALLS_REPO_TOKEN"
-        - cd ${TRAVIS_BUILD_DIR} && coveralls
+        - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
+#        - cd ${TRAVIS_BUILD_DIR} && coveralls
 
     - language: cpp
       os:
