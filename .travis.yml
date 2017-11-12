@@ -25,8 +25,7 @@ matrix:
       script:
 #        - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
-        - docker exec -it qgis2 sh -c "export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN"
-        - docker exec -it qgis2 sh -c "cd vector-tiles-reader && coveralls"
+        - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
 
     - language: cpp
       os:
