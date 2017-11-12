@@ -252,9 +252,9 @@ class VtrPlugin(object):
             bounds = self._current_reader.get_source().bounds_tile(zoom)
             new_extent = clamp_bounds(new_extent, bounds)
 
-        has_changed = new_extent["zoom"] != self._loaded_extent["zoom"] \
-                      or new_extent["x_min"] != self._loaded_extent["x_min"] \
-                      or new_extent["y_min"] != self._loaded_extent["y_min"]
+        has_changed = not self._loaded_extent or new_extent["zoom"] != self._loaded_extent["zoom"] \
+                        or new_extent["x_min"] != self._loaded_extent["x_min"] \
+                        or new_extent["y_min"] != self._loaded_extent["y_min"]
         if has_changed:
             info("changed from: {} to {}, bounds: {}", self._loaded_extent, new_extent, bounds)
         return has_changed, new_extent

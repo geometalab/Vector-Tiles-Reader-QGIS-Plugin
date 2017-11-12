@@ -461,7 +461,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.settings = QSettings("VtrSettings")
         self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
         last_tab = self.settings.value(self._CONNECTIONS_TAB, 0)
-        self.tabConnections.setCurrentIndex(last_tab)
+        self.tabConnections.setCurrentIndex(int(last_tab))
         self.tilejson_connections = ConnectionsGroup(target_groupbox=self.grpTilejsonConnections,
                                                      edit_dialog=EditTilejsonConnectionDialog(),
                                                      connection_template=TILEJSON_CONNECTION_TEMPLATE,

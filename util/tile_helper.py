@@ -204,17 +204,17 @@ _LEFT = 3
 _directions = {
     _UP: (0, -1),
     _RIGHT: (1, 0),
-    _DOWN: (0,1),
+    _DOWN: (0, 1),
     _LEFT: (-1, 0)
     }
 
 
-def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
+def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None):
     if nr_of_tiles > len(available_tiles):
         nr_of_tiles = len(available_tiles)
 
     debug("Getting {} center-tiles from a total of {} tiles", nr_of_tiles, len(available_tiles))
-    if not nr_of_tiles or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
+    if nr_of_tiles is None or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles
 
     min_x = min([t[0] for t in available_tiles])
@@ -225,7 +225,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
     center_tile_offset = (int(round(old_div((max_x-min_x),2))), int(round(old_div((max_y-min_y),2))))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
-    if center_tile in available_tiles:
+    if len(selected_tiles) < nr_of_tiles and  center_tile in available_tiles:
         selected_tiles.add(center_tile)
 
     current_tile = center_tile

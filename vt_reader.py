@@ -322,6 +322,8 @@ class VtReader(QObject):
         else:
             info("Import complete")
             loaded_extent = self._get_extent(self._all_tiles, zoom_level)
+            if not loaded_extent:
+                loaded_extent = {}
             self.loading_finished.emit(zoom_level, loaded_extent)
 
     @staticmethod
