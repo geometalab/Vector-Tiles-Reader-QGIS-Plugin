@@ -100,6 +100,7 @@ class AbstractSource(QObject):
 
 
 class ServerSource(AbstractSource):
+
     def __init__(self, url):
         AbstractSource.__init__(self)
         if not url:
@@ -110,10 +111,6 @@ class ServerSource(AbstractSource):
             raise RuntimeError(error)
 
         self.url = url
-        is_web_source = url.lower().startswith("http://") or url.lower().startswith("https://")
-        if not is_web_source:
-            raise RuntimeError("The URL is invalid: {}".format(url))
-
         self.json = TileJSON(url)
         self.json.load()
 
@@ -122,6 +119,9 @@ class ServerSource(AbstractSource):
 
     def vector_layers(self):
         return self.json.vector_layers()
+
+    def bounds(self):
+        return self.json.bounds_longlat()
 
     def close_connection(self):
         pass
@@ -151,7 +151,6 @@ class ServerSource(AbstractSource):
         return get_tile_bounds(zoom=zoom, scheme=self.scheme(), bounds=lng_lat, source_crs=4326)
 
     def crs(self):
-        # return 21781
         return self.json.crs()
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):

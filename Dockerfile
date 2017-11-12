@@ -13,4 +13,5 @@ RUN ln -s /vector-tiles-reader $QGIS_PLUGINS_DIR/vector_tiles_reader
 RUN apt-get update && \
     apt-get install python-pip -y && \
     pip install coverage && \
-    pip install coveralls
+    pip install coveralls && \
+    pip install mock

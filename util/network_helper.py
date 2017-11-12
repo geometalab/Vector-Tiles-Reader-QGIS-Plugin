@@ -9,20 +9,27 @@ from PyQt4.QtNetwork import QNetworkRequest
 
 
 def url_exists(url):
-    status, data = load_url(url)
+    reply = load_url_async(url, head_only=True)
+    while not reply.isFinished():
+        QApplication.processEvents()
+
+    status = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
     result = status == 200
     error = None
     if status != 200:
-        error = data
+        error = "HTTP HEAD failed: status {}".format(status)
 
     return result, error
 
 
-def load_url_async(url):
+def load_url_async(url, head_only=False):
     m = QgsNetworkAccessManager.instance()
     req = QNetworkRequest(QUrl(url))
     req.setRawHeader('User-Agent', 'Magic Browser')
-    reply = m.get(req)
+    if head_only:
+        reply = m.head(req)
+    else:
+        reply = m.get(req)
     return reply
 
 
