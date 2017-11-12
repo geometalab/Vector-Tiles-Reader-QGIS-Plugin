@@ -4,8 +4,9 @@ from builtins import map
 from builtins import range
 from past.utils import old_div
 from builtins import object
-from global_map_tiles import GlobalMercator
+import itertools
 import operator
+from global_map_tiles import GlobalMercator
 from log_helper import warn, debug, info
 from qgis.core import (
     QgsCoordinateReferenceSystem,
@@ -49,8 +50,8 @@ def clamp(value, low=None, high=None):
 def clamp_bounds(bounds_to_clamp, clamp_values):
     x_min = clamp(bounds_to_clamp["x_min"], low=clamp_values["x_min"])
     y_min = clamp(bounds_to_clamp["y_min"], low=clamp_values["y_min"])
-    x_max = clamp(bounds_to_clamp["x_max"], high=clamp_values["x_max"])
-    y_max = clamp(bounds_to_clamp["y_max"], high=clamp_values["y_max"])
+    x_max = clamp(bounds_to_clamp["x_max"], low=x_min, high=clamp_values["x_max"])
+    y_max = clamp(bounds_to_clamp["y_max"], low=y_min, high=clamp_values["y_max"])
     return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max)
 
 
@@ -71,6 +72,20 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max):
         "width": int(x_max - x_min + 1),
         "height": int(y_max - y_min + 1)
     }
+
+
+def center_tiles_equal(tile_limit, extent_a, extent_b):
+    center_tiles_a = _center_tiles(tile_limit=tile_limit, extent=extent_a)
+    center_tiles_b = _center_tiles(tile_limit=tile_limit, extent=extent_b)
+    return center_tiles_a == center_tiles_b
+
+
+def _center_tiles(tile_limit, extent):
+    tiles = list(itertools.product(
+        range(extent["x_min"], extent["x_max"] + 1),
+        range(extent["y_min"], extent["y_max"] + 1)))
+    center_tiles = get_tiles_from_center(nr_of_tiles=tile_limit, available_tiles=tiles)
+    return center_tiles
 
 
 def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
