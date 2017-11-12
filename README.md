@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin.svg?branch=master)](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin)
+[![Coverage Status](https://coveralls.io/repos/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin/badge.svg?branch=develop)](https://coveralls.io/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin?branch=develop)
 
 # Vector Tiles Reader QGIS-Plugin
 
@@ -37,7 +38,7 @@ Acknowledgments:
 ```
 docker-compose build
 docker-compose run -d --name qgis2 qgis2
-docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_vtreader"
+docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
 ```
 
 
