@@ -36,14 +36,12 @@ matrix:
         - make linux
         - make osx
       after_success: |
-        if [ -n "$GITHUB_TOKEN" ]; then
-          cd "$TRAVIS_BUILD_DIR"
-          git status
-          #git -c user.name='travis' -c user.email='travis' commit -m init
-          # Make sure to make the output quiet, or else the API token will leak!
-          # This works because the API key can replace your password.
-          #git push --dry-run -q https://<me>:$GITHUB_TOKEN@github.com/<me>/<myrepo>-gh-pages gh-pages &2>/dev/null
-        fi
+        cd "$TRAVIS_BUILD_DIR"
+        git status
+        #git -c user.name='travis' -c user.email='travis' commit -m init
+        # Make sure to make the output quiet, or else the API token will leak!
+        # This works because the API key can replace your password.
+        #git push --dry-run -q https://<me>:$GITHUB_TOKEN@github.com/<me>/<myrepo>-gh-pages gh-pages &2>/dev/null
 
 notifications:
     on_success: never # default: change
