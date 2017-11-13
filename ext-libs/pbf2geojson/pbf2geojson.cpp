@@ -118,7 +118,7 @@ struct geom_handler {
     }
 };
 
-struct my_print_value {
+struct print_property {
 
 	std::string& output;
 
@@ -268,72 +268,100 @@ std::string getPolygonFeatures(std::string& id, std::string& properties, std::ve
     return result;
 }
 
+void printFeatures(const std::string geoType, const std::vector<std::string>& features, std::stringstream& result) {
+	std::string output("");
+	for (auto f: features) {
+	    output += f;
+	    output += ',';
+	}
+	if (output.back() == ',') {
+        output.back() = ' ';
+    }
+
+	result << "\"" << geoType << "\":[";
+	result << output << ']';
+}
 
 void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result) {
 	result << "\"" << std::string{layer.name()} << "\":{";
 	int extent = layer.extent();
 	result << "\"extent\":" << extent << ",";
 	result << "\"isGeojson\":true,";
-	result << "\"features\":[";
 
-	int featureCount = 0;
+    std::vector<std::string> points;
+    std::vector<std::string> lines;
+    std::vector<std::string> polygons;
+
+	bool isPoint = false;
 	while (auto feature = layer.next_feature()) {
-		if (featureCount++ > 0) {
-			result << ',';
-		}
-
-        std::string id;
+        std::string id("0");
 		if (feature.has_id()) {
 		    id = std::to_string(feature.id());
-		} else {
-		    id = '0';
 		}
 
-		int propertyCount = 0;
 		std::string properties = "{";
 		while (auto property = feature.next_property()) {
-			if (propertyCount++ > 0) {
-				properties += ',';
-			}
 			properties += "\"";
 			properties += std::string(property.key());
 			properties += "\":";
-			vtzero::apply_visitor(my_print_value{properties}, property.value());
+			vtzero::apply_visitor(print_property{properties}, property.value());
+			properties += ',';
 		}
+		if (properties.back() == ',') {
+            properties.back() = ' ';
+        }
 		properties += '}';
 
         std::string coordinatesString("");
         std::vector<std::vector<Point>> rings;
+        std::string geojsonFeature("");
 		if (feature.geometry_type() == vtzero::GeomType::POLYGON) {
             // todo: create multipolygon here by using method getPolygonFeatures
             vtzero::decode_geometry(feature.geometry(), geom_handler{extent, loc, coordinatesString, rings});
-            auto newFeatures = getPolygonFeatures(id, properties, rings, true);
-            for(auto f : newFeatures) {
-                result << f;
-            }
+            std::string newFeatures = getPolygonFeatures(id, properties, rings, true);
+            polygons.push_back(newFeatures);
 		} else {
 		    // todo: create handle point and linestring feature here
-		    result << "{\"id\":" << id << ",\"type\":\"Feature\",\"properties\":" << properties << ",\"geometry\":{\"coordinates\":";
+		    geojsonFeature += "{\"id\":";
+		    geojsonFeature += id;
+		    geojsonFeature += ",\"type\":\"Feature\",\"properties\":";
+		    geojsonFeature += properties;
+		    geojsonFeature += ",\"geometry\":{\"coordinates\":";
 		    switch (feature.geometry_type()) {
                 case vtzero::GeomType::POINT:
+                    isPoint = true;
                     vtzero::decode_geometry(feature.geometry(), geom_handler{extent, loc, coordinatesString, rings});
-                    result << coordinatesString;
-                    result << ",\n\"type\": \"Point\"";
+                    geojsonFeature += coordinatesString;
+                    geojsonFeature += ",\n\"type\": \"Point\"";
                     break;
                 case vtzero::GeomType::LINESTRING:
+                    isPoint = false;
                     vtzero::decode_geometry(feature.geometry(), geom_handler{extent, loc, coordinatesString, rings});
-                        result << '[' << coordinatesString << ']';
-                        result << ",\n\"type\":\"MultiLineString\"";
+                        geojsonFeature += '[';
+                        geojsonFeature += coordinatesString;
+                        geojsonFeature += ']';
+                        geojsonFeature += ",\n\"type\":\"MultiLineString\"";
                     break;
                 default:
-                    result << "\"UNKNOWN GEOMETRY TYPE\"";
+                    continue;
 		    }
-		    result << "}}";
+		    geojsonFeature += "}}";
+
+		    if (isPoint) {
+		        points.push_back(geojsonFeature);
+		    } else {
+		        lines.push_back(geojsonFeature);
+		    }
 		}
 	}
-	result << "]}";
-}
 
+	printFeatures("Point", points, result);
+	result << ',';
+	printFeatures("LineString", lines, result);
+	result << ',';
+	printFeatures("Polygon", polygons, result);
+	result << '}';
+}
 
 std::string decodeAsJson(tile_location& loc, const char* hex){
 	std::string hexString(hex);

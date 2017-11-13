@@ -288,8 +288,8 @@ class VtReader(QObject):
 
             if remaining_nr_of_tiles > 0:
                 tile_data_tuples = self._source.load_tiles(zoom_level=zoom_level,
-                                                          tiles_to_load=tiles_to_load,
-                                                          max_tiles=remaining_nr_of_tiles)
+                                                           tiles_to_load=tiles_to_load,
+                                                           max_tiles=remaining_nr_of_tiles)
                 if len(tile_data_tuples) > 0 and not self.cancel_requested:
                     tiles = self._decode_tiles(tile_data_tuples)
                     self._process_tiles(tiles, layer_filter)
@@ -322,6 +322,8 @@ class VtReader(QObject):
         else:
             info("Import complete")
             loaded_extent = self._get_extent(self._all_tiles, zoom_level)
+            if not loaded_extent:
+                loaded_extent = {}
             self.loading_finished.emit(zoom_level, loaded_extent)
 
     @staticmethod
@@ -450,15 +452,6 @@ class VtReader(QObject):
         return tiles
 
     @staticmethod
-    def _get_feature_count(tiles):
-        total_nr_of_features = 0
-        for tile in tiles:
-            for layer_name in tile.decoded_data:
-                layer = tile.decoded_data[layer_name]
-                total_nr_of_features += len(layer["features"])
-        return total_nr_of_features
-
-    @staticmethod
     def _unzip(data):
         """
          * If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
@@ -482,8 +475,7 @@ class VtReader(QObject):
         :param tiles: 
         :return: 
         """
-        nr_of_features = self._get_feature_count(tiles)
-        self._update_progress(msg="Processing {} features of {} tiles...".format(nr_of_features, len(tiles)),
+        self._update_progress(msg="Processing features of {} tiles...".format(len(tiles)),
                               max_progress=len(tiles))
         for index, tile in enumerate(tiles):
             if self.cancel_requested:
@@ -696,34 +688,39 @@ class VtReader(QObject):
                     continue
 
             tile_id = tile.id()
-            for feature in layer["features"]:
-                if is_geojson_already:
-                    geojson_features = [feature]
-                    geo_type = geo_types_by_name[feature["geometry"]["type"]]
-                    if geo_type == GeoTypes.POINT:
-                        feature["properties"]["_symbol"] = self._get_poi_icon(feature)
-                    assert geo_type is not None
-                else:
+            if is_geojson_already:
+                for geo_type_id in geo_types:
+                    geo_type = geo_types[geo_type_id]
+                    features = layer[geo_type]
+                    if features:
+                        feature_collection = self._get_feature_collection(layer_name=layer_name,
+                                                                          geo_type=geo_type,
+                                                                          zoom_level=tile.zoom_level)
+                        feature_collection["features"].extend(features)
+                        if tile_id not in feature_collection["tiles"]:
+                            feature_collection["tiles"].append(tile_id)
+            else:
+                for feature in layer["features"]:
                     if "extent" in layer:
                         extent = layer["extent"]
                     else:
                         extent = self._DEFAULT_EXTENT
                     geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
 
-                if geojson_features and len(geojson_features) > 0:
-                    for f in geojson_features:
-                        f["properties"]["_id"] = self._feature_count
-                        f["properties"]["_col"] = tile.column
-                        f["properties"]["_row"] = tile.row
-                        f["properties"]["_zoom_level"] = tile.zoom_level
-                        self._feature_count += 1
+                    if geojson_features and len(geojson_features) > 0:
+                        for f in geojson_features:
+                            f["properties"]["_id"] = self._feature_count
+                            f["properties"]["_col"] = tile.column
+                            f["properties"]["_row"] = tile.row
+                            f["properties"]["_zoom_level"] = tile.zoom_level
+                            self._feature_count += 1
 
-                    feature_collection = self._get_feature_collection(layer_name=layer_name,
-                                                                      geo_type=geo_type,
-                                                                      zoom_level=tile.zoom_level)
-                    feature_collection["features"].extend(geojson_features)
-                    if tile_id not in feature_collection["tiles"]:
-                        feature_collection["tiles"].append(tile_id)
+                        feature_collection = self._get_feature_collection(layer_name=layer_name,
+                                                                          geo_type=geo_type,
+                                                                          zoom_level=tile.zoom_level)
+                        feature_collection["features"].extend(geojson_features)
+                        if tile_id not in feature_collection["tiles"]:
+                            feature_collection["tiles"].append(tile_id)
 
     def _get_feature_collection(self, layer_name, geo_type, zoom_level):
         name_and_geotype = (layer_name, geo_type)

@@ -21,8 +21,6 @@ import traceback
 
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import (
-    QApplication,
-    QStyle,
     QAction,
     QIcon,
     QMenu,
@@ -35,6 +33,7 @@ from builtins import map
 from builtins import object
 from builtins import str
 from util.log_helper import info, critical, debug
+import logging
 from qgis.core import (
     QgsApplication,
     QgsPoint,
@@ -52,6 +51,7 @@ from util.tile_helper import (
     get_tile_bounds,
     tile_to_latlon,
     extent_overlap_bounds,
+    center_tiles_equal,
     clamp_bounds,
     convert_coordinate)
 
@@ -89,6 +89,7 @@ omt_layer_ordering = [
 ]
 
 
+# noinspection PyUnresolvedReferences,PyArgumentList
 class VtrPlugin(object):
     _dialog = None
     _model = None
@@ -129,9 +130,13 @@ class VtrPlugin(object):
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
+
         self._debouncer = SignalDebouncer(timeout=500,
-                                          signals=[self.iface.mapCanvas().scaleChanged,
-                                                   self.iface.mapCanvas().extentsChanged],
+                                          signals=[
+                                              # self.iface.mapCanvas().scaleChanged,  # doesn't seem to be required,
+                                              # is fired anyway, even when only the extent has changed
+                                              self.iface.mapCanvas().extentsChanged
+                                          ],
                                           predicate=self._have_extent_or_scale_changed)
         self._debouncer.on_notify.connect(self._handle_map_scale_or_extents_changed)
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
@@ -233,42 +238,41 @@ class VtrPlugin(object):
         if self._is_loading and (self._scale_to_load or self._extent_to_load):
             self._cancel_load()
 
-    def _has_extent_changed(self):
+    @pyqtSlot('QString', 'QString', list)
+    def _on_add_layer(self, connection, selected_layers):
+        assert connection
+        self._assure_qgis_groups_exist(connection["name"], True)
+
+        crs_string = self._current_reader.get_source().crs()
+        self._init_qgis_map(crs_string)
+
         scheme = self._current_reader.get_source().scheme()
-        scale = self._scale_to_load
-        if not scale:
-            scale = self._get_current_map_scale()
+        zoom = self._get_current_zoom()
 
-        bounds = None
-        if self._extent_to_load:
-            new_extent = self._extent_to_load
-        else:
-            zoom = get_zoom_by_scale(scale)
-            max_zoom = self._current_reader.get_source().max_zoom()
-            min_zoom = self._current_reader.get_source().min_zoom()
-            zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-            new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
-            bounds = self._current_reader.get_source().bounds_tile(zoom)
-            new_extent = clamp_bounds(new_extent, bounds)
+        extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
 
-        has_changed = new_extent["zoom"] != self._loaded_extent["zoom"] \
-                      or new_extent["x_min"] != self._loaded_extent["x_min"] \
-                      or new_extent["y_min"] != self._loaded_extent["y_min"]
-        if has_changed:
-            info("changed from: {} to {}, bounds: {}", self._loaded_extent, new_extent, bounds)
-        return has_changed, new_extent
+        bounds = self._current_reader.get_source().bounds_tile(zoom)
+        info("Bounds of source: {}", bounds)
+        is_within_bounds = self.is_extent_within_bounds(extent, bounds)
+        if not is_within_bounds:
+            info("setting qgis extent ")
+            self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
 
-    def _has_scale_changed(self):
-        new_scale = self._get_current_map_scale()
-        if self._scale_to_load:
-            new_scale = self._scale_to_load
+        if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
+            info("QGIS extent is not valid, replacing by source bounds")
+            extent = self._current_reader.get_source().bounds_tile(zoom)
 
-        has_changed = new_scale != self._loaded_scale
-        scale_increased = self._current_scale is None or new_scale > self._current_scale
-        return has_changed, new_scale, scale_increased
+        keep_dialog_open = self.connections_dialog.keep_dialog_open()
+        if not keep_dialog_open:
+            self.connections_dialog.close()
+        self._load_tiles(options=self.connections_dialog.options,
+                         layers_to_load=selected_layers,
+                         bounds=extent)
+        self._current_layer_filter = selected_layers
 
     @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
+
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()
@@ -298,18 +302,124 @@ class VtrPlugin(object):
                 self._loaded_scale = new_scale
                 self._loaded_extent = new_extent
 
-                info("current zoom: {}", self._current_zoom)
-                info("new zoom: {}", new_zoom)
                 info("Reloading due to scale change from '{}' (zoom {}) to '{}' (zoom {})", old_scale,
                      self._current_zoom, new_scale, new_zoom)
                 self._handle_scale_change(new_scale)
             elif has_extent_changed and not is_new_extent_within_loaded_extent:
-                self._loaded_scale = new_scale
-                self._loaded_extent = new_extent
+                tile_limit = self.connections_dialog.options.tile_number_limit()
+                extent_results_equal = False
+                if tile_limit and self._loaded_extent:
+                    info("compare equality: {}, {}", self._loaded_extent, new_extent)
+                    extent_results_equal = center_tiles_equal(tile_limit, self._loaded_extent, new_extent)
 
-                info("Reloading due to extent change from '{}' to '{}'", self._loaded_extent, new_extent)
-                self._loaded_extent = new_extent
-                self._reload_tiles(new_extent)
+                if not extent_results_equal:
+                    info("Reloading due to extent change from {} to {}", self._loaded_extent, new_extent)
+                    self._loaded_scale = new_scale
+                    self._loaded_extent = new_extent
+                    self._reload_tiles(overwrite_extent=new_extent)
+
+    @pyqtSlot()
+    def _update_nr_of_tiles(self):
+        zoom = self._get_current_zoom()
+        bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
+        nr_of_tiles = bounds["width"] * bounds["height"]
+        self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
+
+        map_scale_zoom = self._get_zoom_for_current_map_scale()
+        if self._current_reader:
+            min_zoom = self._current_reader.get_source().min_zoom()
+            max_zoom = self._current_reader.get_source().max_zoom()
+            map_scale_zoom = clamp(map_scale_zoom, low=min_zoom, high=max_zoom)
+        self.connections_dialog.set_current_zoom_level(map_scale_zoom)
+
+    @pyqtSlot(dict)
+    def _on_connect(self, connection):
+        self._currrent_connection_name = connection["name"]
+        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
+        if self._current_reader and self._current_reader.connection() != connection:
+            self._current_reader.shutdown()
+            self._current_reader.progress_changed.disconnect()
+            self._current_reader.max_progress_changed.disconnect()
+
+            self._current_reader.message_changed.disconnect()
+            self._current_reader.show_progress_changed.disconnect()
+            self._current_reader = None
+        if not self._current_reader:
+            reader = self._create_reader(connection=connection)
+            self._current_reader = reader
+        if self._current_reader:
+            layers = self._current_reader.get_source().vector_layers()
+            self.connections_dialog.set_layers(layers)
+            self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(),
+                                                     self._current_reader.get_source().max_zoom())
+            self.reload_action.setEnabled(True)
+        else:
+            self.connections_dialog.set_layers([])
+            self.reload_action.setEnabled(False)
+            self.reload_action.setText(self._reload_button_text)
+
+    @pyqtSlot()
+    def reader_cancelled(self):
+        info("cancelled")
+        self._is_loading = False
+        self.handle_progress_update(show_progress=False)
+        if self._auto_zoom:
+            extent = self._extent_to_load
+            reload_immediate = self._scale_to_load is not None or extent
+            if reload_immediate:
+                if self._scale_to_load:
+                    self._loaded_scale = self._scale_to_load
+                if extent:
+                    self._loaded_extent = extent
+
+                self._extent_to_load = None
+                self._scale_to_load = None
+                self._reload_tiles(overwrite_extent=extent)
+            else:
+                self._debouncer.start()
+
+    @pyqtSlot(int)
+    def reader_limit_exceeded_message(self, limit):
+        """
+        * Shows a message in QGIS that the nr of tiles has been restricted by the tile limit set in the options
+        :return:
+        """
+        if limit:
+            self.iface.messageBar().pushMessage(
+                "Only {} tiles were loaded according to the limit in the options".format(limit),
+                level=QgsMessageBar.WARNING,
+                duration=5)
+
+    def _has_extent_changed(self):
+        scheme = self._current_reader.get_source().scheme()
+        scale = self._scale_to_load
+        if not scale:
+            scale = self._get_current_map_scale()
+
+        if self._extent_to_load:
+            new_extent = self._extent_to_load
+        else:
+            zoom = get_zoom_by_scale(scale)
+            max_zoom = self._current_reader.get_source().max_zoom()
+            min_zoom = self._current_reader.get_source().min_zoom()
+            zoom = clamp(zoom, low=min_zoom, high=max_zoom)
+            new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+            source_bounds = self._current_reader.get_source().bounds_tile(zoom)
+            new_extent = clamp_bounds(bounds_to_clamp=new_extent, clamp_values=source_bounds)
+
+        has_changed = not self._loaded_extent or new_extent["zoom"] != self._loaded_extent["zoom"] \
+                      or new_extent["x_min"] != self._loaded_extent["x_min"] \
+                      or new_extent["y_min"] != self._loaded_extent["y_min"]
+        return has_changed, new_extent
+
+    def _has_scale_changed(self):
+        new_scale = self._get_current_map_scale()
+        if self._scale_to_load:
+            new_scale = self._scale_to_load
+
+        has_changed = new_scale != self._loaded_scale
+        scale_increased = self._current_scale is None or new_scale > self._current_scale
+        return has_changed, new_scale, scale_increased
 
     def _handle_scale_change(self, new_scale):
         scale_increased = self._current_scale is None or new_scale > self._current_scale
@@ -352,20 +462,6 @@ class VtrPlugin(object):
             current_paths.append(icons_directory)
             QgsApplication.setDefaultSvgPaths(current_paths)
 
-    @pyqtSlot()
-    def _update_nr_of_tiles(self):
-        zoom = self._get_current_zoom()
-        bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
-        nr_of_tiles = bounds["width"] * bounds["height"]
-        self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
-
-        map_scale_zoom = self._get_zoom_for_current_map_scale()
-        if self._current_reader:
-            min_zoom = self._current_reader.get_source().min_zoom()
-            max_zoom = self._current_reader.get_source().max_zoom()
-            map_scale_zoom = clamp(map_scale_zoom, low=min_zoom, high=max_zoom)
-        self.connections_dialog.set_current_zoom_level(map_scale_zoom)
-
     def _show_connections_dialog(self):
         self._update_nr_of_tiles()
         self.connections_dialog.show()
@@ -390,17 +486,18 @@ class VtrPlugin(object):
             if flush_loaded_layers:
                 self._current_reader.flush_layers_of_other_zoom_level = True
 
-            bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
             if overwrite_extent:
                 bounds = overwrite_extent
+            else:
+                bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
 
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
+
             self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
-                             ignore_limit=ignore_limit
-                             )
+                             ignore_limit=ignore_limit)
 
     def _get_current_extent_as_wkt(self):
         return self.iface.mapCanvas().extent().asWktCoordinates()
@@ -411,37 +508,10 @@ class VtrPlugin(object):
         x_max = extent.xMaximum()
         y_min = extent.yMinimum()
         y_max = extent.yMaximum()
-
         current_crs = self._get_qgis_crs()
         bounds = [x_min, y_min, x_max, y_max]
         tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=current_crs)
         return tile_bounds
-
-    @pyqtSlot(dict)
-    def _on_connect(self, connection):
-        self._currrent_connection_name = connection["name"]
-        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
-        if self._current_reader and self._current_reader.connection() != connection:
-            self._current_reader.shutdown()
-            self._current_reader.progress_changed.disconnect()
-            self._current_reader.max_progress_changed.disconnect()
-
-            self._current_reader.message_changed.disconnect()
-            self._current_reader.show_progress_changed.disconnect()
-            self._current_reader = None
-        if not self._current_reader:
-            reader = self._create_reader(connection=connection)
-            self._current_reader = reader
-        if self._current_reader:
-            layers = self._current_reader.get_source().vector_layers()
-            self.connections_dialog.set_layers(layers)
-            self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(),
-                                                     self._current_reader.get_source().max_zoom())
-            self.reload_action.setEnabled(True)
-        else:
-            self.connections_dialog.set_layers([])
-            self.reload_action.setEnabled(False)
-            self.reload_action.setText(self._reload_button_text)
 
     @staticmethod
     def show_about():
@@ -469,38 +539,6 @@ class VtrPlugin(object):
         else:
             debug("Bounds not available on source. Assuming extent is within bounds")
         return is_within
-
-    @pyqtSlot('QString', 'QString', list)
-    def _on_add_layer(self, connection, selected_layers):
-        assert connection
-        self._assure_qgis_groups_exist(connection["name"], True)
-
-        crs_string = self._current_reader.get_source().crs()
-        self._init_qgis_map(crs_string)
-
-        scheme = self._current_reader.get_source().scheme()
-        zoom = self._get_current_zoom()
-
-        extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
-
-        bounds = self._current_reader.get_source().bounds_tile(zoom)
-        info("Bounds of source: {}", bounds)
-        is_within_bounds = self.is_extent_within_bounds(extent, bounds)
-        if not is_within_bounds:
-            info("setting qgis extent ")
-            self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
-
-        if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
-            info("QGIS extent is not valid, replacing by source bounds")
-            extent = self._current_reader.get_source().bounds_tile(zoom)
-
-        keep_dialog_open = self.connections_dialog.keep_dialog_open()
-        if not keep_dialog_open:
-            self.connections_dialog.close()
-        self._load_tiles(options=self.connections_dialog.options,
-                         layers_to_load=selected_layers,
-                         bounds=extent)
-        self._current_layer_filter = selected_layers
 
     def _get_current_zoom(self):
         zoom = None
@@ -601,7 +639,7 @@ class VtrPlugin(object):
                     info("The current map extent and is not within the bounds of the source. The extent to load "
                          "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds,
                          source_bounds)
-                    # bounds = source_bounds
+                    bounds = source_bounds
 
                 reader.set_options(layer_filter=layers_to_load,
                                    load_mask_layer=load_mask_layer,
@@ -625,50 +663,18 @@ class VtrPlugin(object):
                 self._is_loading = False
 
     def _set_background_color(self):
-        myColor = QColor("#F2EFE9")
+        color = QColor("#F2EFE9")
         # Write it to the project (will still need to be saved!)
-        QgsProject.instance().writeEntry("Gui", "/CanvasColorRedPart", myColor.red())
-        QgsProject.instance().writeEntry("Gui", "/CanvasColorGreenPart", myColor.green())
-        QgsProject.instance().writeEntry("Gui", "/CanvasColorBluePart", myColor.blue())
+        QgsProject.instance().writeEntry("Gui", "/CanvasColorRedPart", color.red())
+        QgsProject.instance().writeEntry("Gui", "/CanvasColorGreenPart", color.green())
+        QgsProject.instance().writeEntry("Gui", "/CanvasColorBluePart", color.blue())
         # And apply for the current session
-        self.iface.mapCanvas().setCanvasColor(myColor)
+        self.iface.mapCanvas().setCanvasColor(color)
         self.iface.mapCanvas().refresh()
 
     def refresh_layers(self):
         for layer in self.iface.mapCanvas().layers():
             layer.triggerRepaint()
-
-    @pyqtSlot()
-    def reader_cancelled(self):
-        info("cancelled")
-        self._is_loading = False
-        self.handle_progress_update(show_progress=False)
-        if self._auto_zoom:
-            extent = self._extent_to_load
-            reload_immediate = self._scale_to_load is not None or extent
-            if reload_immediate:
-                if self._scale_to_load:
-                    self._loaded_scale = self._scale_to_load
-                if extent:
-                    self._loaded_extent = extent
-
-                self._extent_to_load = None
-                self._scale_to_load = None
-                self._reload_tiles(overwrite_extent=extent)
-            else:
-                self._debouncer.start(start_immediate=True)
-
-    @pyqtSlot(int)
-    def reader_limit_exceeded_message(self, limit):
-        """
-        * Shows a message in QGIS that the nr of tiles has been restricted by the tile limit set in the options
-        :return: 
-        """
-        if limit:
-            self.iface.messageBar().pushMessage(
-                "Only {} tiles were loaded according to the limit in the options".format(limit),
-                level=QgsMessageBar.WARNING,
-                duration=5)
 
     def _create_reader(self, connection):
         # A lazy import is required because the vtreader depends on the external libs
@@ -708,6 +714,7 @@ class VtrPlugin(object):
 
     @pyqtSlot(object)
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
+        info("loaded: {}", loaded_extent)
         self._loaded_extent = loaded_extent
         self.handle_progress_update(show_progress=False)
 
@@ -725,6 +732,7 @@ class VtrPlugin(object):
             visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
             overlap = extent_overlap_bounds(visible_extent, loaded_extent)
             if not overlap:
+                info("Changing QGIS extent as it's not overlapping with the loaded extent")
                 self._set_qgis_extent(zoom=loaded_zoom_level, scheme=scheme, bounds=loaded_extent)
 
         self._is_loading = False
@@ -826,10 +834,6 @@ class VtrPlugin(object):
         if self._current_reader:
             self._current_reader.get_source().close_connection()
             self._current_reader = None
-        try:
-            self._disconnect_map_scale_changed()
-        except:
-            pass
 
         self.iface.newProjectCreated.disconnect(self._on_project_change)
         self.iface.projectRead.disconnect(self._on_project_change)
@@ -840,6 +844,7 @@ class VtrPlugin(object):
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addLayerMenu().removeAction(self.open_connections_action)
+        logging.shutdown()
         try:
             self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
         except:
@@ -865,7 +870,7 @@ class SignalDebouncer(QObject):
         self._is_paused = False
         self._predicate = predicate
 
-    def start(self, start_immediate=False):
+    def start(self):
         """
          * Starts handling the signals
         :return:
@@ -893,8 +898,8 @@ class SignalDebouncer(QObject):
 
     def _connect(self):
         if not self._is_connected:
-            for s in self._signals:
-                s.connect(self._debounce, Qt.QueuedConnection)
+            for signal in self._signals:
+                signal.connect(self._debounce, Qt.QueuedConnection)
             self._is_connected = True
 
     def _disconnect(self):

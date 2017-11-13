@@ -4,8 +4,9 @@ from builtins import map
 from builtins import range
 from past.utils import old_div
 from builtins import object
-from global_map_tiles import GlobalMercator
+import itertools
 import operator
+from global_map_tiles import GlobalMercator
 from log_helper import warn, debug, info
 from qgis.core import (
     QgsCoordinateReferenceSystem,
@@ -49,8 +50,8 @@ def clamp(value, low=None, high=None):
 def clamp_bounds(bounds_to_clamp, clamp_values):
     x_min = clamp(bounds_to_clamp["x_min"], low=clamp_values["x_min"])
     y_min = clamp(bounds_to_clamp["y_min"], low=clamp_values["y_min"])
-    x_max = clamp(bounds_to_clamp["x_max"], high=clamp_values["x_max"])
-    y_max = clamp(bounds_to_clamp["y_max"], high=clamp_values["y_max"])
+    x_max = clamp(bounds_to_clamp["x_max"], low=x_min, high=clamp_values["x_max"])
+    y_max = clamp(bounds_to_clamp["y_max"], low=y_min, high=clamp_values["y_max"])
     return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max)
 
 
@@ -73,6 +74,20 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max):
     }
 
 
+def center_tiles_equal(tile_limit, extent_a, extent_b):
+    center_tiles_a = _center_tiles(tile_limit=tile_limit, extent=extent_a)
+    center_tiles_b = _center_tiles(tile_limit=tile_limit, extent=extent_b)
+    return center_tiles_a == center_tiles_b
+
+
+def _center_tiles(tile_limit, extent):
+    tiles = list(itertools.product(
+        range(extent["x_min"], extent["x_max"] + 1),
+        range(extent["y_min"], extent["y_max"] + 1)))
+    center_tiles = get_tiles_from_center(nr_of_tiles=tile_limit, available_tiles=tiles)
+    return center_tiles
+
+
 def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
@@ -88,20 +103,20 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     if lng is None:
         raise RuntimeError("Longitude is required")
 
-    lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
+    if get_code_from_epsg(source_crs) != 4326:
+        lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
 
-    lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
     lng = clamp(lng, WORLD_BOUNDS[0], WORLD_BOUNDS[2])
+    lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
 
     gm = GlobalMercator()
-    m = gm.LatLonToMeters(lat, lng)
-    tile = gm.MetersToTile(m[0], m[1], zoom)
-    x = clamp(tile[0], low=0)
-    y = tile[1]
+    mx, my = gm.LatLonToMeters(lat=lat, lon=lng)
+    col, row = gm.MetersToTile(mx=mx, my=my, zoom=zoom)
+    col = clamp(col, low=0)
+    row = clamp(row, low=0)
     if scheme != "tms":
-        y = change_scheme(zoom, y)
-    y = clamp(y, low=0)
-    return int(x), int(y)
+        row = change_scheme(zoom, row)
+    return int(col), int(row)
 
 
 def convert_coordinate(source_crs, target_crs, lat, lng):
@@ -204,17 +219,17 @@ _LEFT = 3
 _directions = {
     _UP: (0, -1),
     _RIGHT: (1, 0),
-    _DOWN: (0,1),
+    _DOWN: (0, 1),
     _LEFT: (-1, 0)
     }
 
 
-def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
+def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None):
     if nr_of_tiles > len(available_tiles):
         nr_of_tiles = len(available_tiles)
 
     debug("Getting {} center-tiles from a total of {} tiles", nr_of_tiles, len(available_tiles))
-    if not nr_of_tiles or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
+    if nr_of_tiles is None or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles
 
     min_x = min([t[0] for t in available_tiles])
@@ -225,7 +240,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func):
     center_tile_offset = (int(round(old_div((max_x-min_x),2))), int(round(old_div((max_y-min_y),2))))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
-    if center_tile in available_tiles:
+    if len(selected_tiles) < nr_of_tiles and  center_tile in available_tiles:
         selected_tiles.add(center_tile)
 
     current_tile = center_tile

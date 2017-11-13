@@ -50,28 +50,6 @@ class TileJSON(object):
         if not bounds and not center:
             raise RuntimeError("Either 'bounds' or 'center' MUST be available in the TileJSON for the plugin to work")
 
-    def center_tile(self):
-        """
-         * Returns the center of the available data. If the 'center' value is not available in the TileJSON,
-         * the center is calculated from the bounds. That means either 'center' or 'bounds' is required in the json.
-        :return: 
-        """
-
-        center = self.center_longlat()
-        if center:
-            assert len(center) == 3
-            lng = center[0]
-            lat = center[1]
-            zoom = center[2]
-            center = latlon_to_tile(zoom=zoom, lat=lat, lng=lng, source_crs=self.crs(), scheme=self.scheme())
-        else:
-            bounds = self.bounds_tile(self.max_zoom())
-            if bounds:
-                center_x = int(old_div((bounds["x_min"] + bounds["x_max"]), 2))
-                center_y = int(old_div((bounds["y_min"] + bounds["y_max"]), 2))
-                center = (center_x, center_y)
-        return center
-
     def attribution(self):
         return self._get_value("attribution")
 

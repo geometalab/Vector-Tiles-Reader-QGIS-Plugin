@@ -15,8 +15,9 @@ from log_helper import info, warn, critical, debug
 from tile_helper import (VectorTile,
                          get_tiles_from_center,
                          get_tile_bounds,
+                         create_bounds,
                          WORLD_BOUNDS)
-from network_helper import url_exists, load_url_async
+from network_helper import url_exists, load_tiles_async
 from file_helper import is_sqlite_db
 
 _DEFAULT_CRS = "EPSG:3857"
@@ -72,6 +73,9 @@ class AbstractSource(QObject):
     def scheme(self):
         raise NotImplementedError
 
+    def bounds(self):
+        raise NotImplementedError
+
     def bounds_tile(self, zoom):
         """
          * Returns the tile boundaries
@@ -96,6 +100,7 @@ class AbstractSource(QObject):
 
 
 class ServerSource(AbstractSource):
+
     def __init__(self, url):
         AbstractSource.__init__(self)
         if not url:
@@ -106,10 +111,6 @@ class ServerSource(AbstractSource):
             raise RuntimeError(error)
 
         self.url = url
-        is_web_source = url.lower().startswith("http://") or url.lower().startswith("https://")
-        if not is_web_source:
-            raise RuntimeError("The URL is invalid: {}".format(url))
-
         self.json = TileJSON(url)
         self.json.load()
 
@@ -118,6 +119,9 @@ class ServerSource(AbstractSource):
 
     def vector_layers(self):
         return self.json.vector_layers()
+
+    def bounds(self):
+        return self.json.bounds_longlat()
 
     def close_connection(self):
         pass
@@ -147,7 +151,6 @@ class ServerSource(AbstractSource):
         return get_tile_bounds(zoom=zoom, scheme=self.scheme(), bounds=lng_lat, source_crs=4326)
 
     def crs(self):
-        # return 21781
         return self.json.crs()
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
@@ -174,52 +177,15 @@ class ServerSource(AbstractSource):
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
-        return self._load_urls_async(zoom_level, urls)
+        tile_coords_with_content = load_tiles_async(urls_with_col_and_row=urls,
+                                                    on_progress_changed=lambda p: self.progress_changed.emit(p),
+                                                    cancelling_func=lambda: self._cancelling)
+        tiles_with_data = []
+        for coord, data in tile_coords_with_content:
+            tile = VectorTile(self.scheme(), zoom_level=zoom_level, x=coord[0], y=coord[1])
+            tiles_with_data.append((tile, data))
 
-    def _load_urls_async(self, zoom_level, urls_with_col_and_row):
-        replies = [(load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
-        total_nr_of_requests = len(replies)
-        all_finished = False
-        nr_finished_before = 0
-        finished_tiles = set()
-        nr_finished = 0
-        all_tiles = []
-        while not all_finished and not self._cancelling:
-            results = []
-            new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
-            nr_finished += len(new_finished)
-            for r in new_finished:
-                reply = r[0]
-                error = reply.error()
-                if error:
-                    info("Error during network request: {}", error)
-                else:
-                    content = reply.readAll().data()
-                    tile_coord = r[1]
-                    finished_tiles.add(tile_coord)
-                    results.append((content, tile_coord))
-                reply.deleteLater()
-            QApplication.processEvents()
-            all_finished = nr_finished == total_nr_of_requests
-            if nr_finished != nr_finished_before:
-                nr_finished_before = nr_finished
-                self.progress_changed.emit(nr_finished)
-                tiles_with_data = [self._create_vector_tile_from_respond(zoom_level, r) for r in results]
-                all_tiles.extend(tiles_with_data)
-        if not all_finished and self._cancelling:
-            unfinished_requests = [r for r in replies if not r[0].isFinished]
-            for r in unfinished_requests:
-                r.abort()
-        if self._cancelling:
-            all_tiles = []
-        return all_tiles
-
-    def _create_vector_tile_from_respond(self, zoom_level, r):
-        content = r[0]
-        col = r[1][0]
-        row = r[1][1]
-        tile = VectorTile(self.scheme(), zoom_level, col, row)
-        return tile, content
+        return tiles_with_data
 
 
 class MBTilesSource(AbstractSource):
@@ -253,8 +219,8 @@ class MBTilesSource(AbstractSource):
             warn("No json found in metadata table")
         return layers
 
-    def bounds_tile(self, zoom):
-        bounds = self._get_metadata_value("bounds", default=WORLD_BOUNDS)
+    def bounds(self):
+        bounds = self._get_metadata_value("bounds")
         if bounds and isinstance(bounds, basestring):
             bounds = bounds\
                 .replace(" ", "")\
@@ -262,8 +228,20 @@ class MBTilesSource(AbstractSource):
                 .replace("]", "")\
                 .split(",")
             bounds = [float(s) for s in bounds]
+        return bounds
+
+    def bounds_tile(self, zoom):
+        bounds = self.bounds()
+        tile_bounds = None
         scheme = self.scheme()
-        return get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+        if bounds:
+            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+        if not tile_bounds:
+            tile_bounds = self._get_bounds_from_data(zoom_level=zoom)
+        if not tile_bounds:
+            bounds = WORLD_BOUNDS
+            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+        return tile_bounds
 
     def name(self):
         base_name = os.path.splitext(os.path.basename(self.path))[0]
@@ -282,10 +260,23 @@ class MBTilesSource(AbstractSource):
         return self._get_metadata_value("maskLevel")
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
+        """
+         * Loads the tiles listed in tiles_to_load for the specified zoom_level.
+        :param zoom_level:
+        :param tiles_to_load:
+        :param max_tiles:
+        :return:
+        """
         self._cancelling = False
         debug("Reading tiles of zoom level {}", zoom_level)
 
-        if max_tiles:
+        if zoom_level is None:
+            raise RuntimeError("zoom_level is required")
+
+        if tiles_to_load is None:
+            raise RuntimeError("tiles_to_load is required")
+
+        if max_tiles is not None:
             center_tiles = get_tiles_from_center(nr_of_tiles=max_tiles,
                                                  available_tiles=tiles_to_load,
                                                  should_cancel_func=lambda: self._cancelling)
@@ -298,18 +289,12 @@ class MBTilesSource(AbstractSource):
 
         tile_data_tuples = []
         rows = self._get_from_db(sql=sql)
-        no_tiles_in_current_extent = not rows or len(rows) == 0
-        if no_tiles_in_current_extent:
-            where_clause = self._get_where_clause(tiles_to_load=None, zoom_level=zoom_level)
-            sql = sql_command.format(where_clause)
-            rows = self._get_from_db(sql=sql)
+        count_sql = "select count(*) 'nr_of_tiles' from tiles WHERE zoom_level = {}".format(zoom_level)
+        total_nr_of_tiles = self._get_single_value(count_sql, "nr_of_tiles")
+        if max_tiles is not None and max_tiles < total_nr_of_tiles:
+            self.tile_limit_reached.emit()
 
         if rows:
-            if max_tiles and len(rows) > max_tiles:
-                if no_tiles_in_current_extent:
-                    rows = rows[:max_tiles]
-                if no_tiles_in_current_extent:
-                    self.tile_limit_reached.emit()
             self.max_progress_changed.emit(len(rows))
             for index, row in enumerate(rows):
                 if self._cancelling or (max_tiles and len(tile_data_tuples) >= max_tiles):
@@ -319,16 +304,35 @@ class MBTilesSource(AbstractSource):
                 self.progress_changed.emit(index+1)
         return tile_data_tuples
 
+    def _get_bounds_from_data(self, zoom_level):
+        sql = """select 
+                min(tile_column) 'x_min', 
+                max(tile_column) 'x_max', 
+                min(tile_row) 'y_min', 
+                max(tile_row) 'y_max'
+                from tiles
+                WHERE zoom_level = {}""".format(zoom_level)
+        rows = self._get_from_db(sql)
+        bounds = None
+        if rows:
+            row = rows[0]
+            bounds = create_bounds(zoom=zoom_level,
+                                   x_min=row["x_min"],
+                                   x_max=row["x_max"],
+                                   y_min=row["y_min"],
+                                   y_max=row["y_max"])
+        return bounds
+
     @staticmethod
     def _get_where_clause(tiles_to_load, zoom_level):
         where_clause = ""
-        if zoom_level is not None or tiles_to_load:
+        if zoom_level is not None or tiles_to_load is not None:
             where_clause = "WHERE"
             if zoom_level is not None:
                 where_clause += " zoom_level = {}".format(zoom_level)
-                if tiles_to_load:
+                if tiles_to_load is not None:
                     where_clause += " AND"
-            if tiles_to_load:
+            if tiles_to_load is not None:
                 tile_coords = str(["{};{}".format(x[0], x[1]) for x in tiles_to_load]).replace("[", "").replace(
                     "]", "")
                 where_clause += " tile_column || \";\" || tile_row IN ({})".format(tile_coords)

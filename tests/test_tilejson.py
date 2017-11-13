@@ -1,78 +1,92 @@
-from util.tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon
+import unittest
+from util.tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon, WORLD_BOUNDS
 from util.tile_json import TileJSON
 
 
-def test_load():
-    tj = _get_loaded()
-    assert tj.json
+class TileJsonTests(unittest.TestCase):
+    """
+    Tests for Iface
+    """
 
+    @classmethod
+    def setUpClass(cls):
+        pass
 
-def test_bounds():
-    tj = _get_loaded()
-    b = tj.bounds_longlat()
-    assert b
-    assert len(b) == 4
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
+    def test_load(self):
+        tj = _get_loaded()
+        assert tj.json
 
-def test_tile_to_latlon():
-    latlon = tile_to_latlon(14, 8568, 5747, scheme="xyz")
-    assert latlon == (919690.3243272416, 5977987.108127065, 922136.3092323653, 5980433.093032189)
+    def test_bounds(self):
+        tj = _get_loaded()
+        b = tj.bounds_longlat()
+        self.assertIsNotNone(b)
+        self.assertEqual(4, len(b))
 
+    def test_tile_to_latlon(self):
+        latlon = tile_to_latlon(14, 8568, 5747, scheme="xyz")
+        latlon_expected = (919690.3243272416, 5977987.108127065, 922136.3092323653, 5980433.093032189)
+        self.assertEqual(latlon_expected, latlon)
 
-def test_manual_bounds_xyz():
-    # boundary for mbtiles zurich 4 tiles in bottom left corner
-    b = [8.268328, 47.222658, 8.298712, 47.243988]
-    t = get_tile_bounds(14, b, scheme="xyz")
-    assert t[0] == (8568, 5746)
-    assert t[1] == (8569, 5747)
+    def test_manual_bounds_xyz(self):
+        # boundary for mbtiles zurich 4 tiles in bottom left corner
+        b = [8.268328, 47.222658, 8.298712, 47.243988]
+        t = get_tile_bounds(14, b, scheme="xyz", source_crs=4326)
+        bounds_expected = {
+            "x_min": 8568,
+            "y_min": 5746,
+            "x_max": 8569,
+            "y_max": 5747,
+            "zoom": 14,
+            "width": 2,
+            "height": 2
+        }
+        self.assertEqual(bounds_expected, t)
 
+    def test_manual_bounds_tms(self):
+        # boundary for mbtiles zurich 4 tiles in bottom left corner
+        b = [8.268328, 47.222658, 8.298712, 47.243988]
+        t = get_tile_bounds(14, b, scheme="tms", source_crs=4326)
+        bounds_expected = {
+            "x_min": 8568,
+            "y_min": 10636,
+            "x_max": 8569,
+            "y_max": 10637,
+            "zoom": 14,
+            "width": 2,
+            "height": 2
+        }
+        self.assertIsNotNone(t)
+        self.assertEqual(bounds_expected, t)
 
-def test_manual_bounds_tms():
-    # boundary for mbtiles zurich 4 tiles in bottom left corner
-    b = [8.268328, 47.222658, 8.298712, 47.243988]
-    t = get_tile_bounds(14, b, scheme="tms")
-    assert t[0] == (8568, 10637)
-    assert t[1] == (8569, 10636)
+    def test_tile_bounds_world(self):
+        tj = _get_loaded()
+        b = tj.bounds_tile(14)
+        bounds_expected = {
+            "x_min": 0,
+            "y_min": 0,
+            "x_max": 16383,
+            "y_max": 16383,
+            "zoom": 14,
+            "width": 16384,
+            "height": 16384
+        }
+        self.assertIsNotNone(b)
+        self.assertEqual(bounds_expected, b)
 
+    def test_no_bounds(self):
+        js = {
+            "scheme": "xyz"
+        }
 
-def test_tile_bounds():
-    b = latlon_to_tile(14, 47.22541, 8.27173)  # hitzkirch coordinates
-    assert b
-    assert b[0] == 8568
-    assert b[1] == 5747
-
-
-def test_tile_bounds_world():
-    tj = _get_loaded()
-    b = tj.bounds_tile(14)
-    b_min = b[0]
-    b_max = b[1]
-    print b
-    assert b
-    assert b_min == (-1, -1)
-    assert b_max == (16383, 16383)
-
-
-def test_center_tile():
-    json = {
-        "center": [8.27187, 47.22550, 14],
-        "scheme": "xyz"
-    }
-    tj = _get_loaded(json)
-    center = tj.center_tile()
-    print center
-    assert center == (8568, 5747)
-
-
-def test_center_tile_from_bounds():
-    json = {
-        "maxzoom": 14,
-        "bounds": [8.27187, 47.22550, 8.30261, 47.22183],
-        "scheme": "xyz"
-    }
-    tj = _get_loaded(json)
-    center = tj.center_tile()
-    assert center == (8568, 5747)
+        tj = _get_loaded(js)
+        b = tj.bounds_tile(14)
+        self.assertIsNotNone(b)
+        world_bounds_tile = get_tile_bounds(zoom=14, source_crs=4326, scheme="xyz", bounds=WORLD_BOUNDS)
+        self.assertEqual(world_bounds_tile, b)
 
 
 def _get_loaded(json=None):
