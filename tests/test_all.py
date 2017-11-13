@@ -28,7 +28,11 @@ def get_tests():
 
 # run all tests using unittest skipping nose or testplugin
 def run_all():
-    cov = coverage.Coverage(omit=['*/usr/*', '*global_map_tiles*', '/vector-tiles-reader/tests/*', '*__init__.py'])
+    cov = coverage.Coverage(omit=['*/usr/*',
+                                  '*global_map_tiles*',
+                                  '/vector-tiles-reader/tests/*',
+                                  '*__init__.py',
+                                  '/vector-tiles-reader/util/*'])
     cov.start()
     complete_suite = unittest.TestSuite(get_tests())
     print("")

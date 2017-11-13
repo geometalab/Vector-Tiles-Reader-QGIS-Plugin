@@ -22,28 +22,21 @@ class ServerSourceTests(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
-    def test_openmaptiles(self):
-        url = "https://free.tilehosting.com/data/v3.json?key=6irhAXGgsi8TrIDL0211"
-        src = ServerSource(url)
-        self.assertIsNotNone(src)
-        self.assertEqual(url, src.source())
-
-    def test_mapzen(self):
-        url = "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key=mapzen-7SNUCXx"
-        src = ServerSource(url)
-        self.assertIsNotNone(src)
-        self.assertEqual(url, src.source())
-
     def test_non_existing_url(self):
         with self.assertRaises(RuntimeError) as ctx:
             ServerSource("http://localhost/mytilejson.json")
         error = "HTTP HEAD failed: status None"
         self.assertTrue(error in ctx.exception)
 
+    @mock.patch("util.tile_source.TileJSON")
+    @mock.patch("util.tile_source.load_tiles_async", return_value=[((1, 2), 'data')])
     @mock.patch("util.tile_source.url_exists", return_value=(True, None))
-    def test_load(self, mock_url_exists):
+    def test_load(self, mock_url_exists, mock_load_tiles_async, mock_tile_json):
         src = ServerSource("https://localhost")
         mock_url_exists.assert_called_with("https://localhost")
+        tiles = src.load_tiles(14, [(1, 1)])
+        mock_load_tiles_async.assert_any_call()
+        self.assertEqual(1, len(tiles))
 
     # def test_get_bounds(self):
     #     src = _create('uster_zh.mbtiles', directory=_sample_dir())

@@ -17,7 +17,7 @@ from tile_helper import (VectorTile,
                          get_tile_bounds,
                          create_bounds,
                          WORLD_BOUNDS)
-from network_helper import url_exists, load_url_async
+from network_helper import url_exists, load_tiles_async
 from file_helper import is_sqlite_db
 
 _DEFAULT_CRS = "EPSG:3857"
@@ -177,52 +177,15 @@ class ServerSource(AbstractSource):
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
-        return self._load_urls_async(zoom_level, urls)
+        tile_coords_with_content = load_tiles_async(urls_with_col_and_row=urls,
+                                                    on_progress_changed=lambda p: self.progress_changed.emit(p),
+                                                    cancelling_func=lambda: self._cancelling)
+        tiles_with_data = []
+        for coord, data in tile_coords_with_content:
+            tile = VectorTile(self.scheme(), zoom_level=zoom_level, x=coord[0], y=coord[1])
+            tiles_with_data.append((tile, data))
 
-    def _load_urls_async(self, zoom_level, urls_with_col_and_row):
-        replies = [(load_url_async(url[0]), (url[1], url[2])) for url in urls_with_col_and_row]
-        total_nr_of_requests = len(replies)
-        all_finished = False
-        nr_finished_before = 0
-        finished_tiles = set()
-        nr_finished = 0
-        all_tiles = []
-        while not all_finished and not self._cancelling:
-            results = []
-            new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
-            nr_finished += len(new_finished)
-            for r in new_finished:
-                reply = r[0]
-                error = reply.error()
-                if error:
-                    info("Error during network request: {}", error)
-                else:
-                    content = reply.readAll().data()
-                    tile_coord = r[1]
-                    finished_tiles.add(tile_coord)
-                    results.append((content, tile_coord))
-                reply.deleteLater()
-            QApplication.processEvents()
-            all_finished = nr_finished == total_nr_of_requests
-            if nr_finished != nr_finished_before:
-                nr_finished_before = nr_finished
-                self.progress_changed.emit(nr_finished)
-                tiles_with_data = [self._create_vector_tile_from_respond(zoom_level, r) for r in results]
-                all_tiles.extend(tiles_with_data)
-        if not all_finished and self._cancelling:
-            unfinished_requests = [r for r in replies if not r[0].isFinished]
-            for r in unfinished_requests:
-                r.abort()
-        if self._cancelling:
-            all_tiles = []
-        return all_tiles
-
-    def _create_vector_tile_from_respond(self, zoom_level, r):
-        content = r[0]
-        col = r[1][0]
-        row = r[1][1]
-        tile = VectorTile(self.scheme(), zoom_level, col, row)
-        return tile, content
+        return tiles_with_data
 
 
 class MBTilesSource(AbstractSource):
