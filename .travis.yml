@@ -35,14 +35,6 @@ matrix:
         - cd $TRAVIS_BUILD_DIR
         - make linux
         - make osx
-      after_success:
-        - cd $TRAVIS_BUILD_DIR
-        #git -c user.name='travis' -c user.email='travis' commit -m init
-        # Make sure to make the output quiet, or else the API token will leak!
-        # This works because the API key can replace your password.
-        - git checkout develop
-        - git commit -m "native pbf2geojson update" ext-libs/pbf2geojson/*.so
-        - git push --dry-run -q https://mnboos:$GITHUB_TOKEN@github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin &2>/dev/null
 
 notifications:
     on_success: never # default: change
