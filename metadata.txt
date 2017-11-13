@@ -20,6 +20,7 @@ email=geometalab@gmail.com
 changelog=
     ---1.2.5---
     * Performance in native mode increased
+    * Loading stability improved
     ---1.2.4---
     * The user settings are persisted
     * Stability improvements

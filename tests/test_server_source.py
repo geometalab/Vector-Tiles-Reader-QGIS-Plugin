@@ -35,7 +35,6 @@ class ServerSourceTests(unittest.TestCase):
         src = ServerSource("https://localhost")
         mock_url_exists.assert_called_with("https://localhost")
         tiles = src.load_tiles(14, [(1, 1)])
-        mock_load_tiles_async.assert_any_call()
         self.assertEqual(1, len(tiles))
 
     # def test_get_bounds(self):
