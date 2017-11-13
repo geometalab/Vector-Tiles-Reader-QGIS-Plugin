@@ -18,17 +18,17 @@ endif
 
 
 windows32:
-	i686-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_i686.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	i686-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_windows_i686.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
 
 windows64:
-	x86_64-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	x86_64-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_windows_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
 
 windows: windows32 windows64
 
 linux:
-	$(CXX) -m64 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
-	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_i686.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) -m64 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_linux_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_linux_i686.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
 
 osx:
-	$(CXX) -m64 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_x86_64_osx.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
-	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_i686_osx.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) -m64 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_x86_64_osx.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_i686_osx.so ./ext-libs/pbf2geojson/pbf2geojson.cpp

@@ -24,11 +24,11 @@ def get_lib_for_current_platform():
         bitness_string = "i686"
     lib = None
     if sys.platform.startswith("linux"):
-        lib = "pbf2geojson_{}.so".format(bitness_string)
+        lib = "pbf2geojson_linux_{}.so".format(bitness_string)
     elif sys.platform.startswith("win32"):
-        lib = "pbf2geojson_{}.dll".format(bitness_string)
+        lib = "pbf2geojson_windows_{}.dll".format(bitness_string)
     elif sys.platform.startswith("darwin"):
-        pass
+        lib = "pbf2geojson_osx_{}.so".format(bitness_string)
     if lib:
         lib = os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "ext-libs", "pbf2geojson", lib)
     return lib
