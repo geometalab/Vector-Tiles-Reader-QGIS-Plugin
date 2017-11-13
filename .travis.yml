@@ -19,8 +19,8 @@ matrix:
 
     - language: cpp
       os:
-      - linux
-      - osx
+        - linux
+        - osx
       compiler:
         - gcc
         - clang
@@ -28,13 +28,22 @@ matrix:
         - sudo apt-get update -qq
         - sudo apt-get install gcc-multilib g++-multilib -y
       script:
-      - git clone https://github.com/mapbox/protozero.git ../protozero
-      - git clone https://github.com/mapbox/vtzero.git ../vtzero
-      - cd ../vtzero
-      - git submodule update --init
-      - cd $TRAVIS_BUILD_DIR
-      - make linux
-      - make osx
+        - git clone https://github.com/mapbox/protozero.git ../protozero
+        - git clone https://github.com/mapbox/vtzero.git ../vtzero
+        - cd ../vtzero
+        - git submodule update --init
+        - cd $TRAVIS_BUILD_DIR
+        - make linux
+        - make osx
+      after_success: |
+        if [ -n "$GITHUB_API_KEY" ]; then
+          cd "$TRAVIS_BUILD_DIR"
+          git status
+          #git -c user.name='travis' -c user.email='travis' commit -m init
+          # Make sure to make the output quiet, or else the API token will leak!
+          # This works because the API key can replace your password.
+          #git push --dry-run -q https://<me>:$GITHUB_API_KEY@github.com/<me>/<myrepo>-gh-pages gh-pages &2>/dev/null
+        fi
 
 notifications:
     on_success: never # default: change
