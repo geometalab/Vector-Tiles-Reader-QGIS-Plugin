@@ -508,9 +508,10 @@ class VtrPlugin(object):
         x_max = extent.xMaximum()
         y_min = extent.yMinimum()
         y_max = extent.yMaximum()
-        current_crs = self._get_qgis_crs()
         bounds = [x_min, y_min, x_max, y_max]
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=current_crs)
+        # the source_crs is 3857, even if the actual data is in another (21781 for example)
+        # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
         return tile_bounds
 
     @staticmethod
