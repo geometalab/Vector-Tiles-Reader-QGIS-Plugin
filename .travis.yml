@@ -14,7 +14,8 @@ matrix:
         - sleep 10
       script:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
-        - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && [[ ! -z $COVERALLS_REPO_TOKEN ]] && coveralls"
+      after_success:
+        - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
 
     - language: cpp
       os:

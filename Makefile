@@ -30,5 +30,5 @@ linux:
 	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_linux_i686.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
 
 osx:
-	$(CXX) -m64 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_x86_64_osx.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
-	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_i686_osx.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) -m64 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_i686.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
