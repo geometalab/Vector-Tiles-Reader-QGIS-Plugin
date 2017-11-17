@@ -14,12 +14,13 @@ matrix:
         - sleep 10
       script:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
+      after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
 
     - language: cpp
       os:
-      - linux
-      - osx
+        - linux
+        - osx
       compiler:
         - gcc
         - clang
@@ -27,13 +28,13 @@ matrix:
         - sudo apt-get update -qq
         - sudo apt-get install gcc-multilib g++-multilib -y
       script:
-      - git clone https://github.com/mapbox/protozero.git ../protozero
-      - git clone https://github.com/mapbox/vtzero.git ../vtzero
-      - cd ../vtzero
-      - git submodule update --init
-      - cd $TRAVIS_BUILD_DIR
-      - make linux
-      - make osx
+        - git clone https://github.com/mapbox/protozero.git ../protozero
+        - git clone https://github.com/mapbox/vtzero.git ../vtzero
+        - cd ../vtzero
+        - git submodule update --init
+        - cd $TRAVIS_BUILD_DIR
+        - make linux
+        - make osx
 
 notifications:
     on_success: never # default: change

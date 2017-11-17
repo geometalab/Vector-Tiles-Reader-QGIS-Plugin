@@ -449,9 +449,19 @@ class VtrPlugin(object):
         lat = pos[1]
 
         current_crs = self._get_qgis_crs()
-        tile = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=current_crs)
+        x, y = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=current_crs)
+        mapbox_x, mapbox_y = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=3857)
 
-        msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
+        mapbox_addition = ""
+        if current_crs != 3857:
+            mapbox_addition = "(Mapbox-ZXY: {zoom}, {mapbox_x}, {mapbox_y})".format(zoom=zoom,
+                                                                                    mapbox_x=mapbox_x,
+                                                                                    mapbox_y=mapbox_y)
+
+        msg = "ZXY: {zoom}, {x}, {y} {mapbox}".format(zoom=zoom,
+                                                      x=x,
+                                                      y=y,
+                                                      mapbox=mapbox_addition)
         self.iface.mainWindow().statusBar().showMessage(msg)
 
     @staticmethod
@@ -508,9 +518,10 @@ class VtrPlugin(object):
         x_max = extent.xMaximum()
         y_min = extent.yMinimum()
         y_max = extent.yMaximum()
-        current_crs = self._get_qgis_crs()
         bounds = [x_min, y_min, x_max, y_max]
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=current_crs)
+        # the source_crs is 3857, even if the actual data is in another (21781 for example)
+        # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
         return tile_bounds
 
     @staticmethod
@@ -681,7 +692,7 @@ class VtrPlugin(object):
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface, connectionn=connection)
+            reader = VtReader(self.iface, connection=connection)
             reader.progress_changed.connect(self.reader_progress_changed)
             reader.max_progress_changed.connect(self.reader_max_progress_changed)
             reader.show_progress_changed.connect(self.reader_show_progress_changed)

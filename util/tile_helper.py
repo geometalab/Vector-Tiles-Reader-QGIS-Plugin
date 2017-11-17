@@ -109,13 +109,14 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     lng = clamp(lng, WORLD_BOUNDS[0], WORLD_BOUNDS[2])
     lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
 
-    gm = GlobalMercator()
+    gm = GlobalMercator(tileSize=512)
     mx, my = gm.LatLonToMeters(lat=lat, lon=lng)
     col, row = gm.MetersToTile(mx=mx, my=my, zoom=zoom)
     col = clamp(col, low=0)
     row = clamp(row, low=0)
     if scheme != "tms":
-        row = change_scheme(zoom, row)
+        row = clamp(change_scheme(zoom, row), low=0)
+
     return int(col), int(row)
 
 
@@ -147,7 +148,7 @@ def tile_to_latlon(zoom, x, y, scheme="tms"):
     :return: 
     """
 
-    gm = GlobalMercator()
+    gm = GlobalMercator(tileSize=512)
     if scheme != "tms":
         y = change_scheme(zoom, y)
     return gm.TileBounds(x, y, zoom)
