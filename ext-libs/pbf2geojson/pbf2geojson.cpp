@@ -403,7 +403,7 @@ extern "C" {
 	}
 
 	void freeme(char *ptr) {
-		printf("freeing address: %p\n", ptr);
+		//printf("freeing address: %p\n", ptr);
 		free(ptr);
 	}
 }

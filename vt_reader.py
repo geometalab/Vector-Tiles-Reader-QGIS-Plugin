@@ -84,19 +84,19 @@ class VtReader(QObject):
 
     _all_tiles = []
 
-    def __init__(self, iface, connectionn):
+    def __init__(self, iface, connection):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
-        :param connectionn:
+        :param connection:
         """
         QObject.__init__(self)
-        if not connectionn:
+        if not connection:
             raise RuntimeError("The datasource is required")
 
-        self._connection = connectionn
-        self._source = self._create_source(connectionn)
-        self._external_source = self._create_source(connectionn)
+        self._connection = connection
+        self._source = self._create_source(connection)
+        self._external_source = self._create_source(connection)
 
         assure_temp_dirs_exist()
         self.iface = iface

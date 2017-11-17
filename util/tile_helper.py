@@ -115,7 +115,8 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     col = clamp(col, low=0)
     row = clamp(row, low=0)
     if scheme != "tms":
-        row = change_scheme(zoom, row)
+        row = clamp(change_scheme(zoom, row), low=0)
+
     return int(col), int(row)
 
 

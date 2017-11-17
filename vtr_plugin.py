@@ -692,7 +692,7 @@ class VtrPlugin(object):
         from vt_reader import VtReader
         reader = None
         try:
-            reader = VtReader(self.iface, connectionn=connection)
+            reader = VtReader(self.iface, connection=connection)
             reader.progress_changed.connect(self.reader_progress_changed)
             reader.max_progress_changed.connect(self.reader_max_progress_changed)
             reader.show_progress_changed.connect(self.reader_show_progress_changed)
