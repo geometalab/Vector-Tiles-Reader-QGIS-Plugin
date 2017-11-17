@@ -88,7 +88,7 @@ class VtReader(QObject):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
-        :param path_or_url: 
+        :param connectionn:
         """
         QObject.__init__(self)
         if not connectionn:
@@ -497,11 +497,11 @@ class VtReader(QObject):
         # self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
+        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
         own_layers = list(map(lambda (n, l): l, vt_qgis_name_layer_tuples))
         for l in own_layers:
             name = l.name()
-            geo_type = l.customProperty("geo_type")
+            geo_type = l.customProperty("VectorTilesReader/geo_type")
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
 
@@ -623,8 +623,8 @@ class VtReader(QObject):
                     style_path = os.path.join(get_plugin_directory(), "styles/{}".format(style_name))
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
-                        layer.setCustomProperty("layerStyle", style_path)
-                        if layer.customProperty("layerStyle") == style_path:
+                        layer.setCustomProperty("VectorTilesReader/layerStyle", style_path)
+                        if layer.customProperty("VectorTilesReader/layerStyle") == style_path:
                             debug("Style successfully applied: {}", style_name)
                             break
         except:
@@ -639,8 +639,8 @@ class VtReader(QObject):
         source_url = self._source.source()
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
-        layer.setCustomProperty("vector_tile_source", source_url)
-        layer.setCustomProperty("zoom_level", zoom_level)
+        layer.setCustomProperty("VectorTilesReader/vector_tile_source", source_url)
+        layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
         layer.setShortName(layer_name)
         layer.setDataUrl(source_url)
 
