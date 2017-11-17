@@ -41,8 +41,17 @@ matrix:
         - cd ../vtzero
         - git submodule update --init
         - cd $TRAVIS_BUILD_DIR
+        - cd /ext-libs/pbf2geojson && rm *.so && rm *.dll && cd ../..
         - make linux
         - make osx
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        target_branch: pbf2geojson_travis_auto_build
+        local_dir: $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
+        on:
+          branch: develop
 
 notifications:
     on_success: never # default: change
