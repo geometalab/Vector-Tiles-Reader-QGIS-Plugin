@@ -449,9 +449,19 @@ class VtrPlugin(object):
         lat = pos[1]
 
         current_crs = self._get_qgis_crs()
-        tile = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=current_crs)
+        x, y = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=current_crs)
+        mapbox_x, mapbox_y = latlon_to_tile(zoom=zoom, lat=lat, lng=lon, source_crs=3857)
 
-        msg = "ZXY: {}, {}, {}".format(zoom, tile[0], tile[1])
+        mapbox_addition = ""
+        if current_crs != 3857:
+            mapbox_addition = "(Mapbox-ZXY: {zoom}, {mapbox_x}, {mapbox_y})".format(zoom=zoom,
+                                                                                    mapbox_x=mapbox_x,
+                                                                                    mapbox_y=mapbox_y)
+
+        msg = "ZXY: {zoom}, {x}, {y} {mapbox}".format(zoom=zoom,
+                                                      x=x,
+                                                      y=y,
+                                                      mapbox=mapbox_addition)
         self.iface.mainWindow().statusBar().showMessage(msg)
 
     @staticmethod
