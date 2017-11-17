@@ -614,7 +614,8 @@ class VtReader(QObject):
             name = layer.name().lower()
             styles = [
                 "{}.{}".format(name, geo_type.lower()),
-                name
+                name,
+                "transparent.{}".format(geo_type.lower())
             ]
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
