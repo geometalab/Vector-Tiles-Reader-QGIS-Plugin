@@ -40,9 +40,7 @@ matrix:
         - cd ../vtzero
         - git submodule update --init
         - cd $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
-        - sudo rm *.so
-        - sudo rm *.dll
-        - cd ../..
+        - sudo rm *.so && sudo rm *.dll && cd ../..
         - make linux
         - make osx
       deploy:
