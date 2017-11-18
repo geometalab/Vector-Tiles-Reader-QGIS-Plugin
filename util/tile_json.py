@@ -3,7 +3,10 @@ from builtins import str
 from builtins import object
 from past.utils import old_div
 import sys
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import os
 import ast
 from log_helper import critical, debug, info

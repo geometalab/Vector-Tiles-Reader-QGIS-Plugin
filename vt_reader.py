@@ -9,7 +9,10 @@ from builtins import str
 from itertools import *
 import sys
 import os
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import uuid
 import traceback
 
@@ -20,7 +23,6 @@ from PyQt4.QtGui import QApplication
 from util.log_helper import info, critical, debug, remove_key
 from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
 from util.feature_helper import (FeatureMerger,
-                                 geo_types_by_name,
                                  geo_types,
                                  is_multi,
                                  map_coordinates_recursive,
@@ -29,7 +31,8 @@ from util.feature_helper import (FeatureMerger,
 from util.file_helper import (get_cached_tile_file_name,
                               get_styles,
                               assure_temp_dirs_exist,
-                              get_cached_tile, is_gzipped,
+                              get_cached_tile,
+                              is_gzipped,
                               get_geojson_file_name,
                               get_plugin_directory,
                               get_icons_directory,
@@ -62,6 +65,7 @@ class VtReader(QObject):
     cancelled = pyqtSignal(name='cancelled')
     add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
 
+
     _loading_options = {
             'zoom_level': None,
             'layer_filter': None,
@@ -73,6 +77,7 @@ class VtReader(QObject):
             'bounds': None
         }
 
+    _nr_tiles_to_process_serial = 30
     _layers_to_dissolve = []
     _zoom_level_delimiter = "*"
     _DEFAULT_EXTENT = 4096
@@ -405,7 +410,7 @@ class VtReader(QObject):
 
         tile_data_tuples = []
 
-        if len(tiles_with_encoded_data) < 30:
+        if len(tiles_with_encoded_data) <= self._nr_tiles_to_process_serial:
             for t in tiles_with_encoded_data:
                 tile, decoded_data = decoder_func(t)
                 if decoded_data:
@@ -501,7 +506,12 @@ class VtReader(QObject):
             name = l.name()
             geo_type = l.customProperty("VectorTilesReader/geo_type")
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
-                self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
+                if not bool(l.customProperty("VectorTilesReader/is_empty")):
+                    info("Clearing layer: {}", name)
+                    l.setCustomProperty("VectorTilesReader/is_empty", True)
+                    self._update_layer_source(l.source(), self._get_empty_feature_collection(0, l.name()))
+            else:
+                l.setCustomProperty("VectorTilesReader/is_empty", False)
 
         self._update_progress(progress=0,
                               max_progress=len(self.feature_collections_by_layer_name_and_geotype),
@@ -533,7 +543,10 @@ class VtReader(QObject):
 
             if not layer:
                 self._update_layer_source(file_path, feature_collection)
-                layer = self._create_named_layer(file_path, layer_name, zoom_level)
+                layer = self._create_named_layer(json_src=file_path,
+                                                 layer_name=layer_name,
+                                                 geo_type=geo_type,
+                                                 zoom_level=zoom_level)
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                     FeatureMerger().merge_features(layer)
                 if clip_tiles:
@@ -544,14 +557,16 @@ class VtReader(QObject):
         self._update_progress(msg="Refresh layers...")
         QgsMapLayerRegistry.instance().reloadAllLayers()
 
-        if len(new_layers) > 0:
+        if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
             only_layers = list([layer_name_tuple[2] for layer_name_tuple in new_layers])
             QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in new_layers:
+            if self.cancel_requested:
+                break
             self.add_layer_to_group.emit(layer)
 
-        if apply_styles:
+        if apply_styles and not self.cancel_requested:
             count = 0
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
             for name, geo_type, layer in new_layers:
@@ -615,20 +630,19 @@ class VtReader(QObject):
                 name,
                 "transparent.{}".format(geo_type.lower())
             ]
+            plugin_dir = get_plugin_directory()
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
                 if style_name in VtReader._styles:
-                    style_path = os.path.join(get_plugin_directory(), "styles/{}".format(style_name))
+                    style_path = os.path.join(plugin_dir, "styles/{}".format(style_name))
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
                         layer.setCustomProperty("VectorTilesReader/layerStyle", style_path)
-                        if layer.customProperty("VectorTilesReader/layerStyle") == style_path:
-                            debug("Style successfully applied: {}", style_name)
-                            break
+                        break
         except:
             critical("Loading style failed: {}", sys.exc_info())
 
-    def _create_named_layer(self, json_src, layer_name, zoom_level):
+    def _create_named_layer(self, json_src, layer_name, geo_type, zoom_level):
         """
          * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
@@ -639,6 +653,7 @@ class VtReader(QObject):
 
         layer.setCustomProperty("VectorTilesReader/vector_tile_source", source_url)
         layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
+        layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
         layer.setDataUrl(source_url)
 

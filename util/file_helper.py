@@ -11,6 +11,8 @@ from log_helper import info, critical, warn, debug
 geojson_folder = "geojson"
 max_cache_age_minutes = 1440  # 24 hours
 
+_temp_dir = tempfile.gettempdir()
+
 
 def get_plugin_directory():
     path = os.path.join(os.path.dirname(__file__), "..")
@@ -92,15 +94,10 @@ def get_sample_data_directory():
     return os.path.join(get_plugin_directory(), "sample_data")
 
 
-def get_home_directory():
-    return os.path.expanduser("~")
-
-
 def get_temp_dir(path_extension=None):
-    temp_dir = os.path.join(tempfile.gettempdir(), "vector_tiles_reader")
+    temp_dir = os.path.join(_temp_dir, "vector_tiles_reader")
     if path_extension:
         temp_dir = os.path.join(temp_dir, path_extension)
-
     return temp_dir
 
 

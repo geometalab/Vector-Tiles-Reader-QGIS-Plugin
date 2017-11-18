@@ -1,6 +1,9 @@
 import mapbox_vector_tile
 from ctypes import *
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import sys
 import os
 

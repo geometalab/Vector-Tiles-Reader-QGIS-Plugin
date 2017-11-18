@@ -3,7 +3,10 @@ standard_library.install_aliases()
 from builtins import str
 import sqlite3
 import urllib.parse
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import os
 import sys
 import traceback
