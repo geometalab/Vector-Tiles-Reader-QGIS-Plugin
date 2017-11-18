@@ -35,7 +35,7 @@ class IfaceTests(unittest.TestCase):
     @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.can_load_lib", return_value=False)
     @mock.patch.object(VtReader, "_create_qgis_layers")
-    def test_load_from_vtreader_python_processing(self, mock_qgis, mock_can_load_lib, mock_info):
+    def test_load_from_vtreader_0_python_processing(self, mock_qgis, mock_can_load_lib, mock_info):
         global iface
         QgsMapLayerRegistry.instance().removeAllMapLayers()
         clear_cache()
@@ -56,7 +56,7 @@ class IfaceTests(unittest.TestCase):
 
     @mock.patch("vt_reader.info")
     @mock.patch.object(VtReader, "_create_qgis_layers")
-    def test_load_from_vtreader_multiprocessed(self, mock_qgis_layers, mock_info):
+    def test_load_from_vtreader_1_multiprocessed(self, mock_qgis_layers, mock_info):
         global iface
         QgsMapLayerRegistry.instance().removeAllMapLayers()
         clear_cache()
@@ -77,7 +77,7 @@ class IfaceTests(unittest.TestCase):
         mock_info.assert_any_call("Import complete")
 
     @mock.patch("vt_reader.info")
-    def test_load_from_vtreader_1(self, mock_info):
+    def test_load_from_vtreader_2(self, mock_info):
         global iface
         clear_cache()
         QgsMapLayerRegistry.instance().removeAllMapLayers()
@@ -98,8 +98,7 @@ class IfaceTests(unittest.TestCase):
 
     @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.critical")
-    @mock.patch.object(VtReader, "_create_qgis_layers")
-    def test_load_from_vtreader_2(self, mock_qgis, mock_critical, mock_info):
+    def test_load_from_vtreader_3_with_cache(self, mock_critical, mock_info):
         global iface
         conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
         gdal.PushErrorHandler('CPLQuietErrorHandler')
