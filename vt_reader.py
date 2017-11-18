@@ -380,10 +380,8 @@ class VtReader(QObject):
         _worker_thread.start()
 
     @staticmethod
-    def _get_pool(cores=None):
+    def _get_pool():
         nr_processors = 4
-        if cores:
-            nr_processors = cores
         try:
             nr_processors = mp.cpu_count()
         except NotImplementedError:
@@ -586,21 +584,6 @@ class VtReader(QObject):
         """
         with open(layer_source, "w") as f:
             f.write(json.dumps(feature_collection))
-
-    @staticmethod
-    def _merge_feature_collections(current_feature_collection, feature_collections_by_tile_coord):
-        """
-         * Merges the features of multiple tiles into the current_feature_collection if not already present.
-        :param current_feature_collection: 
-        :param feature_collections_by_tile_coord: 
-        :return: 
-        """
-
-        for tile_coord in feature_collections_by_tile_coord:
-            if tile_coord not in current_feature_collection["tiles"]:
-                feature_collection = feature_collections_by_tile_coord[tile_coord]
-                current_feature_collection["tiles"].extend(feature_collection["tiles"])
-                current_feature_collection["features"].extend(feature_collection["features"])
 
     @staticmethod
     def _get_layer_by_source(all_layers, layer_name, layer_source_file):
