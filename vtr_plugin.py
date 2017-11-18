@@ -18,6 +18,7 @@ import re
 import site
 import sys
 import traceback
+import ast
 
 from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
 from PyQt4.QtGui import (
@@ -130,7 +131,6 @@ class VtrPlugin(object):
         self._loaded_scale = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-
         self._debouncer = SignalDebouncer(timeout=500,
                                           signals=[
                                               # self.iface.mapCanvas().scaleChanged,  # doesn't seem to be required,
@@ -144,6 +144,40 @@ class VtrPlugin(object):
         self._extent_to_load = None
         self.message_bar_item = None
         self.progress_bar = None
+
+    def initGui(self):
+        self.popupMenu = QMenu(self.iface.mainWindow())
+        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
+                                                           self._show_connections_dialog)
+        self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
+                                                 self._load_features_overlapping_tile_extent, False)
+        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
+        self.about_action = self._create_action("About", "info.svg", self.show_about)
+        self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
+        self.popupMenu.addAction(self.open_connections_action)
+        self.popupMenu.addAction(self.reload_action)
+        # self.popupMenu.addAction(self.export_action)
+        self.popupMenu.addAction(self.clear_cache_action)
+        self.popupMenu.addAction(self.about_action)
+        self.toolButton = QToolButton()
+        self.toolButton.setMenu(self.popupMenu)
+        self.toolButton.setDefaultAction(self.open_connections_action)
+        self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
+        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
+        # self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
+        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
+        info("Vector Tile Reader Plugin loaded...")
+        self._connect_to_first_source()
+
+    def _connect_to_first_source(self):
+        proj = QgsProject.instance()
+        conn = proj.readEntry("VectorTilesReader", "current_connection", None)[0]
+        if conn:
+            conn = ast.literal_eval(conn)
+            self.connections_dialog.connect(conn)
 
     def _on_browse_dir_change(self, diretory_path):
         self.settings.setValue("last_directory", diretory_path)
@@ -185,32 +219,7 @@ class VtrPlugin(object):
         if self._current_reader:
             self._current_reader.shutdown()
             self._current_reader = None
-
-    def initGui(self):
-        self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
-                                                           self._show_connections_dialog)
-        self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
-                                                 self._load_features_overlapping_tile_extent, False)
-        self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
-        self.about_action = self._create_action("About", "info.svg", self.show_about)
-        self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
-        self.popupMenu.addAction(self.open_connections_action)
-        self.popupMenu.addAction(self.reload_action)
-        # self.popupMenu.addAction(self.export_action)
-        self.popupMenu.addAction(self.clear_cache_action)
-        self.popupMenu.addAction(self.about_action)
-        self.toolButton = QToolButton()
-        self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(self.open_connections_action)
-        self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
-        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
-        # self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
-        self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
-        info("Vector Tile Reader Plugin loaded...")
+        self._connect_to_first_source()
 
     def _load_features_overlapping_tile_extent(self):
         self._reload_tiles(ignore_limit=True)
@@ -334,6 +343,9 @@ class VtrPlugin(object):
 
     @pyqtSlot(dict)
     def _on_connect(self, connection):
+        proj = QgsProject.instance()
+        proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
+        info("connect")
         self._currrent_connection_name = connection["name"]
         self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
         if self._current_reader and self._current_reader.connection() != connection:

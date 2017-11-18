@@ -490,6 +490,9 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         _update_size(self)
         self._current_connection = None
 
+    def connect(self, connection):
+        self._handle_connect(connection)
+
     @pyqtSlot(int)
     def _handle_tab_change(self, current_index):
         self.settings.setValue(self._CONNECTIONS_TAB, current_index)
