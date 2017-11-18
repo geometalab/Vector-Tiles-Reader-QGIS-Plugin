@@ -120,7 +120,6 @@ class VtrPlugin(object):
         self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
         self.progress_dialog = None
         self._current_reader = None
-        self._current_writer = None
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
@@ -156,7 +155,6 @@ class VtrPlugin(object):
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
         self.popupMenu.addAction(self.open_connections_action)
         self.popupMenu.addAction(self.reload_action)
-        # self.popupMenu.addAction(self.export_action)
         self.popupMenu.addAction(self.clear_cache_action)
         self.popupMenu.addAction(self.about_action)
         self.toolButton = QToolButton()
@@ -166,7 +164,6 @@ class VtrPlugin(object):
         self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
-        # self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.export_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
         info("Vector Tile Reader Plugin loaded...")
@@ -178,6 +175,7 @@ class VtrPlugin(object):
         if conn:
             conn = ast.literal_eval(conn)
             self.connections_dialog.connect(conn)
+            self._debouncer.start()
 
     def _on_browse_dir_change(self, diretory_path):
         self.settings.setValue("last_directory", diretory_path)
@@ -213,7 +211,6 @@ class VtrPlugin(object):
 
     def _on_project_change(self):
         self._debouncer.stop()
-        self._cancel_export()
         self._cancel_load()
         self.connections_dialog.set_layers([])
         if self._current_reader:
@@ -281,7 +278,6 @@ class VtrPlugin(object):
 
     @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
-
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()
@@ -318,7 +314,6 @@ class VtrPlugin(object):
                 tile_limit = self.connections_dialog.options.tile_number_limit()
                 extent_results_equal = False
                 if tile_limit and self._loaded_extent:
-                    info("compare equality: {}, {}", self._loaded_extent, new_extent)
                     extent_results_equal = center_tiles_equal(tile_limit, self._loaded_extent, new_extent)
 
                 if not extent_results_equal:
@@ -345,7 +340,6 @@ class VtrPlugin(object):
     def _on_connect(self, connection):
         proj = QgsProject.instance()
         proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
-        info("connect")
         self._currrent_connection_name = connection["name"]
         self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
         if self._current_reader and self._current_reader.connection() != connection:
@@ -612,10 +606,6 @@ class VtrPlugin(object):
     def _cancel_load(self):
         if self._current_reader:
             self._current_reader.cancel()
-
-    def _cancel_export(self):
-        if self._current_writer:
-            self._current_writer.cancel()
 
     def _create_action(self, title, icon, callback, is_enabled=True):
         new_action = QAction(QIcon(':/plugins/vector_tiles_reader/{}'.format(icon)), title, self.iface.mainWindow())
