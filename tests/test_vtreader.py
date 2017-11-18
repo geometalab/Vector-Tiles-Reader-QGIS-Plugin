@@ -33,7 +33,7 @@ class IfaceTests(unittest.TestCase):
         self.assertIsNotNone(iface)
 
     @mock.patch("vt_reader.info")
-    def test_load_from_vtreader(self, mock_info):
+    def test_load_from_vtreader_1(self, mock_info):
         global iface
         clear_cache()
         gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -42,11 +42,33 @@ class IfaceTests(unittest.TestCase):
         conn["path"] = os.path.join(os.path.dirname(__file__), '..', 'sample_data', 'uster_zh.mbtiles')
         reader = VtReader(iface=iface, connection=conn)
         bounds = {'y_min': 10644, 'y_max': 10645, 'zoom': 14, 'height': 2, 'width': 3, 'x_max': 8589, 'x_min': 8587}
-        reader.set_options(max_tiles=5)
+        reader.set_options(max_tiles=1)
         reader._loading_options["zoom_level"] = 14
         reader._loading_options["bounds"] = bounds
         reader._load_tiles()
+        print mock_info.call_args_list
         mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
+        mock_info.assert_any_call("Import complete")
+
+    @mock.patch("vt_reader.info")
+    @mock.patch("vt_reader.critical")
+    def test_load_from_vtreader_2(self, mock_critical, mock_info):
+        global iface
+        conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        conn["name"] = "Unittest_Connection"
+        conn["path"] = os.path.join(os.path.dirname(__file__), '..', 'sample_data', 'uster_zh.mbtiles')
+        reader = VtReader(iface=iface, connection=conn)
+        bounds = {'y_min': 10644, 'y_max': 10645, 'zoom': 14, 'height': 2, 'width': 3, 'x_max': 8589, 'x_min': 8587}
+        reader.set_options(max_tiles=1)
+        reader._loading_options["zoom_level"] = 14
+        reader._loading_options["bounds"] = bounds
+        reader._load_tiles()
+        print mock_info.call_args_list
+        print mock_critical.call_args_list
+        mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("{} tiles in cache. Max. {} will be loaded additionally.", 1, 0)
         mock_info.assert_any_call("Import complete")
 
 
