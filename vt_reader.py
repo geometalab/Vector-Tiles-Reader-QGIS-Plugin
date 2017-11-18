@@ -275,9 +275,7 @@ class VtReader(QObject):
             remaining_nr_of_tiles = len(tiles_to_load)
             if max_tiles:
                 if len(cached_tiles) + len(tiles_to_load) >= max_tiles:
-                    remaining_nr_of_tiles = max_tiles - len(cached_tiles)
-                    if remaining_nr_of_tiles < 0:
-                        remaining_nr_of_tiles = 0
+                    remaining_nr_of_tiles = clamp(max_tiles - len(cached_tiles), low=0)
             if len(cached_tiles) > 0:
                 info("{} tiles in cache. Max. {} will be loaded additionally.", len(cached_tiles), remaining_nr_of_tiles)
                 if not self.cancel_requested:
