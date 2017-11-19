@@ -3,9 +3,12 @@ import glob
 import uuid
 import tempfile
 import sys
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle as pickle
 import time
-from log_helper import info, critical, warn, debug
+from .log_helper import info, critical, warn, debug
 
 
 geojson_folder = "geojson"

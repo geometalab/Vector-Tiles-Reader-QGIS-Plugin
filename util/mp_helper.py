@@ -7,7 +7,7 @@ except ImportError:
 import sys
 import os
 
-from log_helper import info, warn
+from .log_helper import info, warn
 
 
 def decode_tile_python(tile_data_tuple):
@@ -68,6 +68,7 @@ def decode_tile_native(tile_data_tuple):
             encoded_data = bytearray(tile_data_tuple[1])
 
             hex_string = "".join("%02x" % b for b in encoded_data)
+            hex_bytes = hex_string.encode(encoding='UTF-8')
 
             tile_span_x = tile.extent[2] - tile.extent[0]
             tile_span_y = tile.extent[1] - tile.extent[3]
@@ -75,7 +76,7 @@ def decode_tile_native(tile_data_tuple):
             tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
             lib = load_lib()
-            ptr = lib.decodeMvtToJson(tile_x, tile_y, tile_span_x, tile_span_y, hex_string)
+            ptr = lib.decodeMvtToJson(tile_x, tile_y, tile_span_x, tile_span_y, hex_bytes)
             decoded_data = cast(ptr, c_char_p).value
             lib.freeme(ptr)
 

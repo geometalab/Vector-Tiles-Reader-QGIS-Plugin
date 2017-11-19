@@ -1,17 +1,12 @@
 from builtins import str
 from builtins import object
-from qgis.core import (QgsMapLayerRegistry,
-                       QgsField,
-                       QgsVectorLayer,
-                       QgsFeatureRequest,
-                       QgsSpatialIndex,
-                       QgsGeometry,
-                       QgsRectangle)
-from PyQt4.QtCore import *
-from log_helper import info, debug
+
+from .vtr_2to3 import *
+
 import uuid
 import numbers
-from tile_helper import tile_to_latlon
+from .log_helper import info, debug
+from .tile_helper import tile_to_latlon
 
 
 def clip_features(layer, scheme):

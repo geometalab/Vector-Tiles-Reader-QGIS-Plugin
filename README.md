@@ -38,7 +38,7 @@ Acknowledgments:
 ```
 docker-compose build
 docker-compose run -d --name qgis2 qgis2
-docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
+docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
 ```
 
 
