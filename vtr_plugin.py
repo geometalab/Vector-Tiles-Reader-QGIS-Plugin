@@ -494,7 +494,7 @@ class VtrPlugin():
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
     def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
-        extent = self.iface.mapCanvas().extent()
+        extent = self.iface.mapCanvas().mapSettings().visibleExtent()
         x_min = extent.xMinimum()
         x_max = extent.xMaximum()
         y_min = extent.yMinimum()
