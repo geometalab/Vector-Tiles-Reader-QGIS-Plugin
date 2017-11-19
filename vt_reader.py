@@ -500,9 +500,11 @@ class VtReader(QObject):
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
         vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
         own_layers = list(map(lambda (n, l): l, vt_qgis_name_layer_tuples))
+        info("own layers: {}", own_layers)
         for l in own_layers:
             name = l.name()
             geo_type = l.customProperty("VectorTilesReader/geo_type")
+            info("layer: {}, {}", geo_type, name)
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 if not bool(l.customProperty("VectorTilesReader/is_empty")):
                     info("Clearing layer: {}", name)
@@ -531,7 +533,10 @@ class VtReader(QObject):
             if os.path.isfile(file_path):
                 # file exists already. add the features of the collection to the existing collection
                 # get the layer from qgis and update its source
-                layer = self._get_layer_by_source(own_layers, layer_name, file_path)
+                for l in own_layers:
+                    if os.path.abspath(file_path).lower() == os.path.abspath(l.source()).lower():
+                        layer = l
+                        break
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
                     if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
@@ -584,19 +589,6 @@ class VtReader(QObject):
         """
         with open(layer_source, "w") as f:
             f.write(json.dumps(feature_collection))
-
-    @staticmethod
-    def _get_layer_by_source(all_layers, layer_name, layer_source_file):
-        """
-         * Returns the layer from QGIS whose name and layer_source matches the specified parameters
-        :param layer_name: 
-        :param layer_source_file: 
-        :return: 
-        """
-        layers = [l for l in all_layers if l.name() == layer_name and l.source() == layer_source_file]
-        if len(layers) > 0:
-            return layers[0]
-        return None
 
     @staticmethod
     def _apply_named_style(layer, geo_type):
