@@ -27,6 +27,5 @@ def run_all():
     sys.path.append("../vector-tiles-reader/util")
     sys.path.append("../vector-tiles-reader")
     sys.path.append("../vector-tiles-reader/ext-libs")
-    print "hello world"
     from .tests import test_all
     test_all.run_all()
