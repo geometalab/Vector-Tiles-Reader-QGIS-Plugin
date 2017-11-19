@@ -439,7 +439,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
-    on_add = pyqtSignal(dict, map)
+    on_add = pyqtSignal(dict, dict)
     on_zoom_change = pyqtSignal()
     on_directory_change = pyqtSignal("QString")
 
@@ -571,7 +571,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
-        selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
+        selected_layers = dict(map(lambda i: self.model.item(i.row()).text(), indexes))
         self.on_add.emit(self._current_connection, selected_layers)
 
     def show(self):
