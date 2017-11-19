@@ -372,13 +372,15 @@ class VtReader(QObject):
             all available layers will be loaded
         :return:
         """
+        if layer_filter:
+            layer_filter = list(layer_filter)
         self._loading_options = {
             'load_mask_layer': load_mask_layer,
             'merge_tiles': merge_tiles,
             'clip_tiles': clip_tiles,
             'apply_styles': apply_styles,
             'max_tiles': max_tiles,
-            'layer_filter': list(layer_filter)
+            'layer_filter': layer_filter
         }
 
     def load_tiles_async(self, zoom_level, bounds):
