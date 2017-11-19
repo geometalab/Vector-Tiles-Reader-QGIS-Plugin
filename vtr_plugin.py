@@ -257,8 +257,6 @@ class VtrPlugin():
         self._current_layer_filter = selected_layers
 
     def _handle_map_scale_or_extents_changed(self):
-        return
-
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()

@@ -38,8 +38,6 @@ def get_lib_for_current_platform():
 
 
 def can_load_lib():
-    # todo:: remove after testing
-    return False
     return load_lib() is not None
 
 
@@ -49,7 +47,7 @@ def load_lib():
     if path and os.path.isfile(path):
         try:
             lib = cdll.LoadLibrary(path)
-            lib.decodeMvtToJson.argtypes = [c_int, c_int, c_int, c_int, c_char_p]
+            lib.decodeMvtToJson.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
             lib.decodeMvtToJson.restype = c_void_p
             lib.freeme.argtypes = [c_void_p]
             lib.freeme.restype = None
@@ -59,63 +57,34 @@ def load_lib():
         warn("No prebuilt binary found for: {}, 64bit={}", sys.platform, sys.maxsize > 2**32)
     return lib
 
+
 def decode_tile_native(tile_data_tuple):
     tile = tile_data_tuple[0]
     decoded_data = None
     if not tile.decoded_data:
+        try:
+            # with open(r"c:\temp\uster.pbf", 'wb') as f:
+            #     f.write(tile_data_tuple[1])
+            encoded_data = bytearray(tile_data_tuple[1])
 
-        # with open(r"c:\temp\uster.pbf", 'wb') as f:
-        #     f.write(tile_data_tuple[1])
-        encoded_data = bytearray(tile_data_tuple[1])
+            hex_string = "".join("%02x" % b for b in encoded_data)
+            hex_bytes = hex_string.encode(encoding='UTF-8')
 
-        hex_string = "".join("%02x" % b for b in encoded_data)
-        hex_bytes = bytes(hex_string)
-        hex_bytes.append('\0')
+            tile_span_x = tile.extent[2] - tile.extent[0]
+            tile_span_y = tile.extent[1] - tile.extent[3]
+            tile_x = tile.extent[0]
+            tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
-        # todo: fix native decoding -> ctypes usage differs in python3
-        tile_span_x = tile.extent[2] - tile.extent[0]
-        tile_span_y = tile.extent[1] - tile.extent[3]
-        tile_x = tile.extent[0]
-        tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
+            lib = load_lib()
+            ptr = lib.decodeMvtToJson(tile_x, tile_y, tile_span_x, tile_span_y, hex_bytes)
+            decoded_data = cast(ptr, c_char_p).value
+            lib.freeme(ptr)
 
-        lib = load_lib()
-        ptr = lib.decodeMvtToJson(int(tile_x), int(tile_y), int(tile_span_x), int(tile_span_y), hex_bytes)
-        decoded_data = cast(ptr, c_char_p).value
-        lib.freeme(ptr)
-
-        # with open(r"c:\temp\output.txt", 'w') as f:
-        #     f.write(decoded_data)
-        decoded_data = json.loads(decoded_data)
-
+            # with open(r"c:\temp\output.txt", 'w') as f:
+            #     f.write(decoded_data)
+            decoded_data = json.loads(decoded_data)
+        except:
+            info("Decoding failed: {}", sys.exc_info()[1])
+            # with open(r"c:\temp\output.txt", 'w') as f:
+            #     f.write(decoded_data)
     return tile, decoded_data
-
-
-# def decode_tile_native(tile_data_tuple):
-#     tile = tile_data_tuple[0]
-#     decoded_data = None
-#     if not tile.decoded_data:
-#         try:
-#             # with open(r"c:\temp\uster.pbf", 'wb') as f:
-#             #     f.write(tile_data_tuple[1])
-#             encoded_data = bytearray(tile_data_tuple[1])
-#
-#             hex_string = "".join("%02x" % b for b in encoded_data)
-#
-#             tile_span_x = tile.extent[2] - tile.extent[0]
-#             tile_span_y = tile.extent[1] - tile.extent[3]
-#             tile_x = tile.extent[0]
-#             tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
-#
-#             lib = load_lib()
-#             ptr = lib.decodeMvtToJson(tile_x, tile_y, tile_span_x, tile_span_y, hex_string)
-#             decoded_data = cast(ptr, c_char_p).value
-#             lib.freeme(ptr)
-#
-#             # with open(r"c:\temp\output.txt", 'w') as f:
-#             #     f.write(decoded_data)
-#             decoded_data = json.loads(decoded_data)
-#         except:
-#             info("Decoding failed: {}", sys.exc_info()[1])
-#             # with open(r"c:\temp\output.txt", 'w') as f:
-#             #     f.write(decoded_data)
-#     return tile, decoded_data

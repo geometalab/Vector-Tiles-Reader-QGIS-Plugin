@@ -40,16 +40,15 @@ from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 from io import BytesIO
 from gzip import GzipFile
 
+import multiprocessing as mp
 
-import multiprocessing.dummy as mp
 
-
-# is_windows = sys.platform.startswith("win32")
-# if is_windows:
-#     # OSGeo4W does not bundle python in exec_prefix for python
-#     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-#     mp.set_executable(path)
-#     sys.argv = [None]
+is_windows = sys.platform.startswith("win32")
+if is_windows:
+    # OSGeo4W does not bundle python in exec_prefix for python
+    path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+    mp.set_executable(path)
+    sys.argv = [None]
 
 
 class VtReader(QObject):
@@ -491,11 +490,9 @@ class VtReader(QObject):
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
         vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
         own_layers = list(map(lambda t: t[1], vt_qgis_name_layer_tuples))
-        info("own layers: {}", own_layers)
         for l in own_layers:
             name = l.name()
             geo_type = l.customProperty("VectorTilesReader/geo_type")
-            info("layer: {}, {}", geo_type, name)
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 if not bool(l.customProperty("VectorTilesReader/is_empty")):
                     info("Clearing layer: {}", name)
