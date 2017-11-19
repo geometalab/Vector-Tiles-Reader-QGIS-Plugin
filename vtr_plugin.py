@@ -257,6 +257,8 @@ class VtrPlugin():
         self._current_layer_filter = selected_layers
 
     def _handle_map_scale_or_extents_changed(self):
+        return
+
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()
@@ -572,10 +574,17 @@ class VtrPlugin():
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
             crs_string = 3857
-        self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
+        try:
+            self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
+        except AttributeError:
+            self.iface.mapCanvas().setDestinationCrs(crs)
+
         x, y = convert_coordinate(4326, crs_string, lat=46.95592, lng=7.42078)
         if center == (0, 0):
-            self.iface.mapCanvas().setCenter(QgsPoint(x, y))
+            try:
+                self.iface.mapCanvas().setCenter(QgsPoint(x, y))
+            except TypeError:
+                self.iface.mapCanvas().setCenter(QgsPointXY(x, y))
             self.iface.mapCanvas().zoomScale(88687108)
 
     def _cancel_load(self):

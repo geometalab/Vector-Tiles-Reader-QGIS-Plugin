@@ -11,17 +11,16 @@ import os
 import sys
 import traceback
 
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import QObject, pyqtSignal
-from tile_json import TileJSON
-from log_helper import info, warn, critical, debug
-from tile_helper import (VectorTile,
+from .vtr_2to3 import *
+from .tile_json import TileJSON
+from .log_helper import info, warn, critical, debug
+from .tile_helper import (VectorTile,
                          get_tiles_from_center,
                          get_tile_bounds,
                          create_bounds,
                          WORLD_BOUNDS)
-from network_helper import url_exists, load_tiles_async
-from file_helper import is_sqlite_db
+from .network_helper import url_exists, load_tiles_async
+from .file_helper import is_sqlite_db
 
 _DEFAULT_CRS = "EPSG:3857"
 

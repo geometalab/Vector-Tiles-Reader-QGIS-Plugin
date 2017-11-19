@@ -439,7 +439,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
-    on_add = pyqtSignal(dict, list)
+    on_add = pyqtSignal(dict, map)
     on_zoom_change = pyqtSignal()
     on_directory_change = pyqtSignal("QString")
 
@@ -513,11 +513,9 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     def connect(self, connection):
         self._handle_connect(connection)
 
-    # @pyqtSlot(int)
     def _handle_tab_change(self, current_index):
         self.settings.setValue(self._CONNECTIONS_TAB, current_index)
 
-    # @pyqtSlot(dict)
     def _handle_connect(self, connection):
         self._current_connection = connection
         self.on_connect.emit(connection)
@@ -525,7 +523,6 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         if active_tab != self.tabFile:
             self.txtPath.setText("")
 
-    # @pyqtSlot('QString')
     def _handle_connection_change(self, name):
         self.settings.setValue(self._CURRENT_ONLINE_CONNECTION, name)
         self.set_layers([])
@@ -585,7 +582,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     def set_layers(self, layers):
         self.model.removeRows(0, self.model.rowCount())
-        for row_index, layer in enumerate(sorted(layers)):
+        for row_index, layer in enumerate(layers):
             for header_index, header in enumerate(self._table_headers.keys()):
                 header_value = self._table_headers[header]
                 if header_value in layer:

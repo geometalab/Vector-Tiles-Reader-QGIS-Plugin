@@ -16,19 +16,16 @@ except ImportError:
 import uuid
 import traceback
 
-from qgis.core import QgsVectorLayer, QgsMapLayerRegistry
-from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-from PyQt4.QtGui import QApplication
-
-from util.log_helper import info, critical, debug, remove_key
-from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
-from util.feature_helper import (FeatureMerger,
+from .util.vtr_2to3 import *
+from .util.log_helper import info, critical, debug, remove_key
+from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
+from .util.feature_helper import (FeatureMerger,
                                  geo_types,
                                  is_multi,
                                  map_coordinates_recursive,
                                  GeoTypes,
                                  clip_features)
-from util.file_helper import (get_cached_tile_file_name,
+from .util.file_helper import (get_cached_tile_file_name,
                               get_styles,
                               assure_temp_dirs_exist,
                               get_cached_tile,
@@ -37,21 +34,22 @@ from util.file_helper import (get_cached_tile_file_name,
                               get_plugin_directory,
                               get_icons_directory,
                               cache_tile)
+from .util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
+from .util.connection import ConnectionTypes
+from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 from io import BytesIO
 from gzip import GzipFile
-from util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
-from util.connection import ConnectionTypes
-from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 
-import multiprocessing as mp
 
-is_windows = sys.platform.startswith("win32")
+import multiprocessing.dummy as mp
 
-if is_windows:
-    # OSGeo4W does not bundle python in exec_prefix for python
-    path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-    mp.set_executable(path)
-    sys.argv = [None]
+
+# is_windows = sys.platform.startswith("win32")
+# if is_windows:
+#     # OSGeo4W does not bundle python in exec_prefix for python
+#     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+#     mp.set_executable(path)
+#     sys.argv = [None]
 
 
 class VtReader(QObject):
@@ -358,7 +356,7 @@ class VtReader(QObject):
             'clip_tiles': clip_tiles,
             'apply_styles': apply_styles,
             'max_tiles': max_tiles,
-            'layer_filter': layer_filter
+            'layer_filter': list(layer_filter)
         }
 
     def load_tiles_async(self, zoom_level, bounds):
@@ -463,9 +461,6 @@ class VtReader(QObject):
             file_content = data
         return file_content
 
-    def _process_tile(self, tile, layer_filter):
-        self._add_features_to_feature_collection(tile, layer_filter)
-
     def _process_tiles(self, tiles, layer_filter):
         """
          * Creates GeoJSON for all the specified tiles and reports the progress
@@ -494,8 +489,8 @@ class VtReader(QObject):
         # self._assure_qgis_groups_exist(sort_layers=apply_styles)
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = list(filter(lambda (n, l): l.customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
-        own_layers = list(map(lambda (n, l): l, vt_qgis_name_layer_tuples))
+        vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
+        own_layers = list(map(lambda t: t[1], vt_qgis_name_layer_tuples))
         info("own layers: {}", own_layers)
         for l in own_layers:
             name = l.name()
