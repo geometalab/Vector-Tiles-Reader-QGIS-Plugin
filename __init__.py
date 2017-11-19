@@ -17,3 +17,16 @@ of the License, or (at your option) any later version.
 def classFactory(iface):
     from .vtr_plugin import VtrPlugin
     return VtrPlugin(iface)
+
+
+def run_all():
+    import sys
+    import os
+    os.environ["VTR_TESTS"] = '1'
+    sys.path.append(".")
+    sys.path.append("../vector-tiles-reader/util")
+    sys.path.append("../vector-tiles-reader")
+    sys.path.append("../vector-tiles-reader/ext-libs")
+    print "hello world"
+    from .tests import test_all
+    test_all.run_all()

@@ -16,27 +16,50 @@ except ImportError:
 import uuid
 import traceback
 
-from .util.vtr_2to3 import *
-from .util.log_helper import info, critical, debug, remove_key
-from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
-from .util.feature_helper import (FeatureMerger,
-                                 geo_types,
-                                 is_multi,
-                                 map_coordinates_recursive,
-                                 GeoTypes,
-                                 clip_features)
-from .util.file_helper import (get_cached_tile_file_name,
-                              get_styles,
-                              assure_temp_dirs_exist,
-                              get_cached_tile,
-                              is_gzipped,
-                              get_geojson_file_name,
-                              get_plugin_directory,
-                              get_icons_directory,
-                              cache_tile)
-from .util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
-from .util.connection import ConnectionTypes
-from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
+if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
+    from .util.vtr_2to3 import *
+    from .util.log_helper import info, critical, debug, remove_key
+    from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
+    from .util.feature_helper import (FeatureMerger,
+                                     geo_types,
+                                     is_multi,
+                                     map_coordinates_recursive,
+                                     GeoTypes,
+                                     clip_features)
+    from .util.file_helper import (get_cached_tile_file_name,
+                                  get_styles,
+                                  assure_temp_dirs_exist,
+                                  get_cached_tile,
+                                  is_gzipped,
+                                  get_geojson_file_name,
+                                  get_plugin_directory,
+                                  get_icons_directory,
+                                  cache_tile)
+    from .util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
+    from .util.connection import ConnectionTypes
+    from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
+else:
+    from util.vtr_2to3 import *
+    from util.log_helper import info, critical, debug, remove_key
+    from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
+    from util.feature_helper import (FeatureMerger,
+                                     geo_types,
+                                     is_multi,
+                                     map_coordinates_recursive,
+                                     GeoTypes,
+                                     clip_features)
+    from util.file_helper import (get_cached_tile_file_name,
+                                  get_styles,
+                                  assure_temp_dirs_exist,
+                                  get_cached_tile,
+                                  is_gzipped,
+                                  get_geojson_file_name,
+                                  get_plugin_directory,
+                                  get_icons_directory,
+                                  cache_tile)
+    from util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
+    from util.connection import ConnectionTypes
+    from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 from io import BytesIO
 from gzip import GzipFile
 
