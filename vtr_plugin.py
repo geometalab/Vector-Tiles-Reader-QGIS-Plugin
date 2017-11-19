@@ -20,31 +20,13 @@ import sys
 import traceback
 import ast
 
-from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
-from PyQt4.QtGui import (
-    QAction,
-    QIcon,
-    QMenu,
-    QToolButton,
-    QMessageBox,
-    QColor,
-    QProgressBar,
-    QPushButton)
 from builtins import map
 from builtins import object
 from builtins import str
-from util.log_helper import info, critical, debug
+from .util.log_helper import info, critical, debug
 import logging
-from qgis.core import (
-    QgsApplication,
-    QgsPoint,
-    QgsRectangle,
-    QgsMapLayerRegistry,
-    QgsCoordinateReferenceSystem,
-    QgsProject
-)
-from qgis.gui import QgsMessageBar
-from util.tile_helper import (
+from .util.vtr_2to3 import *
+from .util.tile_helper import (
     latlon_to_tile,
     get_zoom_by_scale,
     clamp,
@@ -56,8 +38,8 @@ from util.tile_helper import (
     clamp_bounds,
     convert_coordinate)
 
-from ui.dialogs import AboutDialog, ConnectionsDialog
-from util.file_helper import (get_icons_directory,
+from .ui.dialogs import AboutDialog, ConnectionsDialog
+from .util.file_helper import (get_icons_directory,
                               clear_cache,
                               get_plugin_directory)
 
@@ -91,7 +73,7 @@ omt_layer_ordering = [
 
 
 # noinspection PyUnresolvedReferences,PyArgumentList
-class VtrPlugin(object):
+class VtrPlugin():
     _dialog = None
     _model = None
     _reload_button_text = "Load features overlapping the view extent"
@@ -226,7 +208,6 @@ class VtrPlugin(object):
         has_extent_changed = self._has_extent_changed()[0]
         return has_scale_changed or has_extent_changed
 
-    @pyqtSlot()
     def _on_scale_or_extent_change_during_pause(self):
         assert self._current_reader
         self._scale_to_load = None
@@ -244,7 +225,6 @@ class VtrPlugin(object):
         if self._is_loading and (self._scale_to_load or self._extent_to_load):
             self._cancel_load()
 
-    @pyqtSlot('QString', 'QString', list)
     def _on_add_layer(self, connection, selected_layers):
         assert connection
         self._assure_qgis_groups_exist(connection["name"], True)
@@ -276,7 +256,6 @@ class VtrPlugin(object):
                          bounds=extent)
         self._current_layer_filter = selected_layers
 
-    @pyqtSlot()
     def _handle_map_scale_or_extents_changed(self):
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
@@ -322,7 +301,6 @@ class VtrPlugin(object):
                     self._loaded_extent = new_extent
                     self._reload_tiles(overwrite_extent=new_extent)
 
-    @pyqtSlot()
     def _update_nr_of_tiles(self):
         zoom = self._get_current_zoom()
         bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
@@ -336,7 +314,6 @@ class VtrPlugin(object):
             map_scale_zoom = clamp(map_scale_zoom, low=min_zoom, high=max_zoom)
         self.connections_dialog.set_current_zoom_level(map_scale_zoom)
 
-    @pyqtSlot(dict)
     def _on_connect(self, connection):
         proj = QgsProject.instance()
         proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
@@ -364,7 +341,6 @@ class VtrPlugin(object):
             self.reload_action.setEnabled(False)
             self.reload_action.setText(self._reload_button_text)
 
-    @pyqtSlot()
     def reader_cancelled(self):
         info("cancelled")
         self._is_loading = False
@@ -384,7 +360,6 @@ class VtrPlugin(object):
             else:
                 self._debouncer.start()
 
-    @pyqtSlot(int)
     def reader_limit_exceeded_message(self, limit):
         """
         * Shows a message in QGIS that the nr of tiles has been restricted by the tile limit set in the options
@@ -691,7 +666,7 @@ class VtrPlugin(object):
 
     def _create_reader(self, connection):
         # A lazy import is required because the vtreader depends on the external libs
-        from vt_reader import VtReader
+        from .vt_reader import VtReader
         reader = None
         try:
             reader = VtReader(self.iface, connection=connection)
@@ -708,12 +683,10 @@ class VtrPlugin(object):
             critical(str(sys.exc_info()[1]))
         return reader
 
-    @pyqtSlot(list)
     def add_layers(self, layers):
         info("add layers: {}", layers)
         QgsMapLayerRegistry.instance().addMapLayers(layers, False)
 
-    @pyqtSlot('QString', object)
     def add_layer_to_group(self, layer):
         root_group_name = self._currrent_connection_name
         root = QgsProject.instance().layerTreeRoot()
@@ -725,7 +698,6 @@ class VtrPlugin(object):
             layer_group = root_group.addGroup(layer.name())
         layer_group.addLayer(layer)
 
-    @pyqtSlot(object)
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
         info("loaded: {}", loaded_extent)
         self._loaded_extent = loaded_extent
@@ -752,19 +724,15 @@ class VtrPlugin(object):
         if auto_zoom:
             self._debouncer.start()
 
-    @pyqtSlot(int)
     def reader_progress_changed(self, progress):
         self.handle_progress_update(progress=progress)
 
-    @pyqtSlot(int)
     def reader_max_progress_changed(self, max_progress):
         self.handle_progress_update(max_progress=max_progress)
 
-    @pyqtSlot('QString')
     def reader_message_changed(self, msg):
         self.handle_progress_update(msg=msg)
 
-    @pyqtSlot(bool)
     def reader_show_progress_changed(self, show_progress):
         self.handle_progress_update(show_progress=show_progress)
 
@@ -848,18 +816,18 @@ class VtrPlugin(object):
             self._current_reader.get_source().close_connection()
             self._current_reader = None
 
-        self.iface.newProjectCreated.disconnect(self._on_project_change)
-        self.iface.projectRead.disconnect(self._on_project_change)
-        self._debouncer.stop()
-        self.iface.layerToolBar().removeAction(self.toolButtonAction)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
-        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
-        self.iface.addLayerMenu().removeAction(self.open_connections_action)
-        logging.shutdown()
         try:
             self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+            self.iface.newProjectCreated.disconnect(self._on_project_change)
+            self.iface.projectRead.disconnect(self._on_project_change)
+            self._debouncer.stop()
+            self.iface.layerToolBar().removeAction(self.toolButtonAction)
+            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
+            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
+            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
+            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
+            self.iface.addLayerMenu().removeAction(self.open_connections_action)
+            logging.shutdown()
         except:
             pass
 
@@ -922,7 +890,6 @@ class SignalDebouncer(QObject):
             for s in self._signals:
                 s.disconnect(self._debounce)
 
-    @pyqtSlot()
     def _on_timeout(self):
         self._debounce_timer.stop()
 

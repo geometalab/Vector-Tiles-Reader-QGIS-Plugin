@@ -153,19 +153,15 @@ class VtReader(QObject):
     def id(self):
         return self._id
 
-    @pyqtSlot(int)
     def _source_tile_limit_reached(self):
         self.tile_limit_reached.emit(self._loading_options["max_tiles"])
 
-    @pyqtSlot(int)
     def _source_progress_changed(self, progress):
         self._update_progress(progress=progress)
 
-    @pyqtSlot(int)
     def _source_max_progress_changed(self, max_progress):
         self._update_progress(max_progress=max_progress)
 
-    @pyqtSlot('QString')
     def _source_message_changed(self, msg):
         self._update_progress(msg=msg)
 
