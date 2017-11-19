@@ -28,16 +28,22 @@ if not resources_rc:
     info("Resources are required, otherwise no icons will be shown")
 
 
-def _update_size(dialog, fix_size=False):
+def _update_size(dialog):
     screen_resolution = QApplication.desktop().screenGeometry()
     screen_width, screen_height = screen_resolution.width(), screen_resolution.height()
+    new_width = None
+    new_height = None
     if screen_width > 1920 or screen_height > 1080:
         new_width = dialog.width() / 1920.0 * screen_width
         new_height = dialog.height() / 1080.0 * screen_height
-        if fix_size:
-            dialog.setFixedSize(new_width, new_height)
-        else:
-            dialog.setMinimumSize(new_width, new_height)
+        dialog.setMinimumSize(new_width, new_height)
+    elif dialog.width() >= screen_width or dialog.height() >= screen_height:
+        margin = 40
+        new_width = screen_width - margin
+        new_height = screen_height - margin
+
+    if new_width and new_height:
+        dialog.resize(new_width, new_height)
 
 
 class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
