@@ -581,10 +581,7 @@ class VtrPlugin():
 
         x, y = convert_coordinate(4326, crs_string, lat=46.95592, lng=7.42078)
         if center == (0, 0):
-            try:
-                self.iface.mapCanvas().setCenter(QgsPoint(x, y))
-            except TypeError:
-                self.iface.mapCanvas().setCenter(QgsPointXY(x, y))
+            self.iface.mapCanvas().setCenter(QgsPoint(x, y))
             self.iface.mapCanvas().zoomScale(88687108)
 
     def _cancel_load(self):

@@ -1,22 +1,21 @@
 try:
     from qgis.core import (
-        QgsMapLayerRegistry
+        QgsMapLayerRegistry,
+        QgsPoint
     )
 except ImportError:
     from qgis.core import (
-        QgsProject as QgsMapLayerRegistry
+        QgsProject as QgsMapLayerRegistry,
+        QgsPointXY as QgsPoint
     )
 
 from qgis.core import (
     QgsApplication,
-    QgsPoint,
     QgsRectangle,
     QgsCoordinateReferenceSystem,
     QgsProject,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsPoint,
-    QgsPointXY,
     QgsField,
     QgsVectorLayer,
     QgsFeatureRequest,
