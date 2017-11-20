@@ -13,6 +13,7 @@ data/*
 .vscode/*
 ui/*.pyc
 setup.cfg
+dockcross*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
