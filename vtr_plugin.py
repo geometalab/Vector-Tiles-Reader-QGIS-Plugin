@@ -191,6 +191,7 @@ class VtrPlugin():
         return version
 
     def _on_project_change(self):
+        self.iface.mainWindow().statusBar().showMessage("")
         self._debouncer.stop()
         self._cancel_load()
         self.connections_dialog.set_layers([])
@@ -419,11 +420,13 @@ class VtrPlugin():
         return get_code_from_epsg(canvas.mapSettings().destinationCrs().authid())
 
     def _handle_mouse_move(self, pos):
+        if not self._current_reader:
+            return
+
         zoom = self._get_zoom_for_current_map_scale()
-        if self._current_reader:
-            min_zoom = self._current_reader.get_source().min_zoom()
-            max_zoom = self._current_reader.get_source().max_zoom()
-            zoom = clamp(zoom, low=min_zoom, high=max_zoom)
+        min_zoom = self._current_reader.get_source().min_zoom()
+        max_zoom = self._current_reader.get_source().max_zoom()
+        zoom = clamp(zoom, low=min_zoom, high=max_zoom)
 
         lon = pos[0]
         lat = pos[1]
