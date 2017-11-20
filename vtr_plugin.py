@@ -253,7 +253,8 @@ class VtrPlugin():
             self.connections_dialog.close()
         self._load_tiles(options=self.connections_dialog.options,
                          layers_to_load=selected_layers,
-                         bounds=extent)
+                         bounds=extent,
+                         is_add=True)
         self._current_layer_filter = selected_layers
 
     def _handle_map_scale_or_extents_changed(self):
@@ -594,7 +595,7 @@ class VtrPlugin():
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False):
+    def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False, is_add=False):
         if self._debouncer.is_running():
             self._debouncer.pause()
 
@@ -640,7 +641,8 @@ class VtrPlugin():
                                    merge_tiles=merge_tiles,
                                    clip_tiles=clip_tiles,
                                    apply_styles=apply_styles,
-                                   max_tiles=tile_limit)
+                                   max_tiles=tile_limit,
+                                   add_missing_layers=is_add)
                 self._is_loading = True
                 reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
             except Exception as e:

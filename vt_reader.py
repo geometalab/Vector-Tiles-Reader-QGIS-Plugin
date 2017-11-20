@@ -360,7 +360,7 @@ class VtReader(QObject):
         return bounds
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
-                    apply_styles=True, max_tiles=None, layer_filter=None):
+                    apply_styles=True, max_tiles=None, layer_filter=None, add_missing_layers=False):
         """
          * Specify the reader options
         :param load_mask_layer:  If True the mask layer will also be loaded
@@ -380,7 +380,8 @@ class VtReader(QObject):
             'clip_tiles': clip_tiles,
             'apply_styles': apply_styles,
             'max_tiles': max_tiles,
-            'layer_filter': layer_filter
+            'layer_filter': layer_filter,
+            'add_missing_layers': add_missing_layers
         }
 
     def load_tiles_async(self, zoom_level, bounds):
@@ -510,7 +511,7 @@ class VtReader(QObject):
         """
         debug("Creating hierarchy in QGIS")
 
-        # self._assure_qgis_groups_exist(sort_layers=apply_styles)
+
 
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
         vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
@@ -529,12 +530,16 @@ class VtReader(QObject):
         self._update_progress(progress=0,
                               max_progress=len(self.feature_collections_by_layer_name_and_geotype),
                               msg="Creating layers...")
+        layer_filter = self._loading_options["layer_filter"]
+        add_missing_layers = self._loading_options["add_missing_layers"]
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
             count += 1
             if self.cancel_requested:
                 break
+            if layer_filter and layer_name not in layer_filter:
+                continue
 
             feature_collection = self.feature_collections_by_layer_name_and_geotype[(layer_name, geo_type)]
             zoom_level = feature_collection["zoom_level"]
@@ -557,7 +562,7 @@ class VtReader(QObject):
                     if clip_tiles:
                         clip_features(layer=layer, scheme=self._source.scheme())
 
-            if not layer:
+            if not layer and add_missing_layers and (not layer_filter or layer_name in layer_filter):
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(json_src=file_path,
                                                  layer_name=layer_name,
