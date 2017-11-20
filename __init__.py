@@ -13,7 +13,6 @@ of the License, or (at your option) any later version.
 
 """
 
-
 def classFactory(iface):
     from .vtr_plugin import VtrPlugin
     return VtrPlugin(iface)

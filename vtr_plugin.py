@@ -21,7 +21,6 @@ import traceback
 import ast
 
 from builtins import map
-from builtins import object
 from builtins import str
 from .util.log_helper import info, critical, debug
 import logging
@@ -40,8 +39,8 @@ from .util.tile_helper import (
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
 from .util.file_helper import (get_icons_directory,
-                              clear_cache,
-                              get_plugin_directory)
+                               clear_cache,
+                               get_plugin_directory)
 
 # try:
 #     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'

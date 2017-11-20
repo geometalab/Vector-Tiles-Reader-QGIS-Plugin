@@ -35,7 +35,7 @@ if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
                                   get_plugin_directory,
                                   get_icons_directory,
                                   cache_tile)
-    from .util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
+    from .util.tile_source import ServerSource, MBTilesSource, DirectorySource
     from .util.connection import ConnectionTypes
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 else:
@@ -57,7 +57,7 @@ else:
                                   get_plugin_directory,
                                   get_icons_directory,
                                   cache_tile)
-    from util.tile_source import ServerSource, MBTilesSource, TrexCacheSource
+    from util.tile_source import ServerSource, MBTilesSource, DirectorySource
     from util.connection import ConnectionTypes
     from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 from io import BytesIO
@@ -153,8 +153,8 @@ class VtReader(QObject):
             source = ServerSource(url=connection["url"])
         elif conn_type == ConnectionTypes.MBTiles:
             source = MBTilesSource(path=connection["path"])
-        elif conn_type == ConnectionTypes.Trex:
-            source = TrexCacheSource(path=connection["path"])
+        elif conn_type == ConnectionTypes.Directory:
+            source = DirectorySource(path=connection["path"])
         else:
             raise RuntimeError("Type not set on connection")
         source.progress_changed.connect(self._source_progress_changed)

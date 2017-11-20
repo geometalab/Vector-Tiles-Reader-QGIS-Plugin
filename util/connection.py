@@ -4,7 +4,7 @@ class _ConnectionTypes(object):
 
     TileJSON = "TileJSON"
     MBTiles = "MBTiles"
-    Trex = "Trex"
+    Directory = "Directory"
     PostGIS = "PostGIS"
 
 
@@ -16,10 +16,10 @@ MBTILES_CONNECTION_TEMPLATE = {
     "type": ConnectionTypes.MBTiles
 }
 
-TREX_CONNECTION_TEMPLATE = {
+DIRECTORY_CONNECTION_TEMPLATE = {
     "name": None,
     "path": None,
-    "type": ConnectionTypes.Trex
+    "type": ConnectionTypes.Directory
 }
 
 TILEJSON_CONNECTION_TEMPLATE = {

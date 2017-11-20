@@ -95,7 +95,6 @@ class AbstractSource(QObject):
         :param tiles_to_load: All tile coordinates which shall be loaded
         :param zoom_level: The zoom level which will be loaded
         :param max_tiles: The maximum number of tiles to be loaded
-        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
         :return:
         """
         raise NotImplementedError
@@ -448,7 +447,8 @@ class MBTilesSource(AbstractSource):
             critical("Db connection failed:", sys.exc_info())
 
 
-class TrexCacheSource(AbstractSource):
+class DirectorySource(AbstractSource):
+
     def __init__(self, path):
         AbstractSource.__init__(self)
         if not os.path.isdir(path):
@@ -484,6 +484,9 @@ class TrexCacheSource(AbstractSource):
 
     def scheme(self):
         return self.json.scheme()
+
+    def bounds(self):
+        return self.json.bounds_longlat()
 
     def bounds_tile(self, zoom):
         return self.json.bounds_tile(zoom)

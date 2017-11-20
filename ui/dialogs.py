@@ -1,10 +1,9 @@
 import copy
 import csv
-import os
 import webbrowser
 from collections import OrderedDict
 
-from ..util import vtr_2to3
+from ..util.vtr_2to3 import *
 
 try:
     from .connections_group_qt5 import Ui_ConnectionsGroup
@@ -26,21 +25,10 @@ from ..util.connection import (
     ConnectionTypes,
     MBTILES_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
-    TREX_CONNECTION_TEMPLATE)
-from ..util.log_helper import info
+    DIRECTORY_CONNECTION_TEMPLATE)
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
 
-
-try:
-    from PyQt4.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
-    from PyQt4.QtGui import *
-    from ..ui import resources_rc_qt4
-except:
-    from PyQt5.QtCore import QSettings, QTimer, Qt, pyqtSlot, pyqtSignal, QObject
-    from PyQt5.QtGui import *
-    from PyQt5.QtWidgets import *
-    from ..ui import resources_rc_qt5
 
 def _update_size(dialog):
     screen_resolution = QApplication.desktop().screenGeometry()
@@ -501,7 +489,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.btnBrowse.clicked.connect(self._select_file_path)
-        self.btnBrowseTrexCache.clicked.connect(self._select_trex_cache_folder)
+        self.btnSelectDirectory.clicked.connect(self._select_directory)
         self.open_path = None
         self.browse_path = default_browse_directory
         self.model = QStandardItemModel()
@@ -541,12 +529,12 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
             self._handle_path_or_folder_selection(connection)
 
-    def _select_trex_cache_folder(self):
-        open_file_name = QFileDialog.getExistingDirectory(None, "Select t-rex Cache directory", self.browse_path)
+    def _select_directory(self):
+        open_file_name = QFileDialog.getExistingDirectory(None, "Select directory", self.browse_path)
         if open_file_name and os.path.isdir(open_file_name):
-            self.txtTrexCachePath.setText(open_file_name)
+            self.txtDirectoryPath.setText(open_file_name)
 
-            connection = copy.deepcopy(TREX_CONNECTION_TEMPLATE)
+            connection = copy.deepcopy(DIRECTORY_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
 
