@@ -47,8 +47,8 @@ matrix:
         - cd ..
         - docker run --rm dockcross/windows-x64 > ./dockcross-windows-x64 && chmod +x ./dockcross-windows-x64
         - docker run --rm dockcross/windows-x86 > ./dockcross-windows-x86 && chmod +x ./dockcross-windows-x86
-        - ./dockcross-windows-x64 sh -c "cd $TRAVIS_BUILD_DIR && make windows64_dockcross"
-        - ./dockcross-windows-x86 sh -c "cd $TRAVIS_BUILD_DIR && make windows32_dockcross"
+        - ./dockcross-windows-x64 sh -c "cd Vector-Tiles-Reader-QGIS-Plugin && make windows64_dockcross"
+        - ./dockcross-windows-x86 sh -c "cd Vector-Tiles-Reader-QGIS-Plugin && make windows32_dockcross"
       deploy:
         provider: pages
         skip_cleanup: true
