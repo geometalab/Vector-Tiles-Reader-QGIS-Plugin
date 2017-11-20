@@ -213,7 +213,6 @@ class VtrPlugin():
         self._scale_to_load = None
         self._extent_to_load = None
 
-        info("got request in pause")
         has_scale_changed, new_target_scale, has_scale_increased = self._has_scale_changed()
         if has_scale_changed:
             self._scale_to_load = None
@@ -223,6 +222,7 @@ class VtrPlugin():
                 self._extent_to_load = new_target_extent
 
         if self._is_loading and (self._scale_to_load or self._extent_to_load):
+            info("Cancelling loading due to new request...")
             self._cancel_load()
 
     def _on_add_layer(self, connection, selected_layers):
@@ -595,9 +595,22 @@ class VtrPlugin():
         new_action.setEnabled(is_enabled)
         return new_action
 
+    def _has_layers_of_current_connection(self):
+        qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
+
+        layers = len(
+            filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._current_reader.get_source().source(), iter(qgis_layers.items())))
+        return layers > 0
+
     def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False, is_add=False):
         if self._debouncer.is_running():
-            self._debouncer.pause()
+            if is_add:
+                self._debouncer.stop()
+            else:
+                self._debouncer.pause()
+
+        if not is_add and not self._has_layers_of_current_connection():
+            return
 
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
@@ -829,6 +842,7 @@ class VtrPlugin():
             self.iface.newProjectCreated.disconnect(self._on_project_change)
             self.iface.projectRead.disconnect(self._on_project_change)
             self._debouncer.stop()
+            self._debouncer.shutdown()
             self.iface.layerToolBar().removeAction(self.toolButtonAction)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
@@ -857,6 +871,7 @@ class SignalDebouncer(QObject):
         self._signals = signals
         self._is_connected = False
         self._is_paused = False
+        self._is_stopped = False
         self._predicate = predicate
 
     def start(self):
@@ -864,8 +879,9 @@ class SignalDebouncer(QObject):
          * Starts handling the signals
         :return:
         """
-        if self._is_paused:
+        if self._is_paused or self._is_stopped:
             self._is_paused = False
+            self._is_stopped = False
         else:
             self._connect()
             self._debounce_timer.start(self._timeout)
@@ -878,12 +894,15 @@ class SignalDebouncer(QObject):
          * Stops handling the signals
         :return:
         """
-        self._disconnect()
+        self._is_stopped = True
 
     def pause(self):
         self._is_paused = True
         self._debounce_timer.stop()
         self._debounce_timer.start(self._timeout)
+
+    def shutdown(self):
+        self._disconnect()
 
     def _connect(self):
         if not self._is_connected:
@@ -900,6 +919,8 @@ class SignalDebouncer(QObject):
 
     def _on_timeout(self):
         self._debounce_timer.stop()
+        if self._is_stopped:
+            return
 
         should_notify = True
         if self._predicate:
