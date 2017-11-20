@@ -25,7 +25,6 @@ matrix:
       branches:
           only:
           - develop
-          - dockcross
       os:
         - linux
         - osx
