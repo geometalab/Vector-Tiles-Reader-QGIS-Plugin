@@ -131,7 +131,7 @@ class Ui_OptionsGroup(object):
         self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply predefined OpenMapTiles style", None))
         self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (slow)", None))
         self.rbZoomMax.setText(_translate("OptionsGroup", "Max. Zoom", None))
-        self.chkClipTiles.setText(_translate("OptionsGroup", "Clip each tile at bounds", None))
+        self.chkClipTiles.setText(_translate("OptionsGroup", "Clip each tile at bounds (slow)", None))
         self.chkLimitNrOfTiles.setToolTip(_translate("OptionsGroup", "<html><head/><body><p>If this option is enabled, only the specified number of tiles will be loaded from the selected source. </p><p>Cached tiles are not affected by this limit. Therefore, there may be more tiles visible when loading is complete.</p></body></html>", None))
         self.chkLimitNrOfTiles.setText(_translate("OptionsGroup", "Loaded tile limit", None))
         self.lblNumberTilesInCurrentExtent.setText(_translate("OptionsGroup", "(Current extent: n tiles)", None))

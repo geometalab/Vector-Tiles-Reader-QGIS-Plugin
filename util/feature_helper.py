@@ -11,21 +11,22 @@ from .tile_helper import tile_to_latlon
 
 def clip_features(layer, scheme):
     layer.startEditing()
-    info("tile extent: {}")
     for f in layer.getFeatures():
-        errors = f.geometry().validateGeometry()
-        if errors and len(errors) > 0:
-            continue
+        geom = f.geometry()
+        if geom:
+            errors = geom.validateGeometry()
+            if errors and len(errors) > 0:
+                continue
 
-        col = f.attribute("_col")
-        row = f.attribute("_row")
-        zoom_level = f.attribute("_zoom_level")
-        tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
-        rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
+            col = f.attribute("_col")
+            row = f.attribute("_row")
+            zoom_level = f.attribute("_zoom")
+            tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
+            rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
 
-        new_geom = f.geometry().intersection(rect)
-        f.setGeometry(new_geom)
-        layer.updateFeature(f)
+            new_geom = geom.intersection(rect)
+            f.setGeometry(new_geom)
+            layer.updateFeature(f)
     layer.commitChanges()
 
 

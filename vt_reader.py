@@ -719,7 +719,7 @@ class VtReader(QObject):
                             f["properties"]["_id"] = self._feature_count
                             f["properties"]["_col"] = tile.column
                             f["properties"]["_row"] = tile.row
-                            f["properties"]["_zoom_level"] = tile.zoom_level
+                            f["properties"]["_zoom"] = tile.zoom_level
                             self._feature_count += 1
 
                         feature_collection = self._get_feature_collection(layer_name=layer_name,

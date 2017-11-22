@@ -65,7 +65,7 @@
    <item row="3" column="0" colspan="2">
     <widget class="QCheckBox" name="chkClipTiles">
      <property name="text">
-      <string>Clip each tile at bounds</string>
+      <string>Clip each tile at bounds (slow)</string>
      </property>
     </widget>
    </item>

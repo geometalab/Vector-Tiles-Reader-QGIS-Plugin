@@ -597,10 +597,11 @@ class VtrPlugin():
 
     def _has_layers_of_current_connection(self):
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-
-        layers = len(
-            filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._current_reader.get_source().source(), iter(qgis_layers.items())))
-        return layers > 0
+        layers = filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") ==
+                                  self._current_reader.get_source().source(), iter(qgis_layers.items()))
+        if layers:
+            return len(list(layers))
+        return 0
 
     def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False, is_add=False):
         if self._debouncer.is_running():

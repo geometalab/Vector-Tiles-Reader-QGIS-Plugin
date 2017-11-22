@@ -47,7 +47,7 @@ def load_lib():
     if path and os.path.isfile(path):
         try:
             lib = cdll.LoadLibrary(path)
-            lib.decodeMvtToJson.argtypes = [c_double, c_double, c_double, c_double, c_char_p]
+            lib.decodeMvtToJson.argtypes = [c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_char_p]
             lib.decodeMvtToJson.restype = c_void_p
             lib.freeme.argtypes = [c_void_p]
             lib.freeme.restype = None
@@ -76,7 +76,8 @@ def decode_tile_native(tile_data_tuple):
             tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
             lib = load_lib()
-            ptr = lib.decodeMvtToJson(tile_x, tile_y, tile_span_x, tile_span_y, hex_bytes)
+            ptr = lib.decodeMvtToJson(int(tile.zoom_level), int(tile.column), int(tile.row), tile_x, tile_y, tile_span_x, tile_span_y,
+                                      hex_bytes)
             decoded_data = cast(ptr, c_char_p).value
             lib.freeme(ptr)
 
