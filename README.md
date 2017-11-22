@@ -53,7 +53,7 @@ Name conventions for Vector Tiles Reader QGIS Plugin:
 
 ## Requirements
 * QGIS 2.18
-* This Plugin was tested on Ubuntu 16.10 and Windows 10
+* This Plugin was tested on Ubuntu 16.10, Windows 10 and OSX
 
 ## Installation
 ### QGIS Plugins

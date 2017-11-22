@@ -94,7 +94,8 @@ class VtReader(QObject):
             'clip_tiles': None,
             'apply_styles': None,
             'max_tiles': None,
-            'bounds': None
+            'bounds': None,
+            'add_missing_layers': True
         }
 
     _nr_tiles_to_process_serial = 30
@@ -360,7 +361,7 @@ class VtReader(QObject):
         return bounds
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
-                    apply_styles=True, max_tiles=None, layer_filter=None, add_missing_layers=False):
+                    apply_styles=False, max_tiles=None, layer_filter=None, add_missing_layers=True):
         """
          * Specify the reader options
         :param load_mask_layer:  If True the mask layer will also be loaded
@@ -713,7 +714,6 @@ class VtReader(QObject):
                     else:
                         extent = self._DEFAULT_EXTENT
                     geojson_features, geo_type = self._create_geojson_feature(feature, tile, extent)
-
                     if geojson_features and len(geojson_features) > 0:
                         for f in geojson_features:
                             f["properties"]["_id"] = self._feature_count
