@@ -424,10 +424,10 @@ class VtrPlugin():
         if not self._current_reader:
             return
 
-        zoom = self._get_zoom_for_current_map_scale()
+        qgis_zoom = self._get_zoom_for_current_map_scale()
         min_zoom = self._current_reader.get_source().min_zoom()
         max_zoom = self._current_reader.get_source().max_zoom()
-        zoom = clamp(zoom, low=min_zoom, high=max_zoom)
+        zoom = clamp(qgis_zoom, low=min_zoom, high=max_zoom)
 
         lon = pos[0]
         lat = pos[1]
@@ -438,14 +438,15 @@ class VtrPlugin():
 
         mapbox_addition = ""
         if current_crs != 3857:
-            mapbox_addition = "(Mapbox-ZXY: {zoom}, {mapbox_x}, {mapbox_y})".format(zoom=zoom,
-                                                                                    mapbox_x=mapbox_x,
-                                                                                    mapbox_y=mapbox_y)
+            mapbox_addition = "  (Mapbox-Tile: {zoom},{mapbox_x},{mapbox_y})".format(zoom=zoom,
+                                                                                     mapbox_x=mapbox_x,
+                                                                                     mapbox_y=mapbox_y)
 
-        msg = "ZXY: {zoom}, {x}, {y} {mapbox}".format(zoom=zoom,
-                                                      x=x,
-                                                      y=y,
-                                                      mapbox=mapbox_addition)
+        msg = "Zoom: {qgis_zoom}   Tile: {zoom},{x},{y} {mapbox}".format(qgis_zoom=qgis_zoom,
+                                                                         zoom=zoom,
+                                                                         x=x,
+                                                                         y=y,
+                                                                         mapbox=mapbox_addition)
         self.iface.mainWindow().statusBar().showMessage(msg)
 
     @staticmethod
