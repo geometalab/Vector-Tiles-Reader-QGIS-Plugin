@@ -22,9 +22,10 @@ import ast
 
 from builtins import map
 from builtins import str
-from .util.log_helper import info, critical, debug
 import logging
+from .util.log_helper import info, critical, debug
 from .util.vtr_2to3 import *
+from .util.network_helper import url_exists, load_url
 from .util.tile_helper import (
     latlon_to_tile,
     get_zoom_by_scale,
@@ -38,9 +39,11 @@ from .util.tile_helper import (
     convert_coordinate)
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
-from .util.file_helper import (get_icons_directory,
-                               clear_cache,
-                               get_plugin_directory)
+from .util.file_helper import (
+    get_icons_directory,
+    clear_cache,
+    get_plugin_directory,
+    get_temp_dir)
 
 # try:
 #     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'
@@ -317,6 +320,7 @@ class VtrPlugin():
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
     def _on_connect(self, connection):
+        self._create_styles(connection)
         proj = QgsProject.instance()
         proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
         self._currrent_connection_name = connection["name"]
@@ -342,6 +346,23 @@ class VtrPlugin():
             self.connections_dialog.set_layers([])
             self.reload_action.setEnabled(False)
             self.reload_action.setText(self._reload_button_text)
+
+    def _create_styles(self, connection):
+        if "style" not in connection or not connection["style"]:
+            return
+        url = connection["style"]
+        info("Creating styles from: {}", url)
+        from mapboxstyle2qgis import core
+        if not url_exists(url):
+            info("StyleJSON not found. URL invalid?")
+        else:
+            output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
+            status, data = load_url(url)
+            if status == 200:
+                info("Styles will be written to: {}", output_directory)
+                core.generate_styles(data, output_directory)
+            else:
+                info("Loading StyleJSON failed: HTTP status {}", status)
 
     def reader_cancelled(self):
         info("cancelled")

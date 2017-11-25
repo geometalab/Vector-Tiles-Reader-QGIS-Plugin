@@ -41,9 +41,16 @@ def _normalize_path(path):
     return path
 
 
-def get_styles():
-    folder = os.path.join(get_plugin_directory(), "styles")
-    styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+def get_style_folder(connection_name):
+    folder = os.path.join(get_temp_dir(), "styles", connection_name)
+    return folder
+
+
+def get_styles(connection_name):
+    folder = get_style_folder(connection_name)
+    styles = []
+    if os.path.isdir(folder):
+        styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     return styles
 
 

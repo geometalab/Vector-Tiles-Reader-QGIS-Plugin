@@ -28,6 +28,7 @@ if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
                                      clip_features)
     from .util.file_helper import (get_cached_tile_file_name,
                                   get_styles,
+                                  get_style_folder,
                                   assure_temp_dirs_exist,
                                   get_cached_tile,
                                   is_gzipped,
@@ -50,6 +51,7 @@ else:
                                      clip_features)
     from util.file_helper import (get_cached_tile_file_name,
                                   get_styles,
+                                  get_style_folder,
                                   assure_temp_dirs_exist,
                                   get_cached_tile,
                                   is_gzipped,
@@ -103,7 +105,7 @@ class VtReader(QObject):
     _DEFAULT_EXTENT = 4096
     _id = str(uuid.uuid4())
 
-    _styles = get_styles()
+    _style_folder = None
 
     flush_layers_of_other_zoom_level = False
 
@@ -511,8 +513,6 @@ class VtReader(QObject):
         """
         debug("Creating hierarchy in QGIS")
 
-
-
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
         vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
         own_layers = list(map(lambda t: t[1], vt_qgis_name_layer_tuples))
@@ -588,13 +588,19 @@ class VtReader(QObject):
             self.add_layer_to_group.emit(layer)
 
         if apply_styles and not self.cancel_requested:
+            conn_name = self.connection()["name"]
+            styles_folder = get_style_folder(conn_name)
+            styles = get_styles(conn_name)
             count = 0
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
             for name, geo_type, layer in new_layers:
                 count += 1
                 if self.cancel_requested:
                     break
-                VtReader._apply_named_style(layer, geo_type)
+                VtReader._apply_named_style(existing_styles=styles,
+                                            style_dir=styles_folder,
+                                            layer=layer,
+                                            geo_type=geo_type)
                 self._update_progress(progress=count)
 
     @staticmethod
@@ -609,7 +615,7 @@ class VtReader(QObject):
             f.write(json.dumps(feature_collection))
 
     @staticmethod
-    def _apply_named_style(layer, geo_type):
+    def _apply_named_style(existing_styles, style_dir, layer, geo_type):
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
         :param layer: The layer to which the style shall be applied
@@ -623,11 +629,10 @@ class VtReader(QObject):
                 name,
                 "transparent.{}".format(geo_type.lower())
             ]
-            plugin_dir = get_plugin_directory()
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
-                if style_name in VtReader._styles:
-                    style_path = os.path.join(plugin_dir, "styles/{}".format(style_name))
+                if style_name in existing_styles:
+                    style_path = os.path.join(style_dir, style_name)
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
                         layer.setCustomProperty("VectorTilesReader/layerStyle", style_path)

@@ -449,12 +449,14 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         _OMT: {
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
-            "token": "6irhAXGgsi8TrIDL0211"
+            "token": "6irhAXGgsi8TrIDL0211",
+            "style": "https://raw.githubusercontent.com/openmaptiles/klokantech-terrain-gl-style/master/style.json"
         },
         _OMT_CUSTOM_KEY: {
             "name": _OMT_CUSTOM_KEY,
             "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
-            "can_edit": True
+            "can_edit": True,
+            "style": "https://raw.githubusercontent.com/openmaptiles/klokantech-terrain-gl-style/master/style.json"
         },
         _MAPZEN: {
             "name": _MAPZEN,
@@ -630,6 +632,8 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
     def set_connection(self, connection):
         self._connection = copy.deepcopy(connection)
         self._set_name_and_path(connection["name"], connection["url"])
+        if connection["style"]:
+            self.txtStyleJsonUrl.setText(connection["style"])
 
     def _set_name_and_path(self, name, path_or_url):
         if name is not None:

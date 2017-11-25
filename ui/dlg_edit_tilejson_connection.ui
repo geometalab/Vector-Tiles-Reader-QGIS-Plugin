@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>562</width>
-    <height>131</height>
+    <width>636</width>
+    <height>154</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,6 +27,20 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Name</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lblTileJsonUrl">
+        <property name="text">
+         <string>TileJSON URL</string>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="1">
        <widget class="QLineEdit" name="txtUrl">
         <property name="toolTip">
@@ -40,17 +54,13 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Name</string>
-        </property>
-       </widget>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="txtStyleJsonUrl"/>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="lblTileJsonUrl">
+      <item row="2" column="0">
+       <widget class="QLabel" name="lblServerStyleJsonUrl">
         <property name="text">
-         <string>TileJSON URL</string>
+         <string>StyleJSON URL</string>
         </property>
        </widget>
       </item>
