@@ -153,9 +153,9 @@ def get_unique_geojson_file_name():
 def is_sqlite_db(path):
     header_string = "SQLite"
     chunksize = len(header_string)
-    with open(path, "r") as f:
+    with open(path, "rb+") as f:
         content = f.read(chunksize)
-    expected_header = bytearray("SQLite")
+    expected_header = bytearray("SQLite", encoding="UTF-8")
     header_matching = are_headers_equal(content, expected_header)
     return header_matching
 
