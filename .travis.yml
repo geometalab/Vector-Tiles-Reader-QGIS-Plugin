@@ -12,7 +12,7 @@ matrix:
       services:
         - docker
       before_install:
-        - docker-compose build
+        - docker-compose build qgis2
       install:
         - docker-compose run -d --name qgis2 qgis2
         - sleep 10
