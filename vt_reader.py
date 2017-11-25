@@ -85,7 +85,6 @@ class VtReader(QObject):
     cancelled = pyqtSignal(name='cancelled')
     add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
 
-
     _loading_options = {
             'zoom_level': None,
             'layer_filter': None,
