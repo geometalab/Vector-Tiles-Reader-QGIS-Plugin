@@ -205,9 +205,12 @@ class VtrPlugin():
         self._reload_tiles(ignore_limit=True, add_missing_layers=add_missing_layers)
 
     def _have_extent_or_scale_changed(self):
-        has_scale_changed = self._has_scale_changed()[0]
-        has_extent_changed = self._has_extent_changed()[0]
-        return has_scale_changed or has_extent_changed
+        if self._current_reader:
+            has_scale_changed = self._has_scale_changed()[0]
+            has_extent_changed = self._has_extent_changed()[0]
+            return has_scale_changed or has_extent_changed
+        else:
+            return False
 
     def _on_scale_or_extent_change_during_pause(self):
         assert self._current_reader
