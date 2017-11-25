@@ -98,7 +98,7 @@ class VtrPlugin():
         self.connections_dialog.on_directory_change.connect(self._on_browse_dir_change)
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
-        self.connections_dialog.on_zoom_change.connect(self._update_nr_of_tiles)
+        self.connections_dialog.on_zoom_change.connect(self._on_zoom_change)
         self.progress_dialog = None
         self._current_reader = None
         self._add_path_to_icons()
@@ -302,18 +302,15 @@ class VtrPlugin():
                     self._loaded_extent = new_extent
                     self._reload_tiles(overwrite_extent=new_extent)
 
-    def _update_nr_of_tiles(self):
-        zoom = self._get_current_zoom()
+    def _on_zoom_change(self):
+        zoom = self._get_zoom_of_current_mode()
+        if zoom:
+            self._update_nr_of_tiles(zoom)
+
+    def _update_nr_of_tiles(self, zoom):
         bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
         nr_of_tiles = bounds["width"] * bounds["height"]
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
-
-        map_scale_zoom = self._get_zoom_for_current_map_scale()
-        if self._current_reader:
-            min_zoom = self._current_reader.get_source().min_zoom()
-            max_zoom = self._current_reader.get_source().max_zoom()
-            map_scale_zoom = clamp(map_scale_zoom, low=min_zoom, high=max_zoom)
-        self.connections_dialog.set_current_zoom_level(map_scale_zoom)
 
     def _on_connect(self, connection):
         proj = QgsProject.instance()
@@ -334,8 +331,8 @@ class VtrPlugin():
         if self._current_reader:
             layers = self._current_reader.get_source().vector_layers()
             self.connections_dialog.set_layers(layers)
-            self.connections_dialog.options.set_zoom(self._current_reader.get_source().min_zoom(),
-                                                     self._current_reader.get_source().max_zoom())
+            self.connections_dialog.options.set_zoom(min_zoom=self._current_reader.get_source().min_zoom(),
+                                                     max_zoom=self._current_reader.get_source().max_zoom())
             self.reload_action.setEnabled(True)
         else:
             self.connections_dialog.set_layers([])
@@ -458,8 +455,24 @@ class VtrPlugin():
             QgsApplication.setDefaultSvgPaths(current_paths)
 
     def _show_connections_dialog(self):
-        self._update_nr_of_tiles()
+        zoom = self._get_zoom_of_current_mode()
+        self._update_nr_of_tiles(zoom=zoom)
         self.connections_dialog.show()
+
+    def _get_zoom_of_current_mode(self):
+        manual_zoom = self.connections_dialog.options.manual_zoom()
+        if self.connections_dialog.options.auto_zoom_enabled():
+            zoom = self._get_zoom_for_current_map_scale()
+            if self._current_reader:
+                min_zoom = self._current_reader.get_source().min_zoom()
+                max_zoom = self._current_reader.get_source().max_zoom()
+                zoom = clamp(zoom, low=min_zoom, high=max_zoom)
+        elif manual_zoom:
+            zoom = manual_zoom
+        else:
+            if self._current_reader:
+                zoom = self._current_reader.get_source().max_zoom()
+        return zoom
 
     def _get_all_own_layers(self):
         layers = []

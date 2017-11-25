@@ -263,8 +263,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         _CLIP_TILES: False,
         _AUTO_ZOOM: True,
         _MAX_ZOOM: False,
-        _FIX_ZOOM_ENABLED: False,
         _FIX_ZOOM: 0,
+        _FIX_ZOOM_ENABLED: False,
         _APPLY_STYLES: True
     }
 
@@ -280,14 +280,16 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
         self.chkApplyStyles.toggled.connect(lambda enabled: self._set_option(self._APPLY_STYLES, enabled))
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
-        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
-        self.rbZoomManual.toggled.connect(self._on_manual_zoom_selected)
+        self.rbZoomManual.toggled.connect(self._on_manual_zoom_enabled)
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
-        self.zoomSpin.valueChanged.connect(self._on_zoom_change)
+        self.rbAutoZoom.toggled.connect(self._zoom_change_handler)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
         self._load_options()
+        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
+        self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
+
 
     def _load_options(self):
         opt = self._options
@@ -305,10 +307,10 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
             self.rbAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
         if opt[self._MAX_ZOOM]:
             self.rbZoomMax.setChecked(opt[self._MAX_ZOOM] == True or opt[self._MAX_ZOOM] == "true")
-        if opt[self._FIX_ZOOM_ENABLED]:
-            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._FIX_ZOOM]:
             self.zoomSpin.setValue(int(opt[self._FIX_ZOOM]))
+        if opt[self._FIX_ZOOM_ENABLED]:
+            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._APPLY_STYLES]:
             self.chkApplyStyles.setChecked(opt[self._APPLY_STYLES] == True or opt[self._APPLY_STYLES] == "true")
 
@@ -316,13 +318,14 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self._options[key] = value
         self.settings.setValue("options/{}".format(key), value)
 
-    def _on_manual_zoom_selected(self, enabled):
+    def _on_manual_zoom_enabled(self, enabled):
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
         self.zoomSpin.setEnabled(enabled)
-        self._zoom_change_handler()
+        self._on_manual_zoom_change()
 
-    def _on_zoom_change(self):
-        self._set_option(self._FIX_ZOOM, self.zoomSpin.value())
+    def _on_manual_zoom_change(self):
+        zoom = self.zoomSpin.value()
+        self._set_option(self._FIX_ZOOM, zoom)
         self._zoom_change_handler()
 
     def _on_max_zoom_selected(self, enabled):
@@ -364,12 +367,12 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setChecked(enabled)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
-        if min_zoom:
+        if min_zoom is not None:
             self.zoomSpin.setMinimum(min_zoom)
         else:
             self.zoomSpin.setMinimum(0)
         max_zoom_text = "Max. Zoom"
-        if max_zoom:
+        if max_zoom is not None:
             self.zoomSpin.setMaximum(max_zoom)
             max_zoom_text += " ({})".format(max_zoom)
         else:
@@ -377,7 +380,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.rbZoomMax.setText(max_zoom_text)
 
         zoom_range_text = ""
-        if min_zoom or max_zoom:
+        if min_zoom is not None or max_zoom is not None:
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
 
