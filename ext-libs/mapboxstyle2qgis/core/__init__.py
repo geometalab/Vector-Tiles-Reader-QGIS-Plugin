@@ -7,6 +7,18 @@ from xml.sax.saxutils import escape
 from .xml_helper import create_style_file
 
 
+def register_qgis_expressions():
+    try:
+        from qgis.core import QgsExpression
+        from .data import qgis_functions
+        QgsExpression.registerFunction(qgis_functions.get_zoom_for_scale)
+        QgsExpression.registerFunction(qgis_functions.if_not_exists)
+        QgsExpression.registerFunction(qgis_functions.interpolate_exp)
+    except ImportError:
+        print("registering functions failed")
+        pass
+
+
 def generate_styles(text, output_directory):
     """
      * Creates and exports the styles

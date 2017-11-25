@@ -353,6 +353,7 @@ class VtrPlugin():
         url = connection["style"]
         info("Creating styles from: {}", url)
         from mapboxstyle2qgis import core
+        core.register_qgis_expressions()
         if not url_exists(url):
             info("StyleJSON not found. URL invalid?")
         else:
