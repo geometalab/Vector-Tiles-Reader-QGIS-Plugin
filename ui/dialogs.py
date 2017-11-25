@@ -1,9 +1,11 @@
 import copy
 import csv
 import webbrowser
+import ast
 from collections import OrderedDict
 
 from ..util.vtr_2to3 import *
+from ..util.log_helper import info
 
 try:
     from .connections_group_qt5 import Ui_ConnectionsGroup
@@ -290,7 +292,6 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
 
-
     def _load_options(self):
         opt = self._options
         for key in self._options:
@@ -488,9 +489,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)
-
         self.selected_layer_id = None
-
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.btnBrowse.clicked.connect(self._select_file_path)
@@ -502,6 +501,23 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self.tblLayers.setModel(self.model)
         _update_size(self)
         self._current_connection = None
+        self._directory_conn = None
+        self._mbtiles_conn = None
+        self._load_mbtiles_and_directory_connections()
+
+    def _load_mbtiles_and_directory_connections(self):
+        mbtiles_connn = self.settings.value("mbtiles_connection")
+        directory_conn = self.settings.value("directory_connection")
+        if mbtiles_connn:
+            mbtiles_connn = ast.literal_eval(mbtiles_connn)
+            self.txtPath.setText(mbtiles_connn["path"])
+            self.txtMbtilesStyleJsonUrl.setText(mbtiles_connn["style"])
+        if directory_conn:
+            directory_conn = ast.literal_eval(directory_conn)
+            self.txtDirectoryPath.setText(directory_conn["path"])
+            self.txtDirectoryStyleJsonUrl.setText(directory_conn["style"])
+        self._mbtiles_conn = mbtiles_connn
+        self._directory_conn = directory_conn
 
     def connect(self, connection):
         self._handle_connect(connection)
@@ -527,22 +543,18 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
         if open_file_name and os.path.isfile(open_file_name):
             self.txtPath.setText(open_file_name)
-
             connection = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
-
             self._handle_path_or_folder_selection(connection)
 
     def _select_directory(self):
         open_file_name = QFileDialog.getExistingDirectory(None, "Select directory", self.browse_path)
         if open_file_name and os.path.isdir(open_file_name):
             self.txtDirectoryPath.setText(open_file_name)
-
             connection = copy.deepcopy(DIRECTORY_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
-
             self._handle_path_or_folder_selection(connection)
 
     def _handle_path_or_folder_selection(self, connection):
@@ -565,9 +577,21 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = dict(map(lambda i: self.model.item(i.row()).text(), indexes))
+        active_tab = self.tabConnections.currentWidget()
+        if active_tab == self.tabFile:
+            self._current_connection["style"] = self.txtMbtilesStyleJsonUrl.text()
+            self.settings.setValue("mbtiles_connection", str(self._current_connection))
+        elif active_tab == self.tabDirectory:
+            self._current_connection["style"] = self.txtDirectoryStyleJsonUrl.text()
+            self.settings.setValue("directory_connection", str(self._current_connection))
         self.on_add.emit(self._current_connection, selected_layers)
 
     def show(self):
+        active_tab = self.tabConnections.currentWidget()
+        if active_tab == self.tabFile and self._mbtiles_conn:
+            self.connect(self._mbtiles_conn)
+        elif active_tab == self.tabDirectory and self._directory_conn:
+            self.connect(self._directory_conn)
         self.exec_()
 
     def keep_dialog_open(self):

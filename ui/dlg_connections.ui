@@ -153,13 +153,6 @@
        <string>MBTile</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="0">
-        <widget class="QLabel" name="lblSource">
-         <property name="text">
-          <string>Path</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLineEdit" name="txtPath">
          <property name="toolTip">
@@ -180,21 +173,45 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblSource">
+         <property name="text">
+          <string>Path</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblMbtilesStyleJsonUrl">
+         <property name="text">
+          <string>StyleJSON URL</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="txtMbtilesStyleJsonUrl"/>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabDirectory">
       <attribute name="title">
        <string>Directory</string>
       </attribute>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
         <widget class="QLabel" name="lblSource_2">
          <property name="text">
           <string>Path</string>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="btnSelectDirectory">
+         <property name="text">
+          <string>Browse</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
         <widget class="QLineEdit" name="txtDirectoryPath">
          <property name="toolTip">
           <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
@@ -207,12 +224,15 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnSelectDirectory">
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblDirectoryStyleJsonUrl">
          <property name="text">
-          <string>Browse</string>
+          <string>StyleJSON URL</string>
          </property>
         </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="txtDirectoryStyleJsonUrl"/>
        </item>
       </layout>
      </widget>
@@ -229,8 +249,6 @@
   <tabstop>btnHelp</tabstop>
   <tabstop>txtPath</tabstop>
   <tabstop>btnBrowse</tabstop>
-  <tabstop>txtDirectoryPath</tabstop>
-  <tabstop>btnSelectDirectory</tabstop>
  </tabstops>
  <resources/>
  <connections>

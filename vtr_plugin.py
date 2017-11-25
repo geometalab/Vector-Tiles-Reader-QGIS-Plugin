@@ -234,6 +234,7 @@ class VtrPlugin():
 
     def _on_add_layer(self, connection, selected_layers):
         assert connection
+        self._create_styles(connection)
         self._assure_qgis_groups_exist(connection["name"], True)
 
         crs_string = self._current_reader.get_source().crs()
@@ -320,7 +321,6 @@ class VtrPlugin():
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
     def _on_connect(self, connection):
-        self._create_styles(connection)
         proj = QgsProject.instance()
         proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
         self._currrent_connection_name = connection["name"]

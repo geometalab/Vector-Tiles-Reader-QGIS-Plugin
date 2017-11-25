@@ -176,7 +176,8 @@ class VtReader(QObject):
         return self._id
 
     def _source_tile_limit_reached(self):
-        self.tile_limit_reached.emit(self._loading_options["max_tiles"])
+        if self._loading_options["max_tiles"]:
+            self.tile_limit_reached.emit(self._loading_options["max_tiles"])
 
     def _source_progress_changed(self, progress):
         self._update_progress(progress=progress)
