@@ -23,6 +23,12 @@ windows32:
 windows64:
 	x86_64-w64-mingw32-g++ $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_windows_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
 
+windows64_dockcross:
+	$(CXX) $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_windows_x86_64.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
+
+windows32_dockcross:
+	$(CXX) $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_windows_i686.dll ./ext-libs/pbf2geojson/pbf2geojson.cpp
+
 windows: windows32 windows64
 
 linux:

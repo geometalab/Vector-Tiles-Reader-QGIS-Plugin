@@ -1,48 +1,56 @@
 import copy
 import csv
-import os
 import webbrowser
 from collections import OrderedDict
-import resources_rc  # don't remove this import, otherwise the icons won't be working
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
-from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem, QApplication
+from ..util.vtr_2to3 import *
 
-from connections_group import Ui_ConnectionsGroup
-from dlg_about import Ui_DlgAbout
-from dlg_connections import Ui_DlgConnections
-from dlg_edit_postgis_connection import Ui_DlgEditPostgisConnection
-from dlg_edit_tilejson_connection import Ui_DlgEditTileJSONConnection
-from options import Ui_OptionsGroup
+try:
+    from .connections_group_qt5 import Ui_ConnectionsGroup
+    from .dlg_about_qt5 import Ui_DlgAbout
+    from .dlg_connections_qt5 import Ui_DlgConnections
+    from .dlg_edit_postgis_connection_qt5 import Ui_DlgEditPostgisConnection
+    from .dlg_edit_tilejson_connection_qt5 import Ui_DlgEditTileJSONConnection
+    from .options_qt5 import Ui_OptionsGroup
+except:
+    from .connections_group_qt4 import Ui_ConnectionsGroup
+    from .dlg_about_qt4 import Ui_DlgAbout
+    from .dlg_connections_qt4 import Ui_DlgConnections
+    from .dlg_edit_postgis_connection_qt4 import Ui_DlgEditPostgisConnection
+    from .dlg_edit_tilejson_connection_qt4 import Ui_DlgEditTileJSONConnection
+    from .options_qt4 import Ui_OptionsGroup
+
+
 from ..util.connection import (
     ConnectionTypes,
     MBTILES_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
-    TREX_CONNECTION_TEMPLATE)
-from ..util.log_helper import info
+    DIRECTORY_CONNECTION_TEMPLATE)
 
 _HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
 
-if not resources_rc:
-    info("Resources are required, otherwise no icons will be shown")
 
-
-def _update_size(dialog, fix_size=False):
+def _update_size(dialog):
     screen_resolution = QApplication.desktop().screenGeometry()
     screen_width, screen_height = screen_resolution.width(), screen_resolution.height()
+    new_width = None
+    new_height = None
     if screen_width > 1920 or screen_height > 1080:
         new_width = dialog.width() / 1920.0 * screen_width
         new_height = dialog.height() / 1080.0 * screen_height
-        if fix_size:
-            dialog.setFixedSize(new_width, new_height)
-        else:
-            dialog.setMinimumSize(new_width, new_height)
+        dialog.setMinimumSize(new_width, new_height)
+    elif dialog.width() >= screen_width or dialog.height() >= screen_height:
+        margin = 40
+        new_width = screen_width - margin
+        new_height = screen_height - margin
+
+    if new_width and new_height:
+        dialog.resize(new_width, new_height)
 
 
-class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
+class AboutDialog(QDialog, Ui_DlgAbout):
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         self._load_about()
         _update_size(self)
@@ -58,13 +66,13 @@ class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
         self.exec_()
 
 
-class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
+class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal('QString')
 
     def __init__(self, target_groupbox, edit_dialog, connection_template, settings_key, settings, predefined_connections=None):
-        super(QtGui.QGroupBox, self).__init__()
+        super(QGroupBox, self).__init__()
 
         self._connection_template = connection_template
         cloned_predefined_connections = {}
@@ -167,7 +175,7 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         connection = self.cbxConnections.currentText()
         msg = "Are you sure you want to remove the connection '{}' and all associated settings?".format(connection)
         reply = QMessageBox.question(self.activateWindow(), 'Confirm Delete', msg, QMessageBox.Yes, QMessageBox.No)
-        if reply == QtGui.QMessageBox.Yes:
+        if reply == QMessageBox.Yes:
             self.cbxConnections.removeItem(index)
             self.connections.pop(connection)
             self._save_connections()
@@ -195,7 +203,7 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         name = connection["name"]
         self.edit_connection_dialog.set_connection(connection)
         result = self.edit_connection_dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QDialog.Accepted:
             new_connection = self.edit_connection_dialog.get_connection()
             new_name = new_connection["name"]
             self.connections[new_name] = new_connection
@@ -234,7 +242,7 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         return connection
 
 
-class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
+class OptionsGroup(QGroupBox, Ui_OptionsGroup):
 
     on_zoom_change = pyqtSignal()
 
@@ -255,13 +263,13 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         _CLIP_TILES: False,
         _AUTO_ZOOM: True,
         _MAX_ZOOM: False,
-        _FIX_ZOOM_ENABLED: False,
         _FIX_ZOOM: 0,
+        _FIX_ZOOM_ENABLED: False,
         _APPLY_STYLES: True
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
-        super(QtGui.QGroupBox, self).__init__()
+        super(QGroupBox, self).__init__()
         self.setupUi(target_groupbox)
         self._reset_to_basemap_defaults()
         self.settings = settings
@@ -272,14 +280,16 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
         self.chkApplyStyles.toggled.connect(lambda enabled: self._set_option(self._APPLY_STYLES, enabled))
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
-        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
-        self.rbZoomManual.toggled.connect(self._on_manual_zoom_selected)
+        self.rbZoomManual.toggled.connect(self._on_manual_zoom_enabled)
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
-        self.zoomSpin.valueChanged.connect(self._on_zoom_change)
+        self.rbAutoZoom.toggled.connect(self._zoom_change_handler)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
         self._load_options()
+        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
+        self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
+
 
     def _load_options(self):
         opt = self._options
@@ -297,10 +307,10 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
             self.rbAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
         if opt[self._MAX_ZOOM]:
             self.rbZoomMax.setChecked(opt[self._MAX_ZOOM] == True or opt[self._MAX_ZOOM] == "true")
-        if opt[self._FIX_ZOOM_ENABLED]:
-            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._FIX_ZOOM]:
             self.zoomSpin.setValue(int(opt[self._FIX_ZOOM]))
+        if opt[self._FIX_ZOOM_ENABLED]:
+            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._APPLY_STYLES]:
             self.chkApplyStyles.setChecked(opt[self._APPLY_STYLES] == True or opt[self._APPLY_STYLES] == "true")
 
@@ -308,13 +318,14 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self._options[key] = value
         self.settings.setValue("options/{}".format(key), value)
 
-    def _on_manual_zoom_selected(self, enabled):
+    def _on_manual_zoom_enabled(self, enabled):
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
         self.zoomSpin.setEnabled(enabled)
-        self._zoom_change_handler()
+        self._on_manual_zoom_change()
 
-    def _on_zoom_change(self):
-        self._set_option(self._FIX_ZOOM, self.zoomSpin.value())
+    def _on_manual_zoom_change(self):
+        zoom = self.zoomSpin.value()
+        self._set_option(self._FIX_ZOOM, zoom)
         self._zoom_change_handler()
 
     def _on_max_zoom_selected(self, enabled):
@@ -356,12 +367,12 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setChecked(enabled)
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
-        if min_zoom:
+        if min_zoom is not None:
             self.zoomSpin.setMinimum(min_zoom)
         else:
             self.zoomSpin.setMinimum(0)
         max_zoom_text = "Max. Zoom"
-        if max_zoom:
+        if max_zoom is not None:
             self.zoomSpin.setMaximum(max_zoom)
             max_zoom_text += " ({})".format(max_zoom)
         else:
@@ -369,7 +380,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.rbZoomMax.setText(max_zoom_text)
 
         zoom_range_text = ""
-        if min_zoom or max_zoom:
+        if min_zoom is not None or max_zoom is not None:
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
 
@@ -415,11 +426,11 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         return False
 
 
-class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
+class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
-    on_add = pyqtSignal(dict, list)
+    on_add = pyqtSignal(dict, dict)
     on_zoom_change = pyqtSignal()
     on_directory_change = pyqtSignal("QString")
 
@@ -456,7 +467,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     _CURRENT_ONLINE_CONNECTION = "current_online_connection"
 
     def __init__(self, default_browse_directory):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         self.settings = QSettings("VtrSettings")
         self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
@@ -481,7 +492,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.btnBrowse.clicked.connect(self._select_file_path)
-        self.btnBrowseTrexCache.clicked.connect(self._select_trex_cache_folder)
+        self.btnSelectDirectory.clicked.connect(self._select_directory)
         self.open_path = None
         self.browse_path = default_browse_directory
         self.model = QStandardItemModel()
@@ -490,11 +501,12 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         _update_size(self)
         self._current_connection = None
 
-    @pyqtSlot(int)
+    def connect(self, connection):
+        self._handle_connect(connection)
+
     def _handle_tab_change(self, current_index):
         self.settings.setValue(self._CONNECTIONS_TAB, current_index)
 
-    @pyqtSlot(dict)
     def _handle_connect(self, connection):
         self._current_connection = connection
         self.on_connect.emit(connection)
@@ -502,7 +514,6 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if active_tab != self.tabFile:
             self.txtPath.setText("")
 
-    @pyqtSlot('QString')
     def _handle_connection_change(self, name):
         self.settings.setValue(self._CURRENT_ONLINE_CONNECTION, name)
         self.set_layers([])
@@ -521,12 +532,12 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
             self._handle_path_or_folder_selection(connection)
 
-    def _select_trex_cache_folder(self):
-        open_file_name = QFileDialog.getExistingDirectory(None, "Select t-rex Cache directory", self.browse_path)
+    def _select_directory(self):
+        open_file_name = QFileDialog.getExistingDirectory(None, "Select directory", self.browse_path)
         if open_file_name and os.path.isdir(open_file_name):
-            self.txtTrexCachePath.setText(open_file_name)
+            self.txtDirectoryPath.setText(open_file_name)
 
-            connection = copy.deepcopy(TREX_CONNECTION_TEMPLATE)
+            connection = copy.deepcopy(DIRECTORY_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
 
@@ -551,7 +562,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
-        selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
+        selected_layers = dict(map(lambda i: self.model.item(i.row()).text(), indexes))
         self.on_add.emit(self._current_connection, selected_layers)
 
     def show(self):
@@ -562,7 +573,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     def set_layers(self, layers):
         self.model.removeRows(0, self.model.rowCount())
-        for row_index, layer in enumerate(sorted(layers)):
+        for row_index, layer in enumerate(layers):
             for header_index, header in enumerate(self._table_headers.keys()):
                 header_value = self._table_headers[header]
                 if header_value in layer:
@@ -574,10 +585,10 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.btnAdd.setEnabled(add_enabled)
 
 
-class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
+class EditPostgisConnectionDialog(QDialog, Ui_DlgEditPostgisConnection):
 
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         _update_size(self)
         self._connection = None
@@ -606,10 +617,10 @@ class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
         return self._connection
 
 
-class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
+class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
 
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         self.txtName.textChanged.connect(self._update_save_btn_state)
         self.txtUrl.textChanged.connect(self._update_save_btn_state)

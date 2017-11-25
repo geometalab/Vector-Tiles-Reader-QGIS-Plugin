@@ -1,11 +1,8 @@
 from future import standard_library
 standard_library.install_aliases()
-from log_helper import warn, info
-from qgis.core import QgsNetworkAccessManager
+from .log_helper import warn, info
 
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import QUrl
-from PyQt4.QtNetwork import QNetworkRequest
+from .vtr_2to3 import *
 
 
 def url_exists(url):
@@ -25,7 +22,6 @@ def url_exists(url):
 def get_async_reply(url, head_only=False):
     m = QgsNetworkAccessManager.instance()
     req = QNetworkRequest(QUrl(url))
-    req.setRawHeader('User-Agent', 'Magic Browser')
     if head_only:
         reply = m.head(req)
     else:

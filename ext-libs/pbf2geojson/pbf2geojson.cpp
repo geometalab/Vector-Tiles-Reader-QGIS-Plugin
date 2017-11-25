@@ -9,6 +9,9 @@
 #include <iomanip>
 
 struct tile_location {
+    const int zoom;
+    const int col;
+    const int row;
 	const double x;
 	const double y;
 	const double spanX;
@@ -307,9 +310,12 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
 			vtzero::apply_visitor(print_property{properties}, property.value());
 			properties += ',';
 		}
-		if (properties.back() == ',') {
-            properties.back() = ' ';
-        }
+		properties += "\"_col\":";
+		properties += std::to_string(loc.col);
+		properties += ",\"_row\":";
+		properties += std::to_string(loc.row);
+		properties += ",\"_zoom\":";
+		properties += std::to_string(loc.zoom);
 		properties += '}';
 
         std::string coordinatesString("");
@@ -394,8 +400,8 @@ std::string decodeAsJson(tile_location& loc, const char* hex){
 }
 
 extern "C" {
-	char* decodeMvtToJson(const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data) {
-		tile_location loc{tileX, tileY, tileSpanX, tileSpanY};
+	char* decodeMvtToJson(const int zoom, const int col, const int row, const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data) {
+		tile_location loc{zoom, col, row, tileX, tileY, tileSpanX, tileSpanY};
 		auto res = decodeAsJson(loc, data);
 		const char* result = res.c_str();
 		char *new_buf = strdup(result);

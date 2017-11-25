@@ -14,11 +14,12 @@ services:
     volumes:
       - .:/vector-tiles-reader
       - .:/tests_directory
-#  qgis-latest:
-#    build:
-#      context: ./
-#      dockerfile: Dockerfile
-#      args:
-#        QGIS_BRANCH: "master"
-#    volumes:
-#      - ./:/vector-tiles-reader
+  qgis3:
+    build:
+      context: ./
+      dockerfile: DockerfileQGIS3
+      args:
+        QGIS_PLUGINS_DIR: "/root/.local/share/QGIS/QGIS3/profiles/default"
+    volumes:
+      - .:/vector-tiles-reader
+      - .:/tests_directory

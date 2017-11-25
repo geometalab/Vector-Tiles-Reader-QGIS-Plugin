@@ -3,12 +3,15 @@ from builtins import str
 from builtins import object
 from past.utils import old_div
 import sys
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import os
 import ast
-from log_helper import critical, debug, info
-from tile_helper import get_tile_bounds, latlon_to_tile, WORLD_BOUNDS
-from network_helper import load_url
+from .log_helper import critical, debug, info
+from .tile_helper import get_tile_bounds, WORLD_BOUNDS
+from .network_helper import load_url
 
 
 class TileJSON(object):

@@ -6,13 +6,9 @@ from past.utils import old_div
 from builtins import object
 import itertools
 import operator
-from global_map_tiles import GlobalMercator
-from log_helper import warn, debug, info
-from qgis.core import (
-    QgsCoordinateReferenceSystem,
-    QgsCoordinateTransform,
-    QgsPoint
-)
+from .global_map_tiles import GlobalMercator
+from .log_helper import warn, debug, info
+from .vtr_2to3 import *
 
 
 WORLD_BOUNDS = [-180, -85.05112878, 180, 85.05112878]
@@ -127,7 +123,10 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
     crs_src = QgsCoordinateReferenceSystem(source_crs)
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
     xform = QgsCoordinateTransform(crs_src, crs_dest)
-    x, y = xform.transform(QgsPoint(lng, lat))
+    try:
+        x, y = xform.transform(QgsPoint(lng, lat))
+    except TypeError:
+        x, y = xform.transform(lng, lat)
     return x, y
 
 

@@ -1,36 +1,32 @@
 from builtins import str
 from builtins import object
-from qgis.core import (QgsMapLayerRegistry,
-                       QgsField,
-                       QgsVectorLayer,
-                       QgsFeatureRequest,
-                       QgsSpatialIndex,
-                       QgsGeometry,
-                       QgsRectangle)
-from PyQt4.QtCore import *
-from log_helper import info, debug
+
+from .vtr_2to3 import *
+
 import uuid
 import numbers
-from tile_helper import tile_to_latlon
+from .log_helper import info, debug
+from .tile_helper import tile_to_latlon
 
 
 def clip_features(layer, scheme):
     layer.startEditing()
-    info("tile extent: {}")
     for f in layer.getFeatures():
-        errors = f.geometry().validateGeometry()
-        if errors and len(errors) > 0:
-            continue
+        geom = f.geometry()
+        if geom:
+            errors = geom.validateGeometry()
+            if errors and len(errors) > 0:
+                continue
 
-        col = f.attribute("_col")
-        row = f.attribute("_row")
-        zoom_level = f.attribute("_zoom_level")
-        tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
-        rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
+            col = f.attribute("_col")
+            row = f.attribute("_row")
+            zoom_level = f.attribute("_zoom")
+            tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
+            rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
 
-        new_geom = f.geometry().intersection(rect)
-        f.setGeometry(new_geom)
-        layer.updateFeature(f)
+            new_geom = geom.intersection(rect)
+            f.setGeometry(new_geom)
+            layer.updateFeature(f)
     layer.commitChanges()
 
 
@@ -72,25 +68,6 @@ class FeatureMerger(object):
         layer.commitChanges()
         debug('Dissolvement complete: {}', layer.name())
         return
-
-    @staticmethod
-    def extract_poly_coords(geom):
-        if geom.type == 'Polygon':
-            exterior_coords = geom.exterior.coords[:]
-            interior_coords = []
-            for interior in geom.interiors:
-                interior_coords += interior.coords[:]
-        elif geom.type == 'MultiPolygon':
-            exterior_coords = []
-            interior_coords = []
-            for part in geom:
-                epc = FeatureMerger.extract_poly_coords(part)  # Recursive call
-                exterior_coords += epc['exterior_coords']
-                interior_coords += epc['interior_coords']
-        else:
-            raise ValueError('Unhandled geometry type: ' + repr(geom.type))
-        return {'exterior_coords': exterior_coords,
-                'interior_coords': interior_coords}
 
     @staticmethod
     def _assign_dissolve_group_to_neighbours_rec(layer, dissolve_gorup_field, index, f, feature_dict, feature_handler, feature_class_attr_index):
