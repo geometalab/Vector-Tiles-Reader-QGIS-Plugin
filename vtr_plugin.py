@@ -926,7 +926,7 @@ class SignalDebouncer(QObject):
             self._is_stopped = False
         else:
             self._connect()
-            self._debounce_timer.start(self._timeout)
+        self._debounce_timer.start(self._timeout)
 
     def is_running(self):
         return self._is_connected
