@@ -63,9 +63,9 @@ matrix:
         - osx
       compiler:
         - gcc
-      before_script:
-        - sudo apt-get update -qq
-        - sudo apt-get install gcc-multilib g++-multilib -y
+#      before_script:
+#        - sudo apt-get update -qq
+#        - sudo apt-get install gcc-multilib g++-multilib -y
       script:
         - git clone https://github.com/mapbox/protozero.git ../protozero
         - git clone https://github.com/mapbox/vtzero.git ../vtzero
