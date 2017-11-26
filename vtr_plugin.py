@@ -746,7 +746,7 @@ class VtrPlugin():
             reader.cancelled.connect(self.reader_cancelled)
             reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
-            QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
+            QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
 

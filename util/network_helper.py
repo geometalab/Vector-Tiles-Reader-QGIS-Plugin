@@ -13,8 +13,14 @@ def url_exists(url):
     status = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
     result = status == 200
     error = None
-    if status != 200:
-        error = "HTTP HEAD failed: status {}".format(status)
+    if not status:
+        error = reply.errorString()
+    if status == 302:
+        error = "Loading error: Moved Temporarily.\n\nURL incorrect? Missing or incorrect API key?"
+    elif status == 404:
+        error = "Loading error: Resource not found.\n\nURL incorrect?"
+    elif error:
+        error = "Loading error: {}\n\nURL incorrect?".format(error)
 
     return result, error
 
