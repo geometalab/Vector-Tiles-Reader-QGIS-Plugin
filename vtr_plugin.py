@@ -484,7 +484,10 @@ class VtrPlugin():
     def _show_connections_dialog(self):
         zoom = self._get_zoom_of_current_mode()
         self._update_nr_of_tiles(zoom=zoom)
-        self.connections_dialog.show()
+        current_connection = None
+        if self._current_reader:
+            current_connection = self._current_reader.connection()
+        self.connections_dialog.show(current_connection)
 
     def _get_zoom_of_current_mode(self):
         manual_zoom = self.connections_dialog.options.manual_zoom()

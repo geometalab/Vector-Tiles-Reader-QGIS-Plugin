@@ -80,7 +80,7 @@ class Ui_DlgEditTileJSONConnection(object):
         self.label.setText(_translate("DlgEditTileJSONConnection", "Name", None))
         self.lblTileJsonUrl.setText(_translate("DlgEditTileJSONConnection", "TileJSON URL", None))
         self.txtUrl.setToolTip(_translate("DlgEditTileJSONConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
-        self.lblServerStyleJsonUrl.setText(_translate("DlgEditTileJSONConnection", "StyleJSON URL", None))
+        self.lblServerStyleJsonUrl.setText(_translate("DlgEditTileJSONConnection", "GL Style JSON URL", None))
         self.btnSave.setText(_translate("DlgEditTileJSONConnection", "Save", None))
         self.btnCancel.setText(_translate("DlgEditTileJSONConnection", "Cancel", None))
 

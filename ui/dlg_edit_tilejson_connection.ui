@@ -60,7 +60,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="lblServerStyleJsonUrl">
         <property name="text">
-         <string>StyleJSON URL</string>
+         <string>GL Style JSON URL</string>
         </property>
        </widget>
       </item>

@@ -489,6 +489,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         if not connection_to_select:
             connection_to_select = self._OMT
         self.tilejson_connections.select_connection(connection_to_select)
+        self.btnConnectDirectory.clicked.connect(lambda: self.connect(self._directory_conn))
+        self.btnConnectFile.clicked.connect(lambda: self.connect(self._mbtiles_conn))
         self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)
@@ -523,17 +525,32 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self._directory_conn = directory_conn
 
     def connect(self, connection):
-        self._handle_connect(connection)
+        self._update_layers_group_title(connection)
+        if connection:
+            self._handle_connect(connection)
+            widget = None
+            if connection["type"] == ConnectionTypes.TileJSON:
+                widget = self.tabServer
+            elif connection["type"] == ConnectionTypes.MBTiles:
+                widget = self.tabFile
+            elif connection["type"] == ConnectionTypes.Directory:
+                widget = self.tabDirectory
+            if widget:
+                self.tabConnections.setCurrentWidget(widget)
+
+    def _update_layers_group_title(self, connection):
+        if connection:
+            layers_group_title = "Layers of '{}'".format(connection["name"])
+            self.grpLayers.setTitle(layers_group_title)
 
     def _handle_tab_change(self, current_index):
         self.settings.setValue(self._CONNECTIONS_TAB, current_index)
 
     def _handle_connect(self, connection):
-        self._current_connection = connection
-        self.on_connect.emit(connection)
-        active_tab = self.tabConnections.currentWidget()
-        if active_tab != self.tabFile:
-            self.txtPath.setText("")
+        self._update_layers_group_title(connection)
+        if connection:
+            self._current_connection = connection
+            self.on_connect.emit(connection)
 
     def _handle_connection_change(self, name):
         self.settings.setValue(self._CURRENT_ONLINE_CONNECTION, name)
@@ -589,11 +606,11 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             self.settings.setValue("directory_connection", str(self._current_connection))
         self.on_add.emit(self._current_connection, selected_layers)
 
-    def show(self):
+    def show(self, current_connection):
         active_tab = self.tabConnections.currentWidget()
-        if active_tab == self.tabFile and self._mbtiles_conn:
+        if active_tab == self.tabFile and self._mbtiles_conn and current_connection != self._mbtiles_conn:
             self.connect(self._mbtiles_conn)
-        elif active_tab == self.tabDirectory and self._directory_conn:
+        elif active_tab == self.tabDirectory and self._directory_conn and current_connection != self._mbtiles_conn:
             self.connect(self._directory_conn)
         self.exec_()
 
