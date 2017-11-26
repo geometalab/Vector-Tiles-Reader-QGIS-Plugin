@@ -274,14 +274,14 @@ def get_zoom_by_scale(scale):
     if scale < 0:
         scale = 0
     zoom = 0
-    for lower_bound in sorted(_zoom_level_by_lower_scale_bound, key=lambda k: k*-1):
-        if scale >= lower_bound:
-            zoom = _zoom_level_by_lower_scale_bound[lower_bound]
+    for upper_bound in reversed(sorted(_zoom_level_by_upper_scale_bound)):
+        if scale > upper_bound:
+            zoom = _zoom_level_by_upper_scale_bound[upper_bound]
             break
     return zoom
 
 
-_zoom_level_by_lower_scale_bound = {
+_zoom_level_by_upper_scale_bound = {
     1000000000: 0,
     500000000: 1,
     200000000: 2,
