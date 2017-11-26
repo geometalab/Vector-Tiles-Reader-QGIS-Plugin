@@ -204,6 +204,7 @@ class VtrPlugin():
         self._connect_to_first_source()
 
     def _load_features_overlapping_tile_extent(self):
+        clear_cache()
         add_missing_layers = len(self._get_all_own_layers()) == 0
         self._reload_tiles(ignore_limit=True, add_missing_layers=add_missing_layers)
 
