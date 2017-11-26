@@ -22,25 +22,6 @@ def get_plugin_directory():
     return path
 
 
-def paths_equal(path1, path2):
-    return _normalize_path(path1) == _normalize_path(path2)
-
-
-def _normalize_path(path):
-    path = os.path.normpath(os.path.abspath(path))
-    if sys.platform.startswith("win32"):
-        try:
-            from ctypes import create_unicode_buffer, windll
-            BUFFER_SIZE = 500
-            buffer = create_unicode_buffer(BUFFER_SIZE)
-            get_long_path_name = windll.kernel32.GetLongPathNameW
-            get_long_path_name(unicode(path), buffer, BUFFER_SIZE)
-            path = os.path.normpath(buffer.value)
-        except:
-            info("failed: {}", sys.exc_info()[1])
-    return path
-
-
 def get_style_folder(connection_name):
     folder = os.path.join(get_temp_dir(), "styles", connection_name)
     return folder
@@ -80,7 +61,10 @@ def get_cached_tile(file_name):
 
 
 def get_cached_tile_file_name(source_name, zoom_level, col, row):
-    return "{}.{}.{}.{}.bin".format(source_name, zoom_level, col, row)
+    return "{source}.{zoom}.{col}.{row}.bin".format(source=source_name,
+                                                    zoom=zoom_level,
+                                                    col=col,
+                                                    row=row)
 
 
 def cache_tile(tile, source_name):
@@ -142,12 +126,6 @@ def get_geojson_file_name(name):
     path = os.path.join(get_temp_dir(), geojson_folder)
     name_with_extension = "{}.{}".format(name, "geojson")
     return os.path.join(path, name_with_extension)
-
-
-def get_unique_geojson_file_name():
-    path = os.path.join(get_temp_dir(), geojson_folder)
-    unique_name = "{}.{}".format(uuid.uuid4(), "geojson")
-    return os.path.join(path, unique_name)
 
 
 def is_sqlite_db(path):

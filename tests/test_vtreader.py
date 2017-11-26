@@ -15,7 +15,8 @@ import mock
 from osgeo import gdal
 from util.file_helper import clear_cache
 
-class IfaceTests(unittest.TestCase):
+
+class VtReaderTests(unittest.TestCase):
     """
     Tests for Iface
     """
@@ -146,7 +147,7 @@ class IfaceTests(unittest.TestCase):
 
 
 def suite():
-    suite = unittest.makeSuite(IfaceTests, 'test')
+    suite = unittest.makeSuite(VtReaderTests, 'test')
     return suite
 
 
