@@ -27,7 +27,6 @@ matrix:
           - develop
       os:
         - linux
-        - osx
       compiler:
         - gcc
         - clang
@@ -42,7 +41,6 @@ matrix:
         - cd $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
         - sudo rm *.so && sudo rm *.dll && cd ../..
         - make linux
-        - make osx
         - cd ..
         - docker run --rm dockcross/windows-x64 > ./dockcross-windows-x64 && chmod +x ./dockcross-windows-x64
         - docker run --rm dockcross/windows-x86 > ./dockcross-windows-x86 && chmod +x ./dockcross-windows-x86
@@ -53,6 +51,34 @@ matrix:
         skip_cleanup: true
         github_token: $GITHUB_TOKEN
         target_branch: pbf2geojson_travis_auto_build
+        local_dir: $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
+        on:
+          branch: develop
+
+    - language: cpp
+      branches:
+          only:
+          - develop
+      os:
+        - osx
+      compiler:
+        - gcc
+      before_script:
+        - sudo apt-get update -qq
+        - sudo apt-get install gcc-multilib g++-multilib -y
+      script:
+        - git clone https://github.com/mapbox/protozero.git ../protozero
+        - git clone https://github.com/mapbox/vtzero.git ../vtzero
+        - cd ../vtzero
+        - git submodule update --init
+        - cd $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
+        - sudo rm *.so && sudo rm *.dll && cd ../..
+        - make osx
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        target_branch: pbf2geojson_travis_auto_build_osx
         local_dir: $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
         on:
           branch: develop
