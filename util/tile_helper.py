@@ -272,7 +272,7 @@ def _sum_tiles(first_tile, second_tile):
 
 def get_zoom_by_scale(scale):
     if scale < 0:
-        scale = 0
+        return 23
     zoom = 0
     for upper_bound in reversed(sorted(_zoom_level_by_upper_scale_bound)):
         if scale > upper_bound:
