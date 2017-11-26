@@ -25,12 +25,12 @@ DIRECTORY_CONNECTION_TEMPLATE = {
 }
 
 TILEJSON_CONNECTION_TEMPLATE = {
-    "name": None,
-    "url": None,
+    "name": "",
+    "url": "",
     "token": None,
     "type": ConnectionTypes.TileJSON,
     "can_edit": None,
-    "style": None
+    "style": ""
 }
 
 POSTGIS_CONNECTION_TEMPLATE = {

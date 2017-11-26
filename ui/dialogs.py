@@ -196,14 +196,15 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
 
     def _edit_connection(self):
         conn = self._get_current_connection()
-        self._create_or_update_connection(conn)
+        self._create_or_update_connection(conn, edit_mode=True)
 
     def _create_connection(self):
-        self._create_or_update_connection(copy.deepcopy(self._connection_template))
+        self._create_or_update_connection(copy.deepcopy(self._connection_template), edit_mode=False)
 
-    def _create_or_update_connection(self, connection):
+    def _create_or_update_connection(self, connection, edit_mode):
         name = connection["name"]
         self.edit_connection_dialog.set_connection(connection)
+        self.edit_connection_dialog.set_mode(edit_mode=edit_mode)
         result = self.edit_connection_dialog.exec_()
         if result == QDialog.Accepted:
             new_connection = self.edit_connection_dialog.get_connection()
@@ -211,7 +212,9 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
             self.connections[new_name] = new_connection
             if new_name != name:
                 self.cbxConnections.addItem(new_name)
-                self.cbxConnections.setCurrentIndex(len(self.connections)-1)
+                if edit_mode:
+                    self.cbxConnections.removeItem(self.cbxConnections.findText(name))
+                self.cbxConnections.setCurrentIndex(self.cbxConnections.findText(new_name))
             self._save_connections()
 
     def _handle_connection_change(self, name):
@@ -619,6 +622,12 @@ class EditPostgisConnectionDialog(QDialog, Ui_DlgEditPostgisConnection):
         _update_size(self)
         self._connection = None
 
+    def set_mode(self, edit_mode):
+        if edit_mode:
+            self.setWindowTitle("Edit Connection")
+        else:
+            self.setWindowTitle("Create Connection")
+
     def set_connection(self, connection):
         self._connection = copy.deepcopy(connection)
         self.txtpgName.setText(self._connection["name"])
@@ -653,17 +662,22 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
         self._connection = None
         _update_size(self)
 
+    def set_mode(self, edit_mode):
+        if edit_mode:
+            self.setWindowTitle("Edit Connection")
+        else:
+            self.setWindowTitle("Create Connection")
+
     def set_connection(self, connection):
         self._connection = copy.deepcopy(connection)
-        self._set_name_and_path(connection["name"], connection["url"])
-        if connection["style"]:
-            self.txtStyleJsonUrl.setText(connection["style"])
-
-    def _set_name_and_path(self, name, path_or_url):
+        name = connection["name"]
+        url = connection["url"]
         if name is not None:
             self.txtName.setText(name)
-        if path_or_url is not None:
-            self.txtUrl.setText(path_or_url)
+        if url is not None:
+            self.txtUrl.setText(url)
+        if connection["style"] is not None:
+            self.txtStyleJsonUrl.setText(connection["style"])
 
     @staticmethod
     def _is_url(path):
