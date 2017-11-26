@@ -1,4 +1,5 @@
 import sys
+import mock
 import unittest
 from util.file_helper import *
 
@@ -42,15 +43,6 @@ class FileHelperTests(unittest.TestCase):
 
     def test_is_sqlite_false_true(self):
         self.assertFalse(is_sqlite_db(os.path.realpath(__file__)))
-
-    def test_clear_cache_dir(self):
-        cache_dir = get_cache_directory()
-        test_file = os.path.join(cache_dir, "test_file.txt")
-        with open(test_file, 'w') as f:
-            f.write("hello world")
-        self.assertTrue(os.path.isfile(test_file))
-        clear_cache()
-        self.assertFalse(os.path.isfile(test_file))
 
     def test_get_sample_dir(self):
         self.assertEqual('/tests_directory/util/../sample_data', get_sample_data_directory())
