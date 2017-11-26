@@ -128,7 +128,7 @@ class Ui_OptionsGroup(object):
         OptionsGroup.setWindowTitle(_translate("OptionsGroup", "Options", None))
         OptionsGroup.setTitle(_translate("OptionsGroup", "Options", None))
         self.chkApplyStyles.setToolTip(_translate("OptionsGroup", "Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)", None))
-        self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply predefined OpenMapTiles style", None))
+        self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply GL JSON Style (if specified)", None))
         self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (slow)", None))
         self.rbZoomMax.setText(_translate("OptionsGroup", "Max. Zoom", None))
         self.chkClipTiles.setText(_translate("OptionsGroup", "Clip each tile at bounds (slow)", None))
