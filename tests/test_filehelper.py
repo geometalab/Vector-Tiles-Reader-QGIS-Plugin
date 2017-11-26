@@ -46,7 +46,7 @@ class FileHelperTests(unittest.TestCase):
     def test_clear_cache_dir(self):
         cache_dir = get_cache_directory()
         test_file = os.path.join(cache_dir, "test_file.txt")
-        with open(test_file, 'w') as f:
+        with open(test_file, 'w+') as f:
             f.write("hello world")
         self.assertTrue(os.path.isfile(test_file))
         clear_cache()

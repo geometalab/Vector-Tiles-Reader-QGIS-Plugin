@@ -1,6 +1,4 @@
 matrix:
-  allow_failures:
-    - os: osx
   include:
     - language: python
       sudo: required
