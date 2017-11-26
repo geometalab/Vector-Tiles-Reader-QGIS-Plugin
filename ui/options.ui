@@ -35,7 +35,7 @@
       <string>Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)</string>
      </property>
      <property name="text">
-      <string>Apply predefined OpenMapTiles style</string>
+      <string>Apply GL JSON Style (if specified)</string>
      </property>
      <property name="checked">
       <bool>true</bool>
