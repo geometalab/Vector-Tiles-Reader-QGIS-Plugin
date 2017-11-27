@@ -260,6 +260,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     _FIX_ZOOM_ENABLED = "fix_zoom_enabled"
     _FIX_ZOOM = "fix_zoom"
     _APPLY_STYLES = "apply_styles"
+    _SET_BACKGROUND_COLOR = "set_background_color"
 
     _options = {
         _TILE_LIMIT_ENABLED: True,
@@ -270,7 +271,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         _MAX_ZOOM: False,
         _FIX_ZOOM: 0,
         _FIX_ZOOM_ENABLED: False,
-        _APPLY_STYLES: True
+        _APPLY_STYLES: True,
+        _SET_BACKGROUND_COLOR: True
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
@@ -283,7 +285,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.chkMergeTiles.toggled.connect(lambda enabled: self._set_option(self._MERGE_TILES, enabled))
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
-        self.chkApplyStyles.toggled.connect(lambda enabled: self._set_option(self._APPLY_STYLES, enabled))
+        self.chkSetBackgroundColor.toggled.connect(lambda enabled: self._set_option(self._SET_BACKGROUND_COLOR, enabled))
+        self.chkApplyStyles.toggled.connect(self._on_apply_styles_changed)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
         self.rbZoomManual.toggled.connect(self._on_manual_zoom_enabled)
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
@@ -317,6 +320,13 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
             self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._APPLY_STYLES]:
             self.chkApplyStyles.setChecked(opt[self._APPLY_STYLES] == True or opt[self._APPLY_STYLES] == "true")
+        if opt[self._SET_BACKGROUND_COLOR]:
+            val = opt[self._SET_BACKGROUND_COLOR]
+            self.chkSetBackgroundColor.setChecked(val == True or val == "true")
+
+    def _on_apply_styles_changed(self, enabled):
+        self._set_option(self._APPLY_STYLES, enabled)
+        self.chkSetBackgroundColor.setEnabled(enabled)
 
     def _set_option(self, key, value):
         self._options[key] = value
@@ -420,6 +430,9 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         enabled = self.chkApplyStyles.isChecked()
         self._set_option(self._APPLY_STYLES, enabled)
         return enabled
+
+    def set_background_color_enabled(self):
+        return self.chkSetBackgroundColor.isChecked()
 
     def merge_tiles_enabled(self):
         enabled = self.chkMergeTiles.isChecked()

@@ -16,3 +16,6 @@ call C:\Python36\Scripts\pyuic5 -o options_qt5.py options.ui 2>NUL
 call pyuic4 -o connections_group_qt4.py connections_group.ui 2>NUL
 call C:\Python36\Scripts\pyuic5 -o connections_group_qt5.py connections_group.ui 2>NUL
 
+if NOT ["%errorlevel%"]==["0"] pause
+
+exit

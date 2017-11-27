@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_OptionsGroup(object):
     def setupUi(self, OptionsGroup):
         OptionsGroup.setObjectName(_fromUtf8("OptionsGroup"))
-        OptionsGroup.resize(752, 249)
+        OptionsGroup.resize(752, 283)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -104,11 +104,15 @@ class Ui_OptionsGroup(object):
         self.horizontalLayout_2.addWidget(self.btnResetToInspectionDefaults)
         spacerItem2 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem2)
-        self.gridLayout.addLayout(self.horizontalLayout_2, 10, 0, 1, 2)
+        self.gridLayout.addLayout(self.horizontalLayout_2, 11, 0, 1, 2)
         self.label_5 = QtGui.QLabel(OptionsGroup)
         self.label_5.setMaximumSize(QtCore.QSize(16777215, 20))
         self.label_5.setObjectName(_fromUtf8("label_5"))
         self.gridLayout.addWidget(self.label_5, 4, 0, 1, 1)
+        self.chkSetBackgroundColor = QtGui.QCheckBox(OptionsGroup)
+        self.chkSetBackgroundColor.setChecked(True)
+        self.chkSetBackgroundColor.setObjectName(_fromUtf8("chkSetBackgroundColor"))
+        self.gridLayout.addWidget(self.chkSetBackgroundColor, 10, 0, 1, 2)
 
         self.retranslateUi(OptionsGroup)
         QtCore.QMetaObject.connectSlotsByName(OptionsGroup)
@@ -141,4 +145,5 @@ class Ui_OptionsGroup(object):
         self.btnResetToAnalysisDefaults.setText(_translate("OptionsGroup", "Analysis Defaults", None))
         self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Inspection Defaults", None))
         self.label_5.setText(_translate("OptionsGroup", "Zoom", None))
+        self.chkSetBackgroundColor.setText(_translate("OptionsGroup", "Set Project Background Color", None))
 

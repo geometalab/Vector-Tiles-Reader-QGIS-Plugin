@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_OptionsGroup(object):
     def setupUi(self, OptionsGroup):
         OptionsGroup.setObjectName("OptionsGroup")
-        OptionsGroup.resize(752, 249)
+        OptionsGroup.resize(752, 283)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -90,11 +90,15 @@ class Ui_OptionsGroup(object):
         self.horizontalLayout_2.addWidget(self.btnResetToInspectionDefaults)
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem2)
-        self.gridLayout.addLayout(self.horizontalLayout_2, 10, 0, 1, 2)
+        self.gridLayout.addLayout(self.horizontalLayout_2, 11, 0, 1, 2)
         self.label_5 = QtWidgets.QLabel(OptionsGroup)
         self.label_5.setMaximumSize(QtCore.QSize(16777215, 20))
         self.label_5.setObjectName("label_5")
         self.gridLayout.addWidget(self.label_5, 4, 0, 1, 1)
+        self.chkSetBackgroundColor = QtWidgets.QCheckBox(OptionsGroup)
+        self.chkSetBackgroundColor.setChecked(True)
+        self.chkSetBackgroundColor.setObjectName("chkSetBackgroundColor")
+        self.gridLayout.addWidget(self.chkSetBackgroundColor, 10, 0, 1, 2)
 
         self.retranslateUi(OptionsGroup)
         QtCore.QMetaObject.connectSlotsByName(OptionsGroup)
@@ -128,4 +132,5 @@ class Ui_OptionsGroup(object):
         self.btnResetToAnalysisDefaults.setText(_translate("OptionsGroup", "Analysis Defaults"))
         self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Inspection Defaults"))
         self.label_5.setText(_translate("OptionsGroup", "Zoom"))
+        self.chkSetBackgroundColor.setText(_translate("OptionsGroup", "Set Project Background Color"))
 

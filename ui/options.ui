@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>752</width>
-    <height>249</height>
+    <height>283</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -185,7 +185,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="0" colspan="2">
+   <item row="11" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="btnResetToBasemapDefaults">
@@ -233,6 +233,16 @@
      </property>
      <property name="text">
       <string>Zoom</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkSetBackgroundColor">
+     <property name="text">
+      <string>Set Project Background Color</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
