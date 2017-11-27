@@ -15,8 +15,26 @@ def register_qgis_expressions():
         QgsExpression.registerFunction(qgis_functions.if_not_exists)
         QgsExpression.registerFunction(qgis_functions.interpolate_exp)
     except ImportError:
-        print("registering functions failed")
         pass
+
+
+def get_background_color(text):
+    js = json.loads(text)
+    layers = js["layers"]
+    bg_color = None
+    for l in layers:
+        if l["type"] == "background":
+            if "paint" in l:
+                paint = l["paint"]
+                if "background-color" in paint:
+                    bg_color = paint["background-color"]
+                    if bg_color:
+                        bg_color = parse_color(bg_color)
+            break
+    if bg_color and not bg_color.startswith("#"):
+        colors = map(lambda v: int(v), bg_color.split(","))
+        bg_color = "#{0:02x}{1:02x}{2:02x}".format(colors[0], colors[1], colors[2])
+    return bg_color
 
 
 def generate_styles(text, output_directory):

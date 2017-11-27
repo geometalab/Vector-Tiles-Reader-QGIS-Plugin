@@ -361,8 +361,18 @@ class VtrPlugin():
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
             status, data = load_url(url)
             if status == 200:
-                info("Styles will be written to: {}", output_directory)
-                core.generate_styles(data, output_directory)
+                try:
+                    info("Styles will be written to: {}", output_directory)
+                    core.generate_styles(data, output_directory)
+                    if self.connections_dialog.options.set_background_color_enabled():
+                        background_color = core.get_background_color(data)
+                        info("Setting background color: {}", background_color)
+                        self._set_background_color(background_color)
+                except:
+                    tb = ""
+                    if traceback:
+                        tb = traceback.format_exc()
+                    critical("Style generation failed: {}, {}", sys.exc_info(), tb)
             else:
                 info("Loading StyleJSON failed: HTTP status {}", status)
 
@@ -668,9 +678,6 @@ class VtrPlugin():
         manual_zoom = options.manual_zoom()
         clip_tiles = options.clip_tiles()
 
-        if apply_styles:
-            self._set_background_color()
-
         reader = self._current_reader
         if not reader:
             self._is_loading = False
@@ -717,8 +724,8 @@ class VtrPlugin():
                     duration=5)
                 self._is_loading = False
 
-    def _set_background_color(self):
-        color = QColor("#F2EFE9")
+    def _set_background_color(self, color_string):
+        color = QColor(color_string)
         # Write it to the project (will still need to be saved!)
         QgsProject.instance().writeEntry("Gui", "/CanvasColorRedPart", color.red())
         QgsProject.instance().writeEntry("Gui", "/CanvasColorGreenPart", color.green())
