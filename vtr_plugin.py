@@ -363,7 +363,7 @@ class VtrPlugin():
             if status == 200:
                 try:
                     info("Styles will be written to: {}", output_directory)
-                    core.generate_styles(data, output_directory)
+                    core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
                     if self.connections_dialog.options.set_background_color_enabled():
                         background_color = core.get_background_color(data)
                         info("Setting background color: {}", background_color)
@@ -375,6 +375,12 @@ class VtrPlugin():
                     critical("Style generation failed: {}, {}", sys.exc_info(), tb)
             else:
                 info("Loading StyleJSON failed: HTTP status {}", status)
+
+    @staticmethod
+    def _load_style_data(url):
+        status, data = load_url(url)
+        info("data: {}, {} ", url, data)
+        return data
 
     def reader_cancelled(self):
         info("cancelled")

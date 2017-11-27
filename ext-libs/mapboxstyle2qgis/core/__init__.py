@@ -2,6 +2,8 @@ import os
 import json
 import copy
 import colorsys
+import urllib
+import base64
 from itertools import groupby
 from xml.sax.saxutils import escape
 from .xml_helper import create_style_file
@@ -37,27 +39,32 @@ def get_background_color(text):
     return bg_color
 
 
-def generate_styles(text, output_directory):
+def generate_styles(style_json, output_directory, web_request_executor=None):
     """
      * Creates and exports the styles
     :param text:
     :param output_directory:
     :return:
     """
-
-    styles = process(text)
+    try:
+        style_json = json.loads(style_json)
+    except:
+        pass
+    styles = process(style_json)
     write_styles(styles_by_target_layer=styles, output_directory=output_directory)
+    create_icons(style=style_json, web_request_executor=web_request_executor, output_directory=output_directory)
 
 
-def process(text):
+def process(style_json):
     """
      * Creates the style definitions and returns them mapped by filename
     :param text:
     :return:
     """
+    if not isinstance(style_json, dict):
+        style_json = json.loads(style_json)
 
-    js = json.loads(text)
-    layers = js["layers"]
+    layers = style_json["layers"]
     styles_by_file_name = {}
     for l in layers:
         if "source-layer" in l:
@@ -99,6 +106,59 @@ def process(text):
 
     _add_default_transparency_styles(styles_by_file_name)
     return styles_by_file_name
+
+
+def create_icons(style, web_request_executor, output_directory):
+    image_data, image_definition_data = _load_sprite_data(style, web_request_executor)
+    _create_icons(image_data, image_definition_data, output_directory)
+
+
+def _create_icons(image_base64, image_definition_data, output_directory):
+    icons_directory = os.path.join(output_directory, "icons")
+    if not os.path.isdir(icons_directory):
+        os.makedirs(icons_directory)
+
+    template_path = os.path.join(os.path.dirname(__file__), "data", "svg_template.svg")
+    assert os.path.isfile(template_path)
+    with open(template_path, 'r') as f:
+        template_data = f.read()
+    for name in image_definition_data:
+        img_def = image_definition_data[name]
+        file_name = "{}.svg".format(name)
+        svg_data = template_data.format(width=img_def["width"],
+                                        height=img_def["height"],
+                                        x=img_def["x"],
+                                        y=img_def["y"],
+                                        base64_data=image_base64)
+        target_file = os.path.join(icons_directory, file_name)
+        with open(target_file, 'w') as f:
+            f.write(svg_data)
+
+
+def _load_sprite_data(style, web_request_executor):
+    if not web_request_executor:
+        web_request_executor = _execute_get_request
+
+    if "sprite" in style:
+        image_url = "{}.png".format(style["sprite"])
+        image_definitions_url = "{}.json".format(style["sprite"])
+        image_data = web_request_executor(image_url)
+        image_definition_data = web_request_executor(image_definitions_url)
+        if not image_data:
+            raise "No image found at: {}".format(image_url)
+        else:
+            image_data = base64.b64encode(image_data)
+        if not image_definition_data:
+            raise "No image definitions found at: {}".format(image_definition_data)
+        else:
+            image_definition_data = json.loads(str(image_definition_data))
+        return image_data, image_definition_data
+
+
+def _execute_get_request(url):
+    response = urllib.urlopen(url)
+    data = response.read()
+    return data
 
 
 def _add_default_transparency_styles(style_dict):
