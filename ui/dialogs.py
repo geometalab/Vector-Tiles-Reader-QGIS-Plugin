@@ -163,7 +163,8 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
     def _add_loaded_connections_to_combobox(self):
         if self._predefined_connections:
             for index, name in enumerate(self._predefined_connections):
-                self.connections[name] = self._predefined_connections[name]
+                if name not in self.connections:
+                    self.connections[name] = self._predefined_connections[name]
 
         for name in sorted(self.connections):
             is_already_added = self.cbxConnections.findText(name) != -1
@@ -467,13 +468,13 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
             "token": "6irhAXGgsi8TrIDL0211",
-            "style": "https://raw.githubusercontent.com/openmaptiles/klokantech-terrain-gl-style/master/style.json"
+            "style": "https://github.com/openmaptiles/klokantech-basic-gl-style/blob/master/style.json"
         },
         _OMT_CUSTOM_KEY: {
             "name": _OMT_CUSTOM_KEY,
             "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
             "can_edit": True,
-            "style": "https://raw.githubusercontent.com/openmaptiles/klokantech-terrain-gl-style/master/style.json"
+            "style": "https://github.com/openmaptiles/klokantech-basic-gl-style/blob/master/style.json"
         },
         _MAPZEN: {
             "name": _MAPZEN,
@@ -730,5 +731,6 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
     def get_connection(self):
         self._connection["name"] = self.txtName.text()
         self._connection["url"] = self.txtUrl.text()
+        self._connection["style"] = self.txtStyleJsonUrl.text()
         return self._connection
 
