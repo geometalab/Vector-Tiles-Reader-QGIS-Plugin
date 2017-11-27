@@ -16,8 +16,6 @@ _cap_styles = {
 }
 
 
-# todo: use scale expressions: coalesce(scale_exp(@map_scale, 750, 1500000, 18, 0.5, 1.2), 0)
-
 def create_style_file(output_directory, layer_style):
     with open(os.path.join(os.path.dirname(__file__), "data/qml_template.xml"), 'r') as f:
         template = f.read()
@@ -226,8 +224,8 @@ def _get_line_symbol(index, style):
         use_custom_dash = 1
         dash = "({} * {})".format(dashes[0], width)
         space = "({} * {})".format(dashes[1], width)
-        # if space <= width:
-        #     space = "({} + {})".format(space, width)
+        if space <= width:
+            space = "({} + {})".format(space, width)
         dash_expr = "concat({}, ';', {})".format(dash, space)
 
     label = style["name"]
