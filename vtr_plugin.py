@@ -455,7 +455,6 @@ class VtrPlugin():
         if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
             self._loaded_scale = new_scale
             self._reload_tiles()
-            self.iface.mapCanvas().zoomScale(new_scale)
 
     def _get_qgis_crs(self):
         canvas = self.iface.mapCanvas()
