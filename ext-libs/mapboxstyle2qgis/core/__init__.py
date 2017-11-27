@@ -4,6 +4,7 @@ import copy
 import colorsys
 import urllib
 import base64
+import shutil
 from itertools import groupby
 from xml.sax.saxutils import escape
 from .xml_helper import create_style_file
@@ -117,6 +118,8 @@ def _create_icons(image_base64, image_definition_data, output_directory):
     icons_directory = os.path.join(output_directory, "icons")
     if not os.path.isdir(icons_directory):
         os.makedirs(icons_directory)
+    src_icon_path = os.path.join(os.path.dirname(__file__), "data", "icons", "empty.svg")
+    shutil.copy2(src_icon_path, icons_directory)
 
     template_path = os.path.join(os.path.dirname(__file__), "data", "svg_template.svg")
     assert os.path.isfile(template_path)
@@ -270,6 +273,7 @@ def get_styles(layer):
         all_values.extend(get_properties_by_zoom(layer, "paint/fill-outline-color", is_color=True))
         all_values.extend(get_properties_by_zoom(layer, "paint/fill-translate"))
         all_values.extend(get_properties_by_zoom(layer, "paint/fill-opacity"))
+        all_values.extend(get_properties_by_zoom(layer, "paint/fill-pattern", is_expression=True))
     elif layer_type == "line":
         all_values.extend(get_properties_by_zoom(layer, "layout/line-join"))
         all_values.extend(get_properties_by_zoom(layer, "layout/line-cap"))
@@ -278,9 +282,10 @@ def get_styles(layer):
         all_values.extend(get_properties_by_zoom(layer, "paint/line-opacity"))
         all_values.extend(get_properties_by_zoom(layer, "paint/line-dasharray"))
     elif layer_type == "symbol":
+        all_values.extend(get_properties_by_zoom(layer, "layout/icon-image", is_expression=True))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-font"))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-size", can_interpolate=True))
-        all_values.extend(get_properties_by_zoom(layer, "layout/text-field", is_expression=True))
+        all_values.extend(get_properties_by_zoom(layer, "layout/text-field", is_expression=True, take=1))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-max-width"))
         all_values.extend(get_properties_by_zoom(layer, "paint/text-color", is_color=True))
         all_values.extend(get_properties_by_zoom(layer, "paint/text-halo-width", can_interpolate=True))
@@ -327,16 +332,55 @@ def get_styles(layer):
     return resulting_styles
 
 
-def _parse_expr(expr):
-    if not expr:
-        return expr
-    fields = expr.replace("{", '"').replace("}", '"').replace("\n", " ").strip().split(" ")
-    if fields:
-        return escape_xml(fields[0])
-        expr = _get_field_expr(0, fields)
-    # fields = map(lambda (index, f): _get_field_expr(index, f), enumerate(fields))
-    expr = "+".join(fields)
-    return escape_xml(expr)
+def _parse_expr(expr, take=None):
+    """
+     * Creates a QGIS expression
+    :param expr:
+    :param take: The nr of fields to take. All if value is None.
+                 E.g.: "{name:latin}\n{name:nonlatin}" consists of two fields
+    :return:
+    """
+
+    fields = _get_qgis_fields(expr)[:take]
+    result = "+".join(fields)
+    return escape_xml(result)
+
+
+def _map_value_to_qgis_expr(val):
+    if val["is_expr"]:
+        return '"{}"'.format(val["text"])
+    else:
+        return "'{}'".format(val["text"])
+
+
+def _get_qgis_fields(expr):
+    values = []
+    val = None
+    is_expr = False
+    for s in expr:
+        if not is_expr:
+            new_is_expr = s == '{'
+        elif s == '}':
+            new_is_expr = False
+        has_changed = new_is_expr != is_expr
+        is_expr = new_is_expr
+        if has_changed:
+            if val:
+                values.append(val)
+            val = None
+        if has_changed:
+            continue
+        if val is None:
+            val = {
+                "text": "",
+                "is_expr": is_expr
+            }
+
+        val["text"] += s
+    if val:
+        values.append(val)
+    mapped = list(map(_map_value_to_qgis_expr, values))
+    return mapped
 
 
 def escape_xml(value):
@@ -401,7 +445,7 @@ def _apply_scale_range(styles):
         s["max_scale_denom"] = max_scale_denom
 
 
-def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=False, can_interpolate=False, default=None):
+def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=False, can_interpolate=False, default=None, take=None):
     if (is_color or is_expression) and can_interpolate:
         raise RuntimeError("Colors and expressions cannot be interpolated")
 
@@ -431,7 +475,7 @@ def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=F
             if is_color:
                 value = parse_color(value)
             if is_expression:
-                value = _parse_expr(value)
+                value = _parse_expr(value, take=take)
             if can_interpolate:
                 is_qgis_expr = True
                 next_stop = stops[index + 1]
@@ -456,7 +500,7 @@ def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=F
         if is_color:
             value = parse_color(value)
         if is_expression:
-            value = _parse_expr(value)
+            value = _parse_expr(value, take=take)
         properties.append({
             "name": parts[-1],
             "zoom_level": None,
