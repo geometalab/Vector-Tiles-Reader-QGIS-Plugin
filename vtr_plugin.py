@@ -127,6 +127,7 @@ class VtrPlugin():
         self._extent_to_load = None
         self.message_bar_item = None
         self.progress_bar = None
+        self._debouncer.start()
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -979,6 +980,7 @@ class SignalDebouncer(QObject):
     def _on_timeout(self):
         self._debounce_timer.stop()
         if self._is_stopped:
+            info("Debouncer is stopped")
             return
 
         should_notify = True
