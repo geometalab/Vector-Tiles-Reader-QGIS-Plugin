@@ -448,7 +448,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
-    on_add = pyqtSignal(dict, dict)
+    on_add = pyqtSignal(dict, list)
     on_zoom_change = pyqtSignal()
     on_directory_change = pyqtSignal("QString")
 
@@ -610,7 +610,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
-        selected_layers = dict(map(lambda i: self.model.item(i.row()).text(), indexes))
+        selected_layers = list(map(lambda i: self.model.item(i.row()).text(), indexes))
         active_tab = self.tabConnections.currentWidget()
         if active_tab == self.tabFile:
             self._current_connection["style"] = self.txtMbtilesStyleJsonUrl.text()
