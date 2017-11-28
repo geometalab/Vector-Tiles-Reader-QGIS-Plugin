@@ -206,8 +206,7 @@ class VtrPlugin():
 
     def _load_features_overlapping_tile_extent(self):
         clear_cache()
-        add_missing_layers = len(self._get_all_own_layers()) == 0
-        self._reload_tiles(ignore_limit=True, add_missing_layers=add_missing_layers)
+        self._reload_tiles(ignore_limit=True)
 
     def _have_extent_or_scale_changed(self):
         if self._current_reader:
@@ -528,7 +527,7 @@ class VtrPlugin():
                 layers.append(l)
         return layers
 
-    def _reload_tiles(self, overwrite_extent=None, ignore_limit=False, add_missing_layers=False):
+    def _reload_tiles(self, overwrite_extent=None, ignore_limit=False):
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
@@ -551,8 +550,7 @@ class VtrPlugin():
             self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
-                             ignore_limit=ignore_limit,
-                             is_add=add_missing_layers)
+                             ignore_limit=ignore_limit)
 
     def _get_current_extent_as_wkt(self):
         return self.iface.mapCanvas().extent().asWktCoordinates()
