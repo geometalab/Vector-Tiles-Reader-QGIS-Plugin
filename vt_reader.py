@@ -443,17 +443,16 @@ class VtReader(QObject):
             nr_of_tiles = len(tiles_with_encoded_data)
             self._update_progress(max_progress=nr_of_tiles, msg="Decoding {} tiles...".format(nr_of_tiles))
             while not rs.ready() and not self.cancel_requested:
-                if self.cancel_requested:
-                    pool.terminate()
-                    break
-                else:
-                    QApplication.processEvents()
-                    remaining = rs._number_left
-                    index = nr_of_tiles - remaining
-                    progress = int(100.0 / nr_of_tiles * (index + 1))
-                    if progress != current_progress:
-                        current_progress = progress
-                        self._update_progress(progress=progress)
+                QApplication.processEvents()
+                remaining = rs._number_left
+                index = nr_of_tiles - remaining
+                progress = int(100.0 / nr_of_tiles * (index + 1))
+                if progress != current_progress:
+                    current_progress = progress
+                    self._update_progress(progress=progress)
+            if self.cancel_requested:
+                pool.terminate()
+            pool.join()
 
         tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
         groups = groupby(tile_data_tuples, lambda t: t[0].id())

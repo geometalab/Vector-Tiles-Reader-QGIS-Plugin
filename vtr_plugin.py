@@ -244,7 +244,7 @@ class VtrPlugin():
         scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
-        extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+        extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
         bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("Bounds of source: {}", bounds)
@@ -317,7 +317,7 @@ class VtrPlugin():
             self._update_nr_of_tiles(zoom)
 
     def _update_nr_of_tiles(self, zoom):
-        bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
+        bounds = self._get_visible_extent_as_tile_bounds(zoom=zoom)
         nr_of_tiles = bounds["width"] * bounds["height"]
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
@@ -425,7 +425,7 @@ class VtrPlugin():
             max_zoom = self._current_reader.get_source().max_zoom()
             min_zoom = self._current_reader.get_source().min_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-            new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+            new_extent = self._get_visible_extent_as_tile_bounds(zoom)
             source_bounds = self._current_reader.get_source().bounds_tile(zoom)
             new_extent = clamp_bounds(bounds_to_clamp=new_extent, clamp_values=source_bounds)
 
@@ -542,7 +542,7 @@ class VtrPlugin():
             if overwrite_extent:
                 bounds = overwrite_extent
             else:
-                bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+                bounds = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
@@ -555,7 +555,7 @@ class VtrPlugin():
     def _get_current_extent_as_wkt(self):
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
-    def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
+    def _get_visible_extent_as_tile_bounds(self, zoom):
         extent = self.iface.mapCanvas().mapSettings().visibleExtent()
         x_min = extent.xMinimum()
         x_max = extent.xMaximum()
@@ -564,7 +564,7 @@ class VtrPlugin():
         bounds = [x_min, y_min, x_max, y_max]
         # the source_crs is 3857, even if the actual data is in another (21781 for example)
         # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme="xyz", source_crs=3857)
         return tile_bounds
 
     @staticmethod
@@ -792,7 +792,7 @@ class VtrPlugin():
 
         if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
             scheme = self._current_reader.get_source().scheme()
-            visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
+            visible_extent = self._get_visible_extent_as_tile_bounds(loaded_zoom_level)
             overlap = extent_overlap_bounds(visible_extent, loaded_extent)
             if not overlap:
                 info("Changing QGIS extent as it's not overlapping with the loaded extent")
