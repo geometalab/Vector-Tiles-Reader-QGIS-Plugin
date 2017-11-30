@@ -192,6 +192,12 @@
        <property name="text">
         <string>Base Map Defaults</string>
        </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>
@@ -199,12 +205,18 @@
        <property name="text">
         <string>Analysis Defaults</string>
        </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btnResetToInspectionDefaults">
        <property name="text">
         <string>Inspection Defaults</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
        </property>
       </widget>
      </item>

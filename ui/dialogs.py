@@ -298,6 +298,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self._load_options()
         self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
+        self._is_inspection_mode = False
 
     def _load_options(self):
         opt = self._options
@@ -356,14 +357,23 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True, fix_zoom=False, tile_limit=32, styles_enabled=True, merging_enabled=False,
                            clip_tile_at_bounds=False)
+        self._is_inspection_mode = False
+        self.btnResetToAnalysisDefaults.setChecked(False)
+        self.btnResetToInspectionDefaults.setChecked(False)
 
     def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
                            clip_tile_at_bounds=True)
+        self._is_inspection_mode = False
+        self.btnResetToBasemapDefaults.setChecked(False)
+        self.btnResetToInspectionDefaults.setChecked(False)
 
     def _reset_to_inspection_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
                            clip_tile_at_bounds=False)
+        self._is_inspection_mode = True
+        self.btnResetToBasemapDefaults.setChecked(False)
+        self.btnResetToAnalysisDefaults.setChecked(False)
 
     def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds):
         self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
@@ -380,6 +390,9 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     def set_omt_styles_enabled(self, enabled):
         self._set_option(self._APPLY_STYLES, enabled)
         self.chkApplyStyles.setChecked(enabled)
+
+    def is_inspection_mode(self):
+        return self._is_inspection_mode
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom is not None:

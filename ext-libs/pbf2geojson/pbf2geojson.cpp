@@ -9,6 +9,7 @@
 #include <iomanip>
 
 struct tile_location {
+    const bool clipTile;
     const int zoom;
     const int col;
     const int row;
@@ -106,7 +107,7 @@ struct geom_handler {
     }
 
     void points_point(const vtzero::point point) const {
-        if (point.x < 0 || point.x > 4096 || point.y < 0 || point.y > 4096)
+        if (loc.clipTile && (point.x < 0 || point.x > 4096 || point.y < 0 || point.y > 4096))
             return;
 
 		auto absoluteX = loc.x + loc.spanX / extent * point.x;
@@ -323,12 +324,10 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
         std::vector<std::vector<Point>> rings;
         std::string geojsonFeature("");
 		if (feature.geometry_type() == vtzero::GeomType::POLYGON) {
-            // todo: create multipolygon here by using method getPolygonFeatures
             vtzero::decode_geometry(feature.geometry(), geom_handler{extent, loc, coordinatesString, rings});
             std::string newFeatures = getPolygonFeatures(id, properties, rings, true);
             polygons.push_back(newFeatures);
 		} else {
-		    // todo: create handle point and linestring feature here
 		    geojsonFeature += "{\"id\":";
 		    geojsonFeature += id;
 		    geojsonFeature += ",\"type\":\"Feature\",\"properties\":";
@@ -401,8 +400,8 @@ std::string decodeAsJson(tile_location& loc, const char* hex){
 }
 
 extern "C" {
-	char* decodeMvtToJson(const int zoom, const int col, const int row, const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data) {
-		tile_location loc{zoom, col, row, tileX, tileY, tileSpanX, tileSpanY};
+	char* decodeMvtToJson(const bool clipTile, const int zoom, const int col, const int row, const double tileX, const double tileY, const double tileSpanX, const double tileSpanY, const char* data) {
+		tile_location loc{clipTile, zoom, col, row, tileX, tileY, tileSpanX, tileSpanY};
 		auto res = decodeAsJson(loc, data);
 		const char* result = res.c_str();
 		char *new_buf = strdup(result);

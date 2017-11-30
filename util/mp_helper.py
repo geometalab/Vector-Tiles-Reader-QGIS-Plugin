@@ -10,9 +10,11 @@ import os
 from .log_helper import info, warn
 
 
-def decode_tile_python(tile_data_tuple):
-    tile = tile_data_tuple[0]
-    encoded_data = tile_data_tuple[1]
+def decode_tile_python(tile_data_clip):
+    tile = tile_data_clip[0]
+    encoded_data = tile_data_clip[1]
+    clip_tile = tile_data_clip[2]
+
     decoded_data = None
     if encoded_data and not tile.decoded_data:
         decoded_data = mapbox_vector_tile.decode(encoded_data)
@@ -47,7 +49,7 @@ def load_lib():
     if path and os.path.isfile(path):
         try:
             lib = cdll.LoadLibrary(path)
-            lib.decodeMvtToJson.argtypes = [c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_char_p]
+            lib.decodeMvtToJson.argtypes = [c_bool, c_uint16, c_uint16, c_uint16, c_double, c_double, c_double, c_double, c_char_p]
             lib.decodeMvtToJson.restype = c_void_p
             lib.freeme.argtypes = [c_void_p]
             lib.freeme.restype = None
@@ -58,14 +60,17 @@ def load_lib():
     return lib
 
 
-def decode_tile_native(tile_data_tuple):
-    tile = tile_data_tuple[0]
+def decode_tile_native(tile_data_clip):
+    tile = tile_data_clip[0]
+    data = tile_data_clip[1]
+    clip_tile = tile_data_clip[2]
     decoded_data = None
     if not tile.decoded_data:
         try:
             # with open(r"c:\temp\uster.pbf", 'wb') as f:
             #     f.write(tile_data_tuple[1])
-            encoded_data = bytearray(tile_data_tuple[1])
+            # encoded_data = bytearray(tile_data_tuple[1])
+            encoded_data = bytearray(data)
 
             hex_string = "".join("%02x" % b for b in encoded_data)
             hex_bytes = hex_string.encode(encoding='UTF-8')
@@ -76,7 +81,7 @@ def decode_tile_native(tile_data_tuple):
             tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
             lib = load_lib()
-            ptr = lib.decodeMvtToJson(int(tile.zoom_level), int(tile.column), int(tile.row), tile_x, tile_y, tile_span_x, tile_span_y,
+            ptr = lib.decodeMvtToJson(clip_tile, int(tile.zoom_level), int(tile.column), int(tile.row), tile_x, tile_y, tile_span_x, tile_span_y,
                                       hex_bytes)
             decoded_data = cast(ptr, c_char_p).value
             lib.freeme(ptr)

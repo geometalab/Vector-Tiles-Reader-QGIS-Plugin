@@ -363,9 +363,12 @@ class VtReader(QObject):
         return bounds
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
-                    apply_styles=False, max_tiles=None, layer_filter=None, add_missing_layers=True):
+                    apply_styles=False, max_tiles=None, layer_filter=None, add_missing_layers=True,
+                    is_inspection_mode=False):
         """
          * Specify the reader options
+        :param is_inspection_mode:
+        :param add_missing_layers:
         :param load_mask_layer:  If True the mask layer will also be loaded
         :param merge_tiles: If True neighbouring tiles and features will be merged
         :param clip_tiles: If True the features located outside the tile will be removed
@@ -375,6 +378,7 @@ class VtReader(QObject):
             all available layers will be loaded
         :return:
         """
+        info("inspection mode: {}", is_inspection_mode)
         if layer_filter:
             layer_filter = list(layer_filter)
         self._loading_options = {
@@ -384,7 +388,8 @@ class VtReader(QObject):
             'apply_styles': apply_styles,
             'max_tiles': max_tiles,
             'layer_filter': layer_filter,
-            'add_missing_layers': add_missing_layers
+            'add_missing_layers': add_missing_layers,
+            'inspection_mode': is_inspection_mode
         }
 
     def load_tiles_async(self, zoom_level, bounds):
@@ -418,8 +423,8 @@ class VtReader(QObject):
         :param tiles_with_encoded_data:
         :return:
         """
-
-        tiles_with_encoded_data = [(t[0], self._unzip(t[1])) for t in tiles_with_encoded_data]
+        clip_tiles = not self._loading_options["inspection_mode"]
+        tiles_with_encoded_data = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
 
         if can_load_lib():
             decoder_func = decode_tile_native

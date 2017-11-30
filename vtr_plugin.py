@@ -127,6 +127,7 @@ class VtrPlugin():
         self._extent_to_load = None
         self.message_bar_item = None
         self.progress_bar = None
+        self._inspection_mode_active = False
         self._debouncer.start()
 
     def initGui(self):
@@ -676,6 +677,10 @@ class VtrPlugin():
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
         load_mask_layer = options.load_mask_layer_enabled()
+        inspection_mode = options.is_inspection_mode()
+        if self._inspection_mode_active != inspection_mode:
+            clear_cache()
+        self._inspection_mode_active = inspection_mode
         self._auto_zoom = options.auto_zoom_enabled()
         if ignore_limit:
             tile_limit = None
@@ -712,7 +717,8 @@ class VtrPlugin():
                                    clip_tiles=clip_tiles,
                                    apply_styles=apply_styles,
                                    max_tiles=tile_limit,
-                                   add_missing_layers=is_add)
+                                   add_missing_layers=is_add,
+                                   is_inspection_mode=inspection_mode)
                 self._is_loading = True
                 reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
             except Exception as e:
