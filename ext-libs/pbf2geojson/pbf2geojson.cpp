@@ -93,9 +93,6 @@ struct geom_handler {
     }
 
     void linestring_end() {
-        // if (temp.back() == ',') {
-            // temp.resize(temp.size() - 1);
-        // }
         if (temp.back() == ',') {
             temp.back() = ' ';
         }
@@ -109,6 +106,9 @@ struct geom_handler {
     }
 
     void points_point(const vtzero::point point) const {
+        if (point.x < 0 || point.x > 4096 || point.y < 0 || point.y > 4096)
+            return;
+
 		auto absoluteX = loc.x + loc.spanX / extent * point.x;
 		auto absoluteY = loc.y + loc.spanY / extent * point.y;
         result += std::to_string(absoluteX);
@@ -296,6 +296,7 @@ void getJson(tile_location& loc, vtzero::layer& layer, std::stringstream& result
     std::vector<std::string> polygons;
 
 	bool isPoint = false;
+	bool isPointOutsideTile;
 	while (auto feature = layer.next_feature()) {
         std::string id("0");
 		if (feature.has_id()) {
