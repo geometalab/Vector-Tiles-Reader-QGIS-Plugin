@@ -468,13 +468,13 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
             "token": "6irhAXGgsi8TrIDL0211",
-            "style": "https://github.com/openmaptiles/klokantech-basic-gl-style/blob/master/style.json"
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
         },
         _OMT_CUSTOM_KEY: {
             "name": _OMT_CUSTOM_KEY,
             "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
             "can_edit": True,
-            "style": "https://github.com/openmaptiles/klokantech-basic-gl-style/blob/master/style.json"
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
         },
         _MAPZEN: {
             "name": _MAPZEN,
