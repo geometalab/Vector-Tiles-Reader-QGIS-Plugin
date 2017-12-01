@@ -125,6 +125,7 @@ class VtrPlugin():
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
+        self._current_extent = None
         self.message_bar_item = None
         self.progress_bar = None
         self._inspection_mode_active = False
@@ -663,6 +664,7 @@ class VtrPlugin():
         return 0
 
     def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False, is_add=False):
+        self._current_extent = bounds
         if self._debouncer.is_running():
             if is_add:
                 self._debouncer.stop()
@@ -782,7 +784,7 @@ class VtrPlugin():
         layer_group.addLayer(layer)
 
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
-        self._loaded_extent = loaded_extent
+        self._loaded_extent = self._current_extent
         self.handle_progress_update(show_progress=False)
 
         auto_zoom = self._auto_zoom
