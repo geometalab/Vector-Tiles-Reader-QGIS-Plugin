@@ -95,8 +95,7 @@ class VtReader(QObject):
             'clip_tiles': None,
             'apply_styles': None,
             'max_tiles': None,
-            'bounds': None,
-            'add_missing_layers': True
+            'bounds': None
         }
 
     _nr_tiles_to_process_serial = 30
@@ -134,9 +133,18 @@ class VtReader(QObject):
         self._always_overwrite_geojson = False
         self._flush = False
         self._feature_count = None
+        self._allowed_sources = None
 
     def connection(self):
         return self._connection
+
+    def set_allowed_sources(self, sources):
+        """
+         * A list of layer sources (i.e. file paths) can be specified. These layers will later be ignored, i.e. not added.
+        :param sources: The sources which can be created. If None, all are allowed, if empty list, none is allowed
+        :return:
+        """
+        self._allowed_sources = sources
 
     def get_source(self):
         """
@@ -362,13 +370,11 @@ class VtReader(QObject):
                                y_max=max(loaded_tiles_y))
         return bounds
 
-    def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
-                    apply_styles=False, max_tiles=None, layer_filter=None, add_missing_layers=True,
-                    is_inspection_mode=False):
+    def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False, apply_styles=False, max_tiles=None,
+                    layer_filter=None, is_inspection_mode=False):
         """
          * Specify the reader options
         :param is_inspection_mode:
-        :param add_missing_layers:
         :param load_mask_layer:  If True the mask layer will also be loaded
         :param merge_tiles: If True neighbouring tiles and features will be merged
         :param clip_tiles: If True the features located outside the tile will be removed
@@ -387,7 +393,6 @@ class VtReader(QObject):
             'apply_styles': apply_styles,
             'max_tiles': max_tiles,
             'layer_filter': layer_filter,
-            'add_missing_layers': add_missing_layers,
             'inspection_mode': is_inspection_mode
         }
 
@@ -535,7 +540,6 @@ class VtReader(QObject):
                               max_progress=len(self.feature_collections_by_layer_name_and_geotype),
                               msg="Creating layers...")
         layer_filter = self._loading_options["layer_filter"]
-        add_missing_layers = self._loading_options["add_missing_layers"]
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
@@ -566,7 +570,9 @@ class VtReader(QObject):
                     if clip_tiles:
                         clip_features(layer=layer, scheme=self._source.scheme())
 
-            if not layer and add_missing_layers and (not layer_filter or layer_name in layer_filter):
+            if not layer\
+                    and (self._allowed_sources is None or file_path in self._allowed_sources)\
+                    and (not layer_filter or layer_name in layer_filter):
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(json_src=file_path,
                                                  layer_name=layer_name,
@@ -657,14 +663,10 @@ class VtReader(QObject):
         layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
         layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
-        layer.setDataUrl(source_url)
-        layer.setAttribution(self._source.attribution())
-
         layer.setDataUrl(remove_key(source_url))
-        if self._source.name() and "openmaptiles" in self._source.name().lower():
-            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors "
-                                 u"(ODbL)")
-            layer.setAttributionUrl("https://openmaptiles.com/hosting/")
+        layer.setAttribution(self._source.attribution())
+        # layer.setAttributionUrl("")
+        # layer.setAbstract()
         return layer
 
     def _handle_geojson_features(self, tile, layer_name, features):

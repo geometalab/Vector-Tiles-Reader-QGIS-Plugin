@@ -94,6 +94,7 @@ class VtrPlugin():
         self.iface = iface
         iface.newProjectCreated.connect(self._on_project_change)
         iface.projectRead.connect(self._on_project_change)
+        QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self._on_remove)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
@@ -129,7 +130,18 @@ class VtrPlugin():
         self.message_bar_item = None
         self.progress_bar = None
         self._inspection_mode_active = False
+        self._current_reader_sources = None
         self._debouncer.start()
+
+    def _on_remove(self, id):
+        if id:
+            layers = QgsMapLayerRegistry.instance().mapLayers()
+            if self._current_reader_sources is None:
+                self._update_current_reader_sources()
+            assert self._current_reader_sources
+            if id in layers:
+                removed_layer = layers[id]
+                self._current_reader_sources.remove(removed_layer.source())
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -349,6 +361,14 @@ class VtrPlugin():
             self.connections_dialog.set_layers([])
             self.reload_action.setEnabled(False)
             self.reload_action.setText(self._reload_button_text)
+        self._update_current_reader_sources()
+
+    def _update_current_reader_sources(self):
+        own_layers = self._get_all_own_layers()
+        if own_layers:
+            self._current_reader_sources = list(map(lambda l: l.source(), own_layers))
+        else:
+            self._current_reader_sources = None
 
     def _create_styles(self, connection):
         if "style" not in connection or not connection["style"]:
@@ -672,6 +692,7 @@ class VtrPlugin():
                 self._debouncer.pause()
 
         if not is_add and not self._has_layers_of_current_connection():
+            info("cancel load due to missing layers")
             return
 
         merge_tiles = options.merge_tiles_enabled()
@@ -712,13 +733,9 @@ class VtrPlugin():
                          source_bounds)
                     bounds = source_bounds
 
-                reader.set_options(layer_filter=layers_to_load,
-                                   load_mask_layer=load_mask_layer,
-                                   merge_tiles=merge_tiles,
-                                   clip_tiles=clip_tiles,
-                                   apply_styles=apply_styles,
-                                   max_tiles=tile_limit,
-                                   add_missing_layers=is_add,
+                reader.set_allowed_sources(self._current_reader_sources)
+                reader.set_options(load_mask_layer=load_mask_layer, merge_tiles=merge_tiles, clip_tiles=clip_tiles,
+                                   apply_styles=apply_styles, max_tiles=tile_limit, layer_filter=layers_to_load,
                                    is_inspection_mode=inspection_mode)
                 self._is_loading = True
                 reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
