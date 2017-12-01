@@ -346,6 +346,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
             self.btnResetToInspectionDefaults.setChecked(val == self.Mode.INSPECTION)
             self.btnResetToBasemapDefaults.setChecked(val == self.Mode.BASE_MAP)
             self.btnResetToAnalysisDefaults.setChecked(val == self.Mode.ANALYSIS)
+        else:
+            self.btnManualSettings.setChecked(True)
 
     def _on_apply_styles_changed(self, enabled):
         self._set_option(self._APPLY_STYLES, enabled)
