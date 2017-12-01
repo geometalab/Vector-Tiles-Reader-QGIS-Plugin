@@ -39,7 +39,8 @@ def create_style_file(output_directory, layer_style):
             symbols.append(_get_fill_symbol(index, s, icons_directory=icons_directory))
         elif layer_type == "symbol":
             labeling_settings = _get_labeling_settings(s)
-            labeling_rules.append(_get_rule(index, s, rule_content=labeling_settings))
+            if labeling_settings:
+                labeling_rules.append(_get_rule(index, s, rule_content=labeling_settings))
             if "icon-image" in s:
                 rules.append(_get_rule(index, s, rule_content=""))
                 icn = _get_icon_symbol(index=index,
@@ -86,6 +87,10 @@ def create_style_file(output_directory, layer_style):
 
 
 def _get_labeling_settings(style):
+    field_name = _get_value_safe(style, "text-field")
+    if not field_name:
+        return None
+
     font = _get_value_safe(style, "text-font", ["Arial"])
     if isinstance(font, list):
         font = font[0]
@@ -100,8 +105,6 @@ def _get_labeling_settings(style):
     else:
         font_size_expr = "{} / 96*72".format(font_size)
         font_size = ""
-    field_name = _get_value_safe(style, "text-field")
-    assert field_name
     text_color = _get_value_safe(style, "text-color", "0,0,0,255")
     buffer_color = _get_value_safe(style, "text-halo-color", "0,0,0,0")
     buffer_size = _get_value_safe(style, "text-halo-width", 0)
