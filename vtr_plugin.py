@@ -583,10 +583,17 @@ class VtrPlugin():
         x_max = extent.xMaximum()
         y_min = extent.yMinimum()
         y_max = extent.yMaximum()
-        bounds = [x_min, y_min, x_max, y_max]
+        scheme = "xyz"
+        if self._current_reader:
+            scheme = self._current_reader.get_source().scheme()
+        if scheme == "xyz":
+            bounds = [x_min, y_min, x_max, y_max]
+        else:
+            bounds = [x_min, y_max, x_max, y_min]
         # the source_crs is 3857, even if the actual data is in another (21781 for example)
         # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme="xyz", source_crs=3857)
+        # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
         return tile_bounds
 
     @staticmethod
@@ -729,7 +736,7 @@ class VtrPlugin():
                 source_bounds = reader.get_source().bounds_tile(zoom)
                 if source_bounds and not extent_overlap_bounds(bounds, source_bounds) \
                         and not extent_overlap_bounds(source_bounds, bounds):
-                    info("The current map extent and is not within the bounds of the source. The extent to load "
+                    info("The current map extent is not within the bounds of the source. The extent to load "
                          "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds,
                          source_bounds)
                     bounds = source_bounds

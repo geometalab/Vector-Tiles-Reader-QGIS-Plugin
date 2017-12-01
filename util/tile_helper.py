@@ -4,6 +4,7 @@ from builtins import map
 from builtins import range
 from past.utils import old_div
 from builtins import object
+import math
 import itertools
 import operator
 from .global_map_tiles import GlobalMercator
@@ -82,6 +83,25 @@ def _center_tiles(tile_limit, extent):
         range(extent["y_min"], extent["y_max"] + 1)))
     center_tiles = get_tiles_from_center(nr_of_tiles=tile_limit, available_tiles=tiles)
     return center_tiles
+
+
+# def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
+#     if zoom is None:
+#         raise RuntimeError("zoom is required")
+#     if lat is None:
+#         raise RuntimeError("latitude is required")
+#     if lng is None:
+#         raise RuntimeError("Longitude is required")
+#     if source_crs != 4326:
+#         lng, lat = convert_coordinate(source_crs, 4326, lat=lat, lng=lng)
+#
+#     lat_rad = math.radians(lat)
+#     n = 2.0 ** zoom
+#     x = int((lng + 180.0) / 360.0 * n)
+#     y = int((1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
+#     if scheme != "xyz":
+#         y = clamp(change_scheme(zoom, y), low=0)
+#     return x, y
 
 
 def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
