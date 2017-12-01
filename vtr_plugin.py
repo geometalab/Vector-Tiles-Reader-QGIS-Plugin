@@ -380,7 +380,6 @@ class VtrPlugin():
     @staticmethod
     def _load_style_data(url):
         status, data = load_url(url)
-        info("data: {}, {} ", url, data)
         return data
 
     def reader_cancelled(self):
