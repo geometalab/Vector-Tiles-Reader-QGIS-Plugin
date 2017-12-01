@@ -782,7 +782,6 @@ class VtrPlugin():
         layer_group.addLayer(layer)
 
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
-        info("loaded: {}", loaded_extent)
         self._loaded_extent = loaded_extent
         self.handle_progress_update(show_progress=False)
 
