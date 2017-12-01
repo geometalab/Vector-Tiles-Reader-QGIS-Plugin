@@ -60,6 +60,9 @@
      <property name="checked">
       <bool>false</bool>
      </property>
+     <attribute name="buttonGroup">
+      <string notr="true">buttonGroup</string>
+     </attribute>
     </widget>
    </item>
    <item row="3" column="0" colspan="2">
@@ -138,6 +141,9 @@
        <property name="text">
         <string/>
        </property>
+       <attribute name="buttonGroup">
+        <string notr="true">buttonGroup</string>
+       </attribute>
       </widget>
      </item>
      <item alignment="Qt::AlignLeft">
@@ -183,10 +189,29 @@
      <property name="checked">
       <bool>true</bool>
      </property>
+     <attribute name="buttonGroup">
+      <string notr="true">buttonGroup</string>
+     </attribute>
     </widget>
    </item>
    <item row="11" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="btnManualSettings">
+       <property name="text">
+        <string>Manual</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <property name="autoExclusive">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QPushButton" name="btnResetToBasemapDefaults">
        <property name="text">
@@ -196,6 +221,9 @@
         <bool>true</bool>
        </property>
        <property name="checked">
+        <bool>false</bool>
+       </property>
+       <property name="autoExclusive">
         <bool>true</bool>
        </property>
       </widget>
@@ -208,6 +236,9 @@
        <property name="checkable">
         <bool>true</bool>
        </property>
+       <property name="autoExclusive">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>
@@ -216,6 +247,9 @@
         <string>Inspection Defaults</string>
        </property>
        <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="autoExclusive">
         <bool>true</bool>
        </property>
       </widget>
@@ -276,4 +310,7 @@
  </tabstops>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>

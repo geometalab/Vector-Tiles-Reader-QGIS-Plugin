@@ -506,6 +506,7 @@ class VtrPlugin():
         self.connections_dialog.show(current_connection)
 
     def _get_zoom_of_current_mode(self):
+        zoom = 0
         manual_zoom = self.connections_dialog.options.manual_zoom()
         if self.connections_dialog.options.auto_zoom_enabled():
             zoom = self._get_zoom_for_current_map_scale()
@@ -532,7 +533,6 @@ class VtrPlugin():
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
-            scheme = self._current_reader.get_source().scheme()
             zoom = self._get_current_zoom()
             auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
             flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom

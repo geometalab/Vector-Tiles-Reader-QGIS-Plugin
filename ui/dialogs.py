@@ -262,6 +262,13 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     _FIX_ZOOM = "fix_zoom"
     _APPLY_STYLES = "apply_styles"
     _SET_BACKGROUND_COLOR = "set_background_color"
+    _MODE = "mode"
+
+    class Mode(object):
+        MANUAL = "manual"
+        BASE_MAP = "base_map"
+        INSPECTION = "inspection"
+        ANALYSIS = "analysis"
 
     _options = {
         _TILE_LIMIT_ENABLED: True,
@@ -273,12 +280,14 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         _FIX_ZOOM: 0,
         _FIX_ZOOM_ENABLED: False,
         _APPLY_STYLES: True,
-        _SET_BACKGROUND_COLOR: True
+        _SET_BACKGROUND_COLOR: True,
+        _MODE: Mode.MANUAL
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
         super(QGroupBox, self).__init__()
         self.setupUi(target_groupbox)
+        self.settings = None
         self._reset_to_basemap_defaults()
         self.settings = settings
         self._zoom_change_handler = zoom_change_handler
@@ -286,7 +295,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.chkMergeTiles.toggled.connect(lambda enabled: self._set_option(self._MERGE_TILES, enabled))
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
-        self.chkSetBackgroundColor.toggled.connect(lambda enabled: self._set_option(self._SET_BACKGROUND_COLOR, enabled))
+        self.chkSetBackgroundColor.toggled.connect(self._on_bg_color_change)
         self.chkApplyStyles.toggled.connect(self._on_apply_styles_changed)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
         self.rbZoomManual.toggled.connect(self._on_manual_zoom_enabled)
@@ -295,10 +304,15 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
+        self.btnManualSettings.clicked.connect(lambda: self._enable_manual_mode(True))
         self._load_options()
         self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
-        self._is_inspection_mode = False
+
+    def _on_bg_color_change(self, enabled):
+        self._set_option(self._SET_BACKGROUND_COLOR, enabled)
+        if enabled and not self.chkApplyStyles.isChecked():
+            self.chkApplyStyles.setChecked(True)
 
     def _load_options(self):
         opt = self._options
@@ -325,10 +339,18 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         if opt[self._SET_BACKGROUND_COLOR]:
             val = opt[self._SET_BACKGROUND_COLOR]
             self.chkSetBackgroundColor.setChecked(val == True or val == "true")
+        if opt[self._MODE]:
+            val = opt[self._MODE]
+            self._enable_manual_mode(val == self.Mode.MANUAL)
+            self.btnManualSettings.setChecked(val == self.Mode.MANUAL)
+            self.btnResetToInspectionDefaults.setChecked(val == self.Mode.INSPECTION)
+            self.btnResetToBasemapDefaults.setChecked(val == self.Mode.BASE_MAP)
+            self.btnResetToAnalysisDefaults.setChecked(val == self.Mode.ANALYSIS)
 
     def _on_apply_styles_changed(self, enabled):
         self._set_option(self._APPLY_STYLES, enabled)
-        self.chkSetBackgroundColor.setEnabled(enabled)
+        if not enabled:
+            self.chkSetBackgroundColor.setChecked(False)
 
     def _set_option(self, key, value):
         self._options[key] = value
@@ -357,23 +379,35 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True, fix_zoom=False, tile_limit=32, styles_enabled=True, merging_enabled=False,
                            clip_tile_at_bounds=False, background_color=True)
-        self._is_inspection_mode = False
-        self.btnResetToAnalysisDefaults.setChecked(False)
-        self.btnResetToInspectionDefaults.setChecked(False)
+        if self.settings:
+            self._set_option("mode", self.Mode.BASE_MAP)
+        self._enable_manual_mode(False)
 
     def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
                            clip_tile_at_bounds=True, background_color=False)
-        self._is_inspection_mode = False
-        self.btnResetToBasemapDefaults.setChecked(False)
-        self.btnResetToInspectionDefaults.setChecked(False)
+        self._set_option("mode", self.Mode.ANALYSIS)
+        self._enable_manual_mode(False)
 
     def _reset_to_inspection_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
                            clip_tile_at_bounds=False, background_color=False)
-        self._is_inspection_mode = True
-        self.btnResetToBasemapDefaults.setChecked(False)
-        self.btnResetToAnalysisDefaults.setChecked(False)
+        self._set_option("mode", self.Mode.INSPECTION)
+        self._enable_manual_mode(False)
+
+    def _enable_manual_mode(self, enabled):
+        if enabled:
+            self._set_option("mode", self.Mode.MANUAL)
+        self.chkLimitNrOfTiles.setEnabled(enabled)
+        self.spinNrOfLoadedTiles.setEnabled(enabled)
+        self.chkMergeTiles.setEnabled(enabled)
+        self.chkClipTiles.setEnabled(enabled)
+        self.rbAutoZoom.setEnabled(enabled)
+        self.rbZoomMax.setEnabled(enabled)
+        self.rbZoomManual.setEnabled(enabled)
+        self.chkApplyStyles.setEnabled(enabled)
+        self.chkSetBackgroundColor.setEnabled(enabled)
+        self.zoomSpin.setEnabled(enabled)
 
     def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds, background_color):
         self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
@@ -393,7 +427,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setChecked(enabled)
 
     def is_inspection_mode(self):
-        return self._is_inspection_mode
+        return self.btnResetToInspectionDefaults.isChecked()
 
     def set_zoom(self, min_zoom=None, max_zoom=None):
         if min_zoom is not None:
