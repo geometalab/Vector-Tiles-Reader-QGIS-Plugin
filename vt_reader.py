@@ -378,7 +378,6 @@ class VtReader(QObject):
             all available layers will be loaded
         :return:
         """
-        info("inspection mode: {}", is_inspection_mode)
         if layer_filter:
             layer_filter = list(layer_filter)
         self._loading_options = {
