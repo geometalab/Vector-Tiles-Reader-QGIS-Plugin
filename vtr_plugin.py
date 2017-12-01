@@ -249,6 +249,7 @@ class VtrPlugin():
 
     def _on_add_layer(self, connection, selected_layers):
         assert connection
+        self._current_reader_sources = None
         self._create_styles(connection)
         self._assure_qgis_groups_exist(connection["name"], True)
 
