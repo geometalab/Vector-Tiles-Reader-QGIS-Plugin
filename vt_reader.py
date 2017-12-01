@@ -658,6 +658,7 @@ class VtReader(QObject):
         layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
         layer.setDataUrl(source_url)
+        layer.setAttribution(self._source.attribution())
 
         layer.setDataUrl(remove_key(source_url))
         if self._source.name() and "openmaptiles" in self._source.name().lower():

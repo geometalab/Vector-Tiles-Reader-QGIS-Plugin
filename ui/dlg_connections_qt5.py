@@ -128,7 +128,7 @@ class Ui_DlgConnections(object):
         self.gridLayout.addWidget(self.grpLayers, 1, 0, 3, 1)
 
         self.retranslateUi(DlgConnections)
-        self.tabConnections.setCurrentIndex(2)
+        self.tabConnections.setCurrentIndex(0)
         self.btnClose.clicked.connect(DlgConnections.reject)
         QtCore.QMetaObject.connectSlotsByName(DlgConnections)
         DlgConnections.setTabOrder(self.tabConnections, self.chkKeepOpen)
@@ -152,7 +152,7 @@ class Ui_DlgConnections(object):
         self.btnBrowse.setText(_translate("DlgConnections", "Browse"))
         self.lblSource.setText(_translate("DlgConnections", "Path"))
         self.btnConnectFile.setText(_translate("DlgConnections", "Refresh"))
-        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabFile), _translate("DlgConnections", "MBTile"))
+        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabFile), _translate("DlgConnections", "MBTiles"))
         self.btnSelectDirectory.setText(_translate("DlgConnections", "Browse"))
         self.lblDirectoryStyleJsonUrl.setText(_translate("DlgConnections", "GL Style JSON URL"))
         self.lblSource_2.setText(_translate("DlgConnections", "Path"))
