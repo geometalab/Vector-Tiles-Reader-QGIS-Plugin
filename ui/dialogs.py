@@ -691,6 +691,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
                 else:
                     value = "-"
                 self.model.setItem(row_index, header_index, QStandardItem(value))
+        self.model.sort(0)
         add_enabled = layers is not None and len(layers) > 0
         self.btnAdd.setEnabled(add_enabled)
 
