@@ -300,7 +300,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
         self.rbZoomManual.toggled.connect(self._on_manual_zoom_enabled)
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
-        self.rbAutoZoom.toggled.connect(self._zoom_change_handler)
+        self.chkAutoZoom.toggled.connect(self._on_auto_zoom_enabled)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
@@ -308,6 +308,12 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self._load_options()
         self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
+
+    def _on_auto_zoom_enabled(self, enabled):
+        self._set_option(self._AUTO_ZOOM, enabled)
+        self.rbZoomManual.setEnabled(not enabled)
+        self.rbZoomMax.setEnabled(not enabled)
+        self.zoomSpin.setEnabled(not enabled)
 
     def _on_bg_color_change(self, enabled):
         self._set_option(self._SET_BACKGROUND_COLOR, enabled)
@@ -327,7 +333,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         if opt[self._CLIP_TILES]:
             self.chkClipTiles.setChecked(opt[self._CLIP_TILES] == True or opt[self._CLIP_TILES] == "true")
         if opt[self._AUTO_ZOOM]:
-            self.rbAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
+            self.chkAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
         if opt[self._MAX_ZOOM]:
             self.rbZoomMax.setChecked(opt[self._MAX_ZOOM] == True or opt[self._MAX_ZOOM] == "true")
         if opt[self._FIX_ZOOM]:
@@ -360,7 +366,6 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
 
     def _on_manual_zoom_enabled(self, enabled):
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
-        self.zoomSpin.setEnabled(enabled)
         self._on_manual_zoom_change()
 
     def _on_manual_zoom_change(self):
@@ -404,16 +409,16 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.spinNrOfLoadedTiles.setEnabled(enabled)
         self.chkMergeTiles.setEnabled(enabled)
         self.chkClipTiles.setEnabled(enabled)
-        self.rbAutoZoom.setEnabled(enabled)
-        self.rbZoomMax.setEnabled(enabled)
-        self.rbZoomManual.setEnabled(enabled)
+        self.chkAutoZoom.setEnabled(enabled)
+        self.rbZoomMax.setEnabled(enabled and not self.chkAutoZoom.isChecked())
+        self.rbZoomManual.setEnabled(enabled and not self.chkAutoZoom.isChecked())
+        self.zoomSpin.setEnabled(enabled and not self.chkAutoZoom.isChecked())
         self.chkApplyStyles.setEnabled(enabled)
         self.chkSetBackgroundColor.setEnabled(enabled)
-        self.zoomSpin.setEnabled(enabled)
 
     def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds, background_color):
         self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
-        self.rbAutoZoom.setChecked(auto_zoom)
+        self.chkAutoZoom.setChecked(auto_zoom)
         self.rbZoomManual.setChecked(fix_zoom)
         tile_limit_enabled = tile_limit is not None
         self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
@@ -455,12 +460,12 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         return enabled
 
     def auto_zoom_enabled(self):
-        enabled = self.rbAutoZoom.isChecked()
+        enabled = self.chkAutoZoom.isChecked()
         self._set_option(self._AUTO_ZOOM, enabled)
         return enabled
 
     def manual_zoom(self):
-        enabled = self.rbZoomManual.isChecked()
+        enabled = self.rbZoomManual.isChecked() and not self.chkAutoZoom.isChecked()
         fix_zoom = self.zoomSpin.value()
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
         self._set_option(self._FIX_ZOOM, fix_zoom)
