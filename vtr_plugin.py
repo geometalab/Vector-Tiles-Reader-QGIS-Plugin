@@ -36,7 +36,8 @@ from .util.tile_helper import (
     extent_overlap_bounds,
     center_tiles_equal,
     clamp_bounds,
-    convert_coordinate)
+    convert_coordinate,
+    WORLD_BOUNDS)
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
 from .util.file_helper import (
@@ -261,7 +262,10 @@ class VtrPlugin():
         scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
-        extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
+        if not self._loaded_extent:
+            extent = get_tile_bounds(zoom, WORLD_BOUNDS, 4326)
+        else:
+            extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
         bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("Bounds of source: {}", bounds)
@@ -437,7 +441,6 @@ class VtrPlugin():
                 duration=5)
 
     def _has_extent_changed(self):
-        scheme = self._current_reader.get_source().scheme()
         scale = self._scale_to_load
         if not scale:
             scale = self._get_current_map_scale()
@@ -546,10 +549,11 @@ class VtrPlugin():
 
     def _get_all_own_layers(self):
         layers = []
-        for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
-            data_url = l.dataUrl().lower()
-            if data_url and self._current_reader.get_source().source().lower().startswith(data_url):
-                layers.append(l)
+        if self._current_reader:
+            for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
+                data_url = l.dataUrl().lower()
+                if data_url and self._current_reader.get_source().source().lower().startswith(data_url):
+                    layers.append(l)
         return layers
 
     def _reload_tiles(self, overwrite_extent=None, ignore_limit=False):
@@ -604,7 +608,6 @@ class VtrPlugin():
 
     def _is_valid_qgis_extent(self, extent_to_load, zoom):
         source_bounds = self._current_reader.get_source().bounds_tile(zoom)
-        info("bounds: {}", source_bounds)
         if source_bounds and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
@@ -693,7 +696,7 @@ class VtrPlugin():
             return len(list(layers))
         return 0
 
-    def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False, is_add=False):
+    def _load_tiles(self, options, layers_to_load, bounds, ignore_limit=False, is_add=False):
         self._current_extent = bounds
         if self._debouncer.is_running():
             if is_add:

@@ -404,6 +404,7 @@ class VtReader(QObject):
         :param bounds:
         :return: 
         """
+        info("Loading zoom level '{}', bounds: {}", zoom_level, bounds)
         self._loading_options["zoom_level"] = zoom_level
         self._loading_options["bounds"] = bounds
         _worker_thread = QThread(self.iface.mainWindow())
