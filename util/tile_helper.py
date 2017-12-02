@@ -203,6 +203,10 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         y_min = min(xy_min[1], xy_max[1])
         y_max = max(xy_min[1], xy_max[1])
 
+        max_tile = 2**zoom-1
+        x_max = clamp(x_max, high=max_tile)
+        y_max = clamp(y_max, high=max_tile)
+
         tile_bounds = create_bounds(zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, scheme=scheme)
     return tile_bounds
 
