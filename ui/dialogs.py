@@ -544,6 +544,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     def __init__(self, default_browse_directory):
         QDialog.__init__(self)
         self.setupUi(self)
+        self.action_text = "Add"
+        self._current_connection_already_loaded = False
         self.settings = QSettings("VtrSettings")
         self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
         last_tab = self.settings.value(self._CONNECTIONS_TAB, 0)
@@ -578,6 +580,14 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self._directory_conn = None
         self._mbtiles_conn = None
         self._load_mbtiles_and_directory_connections()
+
+    def _update_action_text(self, connection):
+        if connection and self._current_connection == connection and self._current_connection_already_loaded:
+            action_text = "Reload"
+        else:
+            action_text = "Add"
+        self.btnAdd.setText(action_text)
+        self.setWindowTitle("{} Layer(s) from a Vector Tile Source".format(action_text))
 
     def _load_mbtiles_and_directory_connections(self):
         mbtiles_conn = self.settings.value("mbtiles_connection")
@@ -681,7 +691,12 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             self.settings.setValue("directory_connection", str(self._current_connection))
         self.on_add.emit(self._current_connection, selected_layers)
 
+    def set_current_connection_already_loaded(self, is_loaded):
+        self._current_connection_already_loaded = is_loaded
+        self._update_action_text(self._current_connection)
+
     def show(self, current_connection):
+        self._update_action_text(current_connection)
         active_tab = self.tabConnections.currentWidget()
         if active_tab == self.tabFile and self._mbtiles_conn and current_connection != self._mbtiles_conn:
             self.connect(self._mbtiles_conn)

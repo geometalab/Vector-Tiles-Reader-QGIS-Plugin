@@ -95,7 +95,7 @@ class VtrPlugin():
         self.iface = iface
         iface.newProjectCreated.connect(self._on_project_change)
         iface.projectRead.connect(self._on_project_change)
-        QgsMapLayerRegistry.instance().layerWillBeRemoved.connect(self._on_remove)
+        QgsMapLayerRegistry.instance().layersWillBeRemoved.connect(self._on_remove)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
@@ -134,17 +134,18 @@ class VtrPlugin():
         self._current_reader_sources = None
         self._debouncer.start()
 
-    def _on_remove(self, id):
-        if QgsMapLayerRegistry and id:
-            layers = QgsMapLayerRegistry.instance().mapLayers()
-            if self._current_reader_sources is None:
-                self._update_current_reader_sources()
-            assert self._current_reader_sources
-            if id in layers:
-                removed_layer = layers[id]
-                src = removed_layer.source()
-                if src in self._current_reader_sources:
-                    self._current_reader_sources.remove(src)
+    def _on_remove(self, layer_ids):
+        if QgsMapLayerRegistry and layer_ids:
+            for layer_id in layer_ids:
+                layers = QgsMapLayerRegistry.instance().mapLayers()
+                if self._current_reader_sources is None:
+                    self._update_current_reader_sources()
+                assert self._current_reader_sources
+                if layer_id in layers:
+                    removed_layer = layers[layer_id]
+                    src = removed_layer.source()
+                    if src in self._current_reader_sources:
+                        self._current_reader_sources.remove(src)
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
@@ -369,6 +370,8 @@ class VtrPlugin():
             self.reload_action.setEnabled(False)
             self.reload_action.setText(self._reload_button_text)
         self._update_current_reader_sources()
+        already_loaded = self._current_reader_sources is not None and len(self._current_reader_sources) > 0
+        self.connections_dialog.set_current_connection_already_loaded(already_loaded)
 
     def _update_current_reader_sources(self):
         own_layers = self._get_all_own_layers()
@@ -529,6 +532,7 @@ class VtrPlugin():
         current_connection = None
         if self._current_reader:
             current_connection = self._current_reader.connection()
+        self._update_current_reader_sources()
         self.connections_dialog.show(current_connection)
 
     def _get_zoom_of_current_mode(self):
@@ -551,8 +555,8 @@ class VtrPlugin():
         layers = []
         if self._current_reader:
             for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
-                data_url = l.dataUrl().lower()
-                if data_url and self._current_reader.get_source().source().lower().startswith(data_url):
+                source_url = l.customProperty("VectorTilesReader/vector_tile_source")
+                if source_url and self._current_reader.get_source().source() == source_url:
                     layers.append(l)
         return layers
 
@@ -816,7 +820,6 @@ class VtrPlugin():
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
         self._loaded_extent = self._current_extent
         self.handle_progress_update(show_progress=False)
-
         auto_zoom = self._auto_zoom
 
         self._loaded_scale = self._get_current_map_scale()
@@ -932,6 +935,7 @@ class VtrPlugin():
 
         try:
             self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+            QgsMapLayerRegistry.instance().layersWillBeRemoved.disconnect(self._on_remove)
             self.iface.newProjectCreated.disconnect(self._on_project_change)
             self.iface.projectRead.disconnect(self._on_project_change)
             self._debouncer.stop()
