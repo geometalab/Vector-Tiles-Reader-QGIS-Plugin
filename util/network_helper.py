@@ -1,6 +1,6 @@
 from future import standard_library
 standard_library.install_aliases()
-from .log_helper import warn, info
+from .log_helper import warn, info, remove_key
 
 from .vtr_2to3 import *
 
@@ -53,12 +53,12 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed=None, cancelling
         new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
         nr_finished += len(new_finished)
         for reply, tile_coord in new_finished:
+            finished_tiles.add(tile_coord)
             error = reply.error()
             if error:
-                info("Error during network request: {}", error)
+                info("Error during network request: {}, {}", error, remove_key(reply.url()))
             else:
                 content = reply.readAll().data()
-                finished_tiles.add(tile_coord)
                 results.append((tile_coord, content))
             reply.deleteLater()
         QApplication.processEvents()
