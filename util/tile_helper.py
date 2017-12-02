@@ -111,6 +111,8 @@ def _center_tiles(tile_limit, extent):
 def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
+    :param scheme: The tile scheme for which the tile coordinates shall be returned
+    :param source_crs: The CRS in which lat/lon are represented
     :param zoom:
     :param lat:
     :param lng:
@@ -126,10 +128,11 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     if get_code_from_epsg(source_crs) != 3857:
         lng, lat = convert_coordinate(source_crs=source_crs, target_crs=3857, lat=lat, lng=lng)
     gm = GlobalMercator(tileSize=512)
-    col, row = gm.MetersToTile(mx=lng, my=lat, zoom=zoom)
+    global_mercator_output_scheme = "tms"
+    col, row = gm.MetersToTile(mx=lng, my=lat, zoom=zoom)   # GlobalMercator returns in TMS scheme here
     col = clamp(col, low=0)
     row = clamp(row, low=0)
-    if scheme != "tms":
+    if scheme != global_mercator_output_scheme:
         row = clamp(change_scheme(zoom, row), low=0)
 
     return int(col), int(row)

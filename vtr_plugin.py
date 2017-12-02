@@ -141,7 +141,9 @@ class VtrPlugin():
             assert self._current_reader_sources
             if id in layers:
                 removed_layer = layers[id]
-                self._current_reader_sources.remove(removed_layer.source())
+                src = removed_layer.source()
+                if src in self._current_reader_sources:
+                    self._current_reader_sources.remove(src)
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
