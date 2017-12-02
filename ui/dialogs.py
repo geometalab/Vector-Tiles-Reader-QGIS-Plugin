@@ -575,17 +575,23 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self._load_mbtiles_and_directory_connections()
 
     def _load_mbtiles_and_directory_connections(self):
-        mbtiles_connn = self.settings.value("mbtiles_connection")
+        mbtiles_conn = self.settings.value("mbtiles_connection")
         directory_conn = self.settings.value("directory_connection")
-        if mbtiles_connn:
-            mbtiles_connn = ast.literal_eval(mbtiles_connn)
-            self.txtPath.setText(mbtiles_connn["path"])
-            self.txtMbtilesStyleJsonUrl.setText(mbtiles_connn["style"])
+        if mbtiles_conn:
+            mbtiles_conn = ast.literal_eval(mbtiles_conn)
+            if mbtiles_conn["type"] == ConnectionTypes.MBTiles:
+                if mbtiles_conn["path"]:
+                    self.txtPath.setText(mbtiles_conn["path"])
+                if mbtiles_conn["style"]:
+                    self.txtMbtilesStyleJsonUrl.setText(mbtiles_conn["style"])
         if directory_conn:
             directory_conn = ast.literal_eval(directory_conn)
-            self.txtDirectoryPath.setText(directory_conn["path"])
-            self.txtDirectoryStyleJsonUrl.setText(directory_conn["style"])
-        self._mbtiles_conn = mbtiles_connn
+            if directory_conn["type"] == ConnectionTypes.Directory:
+                if directory_conn["path"]:
+                    self.txtDirectoryPath.setText(directory_conn["path"])
+                if directory_conn["style"]:
+                    self.txtDirectoryStyleJsonUrl.setText(directory_conn["style"])
+        self._mbtiles_conn = mbtiles_conn
         self._directory_conn = directory_conn
 
     def connect(self, connection):
@@ -662,10 +668,10 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         indexes = self.tblLayers.selectionModel().selectedRows()
         selected_layers = list(map(lambda i: self.model.item(i.row()).text(), indexes))
         active_tab = self.tabConnections.currentWidget()
-        if active_tab == self.tabFile:
+        if active_tab == self.tabFile and self._current_connection["type"] == ConnectionTypes.MBTiles:
             self._current_connection["style"] = self.txtMbtilesStyleJsonUrl.text()
             self.settings.setValue("mbtiles_connection", str(self._current_connection))
-        elif active_tab == self.tabDirectory:
+        elif active_tab == self.tabDirectory and self._current_connection["type"] == ConnectionTypes.Directory:
             self._current_connection["style"] = self.txtDirectoryStyleJsonUrl.text()
             self.settings.setValue("directory_connection", str(self._current_connection))
         self.on_add.emit(self._current_connection, selected_layers)

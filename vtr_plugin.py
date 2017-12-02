@@ -134,7 +134,7 @@ class VtrPlugin():
         self._debouncer.start()
 
     def _on_remove(self, id):
-        if id:
+        if QgsMapLayerRegistry and id:
             layers = QgsMapLayerRegistry.instance().mapLayers()
             if self._current_reader_sources is None:
                 self._update_current_reader_sources()
