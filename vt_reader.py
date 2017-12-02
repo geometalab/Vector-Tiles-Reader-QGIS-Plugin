@@ -351,13 +351,13 @@ class VtReader(QObject):
             self.cancelled.emit()
         else:
             info("Import complete")
-            loaded_extent = self._get_extent(self._all_tiles, zoom_level)
+            loaded_extent = self._get_extent(self._all_tiles, zoom_level, self._source.scheme())
             if not loaded_extent:
                 loaded_extent = {}
             self.loading_finished.emit(zoom_level, loaded_extent)
 
     @staticmethod
-    def _get_extent(tiles, zoom_level):
+    def _get_extent(tiles, zoom_level, scheme):
         loaded_tiles_x = [t.coord()[0] for t in tiles]
         loaded_tiles_y = [t.coord()[1] for t in tiles]
         if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
@@ -367,7 +367,8 @@ class VtReader(QObject):
                                x_min=min(loaded_tiles_x),
                                x_max=max(loaded_tiles_x),
                                y_min=min(loaded_tiles_y),
-                               y_max=max(loaded_tiles_y))
+                               y_max=max(loaded_tiles_y),
+                               scheme=scheme)
         return bounds
 
     def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False, apply_styles=False, max_tiles=None,

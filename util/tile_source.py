@@ -331,7 +331,8 @@ class MBTilesSource(AbstractSource):
                                    x_min=row["x_min"],
                                    x_max=row["x_max"],
                                    y_min=row["y_min"],
-                                   y_max=row["y_max"])
+                                   y_max=row["y_max"],
+                                   scheme=self.scheme())
         return bounds
 
     @staticmethod

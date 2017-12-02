@@ -11,7 +11,10 @@ from .global_map_tiles import GlobalMercator
 from .log_helper import warn, debug, info
 from .vtr_2to3 import *
 
-
+"""
+ * Top left: (lng=WORLD_BOUNDS[0], lat=WORLD_BOUNDS[3])
+ * Bottom right: (lng=WORLD_BOUNDS[2], lat=WORLD_BOUNDS[1])
+"""
 WORLD_BOUNDS = [-180, -85.05112878, 180, 85.05112878]
 
 
@@ -49,7 +52,7 @@ def clamp_bounds(bounds_to_clamp, clamp_values):
     y_min = clamp(bounds_to_clamp["y_min"], low=clamp_values["y_min"])
     x_max = clamp(bounds_to_clamp["x_max"], low=x_min, high=clamp_values["x_max"])
     y_max = clamp(bounds_to_clamp["y_max"], low=y_min, high=clamp_values["y_max"])
-    return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max)
+    return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max, bounds_to_clamp["scheme"])
 
 
 def extent_overlap_bounds(extent, bounds):
@@ -59,7 +62,7 @@ def extent_overlap_bounds(extent, bounds):
              bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
 
 
-def create_bounds(zoom, x_min, x_max, y_min, y_max):
+def create_bounds(zoom, x_min, x_max, y_min, y_max, scheme):
     return {
         "zoom": int(zoom),
         "x_min": int(x_min),
@@ -67,7 +70,8 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max):
         "y_min": int(y_min),
         "y_max": int(y_max),
         "width": int(x_max - x_min + 1),
-        "height": int(y_max - y_min + 1)
+        "height": int(y_max - y_min + 1),
+        "scheme": scheme
     }
 
 
@@ -155,11 +159,11 @@ def get_code_from_epsg(epsg_string):
 def tile_to_latlon(zoom, x, y, scheme="tms"):
     """
      * Returns the tile extent in ESPG:3857 coordinates
-    :param zoom: 
-    :param x: 
-    :param y: 
-    :param scheme: 
-    :return: 
+    :param zoom:
+    :param x:
+    :param y:
+    :param scheme:
+    :return:
     """
 
     gm = GlobalMercator(tileSize=512)
@@ -196,7 +200,7 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         y_min = min(xy_min[1], xy_max[1])
         y_max = max(xy_min[1], xy_max[1])
 
-        tile_bounds = create_bounds(zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max)
+        tile_bounds = create_bounds(zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, scheme=scheme)
     return tile_bounds
 
 
