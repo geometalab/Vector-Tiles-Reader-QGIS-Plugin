@@ -58,7 +58,7 @@
       <string>Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)</string>
      </property>
      <property name="text">
-      <string>Apply GL JSON Style (if specified)</string>
+      <string>Apply GL JSON style (if specified)</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -68,7 +68,7 @@
    <item row="2" column="0" colspan="2">
     <widget class="QCheckBox" name="chkMergeTiles">
      <property name="text">
-      <string>Merge Tiles (slow)</string>
+      <string>Merge tiles (slow)</string>
      </property>
      <property name="checked">
       <bool>false</bool>
@@ -302,7 +302,7 @@
    <item row="10" column="0" colspan="2">
     <widget class="QCheckBox" name="chkSetBackgroundColor">
      <property name="text">
-      <string>Set Project Background Color</string>
+      <string>Set project background color</string>
      </property>
      <property name="checked">
       <bool>true</bool>

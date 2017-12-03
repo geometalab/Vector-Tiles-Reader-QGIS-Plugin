@@ -143,8 +143,8 @@ class Ui_OptionsGroup(object):
         self.rbZoomMax.setText(_translate("OptionsGroup", "Max. Zoom"))
         self.chkClipTiles.setText(_translate("OptionsGroup", "Clip each tile at bounds (slow)"))
         self.chkApplyStyles.setToolTip(_translate("OptionsGroup", "Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)"))
-        self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply GL JSON Style (if specified)"))
-        self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge Tiles (slow)"))
+        self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply GL JSON style (if specified)"))
+        self.chkMergeTiles.setText(_translate("OptionsGroup", "Merge tiles (slow)"))
         self.lblZoomRange.setText(_translate("OptionsGroup", "TextLabel"))
         self.chkLimitNrOfTiles.setToolTip(_translate("OptionsGroup", "<html><head/><body><p>If this option is enabled, only the specified number of tiles will be loaded from the selected source. </p><p>Cached tiles are not affected by this limit. Therefore, there may be more tiles visible when loading is complete.</p></body></html>"))
         self.chkLimitNrOfTiles.setText(_translate("OptionsGroup", "Loaded tile limit"))
@@ -154,6 +154,6 @@ class Ui_OptionsGroup(object):
         self.btnResetToInspectionDefaults.setText(_translate("OptionsGroup", "Inspection Defaults"))
         self.btnManualSettings.setText(_translate("OptionsGroup", "Manual"))
         self.label_5.setText(_translate("OptionsGroup", "Fix Zoom"))
-        self.chkSetBackgroundColor.setText(_translate("OptionsGroup", "Set Project Background Color"))
+        self.chkSetBackgroundColor.setText(_translate("OptionsGroup", "Set project background color"))
         self.chkAutoZoom.setText(_translate("OptionsGroup", "Auto reload on change of view"))
 
