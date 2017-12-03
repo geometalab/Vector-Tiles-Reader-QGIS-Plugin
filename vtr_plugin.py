@@ -264,8 +264,8 @@ class VtrPlugin():
         scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
-        if not self._loaded_extent:
-            extent = get_tile_bounds(zoom, WORLD_BOUNDS, 4326)
+        if not self._loaded_extent and self.connections_dialog.options.auto_zoom_enabled():
+            extent = get_tile_bounds(2, WORLD_BOUNDS, 4326)
         else:
             extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
@@ -273,7 +273,7 @@ class VtrPlugin():
         info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
-            info("setting qgis extent ")
+            info("Current QGIS extent '{}' is not within bounds '{}'. Setting current QGIS extent to bounds.")
             self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
