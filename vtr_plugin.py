@@ -140,8 +140,7 @@ class VtrPlugin():
                 layers = QgsMapLayerRegistry.instance().mapLayers()
                 if self._current_reader_sources is None:
                     self._update_current_reader_sources()
-                assert self._current_reader_sources
-                if layer_id in layers:
+                if self._current_reader_sources and layer_id in layers:
                     removed_layer = layers[layer_id]
                     src = removed_layer.source()
                     if src in self._current_reader_sources:
