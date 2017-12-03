@@ -104,10 +104,6 @@ class VtReader(QObject):
     _DEFAULT_EXTENT = 4096
     _id = str(uuid.uuid4())
 
-    _style_folder = None
-
-    flush_layers_of_other_zoom_level = False
-
     _all_tiles = []
 
     def __init__(self, iface, connection):
@@ -599,11 +595,11 @@ class VtReader(QObject):
                 break
             self.add_layer_to_group.emit(layer)
 
-        if apply_styles and not self.cancel_requested:
+        if apply_styles and not self.cancel_requested and new_layers:
+            count = 0
             conn_name = self.connection()["name"]
             styles_folder = get_style_folder(conn_name)
             styles = get_styles(conn_name)
-            count = 0
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
             for name, geo_type, layer in new_layers:
                 count += 1

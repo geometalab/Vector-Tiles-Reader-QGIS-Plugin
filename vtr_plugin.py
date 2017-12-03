@@ -572,17 +572,11 @@ class VtrPlugin():
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
-            zoom = self._get_current_zoom()
-            auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
-            flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom
-            self._current_zoom = zoom
-            if flush_loaded_layers:
-                self._current_reader.flush_layers_of_other_zoom_level = True
-
+            self._current_zoom = self._get_current_zoom()
             if overwrite_extent:
                 bounds = overwrite_extent
             else:
-                bounds = self._get_visible_extent_as_tile_bounds(zoom=zoom)
+                bounds = self._get_visible_extent_as_tile_bounds(zoom=self._current_zoom)
 
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
