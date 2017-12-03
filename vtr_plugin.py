@@ -588,7 +588,7 @@ class VtrPlugin():
     def _get_current_extent_as_wkt(self):
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
-    def _get_visible_extent_as_tile_bounds(self, zoom):
+    def _get_visible_extent_as_latlon(self):
         extent = self.iface.mapCanvas().mapSettings().visibleExtent()
         x_min = extent.xMinimum()
         x_max = extent.xMaximum()
@@ -601,6 +601,13 @@ class VtrPlugin():
             bounds = [x_min, y_min, x_max, y_max]
         else:
             bounds = [x_min, y_max, x_max, y_min]
+        return bounds
+
+    def _get_visible_extent_as_tile_bounds(self, zoom):
+        bounds = self._get_visible_extent_as_latlon()
+        scheme = "xyz"
+        if self._current_reader:
+            scheme = self._current_reader.get_source().scheme()
         # the source_crs is 3857, even if the actual data is in another (21781 for example)
         # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
@@ -825,6 +832,7 @@ class VtrPlugin():
 
         self._loaded_scale = self._get_current_map_scale()
         self.refresh_layers()
+        self._set_layer_extent(loaded_extent)
         if loaded_extent:
             info("Loading of zoom level {} complete! Loaded extent: {}", loaded_zoom_level, loaded_extent)
         else:
@@ -841,6 +849,32 @@ class VtrPlugin():
         self._is_loading = False
         if auto_zoom:
             self._debouncer.start()
+
+    def _set_layer_extent(self, loaded_extent):
+        layers = self._get_all_own_layers()
+        if self.connections_dialog.options.auto_zoom_enabled():
+            bounds = WORLD_BOUNDS
+            if self._current_reader:
+                src = self._current_reader.get_source()
+                bounds = src.bounds()
+            x_min, y_min = convert_coordinate(4326, self._get_qgis_crs(), lat=bounds[1], lng=bounds[0])
+            x_max, y_max = convert_coordinate(4326, self._get_qgis_crs(), lat=bounds[3], lng=bounds[2])
+            bounds = [x_min, y_min, x_max, y_max]
+        else:
+            if not loaded_extent:
+                bounds = self._get_visible_extent_as_latlon()
+            else:
+                min_bounds = tile_to_latlon(zoom=loaded_extent["zoom"],
+                                            x=loaded_extent["x_min"],
+                                            y=loaded_extent["y_min"],
+                                            scheme=loaded_extent["scheme"])
+                max_bounds = tile_to_latlon(zoom=loaded_extent["zoom"],
+                                            x=loaded_extent["x_max"],
+                                            y=loaded_extent["y_max"],
+                                            scheme=loaded_extent["scheme"])
+                bounds = [min_bounds[0], min_bounds[1], max_bounds[2], max_bounds[3]]
+        for l in layers:
+            l.setExtent(QgsRectangle(*bounds))
 
     def reader_progress_changed(self, progress):
         self.handle_progress_update(progress=progress)
