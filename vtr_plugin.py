@@ -732,7 +732,6 @@ class VtrPlugin():
         self._auto_zoom = options.auto_zoom_enabled()
         if ignore_limit:
             tile_limit = None
-        manual_zoom = options.manual_zoom()
         clip_tiles = options.clip_tiles()
 
         reader = self._current_reader
@@ -740,31 +739,20 @@ class VtrPlugin():
             self._is_loading = False
         else:
             try:
-                max_zoom = reader.get_source().max_zoom()
-                min_zoom = reader.get_source().min_zoom()
-                if self._auto_zoom:
-                    zoom = self._get_zoom_for_current_map_scale()
-                    zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-                else:
-                    zoom = max_zoom
-                    if manual_zoom is not None:
-                        zoom = manual_zoom
-                self._current_zoom = zoom
-
-                source_bounds = reader.get_source().bounds_tile(zoom)
+                source_bounds = reader.get_source().bounds_tile(bounds["zoom"])
                 if source_bounds and not extent_overlap_bounds(bounds, source_bounds) \
                         and not extent_overlap_bounds(source_bounds, bounds):
                     info("The current map extent is not within the bounds of the source. The extent to load "
                          "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds,
                          source_bounds)
                     bounds = source_bounds
-
+                self._current_zoom = bounds["zoom"]
                 reader.set_allowed_sources(self._current_reader_sources)
                 reader.set_options(load_mask_layer=load_mask_layer, merge_tiles=merge_tiles, clip_tiles=clip_tiles,
                                    apply_styles=apply_styles, max_tiles=tile_limit, layer_filter=layers_to_load,
                                    is_inspection_mode=inspection_mode)
                 self._is_loading = True
-                reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
+                reader.load_tiles_async(bounds=bounds)
             except Exception as e:
                 critical("An exception occured: {}", e)
                 tb_lines = traceback.format_tb(sys.exc_traceback)

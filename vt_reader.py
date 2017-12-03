@@ -393,13 +393,14 @@ class VtReader(QObject):
             'inspection_mode': is_inspection_mode
         }
 
-    def load_tiles_async(self, zoom_level, bounds):
+    def load_tiles_async(self, bounds):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
         :param bounds:
         :return: 
         """
+        zoom_level = bounds["zoom"]
         info("Loading zoom level '{}', bounds: {}", zoom_level, bounds)
         self._loading_options["zoom_level"] = zoom_level
         self._loading_options["bounds"] = bounds
