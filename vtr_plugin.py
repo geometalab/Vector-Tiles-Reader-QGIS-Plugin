@@ -676,20 +676,13 @@ class VtrPlugin():
         self.iface.mapCanvas().refresh()
 
     def _init_qgis_map(self, crs_string):
-        center = tuple(map(lambda n: int(round(n)), self.iface.mapCanvas().extent().center()))
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-            crs_string = 3857
         try:
             self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
         except AttributeError:
             self.iface.mapCanvas().setDestinationCrs(crs)
-
-        x, y = convert_coordinate(4326, crs_string, lat=46.95592, lng=7.42078)
-        if center == (0, 0):
-            self.iface.mapCanvas().setCenter(QgsPoint(x, y))
-            self.iface.mapCanvas().zoomScale(88687108)
 
     def _cancel_load(self):
         if self._current_reader:
