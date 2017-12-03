@@ -107,9 +107,11 @@ def _get_labeling_settings(style):
             raise ValueError("Unknown text_transform '{}'".format(text_transform))
         field_name = '{transform}({field})'.format(transform=text_transform, field=field_name)
 
+    italic_font = 0
     if isinstance(font, list):
+        if any("italic" in f.lower() for f in font):
+            italic_font = 1
         font = font[0]
-    font = "MS Shell Dlg 2"
     font_size = _get_value_safe(style, "text-size", 16)
     font_size_is_expr = not isinstance(font_size, (int, float))
     font_size_expr_active = "true"
@@ -145,9 +147,11 @@ def _get_labeling_settings(style):
         <rendering fontMinPixelSize="3" scaleMax="10000000" fontMaxPixelSize="10000" scaleMin="1" upsidedownLabels="0" limitNumLabels="0" obstacle="1" obstacleFactor="1" scaleVisibility="0" fontLimitPixelSize="0" mergeLines="1" obstacleType="0" labelPerPart="0" zIndex="0" maxNumLabels="2000" displayAll="0" minFeatureSize="0"/>
         <data-defined>
             <Size expr="{font_size_expr}" field="" active="{font_size_expr_active}" useExpr="{font_size_expr_active}"/>
+            <Italic expr="{italic_font}" field="" active="true" useExpr="true"/>
         </data-defined>
     </settings>
     """.format(font=font,
+               italic_font=italic_font,
                font_size=font_size,
                font_size_expr=font_size_expr,
                field_name=field_name,
