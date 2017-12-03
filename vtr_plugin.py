@@ -393,8 +393,6 @@ class VtrPlugin():
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
             status, data = load_url(url)
             if status == 200:
-                with open(r"c:\temp\styledata.json", 'w') as f:
-                    f.write(data)
                 try:
                     info("Styles will be written to: {}", output_directory)
                     core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
