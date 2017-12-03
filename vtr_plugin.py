@@ -415,7 +415,7 @@ class VtrPlugin():
         return data
 
     def reader_cancelled(self):
-        info("cancelled")
+        info("Loading cancelled")
         self._is_loading = False
         self.handle_progress_update(show_progress=False)
         if self._auto_zoom:
@@ -605,7 +605,6 @@ class VtrPlugin():
         # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
         tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
-        info("visible extent: {}", tile_bounds)
         return tile_bounds
 
     @staticmethod
@@ -711,7 +710,7 @@ class VtrPlugin():
                 self._debouncer.pause()
 
         if not is_add and not self._has_layers_of_current_connection():
-            info("cancel load due to missing layers")
+            info("Loading aborted as there are no layers of the current connection already loaded.")
             return
 
         merge_tiles = options.merge_tiles_enabled()
@@ -757,7 +756,6 @@ class VtrPlugin():
                                    apply_styles=apply_styles, max_tiles=tile_limit, layer_filter=layers_to_load,
                                    is_inspection_mode=inspection_mode)
                 self._is_loading = True
-                info("now loading: {}", bounds)
                 reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
             except Exception as e:
                 critical("An exception occured: {}", e)
@@ -1020,7 +1018,6 @@ class SignalDebouncer(QObject):
     def _on_timeout(self):
         self._debounce_timer.stop()
         if self._is_stopped:
-            info("Debouncer is stopped")
             return
 
         should_notify = True
