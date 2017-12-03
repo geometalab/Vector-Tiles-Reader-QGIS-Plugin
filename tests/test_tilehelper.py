@@ -23,6 +23,17 @@ class TileHelperTests(unittest.TestCase):
         self.assertEqual(166, change_scheme(zoom=8, y=89))
         self.assertEqual(2729017, change_scheme(zoom=22, y=1465286))
 
+    def test_top_left_latlon_to_tile_for_each_zoom(self):
+        for n in range(0, 24):
+            top_left = latlon_to_tile(zoom=n, lat=WORLD_BOUNDS[3], lng=WORLD_BOUNDS[0], source_crs=4326, scheme="xyz")
+            self.assertEqual((0, 0), top_left, "Zoom level {} incorrect".format(n))
+
+    def test_bottom_right_latlon_to_tile_for_each_zoom(self):
+        for n in range(0, 24):
+            bottom_right = latlon_to_tile(zoom=n, lat=WORLD_BOUNDS[1], lng=WORLD_BOUNDS[2], source_crs=4326, scheme="xyz")
+            max_tile = (2**n) - 1
+            self.assertEqual((max_tile, max_tile), bottom_right, "Zoom level {} incorrect".format(n))
+
     def test_latlon_to_tile_tms(self):
         tms_tile = latlon_to_tile(0, WORLD_BOUNDS[1], WORLD_BOUNDS[0], source_crs=4326, scheme="tms")
         self.assertEquals((0, 0), tms_tile)
@@ -30,6 +41,13 @@ class TileHelperTests(unittest.TestCase):
     def test_latlon_to_tile_xyz(self):
         xyz_tile = latlon_to_tile(0, WORLD_BOUNDS[1], WORLD_BOUNDS[0], source_crs=4326, scheme="xyz")
         self.assertEquals(xyz_tile, (0, 0))
+
+    def test_latlon_to_tile_manual(self):
+        web_mercator_pos = (981106, 5978646)
+        tms = latlon_to_tile(zoom=6, lat=web_mercator_pos[1], lng=web_mercator_pos[0], source_crs=3857, scheme="tms")
+        xyz = latlon_to_tile(zoom=6, lat=web_mercator_pos[1], lng=web_mercator_pos[0], source_crs=3857, scheme="xyz")
+        self.assertEqual((33, 41), tms)
+        self.assertEqual((33, 22), xyz)
 
     def test_get_zoom_by_scale_min(self):
         zoom = get_zoom_by_scale(-1)
@@ -50,7 +68,8 @@ class TileHelperTests(unittest.TestCase):
                            'height': 16384,
                            'width': 16384,
                            'x_max': 16383,
-                           'x_min': 0}
+                           'x_min': 0,
+                           'scheme': 'xyz'}
         self.assertEqual(bounds_expected, tile)
 
     def test_center_tiles(self):

@@ -22,28 +22,16 @@ def get_plugin_directory():
     return path
 
 
-def paths_equal(path1, path2):
-    return _normalize_path(path1) == _normalize_path(path2)
+def get_style_folder(connection_name):
+    folder = os.path.join(get_temp_dir(), "styles", connection_name)
+    return folder
 
 
-def _normalize_path(path):
-    path = os.path.normpath(os.path.abspath(path))
-    if sys.platform.startswith("win32"):
-        try:
-            from ctypes import create_unicode_buffer, windll
-            BUFFER_SIZE = 500
-            buffer = create_unicode_buffer(BUFFER_SIZE)
-            get_long_path_name = windll.kernel32.GetLongPathNameW
-            get_long_path_name(unicode(path), buffer, BUFFER_SIZE)
-            path = os.path.normpath(buffer.value)
-        except:
-            info("failed: {}", sys.exc_info()[1])
-    return path
-
-
-def get_styles():
-    folder = os.path.join(get_plugin_directory(), "styles")
-    styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+def get_styles(connection_name):
+    folder = get_style_folder(connection_name)
+    styles = []
+    if os.path.isdir(folder):
+        styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     return styles
 
 
@@ -73,7 +61,10 @@ def get_cached_tile(file_name):
 
 
 def get_cached_tile_file_name(source_name, zoom_level, col, row):
-    return "{}.{}.{}.{}.bin".format(source_name, zoom_level, col, row)
+    return "{source}.{zoom}.{col}.{row}.bin".format(source=source_name,
+                                                    zoom=zoom_level,
+                                                    col=col,
+                                                    row=row)
 
 
 def cache_tile(tile, source_name):
@@ -137,18 +128,12 @@ def get_geojson_file_name(name):
     return os.path.join(path, name_with_extension)
 
 
-def get_unique_geojson_file_name():
-    path = os.path.join(get_temp_dir(), geojson_folder)
-    unique_name = "{}.{}".format(uuid.uuid4(), "geojson")
-    return os.path.join(path, unique_name)
-
-
 def is_sqlite_db(path):
     header_string = "SQLite"
     chunksize = len(header_string)
-    with open(path, "r") as f:
+    with open(path, "rb+") as f:
         content = f.read(chunksize)
-    expected_header = bytearray("SQLite")
+    expected_header = bytearray("SQLite", encoding="UTF-8")
     header_matching = are_headers_equal(content, expected_header)
     return header_matching
 

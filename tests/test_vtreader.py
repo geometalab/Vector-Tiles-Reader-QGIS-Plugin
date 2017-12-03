@@ -15,7 +15,8 @@ import mock
 from osgeo import gdal
 from util.file_helper import clear_cache
 
-class IfaceTests(unittest.TestCase):
+
+class VtReaderTests(unittest.TestCase):
     """
     Tests for Iface
     """
@@ -136,7 +137,8 @@ class IfaceTests(unittest.TestCase):
         conn["path"] = os.path.join(os.path.dirname(__file__), '..', 'sample_data', 'uster_zh.mbtiles')
         reader = VtReader(iface=iface, connection=conn)
         bounds = {'y_min': 10644, 'y_max': 10645, 'zoom': 14, 'height': 2, 'width': 3, 'x_max': 8589, 'x_min': 8587}
-        reader.set_options(max_tiles=max_tiles, layer_filter=['landcover', 'place', 'water_name'], merge_tiles=merge_tiles, clip_tiles=clip_tiles)
+        reader.set_options(merge_tiles=merge_tiles, clip_tiles=clip_tiles, max_tiles=max_tiles,
+                           layer_filter=['landcover', 'place', 'water_name'])
         reader._loading_options["zoom_level"] = 14
         reader._loading_options["bounds"] = bounds
         if serial_tile_processing_limit:
@@ -146,7 +148,7 @@ class IfaceTests(unittest.TestCase):
 
 
 def suite():
-    suite = unittest.makeSuite(IfaceTests, 'test')
+    suite = unittest.makeSuite(VtReaderTests, 'test')
     return suite
 
 

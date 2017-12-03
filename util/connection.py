@@ -13,21 +13,24 @@ ConnectionTypes = _ConnectionTypes()
 MBTILES_CONNECTION_TEMPLATE = {
     "name": None,
     "path": None,
-    "type": ConnectionTypes.MBTiles
+    "type": ConnectionTypes.MBTiles,
+    "style": None
 }
 
 DIRECTORY_CONNECTION_TEMPLATE = {
     "name": None,
     "path": None,
-    "type": ConnectionTypes.Directory
+    "type": ConnectionTypes.Directory,
+    "style": None
 }
 
 TILEJSON_CONNECTION_TEMPLATE = {
-    "name": None,
-    "url": None,
+    "name": "",
+    "url": "",
     "token": None,
     "type": ConnectionTypes.TileJSON,
-    "can_edit": None
+    "can_edit": None,
+    "style": ""
 }
 
 POSTGIS_CONNECTION_TEMPLATE = {
@@ -38,5 +41,6 @@ POSTGIS_CONNECTION_TEMPLATE = {
     "password": None,
     "database": None,
     "save_password": True,
-    "type": ConnectionTypes.PostGIS
+    "type": ConnectionTypes.PostGIS,
+    "style": None
 }

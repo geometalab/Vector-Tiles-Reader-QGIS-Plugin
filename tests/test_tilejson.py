@@ -42,7 +42,8 @@ class TileJsonTests(unittest.TestCase):
             "y_max": 5747,
             "zoom": 14,
             "width": 2,
-            "height": 2
+            "height": 2,
+            "scheme": "xyz"
         }
         self.assertEqual(bounds_expected, t)
 
@@ -57,7 +58,8 @@ class TileJsonTests(unittest.TestCase):
             "y_max": 10637,
             "zoom": 14,
             "width": 2,
-            "height": 2
+            "height": 2,
+            "scheme": "tms"
         }
         self.assertIsNotNone(t)
         self.assertEqual(bounds_expected, t)
@@ -72,7 +74,8 @@ class TileJsonTests(unittest.TestCase):
             "y_max": 16383,
             "zoom": 14,
             "width": 16384,
-            "height": 16384
+            "height": 16384,
+            "scheme": "xyz"
         }
         self.assertIsNotNone(b)
         self.assertEqual(bounds_expected, b)
@@ -111,7 +114,7 @@ def _get_test_tilejson():
         "maxzoom": 14,
         "minzoom": 0,
         "version": "3.5",
-        "bounds": [-180, -85.0511, 180, 85.0511],
+        "bounds": WORLD_BOUNDS,
         "maskLevel": "8",
         "planettime": "1491177600000",
         "tilejson": "2.0.0",

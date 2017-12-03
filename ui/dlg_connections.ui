@@ -16,21 +16,8 @@
   <property name="sizeGripEnabled">
    <bool>true</bool>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0">
-   <item row="2" column="0">
-    <widget class="QGroupBox" name="grpOptions">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>190</height>
-      </size>
-     </property>
-     <property name="title">
-      <string>Options</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0">
+   <item row="5" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,0,0">
      <item alignment="Qt::AlignRight|Qt::AlignVCenter">
       <widget class="QCheckBox" name="chkKeepOpen">
@@ -83,40 +70,6 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0">
-    <widget class="QTableView" name="tblLayers">
-     <property name="editTriggers">
-      <set>QAbstractItemView::NoEditTriggers</set>
-     </property>
-     <property name="showDropIndicator" stdset="0">
-      <bool>false</bool>
-     </property>
-     <property name="alternatingRowColors">
-      <bool>true</bool>
-     </property>
-     <property name="selectionMode">
-      <enum>QAbstractItemView::ExtendedSelection</enum>
-     </property>
-     <property name="selectionBehavior">
-      <enum>QAbstractItemView::SelectRows</enum>
-     </property>
-     <property name="sortingEnabled">
-      <bool>true</bool>
-     </property>
-     <property name="cornerButtonEnabled">
-      <bool>true</bool>
-     </property>
-     <attribute name="horizontalHeaderMinimumSectionSize">
-      <number>140</number>
-     </attribute>
-     <attribute name="horizontalHeaderStretchLastSection">
-      <bool>true</bool>
-     </attribute>
-     <attribute name="verticalHeaderVisible">
-      <bool>false</bool>
-     </attribute>
-    </widget>
-   </item>
    <item row="0" column="0" alignment="Qt::AlignTop">
     <widget class="QTabWidget" name="tabConnections">
      <property name="minimumSize">
@@ -150,15 +103,18 @@
      </widget>
      <widget class="QWidget" name="tabFile">
       <attribute name="title">
-       <string>MBTile</string>
+       <string>MBTiles</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="0">
-        <widget class="QLabel" name="lblSource">
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblMbtilesStyleJsonUrl">
          <property name="text">
-          <string>Path</string>
+          <string>GL Style JSON URL</string>
          </property>
         </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="txtMbtilesStyleJsonUrl"/>
        </item>
        <item row="0" column="1">
         <widget class="QLineEdit" name="txtPath">
@@ -180,21 +136,52 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblSource">
+         <property name="text">
+          <string>Path</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnConnectFile">
+         <property name="text">
+          <string>Refresh</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabDirectory">
       <attribute name="title">
        <string>Directory</string>
       </attribute>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="2">
+        <widget class="QPushButton" name="btnSelectDirectory">
+         <property name="text">
+          <string>Browse</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="txtDirectoryStyleJsonUrl"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblDirectoryStyleJsonUrl">
+         <property name="text">
+          <string>GL Style JSON URL</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
         <widget class="QLabel" name="lblSource_2">
          <property name="text">
           <string>Path</string>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="0" column="1">
         <widget class="QLineEdit" name="txtDirectoryPath">
          <property name="toolTip">
           <string>The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)</string>
@@ -207,10 +194,10 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnSelectDirectory">
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnConnectDirectory">
          <property name="text">
-          <string>Browse</string>
+          <string>Refresh</string>
          </property>
         </widget>
        </item>
@@ -218,19 +205,78 @@
      </widget>
     </widget>
    </item>
+   <item row="4" column="0">
+    <widget class="QGroupBox" name="grpOptions">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>190</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Options</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" rowspan="3">
+    <widget class="QGroupBox" name="grpLayers">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Layers</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="1" column="0">
+       <widget class="QTableView" name="tblLayers">
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
+        <property name="showDropIndicator" stdset="0">
+         <bool>false</bool>
+        </property>
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::ExtendedSelection</enum>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectRows</enum>
+        </property>
+        <property name="sortingEnabled">
+         <bool>true</bool>
+        </property>
+        <property name="cornerButtonEnabled">
+         <bool>true</bool>
+        </property>
+        <attribute name="horizontalHeaderMinimumSectionSize">
+         <number>140</number>
+        </attribute>
+        <attribute name="horizontalHeaderStretchLastSection">
+         <bool>true</bool>
+        </attribute>
+        <attribute name="verticalHeaderVisible">
+         <bool>false</bool>
+        </attribute>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
   <tabstop>tabConnections</tabstop>
-  <tabstop>tblLayers</tabstop>
   <tabstop>chkKeepOpen</tabstop>
   <tabstop>btnAdd</tabstop>
   <tabstop>btnClose</tabstop>
   <tabstop>btnHelp</tabstop>
   <tabstop>txtPath</tabstop>
   <tabstop>btnBrowse</tabstop>
-  <tabstop>txtDirectoryPath</tabstop>
-  <tabstop>btnSelectDirectory</tabstop>
  </tabstops>
  <resources/>
  <connections>

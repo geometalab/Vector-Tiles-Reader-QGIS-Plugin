@@ -51,6 +51,9 @@ class AbstractSource(QObject):
     def name(self):
         raise NotImplementedError
 
+    def attribution(self):
+        raise NotImplementedError
+
     def min_zoom(self):
         """
          * Returns the minimum zoom that is found in either the metadata or the tile table
@@ -144,6 +147,9 @@ class ServerSource(AbstractSource):
     def mask_level(self):
         return self.json.mask_level()
 
+    def attribution(self):
+        return self.json.attribution()
+
     def scheme(self):
         return self.json.scheme()
 
@@ -190,6 +196,10 @@ class ServerSource(AbstractSource):
 
 
 class MBTilesSource(AbstractSource):
+
+    def attribution(self):
+        return self._get_metadata_value("attribution", "")
+
     def __init__(self, path):
         AbstractSource.__init__(self)
         if not os.path.isfile(path):
@@ -321,7 +331,8 @@ class MBTilesSource(AbstractSource):
                                    x_min=row["x_min"],
                                    x_max=row["x_max"],
                                    y_min=row["y_min"],
-                                   y_max=row["y_max"])
+                                   y_max=row["y_max"],
+                                   scheme=self.scheme())
         return bounds
 
     @staticmethod
@@ -460,6 +471,9 @@ class DirectorySource(AbstractSource):
 
     def source(self):
         return self.path
+
+    def attribution(self):
+        return self.json.attribution()
 
     def vector_layers(self):
         data = json.loads(self.json.get_value("json"))["vector_layers"]

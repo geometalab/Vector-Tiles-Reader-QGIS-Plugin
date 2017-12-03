@@ -22,9 +22,10 @@ import ast
 
 from builtins import map
 from builtins import str
-from .util.log_helper import info, critical, debug
 import logging
+from .util.log_helper import info, critical, debug
 from .util.vtr_2to3 import *
+from .util.network_helper import url_exists, load_url
 from .util.tile_helper import (
     latlon_to_tile,
     get_zoom_by_scale,
@@ -35,12 +36,15 @@ from .util.tile_helper import (
     extent_overlap_bounds,
     center_tiles_equal,
     clamp_bounds,
-    convert_coordinate)
+    convert_coordinate,
+    WORLD_BOUNDS)
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
-from .util.file_helper import (get_icons_directory,
-                               clear_cache,
-                               get_plugin_directory)
+from .util.file_helper import (
+    get_icons_directory,
+    clear_cache,
+    get_plugin_directory,
+    get_temp_dir)
 
 # try:
 #     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'
@@ -91,6 +95,7 @@ class VtrPlugin():
         self.iface = iface
         iface.newProjectCreated.connect(self._on_project_change)
         iface.projectRead.connect(self._on_project_change)
+        QgsMapLayerRegistry.instance().layersWillBeRemoved.connect(self._on_remove)
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
@@ -122,12 +127,28 @@ class VtrPlugin():
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load = None
         self._extent_to_load = None
+        self._current_extent = None
         self.message_bar_item = None
         self.progress_bar = None
+        self._inspection_mode_active = False
+        self._current_reader_sources = None
+        self._debouncer.start()
+
+    def _on_remove(self, layer_ids):
+        if QgsMapLayerRegistry and layer_ids:
+            for layer_id in layer_ids:
+                layers = QgsMapLayerRegistry.instance().mapLayers()
+                if self._current_reader_sources is None:
+                    self._update_current_reader_sources()
+                if self._current_reader_sources and layer_id in layers:
+                    removed_layer = layers[layer_id]
+                    src = removed_layer.source()
+                    if src in self._current_reader_sources:
+                        self._current_reader_sources.remove(src)
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "server.svg",
+        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "mActionAddVectorTilesReader.svg",
                                                            self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
                                                  self._load_features_overlapping_tile_extent, False)
@@ -201,8 +222,8 @@ class VtrPlugin():
         self._connect_to_first_source()
 
     def _load_features_overlapping_tile_extent(self):
-        add_missing_layers = len(self._get_all_own_layers()) == 0
-        self._reload_tiles(ignore_limit=True, add_missing_layers=add_missing_layers)
+        clear_cache()
+        self._reload_tiles(ignore_limit=True)
 
     def _have_extent_or_scale_changed(self):
         if self._current_reader:
@@ -231,6 +252,9 @@ class VtrPlugin():
 
     def _on_add_layer(self, connection, selected_layers):
         assert connection
+        self._current_reader_sources = None
+        if self.connections_dialog.options.apply_styles_enabled():
+            self._create_styles(connection)
         self._assure_qgis_groups_exist(connection["name"], True)
 
         crs_string = self._current_reader.get_source().crs()
@@ -239,13 +263,16 @@ class VtrPlugin():
         scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
-        extent = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+        if not self._loaded_extent and self.connections_dialog.options.auto_zoom_enabled():
+            extent = get_tile_bounds(2, WORLD_BOUNDS, 4326)
+        else:
+            extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
         bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
-            info("setting qgis extent ")
+            info("Current QGIS extent '{}' is not within bounds '{}'. Setting current QGIS extent to bounds.")
             self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):
@@ -312,7 +339,7 @@ class VtrPlugin():
             self._update_nr_of_tiles(zoom)
 
     def _update_nr_of_tiles(self, zoom):
-        bounds = self._get_visible_extent_as_tile_bounds(scheme="xyz", zoom=zoom)
+        bounds = self._get_visible_extent_as_tile_bounds(zoom=zoom)
         nr_of_tiles = bounds["width"] * bounds["height"]
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
@@ -342,9 +369,58 @@ class VtrPlugin():
             self.connections_dialog.set_layers([])
             self.reload_action.setEnabled(False)
             self.reload_action.setText(self._reload_button_text)
+        self._update_current_reader_sources()
+        already_loaded = self._current_reader_sources is not None and len(self._current_reader_sources) > 0
+        self.connections_dialog.set_current_connection_already_loaded(already_loaded)
+
+    def _update_current_reader_sources(self):
+        own_layers = self._get_all_own_layers()
+        if own_layers:
+            self._current_reader_sources = list(map(lambda l: l.source(), own_layers))
+        else:
+            self._current_reader_sources = None
+
+    def _create_styles(self, connection):
+        if "style" not in connection or not connection["style"]:
+            return
+        url = connection["style"]
+        info("Creating styles from: {}", url)
+        from mapboxstyle2qgis import core
+        core.register_qgis_expressions()
+        if not url_exists(url):
+            info("StyleJSON not found. URL invalid?")
+        else:
+            output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
+            status, data = load_url(url)
+            if status == 200:
+                try:
+                    info("Styles will be written to: {}", output_directory)
+                    core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
+                except:
+                    tb = ""
+                    if traceback:
+                        tb = traceback.format_exc()
+                    critical("Style generation failed: {}, {}", sys.exc_info(), tb)
+                try:
+                    if self.connections_dialog.options.set_background_color_enabled():
+                        background_color = core.get_background_color(data)
+                        info("Setting background color: {}", background_color)
+                        self._set_background_color(background_color)
+                except:
+                    tb = ""
+                    if traceback:
+                        tb = traceback.format_exc()
+                    critical("Setting style background color failed: {}, {}", sys.exc_info(), tb)
+            else:
+                info("Loading StyleJSON failed: HTTP status {}", status)
+
+    @staticmethod
+    def _load_style_data(url):
+        status, data = load_url(url)
+        return data
 
     def reader_cancelled(self):
-        info("cancelled")
+        info("Loading cancelled")
         self._is_loading = False
         self.handle_progress_update(show_progress=False)
         if self._auto_zoom:
@@ -374,7 +450,6 @@ class VtrPlugin():
                 duration=5)
 
     def _has_extent_changed(self):
-        scheme = self._current_reader.get_source().scheme()
         scale = self._scale_to_load
         if not scale:
             scale = self._get_current_map_scale()
@@ -386,7 +461,7 @@ class VtrPlugin():
             max_zoom = self._current_reader.get_source().max_zoom()
             min_zoom = self._current_reader.get_source().min_zoom()
             zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-            new_extent = self._get_visible_extent_as_tile_bounds(scheme, zoom)
+            new_extent = self._get_visible_extent_as_tile_bounds(zoom)
             source_bounds = self._current_reader.get_source().bounds_tile(zoom)
             new_extent = clamp_bounds(bounds_to_clamp=new_extent, clamp_values=source_bounds)
 
@@ -415,7 +490,6 @@ class VtrPlugin():
         if new_zoom != current_zoom or (scale_increased and new_scale > self._loaded_scale):
             self._loaded_scale = new_scale
             self._reload_tiles()
-            self.iface.mapCanvas().zoomScale(new_scale)
 
     def _get_qgis_crs(self):
         canvas = self.iface.mapCanvas()
@@ -461,9 +535,14 @@ class VtrPlugin():
     def _show_connections_dialog(self):
         zoom = self._get_zoom_of_current_mode()
         self._update_nr_of_tiles(zoom=zoom)
-        self.connections_dialog.show()
+        current_connection = None
+        if self._current_reader:
+            current_connection = self._current_reader.connection()
+        self._update_current_reader_sources()
+        self.connections_dialog.show(current_connection)
 
     def _get_zoom_of_current_mode(self):
+        zoom = 0
         manual_zoom = self.connections_dialog.options.manual_zoom()
         if self.connections_dialog.options.auto_zoom_enabled():
             zoom = self._get_zoom_for_current_map_scale()
@@ -480,28 +559,22 @@ class VtrPlugin():
 
     def _get_all_own_layers(self):
         layers = []
-        for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
-            data_url = l.dataUrl().lower()
-            if data_url and self._current_reader.get_source().source().lower().startswith(data_url):
-                layers.append(l)
+        if self._current_reader:
+            for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
+                source_url = l.customProperty("VectorTilesReader/vector_tile_source")
+                if source_url and self._current_reader.get_source().source() == source_url:
+                    layers.append(l)
         return layers
 
-    def _reload_tiles(self, overwrite_extent=None, ignore_limit=False, add_missing_layers=False):
+    def _reload_tiles(self, overwrite_extent=None, ignore_limit=False):
         if self._debouncer.is_running():
             self._debouncer.pause()
         if self._current_reader:
-            scheme = self._current_reader.get_source().scheme()
-            zoom = self._get_current_zoom()
-            auto_zoom_enabled = self.connections_dialog.options.auto_zoom_enabled()
-            flush_loaded_layers = auto_zoom_enabled and zoom != self._current_zoom
-            self._current_zoom = zoom
-            if flush_loaded_layers:
-                self._current_reader.flush_layers_of_other_zoom_level = True
-
+            self._current_zoom = self._get_current_zoom()
             if overwrite_extent:
                 bounds = overwrite_extent
             else:
-                bounds = self._get_visible_extent_as_tile_bounds(scheme=scheme, zoom=zoom)
+                bounds = self._get_visible_extent_as_tile_bounds(zoom=self._current_zoom)
 
             if self.connections_dialog.options.auto_zoom_enabled():
                 self._current_reader.always_overwrite_geojson(True)
@@ -509,21 +582,34 @@ class VtrPlugin():
             self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
-                             ignore_limit=ignore_limit,
-                             is_add=add_missing_layers)
+                             ignore_limit=ignore_limit)
 
     def _get_current_extent_as_wkt(self):
         return self.iface.mapCanvas().extent().asWktCoordinates()
 
-    def _get_visible_extent_as_tile_bounds(self, scheme, zoom):
+    def _get_visible_extent_as_latlon(self):
         extent = self.iface.mapCanvas().mapSettings().visibleExtent()
         x_min = extent.xMinimum()
         x_max = extent.xMaximum()
         y_min = extent.yMinimum()
         y_max = extent.yMaximum()
-        bounds = [x_min, y_min, x_max, y_max]
+        scheme = "xyz"
+        if self._current_reader:
+            scheme = self._current_reader.get_source().scheme()
+        if scheme == "xyz":
+            bounds = [x_min, y_min, x_max, y_max]
+        else:
+            bounds = [x_min, y_max, x_max, y_min]
+        return bounds
+
+    def _get_visible_extent_as_tile_bounds(self, zoom):
+        bounds = self._get_visible_extent_as_latlon()
+        scheme = "xyz"
+        if self._current_reader:
+            scheme = self._current_reader.get_source().scheme()
         # the source_crs is 3857, even if the actual data is in another (21781 for example)
         # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
+        # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
         tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
         return tile_bounds
 
@@ -533,7 +619,6 @@ class VtrPlugin():
 
     def _is_valid_qgis_extent(self, extent_to_load, zoom):
         source_bounds = self._current_reader.get_source().bounds_tile(zoom)
-        info("bounds: {}", source_bounds)
         if source_bounds and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
                 and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
                 and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
@@ -589,20 +674,13 @@ class VtrPlugin():
         self.iface.mapCanvas().refresh()
 
     def _init_qgis_map(self, crs_string):
-        center = tuple(map(lambda n: int(round(n)), self.iface.mapCanvas().extent().center()))
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-            crs_string = 3857
         try:
             self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
         except AttributeError:
             self.iface.mapCanvas().setDestinationCrs(crs)
-
-        x, y = convert_coordinate(4326, crs_string, lat=46.95592, lng=7.42078)
-        if center == (0, 0):
-            self.iface.mapCanvas().setCenter(QgsPoint(x, y))
-            self.iface.mapCanvas().zoomScale(88687108)
 
     def _cancel_load(self):
         if self._current_reader:
@@ -622,7 +700,8 @@ class VtrPlugin():
             return len(list(layers))
         return 0
 
-    def _load_tiles(self, options, layers_to_load, bounds=None, ignore_limit=False, is_add=False):
+    def _load_tiles(self, options, layers_to_load, bounds, ignore_limit=False, is_add=False):
+        self._current_extent = bounds
         if self._debouncer.is_running():
             if is_add:
                 self._debouncer.stop()
@@ -630,54 +709,41 @@ class VtrPlugin():
                 self._debouncer.pause()
 
         if not is_add and not self._has_layers_of_current_connection():
+            info("Loading aborted as there are no layers of the current connection already loaded.")
             return
 
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
         load_mask_layer = options.load_mask_layer_enabled()
+        inspection_mode = options.is_inspection_mode()
+        if self._inspection_mode_active != inspection_mode:
+            clear_cache()
+        self._inspection_mode_active = inspection_mode
         self._auto_zoom = options.auto_zoom_enabled()
         if ignore_limit:
             tile_limit = None
-        manual_zoom = options.manual_zoom()
         clip_tiles = options.clip_tiles()
-
-        if apply_styles:
-            self._set_background_color()
 
         reader = self._current_reader
         if not reader:
             self._is_loading = False
         else:
             try:
-                max_zoom = reader.get_source().max_zoom()
-                min_zoom = reader.get_source().min_zoom()
-                if self._auto_zoom:
-                    zoom = self._get_zoom_for_current_map_scale()
-                    zoom = clamp(zoom, low=min_zoom, high=max_zoom)
-                else:
-                    zoom = max_zoom
-                    if manual_zoom is not None:
-                        zoom = manual_zoom
-                self._current_zoom = zoom
-
-                source_bounds = reader.get_source().bounds_tile(zoom)
+                source_bounds = reader.get_source().bounds_tile(bounds["zoom"])
                 if source_bounds and not extent_overlap_bounds(bounds, source_bounds) \
                         and not extent_overlap_bounds(source_bounds, bounds):
-                    info("The current map extent and is not within the bounds of the source. The extent to load "
+                    info("The current map extent is not within the bounds of the source. The extent to load "
                          "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds,
                          source_bounds)
                     bounds = source_bounds
-
-                reader.set_options(layer_filter=layers_to_load,
-                                   load_mask_layer=load_mask_layer,
-                                   merge_tiles=merge_tiles,
-                                   clip_tiles=clip_tiles,
-                                   apply_styles=apply_styles,
-                                   max_tiles=tile_limit,
-                                   add_missing_layers=is_add)
+                self._current_zoom = bounds["zoom"]
+                reader.set_allowed_sources(self._current_reader_sources)
+                reader.set_options(load_mask_layer=load_mask_layer, merge_tiles=merge_tiles, clip_tiles=clip_tiles,
+                                   apply_styles=apply_styles, max_tiles=tile_limit, layer_filter=layers_to_load,
+                                   is_inspection_mode=inspection_mode)
                 self._is_loading = True
-                reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
+                reader.load_tiles_async(bounds=bounds)
             except Exception as e:
                 critical("An exception occured: {}", e)
                 tb_lines = traceback.format_tb(sys.exc_traceback)
@@ -691,8 +757,8 @@ class VtrPlugin():
                     duration=5)
                 self._is_loading = False
 
-    def _set_background_color(self):
-        color = QColor("#F2EFE9")
+    def _set_background_color(self, color_string):
+        color = QColor(color_string)
         # Write it to the project (will still need to be saved!)
         QgsProject.instance().writeEntry("Gui", "/CanvasColorRedPart", color.red())
         QgsProject.instance().writeEntry("Gui", "/CanvasColorGreenPart", color.green())
@@ -720,7 +786,7 @@ class VtrPlugin():
             reader.cancelled.connect(self.reader_cancelled)
             reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
-            QMessageBox.critical(None, "Loading Error", str(sys.exc_info()[1]))
+            QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
             critical(str(sys.exc_info()[1]))
         return reader
 
@@ -740,14 +806,13 @@ class VtrPlugin():
         layer_group.addLayer(layer)
 
     def reader_loading_finished(self, loaded_zoom_level, loaded_extent):
-        info("loaded: {}", loaded_extent)
-        self._loaded_extent = loaded_extent
+        self._loaded_extent = self._current_extent
         self.handle_progress_update(show_progress=False)
-
         auto_zoom = self._auto_zoom
 
         self._loaded_scale = self._get_current_map_scale()
         self.refresh_layers()
+        self._set_layer_extent(loaded_extent)
         if loaded_extent:
             info("Loading of zoom level {} complete! Loaded extent: {}", loaded_zoom_level, loaded_extent)
         else:
@@ -755,7 +820,7 @@ class VtrPlugin():
 
         if loaded_extent and (not auto_zoom or (auto_zoom and self._loaded_scale is None)):
             scheme = self._current_reader.get_source().scheme()
-            visible_extent = self._get_visible_extent_as_tile_bounds(scheme, loaded_zoom_level)
+            visible_extent = self._get_visible_extent_as_tile_bounds(loaded_zoom_level)
             overlap = extent_overlap_bounds(visible_extent, loaded_extent)
             if not overlap:
                 info("Changing QGIS extent as it's not overlapping with the loaded extent")
@@ -764,6 +829,32 @@ class VtrPlugin():
         self._is_loading = False
         if auto_zoom:
             self._debouncer.start()
+
+    def _set_layer_extent(self, loaded_extent):
+        layers = self._get_all_own_layers()
+        if self.connections_dialog.options.auto_zoom_enabled():
+            bounds = WORLD_BOUNDS
+            if self._current_reader:
+                src = self._current_reader.get_source()
+                bounds = src.bounds()
+            x_min, y_min = convert_coordinate(4326, self._get_qgis_crs(), lat=bounds[1], lng=bounds[0])
+            x_max, y_max = convert_coordinate(4326, self._get_qgis_crs(), lat=bounds[3], lng=bounds[2])
+            bounds = [x_min, y_min, x_max, y_max]
+        else:
+            if not loaded_extent:
+                bounds = self._get_visible_extent_as_latlon()
+            else:
+                min_bounds = tile_to_latlon(zoom=loaded_extent["zoom"],
+                                            x=loaded_extent["x_min"],
+                                            y=loaded_extent["y_min"],
+                                            scheme=loaded_extent["scheme"])
+                max_bounds = tile_to_latlon(zoom=loaded_extent["zoom"],
+                                            x=loaded_extent["x_max"],
+                                            y=loaded_extent["y_max"],
+                                            scheme=loaded_extent["scheme"])
+                bounds = [min_bounds[0], min_bounds[1], max_bounds[2], max_bounds[3]]
+        for l in layers:
+            l.setExtent(QgsRectangle(*bounds))
 
     def reader_progress_changed(self, progress):
         self.handle_progress_update(progress=progress)
@@ -859,6 +950,7 @@ class VtrPlugin():
 
         try:
             self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+            QgsMapLayerRegistry.instance().layersWillBeRemoved.disconnect(self._on_remove)
             self.iface.newProjectCreated.disconnect(self._on_project_change)
             self.iface.projectRead.disconnect(self._on_project_change)
             self._debouncer.stop()

@@ -65,7 +65,8 @@ class MbtileSourceTests(unittest.TestCase):
             'height': 6,
             'width': 5,
             'x_max': 8590,
-            'x_min': 8586}
+            'x_min': 8586,
+            'scheme': 'tms'}
         self.assertEqual(bounds_expected, b)
 
     def test_get_bounds_from_data(self):

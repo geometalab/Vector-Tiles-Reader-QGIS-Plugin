@@ -28,6 +28,7 @@ if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
                                      clip_features)
     from .util.file_helper import (get_cached_tile_file_name,
                                   get_styles,
+                                  get_style_folder,
                                   assure_temp_dirs_exist,
                                   get_cached_tile,
                                   is_gzipped,
@@ -50,6 +51,7 @@ else:
                                      clip_features)
     from util.file_helper import (get_cached_tile_file_name,
                                   get_styles,
+                                  get_style_folder,
                                   assure_temp_dirs_exist,
                                   get_cached_tile,
                                   is_gzipped,
@@ -93,8 +95,7 @@ class VtReader(QObject):
             'clip_tiles': None,
             'apply_styles': None,
             'max_tiles': None,
-            'bounds': None,
-            'add_missing_layers': True
+            'bounds': None
         }
 
     _nr_tiles_to_process_serial = 30
@@ -102,10 +103,6 @@ class VtReader(QObject):
     _zoom_level_delimiter = "*"
     _DEFAULT_EXTENT = 4096
     _id = str(uuid.uuid4())
-
-    _styles = get_styles()
-
-    flush_layers_of_other_zoom_level = False
 
     _all_tiles = []
 
@@ -132,9 +129,18 @@ class VtReader(QObject):
         self._always_overwrite_geojson = False
         self._flush = False
         self._feature_count = None
+        self._allowed_sources = None
 
     def connection(self):
         return self._connection
+
+    def set_allowed_sources(self, sources):
+        """
+         * A list of layer sources (i.e. file paths) can be specified. These layers will later be ignored, i.e. not added.
+        :param sources: The sources which can be created. If None, all are allowed, if empty list, none is allowed
+        :return:
+        """
+        self._allowed_sources = sources
 
     def get_source(self):
         """
@@ -174,7 +180,8 @@ class VtReader(QObject):
         return self._id
 
     def _source_tile_limit_reached(self):
-        self.tile_limit_reached.emit(self._loading_options["max_tiles"])
+        if self._loading_options["max_tiles"]:
+            self.tile_limit_reached.emit(self._loading_options["max_tiles"])
 
     def _source_progress_changed(self, progress):
         self._update_progress(progress=progress)
@@ -340,13 +347,13 @@ class VtReader(QObject):
             self.cancelled.emit()
         else:
             info("Import complete")
-            loaded_extent = self._get_extent(self._all_tiles, zoom_level)
+            loaded_extent = self._get_extent(self._all_tiles, zoom_level, self._source.scheme())
             if not loaded_extent:
                 loaded_extent = {}
             self.loading_finished.emit(zoom_level, loaded_extent)
 
     @staticmethod
-    def _get_extent(tiles, zoom_level):
+    def _get_extent(tiles, zoom_level, scheme):
         loaded_tiles_x = [t.coord()[0] for t in tiles]
         loaded_tiles_y = [t.coord()[1] for t in tiles]
         if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
@@ -356,13 +363,15 @@ class VtReader(QObject):
                                x_min=min(loaded_tiles_x),
                                x_max=max(loaded_tiles_x),
                                y_min=min(loaded_tiles_y),
-                               y_max=max(loaded_tiles_y))
+                               y_max=max(loaded_tiles_y),
+                               scheme=scheme)
         return bounds
 
-    def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False,
-                    apply_styles=False, max_tiles=None, layer_filter=None, add_missing_layers=True):
+    def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False, apply_styles=False, max_tiles=None,
+                    layer_filter=None, is_inspection_mode=False):
         """
          * Specify the reader options
+        :param is_inspection_mode:
         :param load_mask_layer:  If True the mask layer will also be loaded
         :param merge_tiles: If True neighbouring tiles and features will be merged
         :param clip_tiles: If True the features located outside the tile will be removed
@@ -381,16 +390,18 @@ class VtReader(QObject):
             'apply_styles': apply_styles,
             'max_tiles': max_tiles,
             'layer_filter': layer_filter,
-            'add_missing_layers': add_missing_layers
+            'inspection_mode': is_inspection_mode
         }
 
-    def load_tiles_async(self, zoom_level, bounds):
+    def load_tiles_async(self, bounds):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param zoom_level: The zoom level to load
         :param bounds:
         :return: 
         """
+        zoom_level = bounds["zoom"]
+        info("Loading zoom level '{}', bounds: {}", zoom_level, bounds)
         self._loading_options["zoom_level"] = zoom_level
         self._loading_options["bounds"] = bounds
         _worker_thread = QThread(self.iface.mainWindow())
@@ -415,8 +426,8 @@ class VtReader(QObject):
         :param tiles_with_encoded_data:
         :return:
         """
-
-        tiles_with_encoded_data = [(t[0], self._unzip(t[1])) for t in tiles_with_encoded_data]
+        clip_tiles = not self._loading_options["inspection_mode"]
+        tiles_with_encoded_data = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
 
         if can_load_lib():
             decoder_func = decode_tile_native
@@ -440,17 +451,16 @@ class VtReader(QObject):
             nr_of_tiles = len(tiles_with_encoded_data)
             self._update_progress(max_progress=nr_of_tiles, msg="Decoding {} tiles...".format(nr_of_tiles))
             while not rs.ready() and not self.cancel_requested:
-                if self.cancel_requested:
-                    pool.terminate()
-                    break
-                else:
-                    QApplication.processEvents()
-                    remaining = rs._number_left
-                    index = nr_of_tiles - remaining
-                    progress = int(100.0 / nr_of_tiles * (index + 1))
-                    if progress != current_progress:
-                        current_progress = progress
-                        self._update_progress(progress=progress)
+                QApplication.processEvents()
+                remaining = rs._number_left
+                index = nr_of_tiles - remaining
+                progress = int(100.0 / nr_of_tiles * (index + 1))
+                if progress != current_progress:
+                    current_progress = progress
+                    self._update_progress(progress=progress)
+            if self.cancel_requested:
+                pool.terminate()
+            pool.join()
 
         tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
         groups = groupby(tile_data_tuples, lambda t: t[0].id())
@@ -511,8 +521,6 @@ class VtReader(QObject):
         """
         debug("Creating hierarchy in QGIS")
 
-
-
         qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
         vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
         own_layers = list(map(lambda t: t[1], vt_qgis_name_layer_tuples))
@@ -531,7 +539,6 @@ class VtReader(QObject):
                               max_progress=len(self.feature_collections_by_layer_name_and_geotype),
                               msg="Creating layers...")
         layer_filter = self._loading_options["layer_filter"]
-        add_missing_layers = self._loading_options["add_missing_layers"]
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
@@ -562,7 +569,9 @@ class VtReader(QObject):
                     if clip_tiles:
                         clip_features(layer=layer, scheme=self._source.scheme())
 
-            if not layer and add_missing_layers and (not layer_filter or layer_name in layer_filter):
+            if not layer\
+                    and (self._allowed_sources is None or file_path in self._allowed_sources)\
+                    and (not layer_filter or layer_name in layer_filter):
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(json_src=file_path,
                                                  layer_name=layer_name,
@@ -587,14 +596,20 @@ class VtReader(QObject):
                 break
             self.add_layer_to_group.emit(layer)
 
-        if apply_styles and not self.cancel_requested:
+        if apply_styles and not self.cancel_requested and new_layers:
             count = 0
+            conn_name = self.connection()["name"]
+            styles_folder = get_style_folder(conn_name)
+            styles = get_styles(conn_name)
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
             for name, geo_type, layer in new_layers:
                 count += 1
                 if self.cancel_requested:
                     break
-                VtReader._apply_named_style(layer, geo_type)
+                VtReader._apply_named_style(existing_styles=styles,
+                                            style_dir=styles_folder,
+                                            layer=layer,
+                                            geo_type=geo_type)
                 self._update_progress(progress=count)
 
     @staticmethod
@@ -609,7 +624,7 @@ class VtReader(QObject):
             f.write(json.dumps(feature_collection))
 
     @staticmethod
-    def _apply_named_style(layer, geo_type):
+    def _apply_named_style(existing_styles, style_dir, layer, geo_type):
         """
          * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
         :param layer: The layer to which the style shall be applied
@@ -623,11 +638,10 @@ class VtReader(QObject):
                 name,
                 "transparent.{}".format(geo_type.lower())
             ]
-            plugin_dir = get_plugin_directory()
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
-                if style_name in VtReader._styles:
-                    style_path = os.path.join(plugin_dir, "styles/{}".format(style_name))
+                if style_name in existing_styles:
+                    style_path = os.path.join(style_dir, style_name)
                     res = layer.loadNamedStyle(style_path)
                     if res[1]:  # Style loaded
                         layer.setCustomProperty("VectorTilesReader/layerStyle", style_path)
@@ -648,13 +662,10 @@ class VtReader(QObject):
         layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
         layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
-        layer.setDataUrl(source_url)
-
         layer.setDataUrl(remove_key(source_url))
-        if self._source.name() and "openmaptiles" in self._source.name().lower():
-            layer.setAttribution(u"Vector Tiles © Klokan Technologies GmbH (CC-BY), Data © OpenStreetMap contributors "
-                                 u"(ODbL)")
-            layer.setAttributionUrl("https://openmaptiles.com/hosting/")
+        layer.setAttribution(self._source.attribution())
+        # layer.setAttributionUrl("")
+        # layer.setAbstract()
         return layer
 
     def _handle_geojson_features(self, tile, layer_name, features):
