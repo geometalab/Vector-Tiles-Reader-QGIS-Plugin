@@ -1,5 +1,6 @@
 import os
 import uuid
+from xml.sax.saxutils import escape
 
 _join_styles = {
     None: "round",
@@ -86,12 +87,26 @@ def create_style_file(output_directory, layer_style):
         f.write(template)
 
 
+def escape_xml(value):
+    return escape(value, entities={'"': "&quot;"})
+
+
 def _get_labeling_settings(style):
     field_name = _get_value_safe(style, "text-field")
     if not field_name:
         return None
 
     font = _get_value_safe(style, "text-font", ["Arial"])
+    text_transform = _get_value_safe(style, "text-transform", "").lower()
+    if text_transform:
+        if text_transform == "uppercase":
+            text_transform = "upper"
+        elif text_transform == "lowercase":
+            text_transform = "lower"
+        else:
+            raise ValueError("Unknown text_transform '{}'".format(text_transform))
+        field_name = '{transform}({field})'.format(transform=text_transform, field=field_name)
+
     if isinstance(font, list):
         font = font[0]
     font = "MS Shell Dlg 2"

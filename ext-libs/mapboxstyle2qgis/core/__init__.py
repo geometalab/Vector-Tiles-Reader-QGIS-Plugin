@@ -6,8 +6,7 @@ import urllib
 import base64
 import shutil
 from itertools import groupby
-from xml.sax.saxutils import escape
-from .xml_helper import create_style_file
+from .xml_helper import create_style_file, escape_xml
 
 
 def register_qgis_expressions():
@@ -286,6 +285,7 @@ def get_styles(layer):
     elif layer_type == "symbol":
         all_values.extend(get_properties_by_zoom(layer, "layout/icon-image", is_expression=True))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-font"))
+        all_values.extend(get_properties_by_zoom(layer, "layout/text-transform"))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-size", can_interpolate=True))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-field", is_expression=True, take=1))
         all_values.extend(get_properties_by_zoom(layer, "layout/text-max-width"))
@@ -383,10 +383,6 @@ def _get_qgis_fields(expr):
         values.append(val)
     mapped = list(map(_map_value_to_qgis_expr, values))
     return mapped
-
-
-def escape_xml(value):
-    return escape(value, entities={'"': "&quot;"})
 
 
 def _get_field_expr(index, field):
