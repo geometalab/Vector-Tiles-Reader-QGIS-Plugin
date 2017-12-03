@@ -394,9 +394,17 @@ class VtrPlugin():
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
             status, data = load_url(url)
             if status == 200:
+                with open(r"c:\temp\styledata.json", 'w') as f:
+                    f.write(data)
                 try:
                     info("Styles will be written to: {}", output_directory)
                     core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
+                except:
+                    tb = ""
+                    if traceback:
+                        tb = traceback.format_exc()
+                    critical("Style generation failed: {}, {}", sys.exc_info(), tb)
+                try:
                     if self.connections_dialog.options.set_background_color_enabled():
                         background_color = core.get_background_color(data)
                         info("Setting background color: {}", background_color)
@@ -405,7 +413,7 @@ class VtrPlugin():
                     tb = ""
                     if traceback:
                         tb = traceback.format_exc()
-                    critical("Style generation failed: {}, {}", sys.exc_info(), tb)
+                    critical("Setting style background color failed: {}, {}", sys.exc_info(), tb)
             else:
                 info("Loading StyleJSON failed: HTTP status {}", status)
 
