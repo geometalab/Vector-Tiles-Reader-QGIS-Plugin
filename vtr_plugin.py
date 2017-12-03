@@ -254,7 +254,8 @@ class VtrPlugin():
     def _on_add_layer(self, connection, selected_layers):
         assert connection
         self._current_reader_sources = None
-        self._create_styles(connection)
+        if self.connections_dialog.options.apply_styles_enabled():
+            self._create_styles(connection)
         self._assure_qgis_groups_exist(connection["name"], True)
 
         crs_string = self._current_reader.get_source().crs()
@@ -604,6 +605,7 @@ class VtrPlugin():
         # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
         tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
+        info("visible extent: {}", tile_bounds)
         return tile_bounds
 
     @staticmethod
@@ -755,6 +757,7 @@ class VtrPlugin():
                                    apply_styles=apply_styles, max_tiles=tile_limit, layer_filter=layers_to_load,
                                    is_inspection_mode=inspection_mode)
                 self._is_loading = True
+                info("now loading: {}", bounds)
                 reader.load_tiles_async(zoom_level=zoom, bounds=bounds)
             except Exception as e:
                 critical("An exception occured: {}", e)
