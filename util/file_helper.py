@@ -1,13 +1,13 @@
 import os
 import glob
-import uuid
 import tempfile
 import sys
+import time
+import shutil
 try:
     import cPickle as pickle
 except ImportError:
     import pickle as pickle
-import time
 from .log_helper import info, critical, warn, debug
 
 
@@ -43,45 +43,42 @@ def get_cache_directory():
     return get_temp_dir("cache")
 
 
-def get_cached_tile(file_name):
-    file_path = os.path.join(get_cache_directory(), file_name)
-    tile = None
+def _get_cache_entry_path(cache_name, zoom_level, x, y):
+    return os.path.join(get_cache_directory(), cache_name, str(zoom_level), str(x), "{}.bin".format(y))
+
+
+def get_cache_entry(cache_name, zoom_level, x, y):
+    file_path = _get_cache_entry_path(cache_name=cache_name, zoom_level=zoom_level, x=x, y=y)
+    decoded_data = None
     try:
-        if os.path.exists(file_path):
+        if os.path.isfile(file_path):
             age_in_seconds = int(time.time()) - os.path.getmtime(file_path)
             is_deprecated = age_in_seconds > max_cache_age_minutes * 60
             if is_deprecated:
                 os.remove(file_path)
             else:
                 with open(file_path, 'rb') as f:
-                    tile = pickle.load(f)
+                    decoded_data = pickle.load(f)
     except:
-        debug("Error while reading cache entry {}: {}", file_name, sys.exc_info()[1])
-    return tile
+        critical("Error while reading cache entry {}: {}", file_path, sys.exc_info()[1])
+    return decoded_data
 
 
-def get_cached_tile_file_name(source_name, zoom_level, col, row):
-    return "{source}.{zoom}.{col}.{row}.bin".format(source=source_name,
-                                                    zoom=zoom_level,
-                                                    col=col,
-                                                    row=row)
-
-
-def cache_tile(tile, source_name):
-    cache_file_name = get_cached_tile_file_name(source_name=source_name,
-                                                zoom_level=tile.zoom_level,
-                                                col=tile.column,
-                                                row=tile.row)
-    file_path = os.path.join(get_cache_directory(), cache_file_name)
+def cache_tile(cache_name, zoom_level, x, y, decoded_data):
+    file_path = _get_cache_entry_path(cache_name=cache_name, zoom_level=zoom_level, x=x, y=y)
     if not os.path.isfile(file_path):
-        if not tile.decoded_data:
-            warn("Trying to cache a tile without data: {}", tile)
+        if not decoded_data:
+            warn("Trying to cache a tile without data: {}: {},{},{}", cache_name, zoom_level, x, y)
+        else:
+            try:
+                directory = os.path.dirname(file_path)
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+                with open(file_path, 'wb') as f:
+                    pickle.dump(decoded_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            except:
+                critical("Error during caching of '{}': {}", file_path, sys.exc_info()[1])
 
-        try:
-            with open(file_path, 'wb') as f:
-                pickle.dump(tile, f, pickle.HIGHEST_PROTOCOL)
-        except:
-            critical("Error while writing tile '{}' to cache: {}", str(tile), sys.exc_info()[1])
 
 
 def get_sample_data_directory():
@@ -102,12 +99,8 @@ def clear_cache():
     cache = os.path.join(get_cache_directory())
     if not os.path.exists(cache):
         return
-    files = glob.glob(os.path.join(cache, "*"))
-    for f in files:
-        try:
-            os.remove(f)
-        except:
-            warn("File could not be deleted: {}", f)
+
+    shutil.rmtree(get_cache_directory(), ignore_errors=True)
     info("Cache cleared")
 
 
