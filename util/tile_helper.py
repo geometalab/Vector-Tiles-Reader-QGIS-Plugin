@@ -300,8 +300,8 @@ def get_zoom_by_scale(scale):
     if scale < 0:
         return 23
     zoom = 0
-    for upper_bound in reversed(sorted(_zoom_level_by_upper_scale_bound)):
-        if scale > upper_bound:
+    for upper_bound in sorted(_zoom_level_by_upper_scale_bound):
+        if scale < upper_bound:
             zoom = _zoom_level_by_upper_scale_bound[upper_bound]
             break
     return zoom
