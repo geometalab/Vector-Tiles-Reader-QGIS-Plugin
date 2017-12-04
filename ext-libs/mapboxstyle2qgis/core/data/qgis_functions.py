@@ -6,6 +6,7 @@ last args. Use args=-1 to pass a list of values as arguments
 from qgis.core import *
 from qgis.gui import *
 import os
+import json
 
 def interpolate(a, b, ratio):
     return (a * (1 - ratio)) + (b * ratio)
@@ -32,6 +33,24 @@ def if_not_exists(file_path, default, feature, parent):
 def interpolate_exp(zoom, base, lower_zoom, upper_zoom, lower_value, upper_value, feature, parent):
     ratio = get_exponential_interpolation_factor(zoom, base, lower_zoom, upper_zoom)
     return interpolate(lower_value, upper_value, ratio)
+
+global mvtr_icons_dir
+mvtr_icons_dir = None
+global mvtr_icons_data
+mvtr_icons_data = None
+
+@qgsfunction(args='auto', group='Custom')
+def get_icon_size(name, icons_directory, feature, parent):
+    global mvtr_icons_dir
+    global mvtr_icons_data
+
+    if not mvtr_icons_dir or mvtr_icons_dir != icons_directory:
+        mvtr_icons_dir = icons_directory
+        with open(os.path.join(icons_directory, "sprite.json"), 'r') as f:
+            mvtr_icons_data = json.loads(f.read())
+    size = max(mvtr_icons_data[name]["width"], mvtr_icons_data[name]["height"])
+    return size
+
 
 _zoom_level_by_lower_scale_bound = {
     1000000000: 0,

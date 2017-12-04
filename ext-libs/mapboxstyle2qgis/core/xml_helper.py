@@ -168,6 +168,8 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
     fallback_path = "'" + os.path.join(icons_directory, "empty.svg'").replace("\\", "/")
     svg_expr = "if_not_exists({svg_path}, {fallback_path})".format(svg_path=svg_path, fallback_path=fallback_path)
     rendering_pass = _get_value_safe(style, "rendering_pass", 0)
+    icon_size_expr = "get_icon_size({icon}, '{icons_dir}')".format(icon=icon_expr,
+                                                                   icons_dir=icons_directory.replace("\\", "/"))
     return """<!-- {description} -->
           <symbol alpha="{opacity}" clip_to_extent="1" type="marker" name="{index}">
         <layer pass="{rendering_pass}" class="SvgMarker" locked="0">
@@ -190,6 +192,10 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
           <prop k="size" v="17"/>
           <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="size_unit" v="Pixel"/>
+          <prop k="size_dd_active" v="1"/>
+          <prop k="size_dd_expression" v="{size}"/>
+          <prop k="size_dd_field" v=""/>
+          <prop k="size_dd_useexpr" v="1"/>
           <prop k="vertical_anchor_point" v="1"/>
         </layer>
       </symbol>
@@ -197,6 +203,7 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
                opacity=opacity,
                svg_path=svg_expr,
                index=index,
+               size=icon_size_expr,
                rendering_pass=rendering_pass)
 
 
