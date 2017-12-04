@@ -314,26 +314,28 @@ def _get_line_symbol(index, style):
     width_is_expr = not isinstance(width, (int, float))
     width_dd_active = 0
     if width_is_expr:
-        width = "1"
         width_dd_active = 1
     else:
         width_expr = "1"
     capstyle = _cap_styles[_get_value_safe(style, "line-cap")]
     joinstyle = _join_styles[_get_value_safe(style, "line-join")]
     opacity = _get_value_safe(style, "line-opacity", 1)
-    dashes = _get_value_safe(style, "line-dasharray", None)
+    dashes = _get_value_safe(style, "line-dasharray")
+    rendering_passs = _get_value_safe(style, "rendering_pass", 0)
     dash_string = "0;0"
     dash_expr = ""
     use_custom_dash = 0
     if dashes:
-        use_custom_dash = 1
-        dash = "({} * {})".format(dashes[0], width)
-        space = "({} * {})".format(dashes[1], width)
-        if space <= width:
-            space = "({} + {})".format(space, width)
-        dash_expr = "concat({}, ';', {})".format(dash, space)
+        custom_dashes = []
+        it = iter(dashes)
+        for dash, space in zip(it, it):
+            custom_dashes.extend(_get_dash(dash, space, width))
 
-    label = style["name"]
+        dash_expr = ",';',".join(custom_dashes)
+        dash_expr = "concat({})".format(dash_expr)
+        use_custom_dash = 1
+
+    label = _get_value_safe(style, "name", "")
     if style["zoom_level"] is not None:
         label = "{}-zoom-{}".format(label, style["zoom_level"])
     symbol = """<!-- {description} -->
@@ -372,8 +374,14 @@ def _get_line_symbol(index, style):
                  custom_dash=dash_string,
                  dash_expr=dash_expr,
                  description=label,
-                 rendering_pass=style["rendering_pass"])
+                 rendering_pass=rendering_passs)
     return symbol
+
+
+def _get_dash(dash, space, width):
+    dash = "({} * {})".format(dash, width)
+    space = escape_xml("if({space}<={width}, {space}*{width}*2, {space}*{width})".format(space=space, width=width))
+    return [dash, space]
 
 
 def _get_rule(index, style, rule_content):
