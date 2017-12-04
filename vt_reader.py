@@ -19,44 +19,40 @@ import traceback
 if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
     from .util.vtr_2to3 import *
     from .util.log_helper import info, critical, debug, remove_key
-    from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
+    from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from .util.feature_helper import (FeatureMerger,
                                      geo_types,
                                      is_multi,
                                      map_coordinates_recursive,
                                      GeoTypes,
                                      clip_features)
-    from .util.file_helper import (get_cached_tile_file_name,
-                                  get_styles,
-                                  get_style_folder,
-                                  assure_temp_dirs_exist,
-                                  get_cached_tile,
-                                  is_gzipped,
-                                  get_geojson_file_name,
-                                  get_plugin_directory,
-                                  get_icons_directory,
-                                  cache_tile)
+    from .util.file_helper import (get_styles,
+                                   get_style_folder,
+                                   assure_temp_dirs_exist,
+                                   get_cache_entry,
+                                   is_gzipped,
+                                   get_geojson_file_name,
+                                   get_icons_directory,
+                                   cache_tile)
     from .util.tile_source import ServerSource, MBTilesSource, DirectorySource
     from .util.connection import ConnectionTypes
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 else:
     from util.vtr_2to3 import *
     from util.log_helper import info, critical, debug, remove_key
-    from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds
+    from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from util.feature_helper import (FeatureMerger,
                                      geo_types,
                                      is_multi,
                                      map_coordinates_recursive,
                                      GeoTypes,
                                      clip_features)
-    from util.file_helper import (get_cached_tile_file_name,
-                                  get_styles,
+    from util.file_helper import (get_styles,
                                   get_style_folder,
                                   assure_temp_dirs_exist,
-                                  get_cached_tile,
+                                  get_cache_entry,
                                   is_gzipped,
                                   get_geojson_file_name,
-                                  get_plugin_directory,
                                   get_icons_directory,
                                   cache_tile)
     from util.tile_source import ServerSource, MBTilesSource, DirectorySource
@@ -288,13 +284,16 @@ class VtReader(QObject):
             tiles_to_load = set()
             cached_tiles = []
             tiles_to_ignore = set()
+            source_name = self._source.name()
+            scheme = self._source.scheme()
             for t in all_tiles:
                 if self.cancel_requested or (max_tiles and len(cached_tiles) >= max_tiles):
                     break
 
-                file_name = get_cached_tile_file_name(self._source.name(), zoom_level, t[0], t[1])
-                tile = get_cached_tile(file_name)
-                if tile and tile.decoded_data:
+                decoded_data = get_cache_entry(cache_name=source_name, zoom_level=zoom_level, x=t[0], y=t[1])
+                if decoded_data:
+                    tile = VectorTile(scheme=scheme, zoom_level=zoom_level, x=t[0], y=t[1])
+                    tile.decoded_data = decoded_data
                     cached_tiles.append(tile)
                     tiles_to_ignore.add((tile.column, tile.row))
                 else:
@@ -304,15 +303,15 @@ class VtReader(QObject):
             if max_tiles:
                 if len(cached_tiles) + len(tiles_to_load) >= max_tiles:
                     remaining_nr_of_tiles = clamp(max_tiles - len(cached_tiles), low=0)
+            info("{} tiles in cache. Max. {} will be loaded additionally.", len(cached_tiles), remaining_nr_of_tiles)
             if len(cached_tiles) > 0:
-                info("{} tiles in cache. Max. {} will be loaded additionally.", len(cached_tiles), remaining_nr_of_tiles)
                 if not self.cancel_requested:
                     self._process_tiles(cached_tiles, layer_filter)
                     self._all_tiles.extend(cached_tiles)
 
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self._source.name())
 
-            if remaining_nr_of_tiles > 0:
+            if remaining_nr_of_tiles:
                 tile_data_tuples = self._source.load_tiles(zoom_level=zoom_level,
                                                            tiles_to_load=tiles_to_load,
                                                            max_tiles=remaining_nr_of_tiles)
@@ -320,7 +319,8 @@ class VtReader(QObject):
                     tiles = self._decode_tiles(tile_data_tuples)
                     self._process_tiles(tiles, layer_filter)
                     for t in tiles:
-                        cache_tile(t, self._source.name())
+                        cache_tile(cache_name=source_name, zoom_level=zoom_level, x=t.column, y=t.row,
+                                   decoded_data=t.decoded_data)
                     self._all_tiles.extend(tiles)
             self._continue_loading()
 
@@ -668,27 +668,6 @@ class VtReader(QObject):
         # layer.setAbstract()
         return layer
 
-    def _handle_geojson_features(self, tile, layer_name, features):
-        tile_id = tile.id()
-        for geojson_feature in features:
-            geo_type = None
-            geom_type = str(geojson_feature["geometry"]["type"])
-            if geom_type.endswith("Polygon"):
-                geo_type = GeoTypes.POLYGON
-            elif geom_type.endswith("Point"):
-                geo_type = GeoTypes.POINT
-            elif geom_type.endswith("LineString"):
-                geo_type = GeoTypes.LINE_STRING
-            assert geo_type is not None
-
-            feature_collection = self._get_feature_collection(layer_name=layer_name,
-                                                              geo_type=geo_type,
-                                                              zoom_level=tile.zoom_level)
-
-            feature_collection["features"].append(geojson_feature)
-            if tile_id not in feature_collection["tiles"]:
-                feature_collection["tiles"].append(tile_id)
-
     def _add_features_to_feature_collection(self, tile, layer_filter):
         """
          * Transforms all features of the specified tile into GeoJSON
@@ -817,26 +796,6 @@ class VtReader(QObject):
         elif os.path.isfile(os.path.join(root_path, class_icon)):
             icon_name = class_icon
         return icon_name
-
-    @staticmethod
-    def _feature_id(feature):
-        name = VtReader._feature_name(feature)
-        feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
-        feature_id = (name, feature_class, feature_subclass)
-        return feature_id
-
-    @staticmethod
-    def _feature_name(feature):
-        """
-        * Returns the 'name' property of the feature
-        :param feature: 
-        :return: 
-        """
-        name = None
-        properties = feature["properties"]
-        if "name" in properties:
-            name = properties["name"]
-        return name
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):

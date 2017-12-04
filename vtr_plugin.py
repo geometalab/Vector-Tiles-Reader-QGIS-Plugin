@@ -168,7 +168,7 @@ class VtrPlugin():
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
-        info("Vector Tile Reader Plugin loaded...")
+        info("Vector Tiles Reader Plugin loaded...")
         self._connect_to_first_source()
 
     def _connect_to_first_source(self):

@@ -118,6 +118,10 @@ def _create_icons(image_base64, image_definition_data, output_directory):
     icons_directory = os.path.join(output_directory, "icons")
     if not os.path.isdir(icons_directory):
         os.makedirs(icons_directory)
+
+    with open(os.path.join(icons_directory, "sprite.json"), 'w') as f:
+        f.write(json.dumps(image_definition_data))
+
     src_icon_path = os.path.join(os.path.dirname(__file__), "data", "icons", "empty.svg")
     shutil.copy2(src_icon_path, icons_directory)
 

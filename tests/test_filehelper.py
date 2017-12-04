@@ -1,6 +1,7 @@
 import sys
 import unittest
 from util.file_helper import *
+from util import file_helper
 
 
 class FileHelperTests(unittest.TestCase):
@@ -60,13 +61,11 @@ class FileHelperTests(unittest.TestCase):
         self.assertEqual(0, len(get_styles("total_random_name_that_doesnt_exist")))
 
     def test_get_cached_tile(self):
-        self.assertIsNone(get_cached_tile("blabla"))
+        self.assertIsNone(get_cache_entry("blabla", "zoom", "x", "y"))
 
     def test_get_cached_tile_file_name(self):
-        self.assertEqual('src.14.2.3.bin', get_cached_tile_file_name(source_name="src",
-                                                                     zoom_level=14,
-                                                                     col=2,
-                                                                     row=3))
+        path = os.path.join(get_cache_directory(), "test", "2", "3", "4.bin")
+        self.assertEqual(path, file_helper._get_cache_entry_path("test", zoom_level=2, x=3, y=4))
 
 
 def suite():
