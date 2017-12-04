@@ -34,6 +34,19 @@ class VtReaderTests(unittest.TestCase):
         self.assertIsNotNone(iface)
 
     @mock.patch("vt_reader.info")
+    @mock.patch("vt_reader.critical")
+    @mock.patch("vtr_2to3.QgsVectorLayer.loadNamedStyle")
+    def test_load_from_vtreader_0_apply_styles(self, mock_style, mock_critical, mock_info):
+        global iface
+        clear_cache()
+        QgsMapLayerRegistry.instance().removeAllMapLayers()
+        self._load(iface=iface, max_tiles=1, apply_styles=True)
+        print mock_info.call_args_list
+        print mock_critical.call_args_list
+        # print mock_style.assert_called_with()
+        mock_info.assert_any_call("Import complete")
+
+    @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.can_load_lib", return_value=False)
     @mock.patch.object(VtReader, "_create_qgis_layers")
     def test_load_from_vtreader_0_python_processing(self, mock_qgis, mock_can_load_lib, mock_info):
@@ -128,19 +141,6 @@ class VtReaderTests(unittest.TestCase):
         print mock_info.call_args_list
         print mock_critical.call_args_list
         mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
-        mock_info.assert_any_call("Import complete")
-
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
-    @mock.patch("vtr_2to3.QgsVectorLayer.loadNamedStyle")
-    def test_load_from_vtreader_8_apply_styles(self, mock_style, mock_critical, mock_info):
-        global iface
-        clear_cache()
-        QgsMapLayerRegistry.instance().removeAllMapLayers()
-        self._load(iface=iface, max_tiles=1, apply_styles=True)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
-        # print mock_style.assert_called_with()
         mock_info.assert_any_call("Import complete")
 
     def _load(self, iface, max_tiles, serial_tile_processing_limit=None, merge_tiles=False, clip_tiles=False, apply_styles=False):
