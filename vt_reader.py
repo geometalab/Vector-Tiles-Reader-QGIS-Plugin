@@ -668,27 +668,6 @@ class VtReader(QObject):
         # layer.setAbstract()
         return layer
 
-    def _handle_geojson_features(self, tile, layer_name, features):
-        tile_id = tile.id()
-        for geojson_feature in features:
-            geo_type = None
-            geom_type = str(geojson_feature["geometry"]["type"])
-            if geom_type.endswith("Polygon"):
-                geo_type = GeoTypes.POLYGON
-            elif geom_type.endswith("Point"):
-                geo_type = GeoTypes.POINT
-            elif geom_type.endswith("LineString"):
-                geo_type = GeoTypes.LINE_STRING
-            assert geo_type is not None
-
-            feature_collection = self._get_feature_collection(layer_name=layer_name,
-                                                              geo_type=geo_type,
-                                                              zoom_level=tile.zoom_level)
-
-            feature_collection["features"].append(geojson_feature)
-            if tile_id not in feature_collection["tiles"]:
-                feature_collection["tiles"].append(tile_id)
-
     def _add_features_to_feature_collection(self, tile, layer_filter):
         """
          * Transforms all features of the specified tile into GeoJSON
@@ -817,26 +796,6 @@ class VtReader(QObject):
         elif os.path.isfile(os.path.join(root_path, class_icon)):
             icon_name = class_icon
         return icon_name
-
-    @staticmethod
-    def _feature_id(feature):
-        name = VtReader._feature_name(feature)
-        feature_class, feature_subclass = VtReader._get_feature_class_and_subclass(feature)
-        feature_id = (name, feature_class, feature_subclass)
-        return feature_id
-
-    @staticmethod
-    def _feature_name(feature):
-        """
-        * Returns the 'name' property of the feature
-        :param feature: 
-        :return: 
-        """
-        name = None
-        properties = feature["properties"]
-        if "name" in properties:
-            name = properties["name"]
-        return name
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):
