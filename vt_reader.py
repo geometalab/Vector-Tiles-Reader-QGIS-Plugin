@@ -122,7 +122,6 @@ class VtReader(QObject):
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds = None
-        self._always_overwrite_geojson = False
         self._flush = False
         self._feature_count = None
         self._allowed_sources = None
@@ -224,14 +223,6 @@ class VtReader(QObject):
             "type": "FeatureCollection",
             "crs": crs,
             "features": []}
-
-    def always_overwrite_geojson(self, enabled):
-        """
-         * If activated, the geoJson written to the disk will always be overwritten, with each load
-         * As a result of this, only the latest loaded extent will be visible in qgis
-        :return:
-        """
-        self._always_overwrite_geojson = enabled
 
     def cancel(self):
         """
@@ -636,7 +627,8 @@ class VtReader(QObject):
             styles = [
                 "{}.{}".format(name, geo_type.lower()),
                 name,
-                "transparent.{}".format(geo_type.lower())
+                "transparent.{}".format(geo_type.lower()),
+                geo_type.lower()
             ]
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
@@ -726,21 +718,6 @@ class VtReader(QObject):
         feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
         return feature_collection
 
-    @staticmethod
-    def _get_feature_class_and_subclass(feature):
-        feature_class = None
-        feature_subclass = None
-        properties = feature["properties"]
-        if "class" in properties:
-            feature_class = properties["class"]
-            if "subclass" in properties:
-                feature_subclass = properties["subclass"]
-                if feature_subclass == feature_class:
-                    feature_subclass = None
-        if feature_subclass:
-            assert feature_class, "A feature with a subclass should also have a class"
-        return feature_class, feature_subclass
-
     def _create_geojson_feature(self, feature, tile, current_layer_tile_extent):
         """
         Creates a GeoJSON feature for the specified feature
@@ -754,7 +731,6 @@ class VtReader(QObject):
 
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
-            properties["_symbol"] = self._get_poi_icon(feature)
             if self._clip_tiles_at_tile_bounds and not all(0 <= c <= current_layer_tile_extent for c in coordinates):
                 return None, None
         all_out_of_bounds = []
@@ -777,25 +753,6 @@ class VtReader(QObject):
                                                                              split_multi_geometries=split_geometries)
 
         return geojson_features, geo_type
-
-    def _get_poi_icon(self, feature):
-        """
-         * Returns the name of the svg icon that will be applied in QGIS.
-         * The resulting icon is determined based on class and subclass of the specified feature.
-        :param feature: 
-        :return: 
-        """
-
-        feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
-        root_path = get_icons_directory()
-        class_icon = "{}.svg".format(feature_class)
-        class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
-        icon_name = "poi.svg"
-        if os.path.isfile(os.path.join(root_path, class_subclass_icon)):
-            icon_name = class_subclass_icon
-        elif os.path.isfile(os.path.join(root_path, class_icon)):
-            icon_name = class_icon
-        return icon_name
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):

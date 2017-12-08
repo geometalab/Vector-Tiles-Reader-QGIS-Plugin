@@ -145,9 +145,9 @@ def is_multi(geo_type, coordinates):
         is_array_of_tuples = all(len(c) == 2 and all(isinstance(ci, int) for ci in c) for c in coordinates)
         is_single = is_array_of_tuples
         return not is_single
-    elif geo_type == GeoTypes.POLYGON:
+    else:
+        assert geo_type == GeoTypes.POLYGON
         return get_array_depth(coordinates, 0) >= 2
-    return False
 
 
 def get_array_depth(arr, depth):
