@@ -198,7 +198,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Base Map Defaults</string>
+        <string>Base map defaults</string>
        </property>
        <property name="checkable">
         <bool>true</bool>
@@ -220,7 +220,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Analysis Defaults</string>
+        <string>Analysis defaults</string>
        </property>
        <property name="checkable">
         <bool>true</bool>
@@ -239,7 +239,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Inspection Defaults</string>
+        <string>Inspection defaults</string>
        </property>
        <property name="checkable">
         <bool>true</bool>
