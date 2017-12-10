@@ -576,9 +576,6 @@ class VtrPlugin():
             else:
                 bounds = self._get_visible_extent_as_tile_bounds(zoom=self._current_zoom)
 
-            if self.connections_dialog.options.auto_zoom_enabled():
-                self._current_reader.always_overwrite_geojson(True)
-
             self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
                              bounds=bounds,
