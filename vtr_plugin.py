@@ -263,10 +263,7 @@ class VtrPlugin():
         scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
-        if not self._loaded_extent and self.connections_dialog.options.auto_zoom_enabled():
-            extent = get_tile_bounds(2, WORLD_BOUNDS, 4326)
-        else:
-            extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
+        extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
         bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("Bounds of source: {}", bounds)
@@ -677,10 +674,8 @@ class VtrPlugin():
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-        try:
-            self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
-        except AttributeError:
-            self.iface.mapCanvas().setDestinationCrs(crs)
+        self.iface.mapCanvas().setCrsTransformEnabled(True)
+        self.iface.mapCanvas().setDestinationCrs(crs)
 
     def _cancel_load(self):
         if self._current_reader:
