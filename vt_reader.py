@@ -576,7 +576,7 @@ class VtReader(QObject):
             self._update_progress(progress=count+1)
 
         self._update_progress(msg="Refresh layers...")
-        QgsMapLayerRegistry.instance().reloadAllLayers()
+        self.iface.mapCanvas().refreshAllLayers()
 
         if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
