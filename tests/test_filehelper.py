@@ -36,7 +36,7 @@ class FileHelperTests(unittest.TestCase):
         self.assertEqual('/tmp/vector_tiles_reader/cache', get_cache_directory())
 
     def test_get_geojson_filename(self):
-        self.assertEqual('/tmp/vector_tiles_reader/geojson/name.geojson', get_geojson_file_name("name"))
+        self.assertEqual('/tmp/vector_tiles_reader/tmp/name.geojson', get_geojson_file_name("name"))
 
     def test_is_sqlite_db_true(self):
         sample_file = os.path.join(get_sample_data_directory(), "uster_zh.mbtiles")
