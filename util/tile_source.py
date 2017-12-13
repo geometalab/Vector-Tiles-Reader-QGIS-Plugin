@@ -466,6 +466,8 @@ class DirectorySource(AbstractSource):
             raise RuntimeError("The folder does not exist: {}".format(path))
         self.path = path
         metadata_path = os.path.join(path, "metadata.json")
+        if not os.path.isfile(metadata_path):
+            raise RuntimeError("There is no metadata.json in the directory.")
         self.json = TileJSON(metadata_path)
         self.json.load()
 
