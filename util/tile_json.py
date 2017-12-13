@@ -82,8 +82,8 @@ class TileJSON(object):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
         return layers
 
-    def get_value(self, key):
-        val = self._get_value(key)
+    def get_value(self, key, is_array=False, is_required=False):
+        val = self._get_value(key, is_array=is_array, is_required=is_required)
         return val
 
     def crs(self, default=3857):

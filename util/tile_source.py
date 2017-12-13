@@ -478,8 +478,12 @@ class DirectorySource(AbstractSource):
         return self.json.attribution()
 
     def vector_layers(self):
-        data = json.loads(self.json.get_value("json"))["vector_layers"]
-        return data
+        layers = self.json.get_value("vector_layers", is_array=True, is_required=False)
+        if not layers:
+            layers = json.loads(self.json.get_value("json"))["vector_layers"]
+        if not layers:
+            raise RuntimeError("'vector_layers' is required")
+        return layers
 
     def name(self):
         name = self.json.name()
