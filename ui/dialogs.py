@@ -29,7 +29,7 @@ from ..util.connection import (
     TILEJSON_CONNECTION_TEMPLATE,
     DIRECTORY_CONNECTION_TEMPLATE)
 
-_HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
+_HELP_URL = "https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help"
 
 
 def _update_size(dialog):

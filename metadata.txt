@@ -128,7 +128,7 @@ changelog=
 # Tags are comma separated with spaces allowed
 tags=vector tile, mbtiles, vector
 
-homepage=http://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin
+homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help
 tracker=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
 repository=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
 category=Vector
