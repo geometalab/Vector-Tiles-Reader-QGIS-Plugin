@@ -95,11 +95,15 @@ class FeatureMerger(object):
                     continue
 
                 geom = geom.combine(intersecting_geometry)
+                if not geom:
+                    geom = intersecting_geometry
                 layer.deleteFeature(intersecting_id)
-                f.setGeometry(geom)
+                if geom:
+                    f.setGeometry(geom)
                 new_neighbours.append(intersecting_f)
                 feature_handler(f)
-                intersecting_ids = index.intersects(geom.boundingBox())
+                if geom:
+                    intersecting_ids = index.intersects(geom.boundingBox())
 
         for n in new_neighbours:
             FeatureMerger._assign_dissolve_group_to_neighbours_rec(layer, dissolve_gorup_field, index, n, feature_dict, feature_handler, feature_class_attr_index)

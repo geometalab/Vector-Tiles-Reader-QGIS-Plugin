@@ -546,6 +546,7 @@ class VtReader(QObject):
             file_path = get_geojson_file_name(file_name)
 
             layer = None
+            clone = None
             if os.path.isfile(file_path):
                 # file exists already. add the features of the collection to the existing collection
                 # get the layer from qgis and update its source
@@ -555,12 +556,20 @@ class VtReader(QObject):
                         break
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
+                    clone = None
                     if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-                        FeatureMerger().merge_features(layer)
+                        clone = QgsVectorLayer(layer.source(), layer_name, "ogr")
+                        FeatureMerger().merge_features(clone)
                     if clip_tiles:
-                        clip_features(layer=layer, scheme=self._source.scheme())
+                        if not clone:
+                            clone = QgsVectorLayer(layer.source(), layer_name, "ogr")
+                        clip_features(layer=clone, scheme=self._source.scheme())
+                    if clone:
+                        QgsMapLayerRegistry.instance().removeMapLayer(layer)
+                        new_layers.append((layer_name, geo_type, clone))
 
-            if not layer\
+
+            if not clone and not layer\
                     and (self._allowed_sources is None or file_path in self._allowed_sources)\
                     and (not layer_filter or layer_name in layer_filter):
                 self._update_layer_source(file_path, feature_collection)
