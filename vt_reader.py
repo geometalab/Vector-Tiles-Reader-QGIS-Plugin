@@ -530,6 +530,11 @@ class VtReader(QObject):
                               max_progress=len(self.feature_collections_by_layer_name_and_geotype),
                               msg="Creating layers...")
         layer_filter = self._loading_options["layer_filter"]
+
+        clipping_bounds = None
+        if merge_features:
+            clipping_bounds = self._loading_options["bounds"]
+
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
@@ -556,18 +561,16 @@ class VtReader(QObject):
                         break
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
-                    clone = None
-                    if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
+                    if merge_features or clip_tiles:
                         clone = QgsVectorLayer(layer.source(), layer_name, "ogr")
+                    else:
+                        clone = layer
+                    if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                         FeatureMerger().merge_features(clone)
                     if clip_tiles:
-                        if not clone:
-                            clone = QgsVectorLayer(layer.source(), layer_name, "ogr")
-                        clip_features(layer=clone, scheme=self._source.scheme())
-                    if clone:
-                        QgsMapLayerRegistry.instance().removeMapLayer(layer)
-                        new_layers.append((layer_name, geo_type, clone))
-
+                        clip_features(layer=clone, scheme=self._source.scheme(), bounds=clipping_bounds)
+                    QgsMapLayerRegistry.instance().removeMapLayer(layer)
+                    new_layers.append((layer_name, geo_type, clone))
 
             if not clone and not layer\
                     and (self._allowed_sources is None or file_path in self._allowed_sources)\
@@ -580,7 +583,7 @@ class VtReader(QObject):
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                     FeatureMerger().merge_features(layer)
                 if clip_tiles:
-                    clip_features(layer=layer, scheme=self._source.scheme())
+                    clip_features(layer=layer, scheme=self._source.scheme(), bounds=clipping_bounds)
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 

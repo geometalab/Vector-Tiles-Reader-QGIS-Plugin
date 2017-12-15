@@ -9,8 +9,16 @@ from .log_helper import info, debug
 from .tile_helper import tile_to_latlon
 
 
-def clip_features(layer, scheme):
+def clip_features(layer, scheme, bounds=None):
     layer.startEditing()
+
+    if bounds:
+        zoom_level = bounds["zoom"]
+        min_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_min"], y=bounds["y_min"], scheme=scheme)
+        max_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_max"], y=bounds["y_max"], scheme=scheme)
+        rect = QgsGeometry.fromRect(QgsRectangle(min_extent[0], max_extent[1], max_extent[2], min_extent[3]))
+        info("clip at: {}", (min_extent[0], max_extent[1], max_extent[2], min_extent[3]))
+
     for f in layer.getFeatures():
         geom = f.geometry()
         if geom:
@@ -18,11 +26,13 @@ def clip_features(layer, scheme):
             if errors and len(errors) > 0:
                 continue
 
-            col = f.attribute("_col")
-            row = f.attribute("_row")
-            zoom_level = f.attribute("_zoom")
-            tile_extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
-            rect = QgsGeometry.fromRect(QgsRectangle(tile_extent[0], tile_extent[1], tile_extent[2], tile_extent[3]))
+            if not bounds:
+                col = f.attribute("_col")
+                row = f.attribute("_row")
+                zoom_level = f.attribute("_zoom")
+                extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
+                rect = QgsGeometry.fromRect(QgsRectangle(extent[0], extent[1], extent[2], extent[3]))
+            assert rect
 
             new_geom = geom.intersection(rect)
             f.setGeometry(new_geom)
