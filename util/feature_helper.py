@@ -9,35 +9,40 @@ from .log_helper import info, debug
 from .tile_helper import tile_to_latlon
 
 
-def clip_features(layer, scheme, bounds=None):
+def clip_features(layer, scheme, bounds=None, should_cancel_func=None):
     layer.startEditing()
 
-    if bounds:
-        zoom_level = bounds["zoom"]
-        min_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_min"], y=bounds["y_min"], scheme=scheme)
-        max_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_max"], y=bounds["y_max"], scheme=scheme)
-        rect = QgsGeometry.fromRect(QgsRectangle(min_extent[0], max_extent[1], max_extent[2], min_extent[3]))
-        info("clip at: {}", (min_extent[0], max_extent[1], max_extent[2], min_extent[3]))
+    try:
+        if bounds:
+            zoom_level = bounds["zoom"]
+            min_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_min"], y=bounds["y_min"], scheme=scheme)
+            max_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_max"], y=bounds["y_max"], scheme=scheme)
+            rect = QgsGeometry.fromRect(QgsRectangle(min_extent[0], max_extent[1], max_extent[2], min_extent[3]))
+            info("clip at: {}", (min_extent[0], max_extent[1], max_extent[2], min_extent[3]))
 
-    for f in layer.getFeatures():
-        geom = f.geometry()
-        if geom:
-            errors = geom.validateGeometry()
-            if errors and len(errors) > 0:
-                continue
+        for f in layer.getFeatures():
+            if should_cancel_func and should_cancel_func():
+                break
 
-            if not bounds:
-                col = f.attribute("_col")
-                row = f.attribute("_row")
-                zoom_level = f.attribute("_zoom")
-                extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
-                rect = QgsGeometry.fromRect(QgsRectangle(extent[0], extent[1], extent[2], extent[3]))
-            assert rect
+            geom = f.geometry()
+            if geom:
+                errors = geom.validateGeometry()
+                if errors and len(errors) > 0:
+                    continue
 
-            new_geom = geom.intersection(rect)
-            f.setGeometry(new_geom)
-            layer.updateFeature(f)
-    layer.commitChanges()
+                if not bounds:
+                    col = f.attribute("_col")
+                    row = f.attribute("_row")
+                    zoom_level = f.attribute("_zoom")
+                    extent = tile_to_latlon(zoom=zoom_level, x=col, y=row, scheme=scheme)
+                    rect = QgsGeometry.fromRect(QgsRectangle(extent[0], extent[1], extent[2], extent[3]))
+                assert rect
+
+                new_geom = geom.intersection(rect)
+                f.setGeometry(new_geom)
+                layer.updateFeature(f)
+    finally:
+        layer.commitChanges()
 
 
 class FeatureMerger(object):
@@ -45,57 +50,63 @@ class FeatureMerger(object):
      * The class FeatureMerger can be used to merge features over tile boundaries.
     """
 
-    def __init__(self):
-        pass
+    _DISSOLVE_GROUP_FIELD = "dissolveGroup"
+
+    def __init__(self, should_cancel_func):
+        self._should_cancel_func = should_cancel_func
 
     def merge_features(self, layer):
         layer_name = layer.name()
         info("Merging features of layer: {}".format(layer_name))
-        self._prepare_features_for_dissolvment(layer)
-
-    @staticmethod
-    def _prepare_features_for_dissolvment(layer):
-        _DISSOLVE_GROUP_FIELD = "dissolveGroup"
         layer.startEditing()
-        layer.dataProvider().addAttributes([QgsField(_DISSOLVE_GROUP_FIELD, QVariant.String, len=36)])
-        layer.updateFields()
+        self._merge_layer(layer)
+        layer.commitChanges()
+
+    def _merge_layer(self, layer):
+        existing_attributes = layer.dataProvider().fieldNameMap()
+        if self._DISSOLVE_GROUP_FIELD not in existing_attributes:
+            layer.dataProvider().addAttributes([QgsField(self._DISSOLVE_GROUP_FIELD, QVariant.String, len=36)])
+            layer.updateFields()
         # Create a dictionary of all features
         feature_dict = {f.id(): f for f in layer.getFeatures()}
-
-        idx = layer.fieldNameIndex('class')
 
         # Build a spatial index
         index = QgsSpatialIndex()
         for f in list(feature_dict.values()):
             index.insertFeature(f)
+            if self._should_cancel_func():
+                break
 
         for f in list(feature_dict.values()):
-            if f[_DISSOLVE_GROUP_FIELD]:
+            if self._should_cancel_func():
+                break
+            if f[self._DISSOLVE_GROUP_FIELD]:
                 continue
-            f[_DISSOLVE_GROUP_FIELD] = "{}".format(uuid.uuid4())
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(layer, _DISSOLVE_GROUP_FIELD, index, f, feature_dict, feature_handler=lambda feat: layer.updateFeature(feat), feature_class_attr_index=idx)
+            f[self._DISSOLVE_GROUP_FIELD] = "{}".format(uuid.uuid4())
+            self._merge_feature(layer=layer,
+                                index=index,
+                                f=f,
+                                feature_dict=feature_dict,
+                                feature_handler=lambda feat: layer.updateFeature(feat))
             layer.updateFeature(f)
-        layer.commitChanges()
-        debug('Dissolvement complete: {}', layer.name())
-        return
 
-    @staticmethod
-    def _assign_dissolve_group_to_neighbours_rec(layer, dissolve_gorup_field, index, f, feature_dict, feature_handler, feature_class_attr_index):
-        geom = f.geometry()
-        if not geom:
+    def _merge_feature(self, layer, index, f, feature_dict, feature_handler):
+        BUFFER_SIZE = 10
+        geom = f.geometry().buffer(0, 0)
+        if not geom or self._should_cancel_func():
             return
 
         index.deleteFeature(f)
-        intersecting_ids = index.intersects(geom.boundingBox())
+        intersecting_ids = index.intersects(geom.buffer(BUFFER_SIZE, 0).boundingBox())
 
         new_neighbours = []
-        while len(intersecting_ids) > 0:
+        while len(intersecting_ids) > 0 and not self._should_cancel_func():
             intersecting_id = intersecting_ids.pop(0)
             intersecting_f = feature_dict[intersecting_id]
             index.deleteFeature(intersecting_f)
-            if not intersecting_f[dissolve_gorup_field] and not intersecting_f.geometry().disjoint(geom):
-                intersecting_f[dissolve_gorup_field] = "{}".format(f[dissolve_gorup_field])
-                intersecting_geometry = intersecting_f.geometry()
+            if not intersecting_f[self._DISSOLVE_GROUP_FIELD] and not intersecting_f.geometry().disjoint(geom):
+                intersecting_f[self._DISSOLVE_GROUP_FIELD] = "{}".format(f[self._DISSOLVE_GROUP_FIELD])
+                intersecting_geometry = intersecting_f.geometry().buffer(0, 0)
                 errors = []
                 errors.extend(geom.validateGeometry())
                 errors.extend(intersecting_geometry.validateGeometry())
@@ -106,17 +117,23 @@ class FeatureMerger(object):
 
                 geom = geom.combine(intersecting_geometry)
                 if not geom:
-                    geom = intersecting_geometry
+                    continue
                 layer.deleteFeature(intersecting_id)
-                if geom:
-                    f.setGeometry(geom)
+                index.deleteFeature(intersecting_f)
+                f.setGeometry(geom)
                 new_neighbours.append(intersecting_f)
                 feature_handler(f)
                 if geom:
                     intersecting_ids = index.intersects(geom.boundingBox())
 
         for n in new_neighbours:
-            FeatureMerger._assign_dissolve_group_to_neighbours_rec(layer, dissolve_gorup_field, index, n, feature_dict, feature_handler, feature_class_attr_index)
+            if self._should_cancel_func():
+                break
+            self._merge_feature(layer=layer,
+                                index=index,
+                                f=n,
+                                feature_dict=feature_dict,
+                                feature_handler=feature_handler)
 
 
 class _GeoTypes(object):

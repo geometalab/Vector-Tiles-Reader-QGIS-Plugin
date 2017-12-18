@@ -551,7 +551,6 @@ class VtReader(QObject):
             file_path = get_geojson_file_name(file_name)
 
             layer = None
-            clone = None
             if os.path.isfile(file_path):
                 # file exists already. add the features of the collection to the existing collection
                 # get the layer from qgis and update its source
@@ -561,18 +560,16 @@ class VtReader(QObject):
                         break
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
-                    if merge_features or clip_tiles:
-                        clone = QgsVectorLayer(layer.source(), layer_name, "ogr")
-                    else:
-                        clone = layer
+                    layer.reload()
                     if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-                        FeatureMerger().merge_features(clone)
+                        merger = FeatureMerger(should_cancel_func=lambda: self.cancel_requested)
+                        merger.merge_features(layer)
                     if clip_tiles:
-                        clip_features(layer=clone, scheme=self._source.scheme(), bounds=clipping_bounds)
-                    QgsMapLayerRegistry.instance().removeMapLayer(layer)
-                    new_layers.append((layer_name, geo_type, clone))
-
-            if not clone and not layer\
+                        clip_features(layer=layer,
+                                      scheme=self._source.scheme(),
+                                      bounds=clipping_bounds,
+                                      should_cancel_func=lambda: self.cancel_requested)
+            if not layer\
                     and (self._allowed_sources is None or file_path in self._allowed_sources)\
                     and (not layer_filter or layer_name in layer_filter):
                 self._update_layer_source(file_path, feature_collection)
@@ -581,14 +578,17 @@ class VtReader(QObject):
                                                  geo_type=geo_type,
                                                  zoom_level=zoom_level)
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-                    FeatureMerger().merge_features(layer)
+                    merger = FeatureMerger(should_cancel_func=lambda: self.cancel_requested)
+                    merger.merge_features(layer)
                 if clip_tiles:
-                    clip_features(layer=layer, scheme=self._source.scheme(), bounds=clipping_bounds)
+                    clip_features(layer=layer,
+                                  scheme=self._source.scheme(),
+                                  bounds=clipping_bounds,
+                                  should_cancel_func=lambda: self.cancel_requested)
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
         self._update_progress(msg="Refresh layers...")
-        self.iface.mapCanvas().refreshAllLayers()
 
         if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
