@@ -674,7 +674,10 @@ class VtrPlugin():
         crs = QgsCoordinateReferenceSystem(crs_string)
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
-        self.iface.mapCanvas().setCrsTransformEnabled(True)
+        try:
+            self.iface.mapCanvas().setCrsTransformEnabled(True)
+        except:
+            pass # not available in QGIS3 anymore
         self.iface.mapCanvas().setDestinationCrs(crs)
 
     def _cancel_load(self):
