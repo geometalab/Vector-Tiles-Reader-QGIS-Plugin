@@ -136,6 +136,9 @@ class Ui_OptionsGroup(object):
         self.chkAutoZoom.setChecked(True)
         self.chkAutoZoom.setObjectName(_fromUtf8("chkAutoZoom"))
         self.gridLayout.addWidget(self.chkAutoZoom, 4, 0, 1, 2)
+        self.chkIgnoreCrsFromMetadata = QtGui.QCheckBox(OptionsGroup)
+        self.chkIgnoreCrsFromMetadata.setObjectName(_fromUtf8("chkIgnoreCrsFromMetadata"))
+        self.gridLayout.addWidget(self.chkIgnoreCrsFromMetadata, 8, 0, 1, 2)
 
         self.retranslateUi(OptionsGroup)
         QtCore.QMetaObject.connectSlotsByName(OptionsGroup)
@@ -169,4 +172,6 @@ class Ui_OptionsGroup(object):
         self.label_5.setText(_translate("OptionsGroup", "Fix Zoom", None))
         self.chkSetBackgroundColor.setText(_translate("OptionsGroup", "Set project background color", None))
         self.chkAutoZoom.setText(_translate("OptionsGroup", "Auto reload on change of view", None))
+        self.chkIgnoreCrsFromMetadata.setToolTip(_translate("OptionsGroup", "If checked, EPSG:3857 will be used to calculate the tile extent from the current QGIS view extent", None))
+        self.chkIgnoreCrsFromMetadata.setText(_translate("OptionsGroup", "Ignore CRS from metadata", None))
 

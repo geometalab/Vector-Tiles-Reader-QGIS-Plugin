@@ -605,9 +605,15 @@ class VtrPlugin():
         if self._current_reader:
             scheme = self._current_reader.get_source().scheme()
         # the source_crs is 3857, even if the actual data is in another (21781 for example)
-        # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
+        # the reason is to be fully compatible with the mapbox apis.
+        source_crs = self._get_qgis_crs()
+        if self.connections_dialog.options.ignore_crs_from_metadata():
+            if source_crs != 3857:
+                info("Using EPSG:3857 for tile calculation instead of EPSG:{}", source_crs)
+            source_crs = 3857
+
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=source_crs)
         return tile_bounds
 
     @staticmethod

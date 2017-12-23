@@ -319,6 +319,16 @@
      </property>
     </widget>
    </item>
+   <item row="8" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkIgnoreCrsFromMetadata">
+     <property name="toolTip">
+      <string>If checked, EPSG:3857 will be used to calculate the tile extent from the current QGIS view extent</string>
+     </property>
+     <property name="text">
+      <string>Ignore CRS from metadata</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>

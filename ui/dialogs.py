@@ -263,6 +263,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     _APPLY_STYLES = "apply_styles"
     _SET_BACKGROUND_COLOR = "set_background_color"
     _MODE = "mode"
+    _IGNORE_CRS = "ignore_crs"
 
     class Mode(object):
         MANUAL = "manual"
@@ -281,7 +282,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         _FIX_ZOOM_ENABLED: False,
         _APPLY_STYLES: True,
         _SET_BACKGROUND_COLOR: True,
-        _MODE: Mode.MANUAL
+        _MODE: Mode.MANUAL,
+        _IGNORE_CRS: False
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
@@ -295,6 +297,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.chkMergeTiles.toggled.connect(lambda enabled: self._set_option(self._MERGE_TILES, enabled))
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
+        self.chkIgnoreCrsFromMetadata.toggled.connect(lambda enabled: self._set_option(self._IGNORE_CRS, enabled))
         self.chkSetBackgroundColor.toggled.connect(self._on_bg_color_change)
         self.chkApplyStyles.toggled.connect(self._on_apply_styles_changed)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
@@ -346,6 +349,9 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         if opt[self._SET_BACKGROUND_COLOR]:
             val = opt[self._SET_BACKGROUND_COLOR]
             self.chkSetBackgroundColor.setChecked(val == True or val == "true")
+        if opt[self._IGNORE_CRS]:
+            val = opt[self._IGNORE_CRS]
+            self.chkIgnoreCrsFromMetadata.setChecked(val == True or val == "true")
         if opt[self._MODE]:
             val = opt[self._MODE]
             self._enable_manual_mode(val == self.Mode.MANUAL)
@@ -377,6 +383,9 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     def _on_max_zoom_selected(self, enabled):
         self._set_option(self._MAX_ZOOM, enabled)
         self._zoom_change_handler()
+
+    def ignore_crs_from_metadata(self):
+        return self.chkIgnoreCrsFromMetadata.isChecked()
 
     def is_manual_mode(self):
         return self.btnManualSettings.isChecked()
