@@ -40,6 +40,7 @@ from .util.tile_helper import (
     WORLD_BOUNDS)
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
+from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.file_helper import (
     get_icons_directory,
     clear_cache,
@@ -343,11 +344,12 @@ class VtrPlugin():
     def _on_connect(self, connection):
         proj = QgsProject.instance()
         proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
-        if self._current_connection_name and self._current_connection_name != connection["name"]:
-            msg = "You just changed the current connection from '{old}' to '{new}'. The current implementation of the plugin supports only one active connection at a time.\"" \
-                  "Due to this, only the latest connection will be updated. You mave save or delete the layer group from '{old}'"\
-                .format(old=self._current_connection_name, new=connection["name"])
-            QMessageBox.warning(None, "Connection", msg)
+        if self._current_reader and self._current_reader.connection()["name"] != connection["name"]:
+            if self._get_all_own_layers():
+                msg = "You just changed the current connection from '{old}' to '{new}'. The current implementation of the plugin supports only one active connection at a time.\"" \
+                      "Due to this, only the latest connection will be updated. You mave save or delete the layer group from '{old}'."\
+                    .format(old=self._current_reader.connection()["name"], new=connection["name"])
+                QMessageBox.warning(None, "Connection", msg)
 
         self._current_connection_name = connection["name"]
         self.reload_action.setText("{} ({})".format(self._reload_button_text, self._current_connection_name))
@@ -566,10 +568,7 @@ class VtrPlugin():
     def _get_all_own_layers(self):
         layers = []
         if self._current_reader:
-            for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
-                source_url = l.customProperty("VectorTilesReader/vector_tile_source")
-                if source_url and self._current_reader.get_source().source() == source_url:
-                    layers.append(l)
+            layers = get_loaded_layers_of_connection(self._current_reader.connection()["name"])
         return layers
 
     def _reload_tiles(self, overwrite_extent=None, ignore_limit=False):
@@ -702,14 +701,6 @@ class VtrPlugin():
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _has_layers_of_current_connection(self):
-        qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        layers = filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") ==
-                                  self._current_reader.get_source().source(), iter(qgis_layers.items()))
-        if layers:
-            return len(list(layers))
-        return 0
-
     def _load_tiles(self, options, layers_to_load, bounds, ignore_limit=False, is_add=False):
         self._current_extent = bounds
         if self._debouncer.is_running():
@@ -718,7 +709,7 @@ class VtrPlugin():
             else:
                 self._debouncer.pause()
 
-        if not is_add and not self._has_layers_of_current_connection():
+        if not is_add and not self._get_all_own_layers():
             info("Loading aborted as there are no layers of the current connection already loaded.")
             return
 

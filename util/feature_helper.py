@@ -135,7 +135,6 @@ class FeatureMerger(object):
                                 feature_dict=feature_dict,
                                 feature_handler=feature_handler)
 
-
 class _GeoTypes(object):
     def __init__(self):
         pass

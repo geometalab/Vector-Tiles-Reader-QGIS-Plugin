@@ -18,6 +18,7 @@ import traceback
 
 if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
     from .util.vtr_2to3 import *
+    from .util.qgis_helper import get_loaded_layers_of_connection
     from .util.log_helper import info, critical, debug, remove_key
     from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from .util.feature_helper import (FeatureMerger,
@@ -39,6 +40,7 @@ if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 else:
     from util.vtr_2to3 import *
+    from util.qgis_helper import get_loaded_layers_of_connection
     from util.log_helper import info, critical, debug, remove_key
     from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from util.feature_helper import (FeatureMerger,
@@ -510,11 +512,7 @@ class VtReader(QObject):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
-        debug("Creating hierarchy in QGIS")
-
-        qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
-        own_layers = list(map(lambda t: t[1], vt_qgis_name_layer_tuples))
+        own_layers = get_loaded_layers_of_connection(self._connection["name"])
         for l in own_layers:
             name = l.name()
             geo_type = l.customProperty("VectorTilesReader/geo_type")
@@ -662,7 +660,7 @@ class VtReader(QObject):
         source_url = self._source.source()
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
-        layer.setCustomProperty("VectorTilesReader/vector_tile_source", source_url)
+        layer.setCustomProperty("VectorTilesReader/vector_tile_source", self._connection["name"])
         layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
         layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
