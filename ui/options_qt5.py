@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'options.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -122,6 +122,9 @@ class Ui_OptionsGroup(object):
         self.chkAutoZoom.setChecked(True)
         self.chkAutoZoom.setObjectName("chkAutoZoom")
         self.gridLayout.addWidget(self.chkAutoZoom, 4, 0, 1, 2)
+        self.chkIgnoreCrsFromMetadata = QtWidgets.QCheckBox(OptionsGroup)
+        self.chkIgnoreCrsFromMetadata.setObjectName("chkIgnoreCrsFromMetadata")
+        self.gridLayout.addWidget(self.chkIgnoreCrsFromMetadata, 8, 0, 1, 2)
 
         self.retranslateUi(OptionsGroup)
         QtCore.QMetaObject.connectSlotsByName(OptionsGroup)
@@ -156,4 +159,6 @@ class Ui_OptionsGroup(object):
         self.label_5.setText(_translate("OptionsGroup", "Fix Zoom"))
         self.chkSetBackgroundColor.setText(_translate("OptionsGroup", "Set project background color"))
         self.chkAutoZoom.setText(_translate("OptionsGroup", "Auto reload on change of view"))
+        self.chkIgnoreCrsFromMetadata.setToolTip(_translate("OptionsGroup", "If checked, EPSG:3857 will be used to calculate the tile extent from the current QGIS view extent"))
+        self.chkIgnoreCrsFromMetadata.setText(_translate("OptionsGroup", "Ignore CRS from metadata"))
 

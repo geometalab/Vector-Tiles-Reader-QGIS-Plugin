@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'connections_group.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
