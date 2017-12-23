@@ -109,7 +109,7 @@ class VtrPlugin():
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
-        self._currrent_connection_name = None
+        self._current_connection_name = None
         self._current_zoom = None
         self._current_scale = None
         self._loaded_extent = None
@@ -343,8 +343,14 @@ class VtrPlugin():
     def _on_connect(self, connection):
         proj = QgsProject.instance()
         proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
-        self._currrent_connection_name = connection["name"]
-        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
+        if self._current_connection_name and self._current_connection_name != connection["name"]:
+            msg = "You just changed the current connection from '{old}' to '{new}'. The current implementation of the plugin supports only one active connection at a time.\"" \
+                  "Due to this, only the latest connection will be updated. You mave save or delete the layer group from '{old}'"\
+                .format(old=self._current_connection_name, new=connection["name"])
+            QMessageBox.warning(None, "Connection", msg)
+
+        self._current_connection_name = connection["name"]
+        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._current_connection_name))
         if self._current_reader and self._current_reader.connection() != connection:
             self._current_reader.shutdown()
             self._current_reader.progress_changed.disconnect()
@@ -799,7 +805,7 @@ class VtrPlugin():
         QgsMapLayerRegistry.instance().addMapLayers(layers, False)
 
     def add_layer_to_group(self, layer):
-        root_group_name = self._currrent_connection_name
+        root_group_name = self._current_connection_name
         root = QgsProject.instance().layerTreeRoot()
         root_group = root.findGroup(root_group_name)
         if not root_group:
