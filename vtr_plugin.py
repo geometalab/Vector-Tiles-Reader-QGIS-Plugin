@@ -342,8 +342,6 @@ class VtrPlugin():
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
     def _on_connect(self, connection):
-        proj = QgsProject.instance()
-        proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
         if self._current_reader and self._current_reader.connection()["name"] != connection["name"]:
             if self._get_all_own_layers():
                 msg = "You just changed the current connection from '{old}' to '{new}'. The current implementation of the plugin supports only one active connection at a time.\"" \
@@ -362,18 +360,26 @@ class VtrPlugin():
             self._current_reader.show_progress_changed.disconnect()
             self._current_reader = None
         if not self._current_reader:
-            reader = self._create_reader(connection=connection)
-            self._current_reader = reader
-        if self._current_reader:
-            layers = self._current_reader.get_source().vector_layers()
-            self.connections_dialog.set_layers(layers)
-            self.connections_dialog.options.set_zoom(min_zoom=self._current_reader.get_source().min_zoom(),
-                                                     max_zoom=self._current_reader.get_source().max_zoom())
-            self.reload_action.setEnabled(True)
-        else:
-            self.connections_dialog.set_layers([])
-            self.reload_action.setEnabled(False)
-            self.reload_action.setText(self._reload_button_text)
+            try:
+                reader = self._create_reader(connection=connection)
+                if reader:
+                    layers = reader.get_source().vector_layers()
+                    self.connections_dialog.set_layers(layers)
+                    self.connections_dialog.options.set_zoom(min_zoom=reader.get_source().min_zoom(),
+                                                             max_zoom=reader.get_source().max_zoom())
+                    self.reload_action.setEnabled(True)
+                    self._current_reader = reader
+                    proj = QgsProject.instance()
+                    proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
+                else:
+                    self.connections_dialog.set_layers([])
+                    self.reload_action.setEnabled(False)
+                    self.reload_action.setText(self._reload_button_text)
+            except RuntimeError:
+                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
+                critical(str(sys.exc_info()[1]))
+                self._current_reader = None
+                self._current_connection_name = None
         self._update_current_reader_sources()
         already_loaded = self._current_reader_sources is not None and len(self._current_reader_sources) > 0
         self.connections_dialog.set_current_connection_already_loaded(already_loaded)
@@ -539,7 +545,8 @@ class VtrPlugin():
 
     def _show_connections_dialog(self):
         zoom = self._get_zoom_of_current_mode()
-        self._update_nr_of_tiles(zoom=zoom)
+        if self._current_reader:
+            self._update_nr_of_tiles(zoom=zoom)
         update_zoom_immediately = not self.connections_dialog.options.is_manual_mode()
         self.connections_dialog.set_current_zoom_level(zoom_level=self._get_zoom_for_current_map_scale(),
                                                        set_immediately=update_zoom_immediately)

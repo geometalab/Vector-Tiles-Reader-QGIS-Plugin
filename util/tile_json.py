@@ -112,11 +112,15 @@ class TileJSON(object):
 
     def min_zoom(self):
         min_zoom = self._get_value("minzoom")
-        return min_zoom
+        if min_zoom is not None:
+            return int(min_zoom)
+        return None
 
     def max_zoom(self):
         max_zoom = self._get_value("maxzoom")
-        return max_zoom
+        if max_zoom is not None:
+            return int(max_zoom)
+        return None
 
     def mask_level(self):
         return self._get_value("maskLevel")
