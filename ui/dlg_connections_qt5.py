@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'dlg_connections.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -146,7 +146,7 @@ class Ui_DlgConnections(object):
         self.btnClose.setText(_translate("DlgConnections", "Close"))
         self.btnHelp.setText(_translate("DlgConnections", "Help"))
         self.grpTilejsonConnections.setTitle(_translate("DlgConnections", "Connections"))
-        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabServer), _translate("DlgConnections", "Online"))
+        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabServer), _translate("DlgConnections", "Server"))
         self.lblMbtilesStyleJsonUrl.setText(_translate("DlgConnections", "GL Style JSON URL"))
         self.txtPath.setToolTip(_translate("DlgConnections", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)"))
         self.btnBrowse.setText(_translate("DlgConnections", "Browse"))

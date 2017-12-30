@@ -40,6 +40,7 @@ from .util.tile_helper import (
     WORLD_BOUNDS)
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
+from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.file_helper import (
     get_icons_directory,
     clear_cache,
@@ -109,7 +110,7 @@ class VtrPlugin():
         self._add_path_to_icons()
         self._current_layer_filter = []
         self._auto_zoom = False
-        self._currrent_connection_name = None
+        self._current_connection_name = None
         self._current_zoom = None
         self._current_scale = None
         self._loaded_extent = None
@@ -263,10 +264,7 @@ class VtrPlugin():
         scheme = self._current_reader.get_source().scheme()
         zoom = self._get_current_zoom()
 
-        if not self._loaded_extent and self.connections_dialog.options.auto_zoom_enabled():
-            extent = get_tile_bounds(2, WORLD_BOUNDS, 4326)
-        else:
-            extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
+        extent = self._get_visible_extent_as_tile_bounds(zoom=zoom)
 
         bounds = self._current_reader.get_source().bounds_tile(zoom)
         info("Bounds of source: {}", bounds)
@@ -344,10 +342,15 @@ class VtrPlugin():
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
     def _on_connect(self, connection):
-        proj = QgsProject.instance()
-        proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
-        self._currrent_connection_name = connection["name"]
-        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._currrent_connection_name))
+        if self._current_reader and self._current_reader.connection()["name"] != connection["name"]:
+            if self._get_all_own_layers():
+                msg = "You just changed the current connection from '{old}' to '{new}'. The current implementation of the plugin supports only one active connection at a time.\"" \
+                      "Due to this, only the latest connection will be updated. You mave save or delete the layer group from '{old}'."\
+                    .format(old=self._current_reader.connection()["name"], new=connection["name"])
+                QMessageBox.warning(None, "Connection", msg)
+
+        self._current_connection_name = connection["name"]
+        self.reload_action.setText("{} ({})".format(self._reload_button_text, self._current_connection_name))
         if self._current_reader and self._current_reader.connection() != connection:
             self._current_reader.shutdown()
             self._current_reader.progress_changed.disconnect()
@@ -357,18 +360,26 @@ class VtrPlugin():
             self._current_reader.show_progress_changed.disconnect()
             self._current_reader = None
         if not self._current_reader:
-            reader = self._create_reader(connection=connection)
-            self._current_reader = reader
-        if self._current_reader:
-            layers = self._current_reader.get_source().vector_layers()
-            self.connections_dialog.set_layers(layers)
-            self.connections_dialog.options.set_zoom(min_zoom=self._current_reader.get_source().min_zoom(),
-                                                     max_zoom=self._current_reader.get_source().max_zoom())
-            self.reload_action.setEnabled(True)
-        else:
-            self.connections_dialog.set_layers([])
-            self.reload_action.setEnabled(False)
-            self.reload_action.setText(self._reload_button_text)
+            try:
+                reader = self._create_reader(connection=connection)
+                if reader:
+                    layers = reader.get_source().vector_layers()
+                    self.connections_dialog.set_layers(layers)
+                    self.connections_dialog.options.set_zoom(min_zoom=reader.get_source().min_zoom(),
+                                                             max_zoom=reader.get_source().max_zoom())
+                    self.reload_action.setEnabled(True)
+                    self._current_reader = reader
+                    proj = QgsProject.instance()
+                    proj.writeEntry("VectorTilesReader", "current_connection", str(connection))
+                else:
+                    self.connections_dialog.set_layers([])
+                    self.reload_action.setEnabled(False)
+                    self.reload_action.setText(self._reload_button_text)
+            except RuntimeError:
+                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
+                critical(str(sys.exc_info()[1]))
+                self._current_reader = None
+                self._current_connection_name = None
         self._update_current_reader_sources()
         already_loaded = self._current_reader_sources is not None and len(self._current_reader_sources) > 0
         self.connections_dialog.set_current_connection_already_loaded(already_loaded)
@@ -534,7 +545,11 @@ class VtrPlugin():
 
     def _show_connections_dialog(self):
         zoom = self._get_zoom_of_current_mode()
-        self._update_nr_of_tiles(zoom=zoom)
+        if self._current_reader:
+            self._update_nr_of_tiles(zoom=zoom)
+        update_zoom_immediately = not self.connections_dialog.options.is_manual_mode()
+        self.connections_dialog.set_current_zoom_level(zoom_level=self._get_zoom_for_current_map_scale(),
+                                                       set_immediately=update_zoom_immediately)
         current_connection = None
         if self._current_reader:
             current_connection = self._current_reader.connection()
@@ -560,10 +575,7 @@ class VtrPlugin():
     def _get_all_own_layers(self):
         layers = []
         if self._current_reader:
-            for l in list(QgsMapLayerRegistry.instance().mapLayers().values()):
-                source_url = l.customProperty("VectorTilesReader/vector_tile_source")
-                if source_url and self._current_reader.get_source().source() == source_url:
-                    layers.append(l)
+            layers = get_loaded_layers_of_connection(self._current_reader.connection()["name"])
         return layers
 
     def _reload_tiles(self, overwrite_extent=None, ignore_limit=False):
@@ -575,9 +587,6 @@ class VtrPlugin():
                 bounds = overwrite_extent
             else:
                 bounds = self._get_visible_extent_as_tile_bounds(zoom=self._current_zoom)
-
-            if self.connections_dialog.options.auto_zoom_enabled():
-                self._current_reader.always_overwrite_geojson(True)
 
             self._load_tiles(options=self.connections_dialog.options,
                              layers_to_load=self._current_layer_filter,
@@ -608,9 +617,15 @@ class VtrPlugin():
         if self._current_reader:
             scheme = self._current_reader.get_source().scheme()
         # the source_crs is 3857, even if the actual data is in another (21781 for example)
-        # the reason is to be fully compatible with the mapbox apis. Ask Petr Pridal @ klokan for details
+        # the reason is to be fully compatible with the mapbox apis.
+        source_crs = self._get_qgis_crs()
+        if self.connections_dialog.options.ignore_crs_from_metadata():
+            if source_crs != 3857:
+                info("Using EPSG:3857 for tile calculation instead of EPSG:{}", source_crs)
+            source_crs = 3857
+
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=3857)
+        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=source_crs)
         return tile_bounds
 
     @staticmethod
@@ -678,9 +693,10 @@ class VtrPlugin():
         if not crs.isValid():
             crs = QgsCoordinateReferenceSystem("EPSG:3857")
         try:
-            self.iface.mapCanvas().mapRenderer().setDestinationCrs(crs)
-        except AttributeError:
-            self.iface.mapCanvas().setDestinationCrs(crs)
+            self.iface.mapCanvas().setCrsTransformEnabled(True)
+        except:
+            pass # not available in QGIS3 anymore
+        self.iface.mapCanvas().setDestinationCrs(crs)
 
     def _cancel_load(self):
         if self._current_reader:
@@ -692,14 +708,6 @@ class VtrPlugin():
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _has_layers_of_current_connection(self):
-        qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        layers = filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") ==
-                                  self._current_reader.get_source().source(), iter(qgis_layers.items()))
-        if layers:
-            return len(list(layers))
-        return 0
-
     def _load_tiles(self, options, layers_to_load, bounds, ignore_limit=False, is_add=False):
         self._current_extent = bounds
         if self._debouncer.is_running():
@@ -708,7 +716,7 @@ class VtrPlugin():
             else:
                 self._debouncer.pause()
 
-        if not is_add and not self._has_layers_of_current_connection():
+        if not is_add and not self._get_all_own_layers():
             info("Loading aborted as there are no layers of the current connection already loaded.")
             return
 
@@ -795,7 +803,7 @@ class VtrPlugin():
         QgsMapLayerRegistry.instance().addMapLayers(layers, False)
 
     def add_layer_to_group(self, layer):
-        root_group_name = self._currrent_connection_name
+        root_group_name = self._current_connection_name
         root = QgsProject.instance().layerTreeRoot()
         root_group = root.findGroup(root_group_name)
         if not root_group:

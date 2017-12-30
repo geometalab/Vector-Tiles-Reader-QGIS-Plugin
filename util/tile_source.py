@@ -139,10 +139,10 @@ class ServerSource(AbstractSource):
         return name
 
     def min_zoom(self):
-        return int(self.json.min_zoom())
+        return self.json.min_zoom()
 
     def max_zoom(self):
-        return int(self.json.max_zoom())
+        return self.json.max_zoom()
 
     def mask_level(self):
         return self.json.mask_level()
@@ -466,6 +466,8 @@ class DirectorySource(AbstractSource):
             raise RuntimeError("The folder does not exist: {}".format(path))
         self.path = path
         metadata_path = os.path.join(path, "metadata.json")
+        if not os.path.isfile(metadata_path):
+            raise RuntimeError("There is no metadata.json in the directory.")
         self.json = TileJSON(metadata_path)
         self.json.load()
 
@@ -476,8 +478,12 @@ class DirectorySource(AbstractSource):
         return self.json.attribution()
 
     def vector_layers(self):
-        data = json.loads(self.json.get_value("json"))["vector_layers"]
-        return data
+        layers = self.json.get_value("vector_layers", is_array=True, is_required=False)
+        if not layers:
+            layers = json.loads(self.json.get_value("json"))["vector_layers"]
+        if not layers:
+            raise RuntimeError("'vector_layers' is required")
+        return layers
 
     def name(self):
         name = self.json.name()

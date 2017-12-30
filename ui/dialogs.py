@@ -29,7 +29,7 @@ from ..util.connection import (
     TILEJSON_CONNECTION_TEMPLATE,
     DIRECTORY_CONNECTION_TEMPLATE)
 
-_HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
+_HELP_URL = "https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help"
 
 
 def _update_size(dialog):
@@ -263,6 +263,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     _APPLY_STYLES = "apply_styles"
     _SET_BACKGROUND_COLOR = "set_background_color"
     _MODE = "mode"
+    _IGNORE_CRS = "ignore_crs"
 
     class Mode(object):
         MANUAL = "manual"
@@ -281,7 +282,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         _FIX_ZOOM_ENABLED: False,
         _APPLY_STYLES: True,
         _SET_BACKGROUND_COLOR: True,
-        _MODE: Mode.MANUAL
+        _MODE: Mode.MANUAL,
+        _IGNORE_CRS: False
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
@@ -295,6 +297,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.chkMergeTiles.toggled.connect(lambda enabled: self._set_option(self._MERGE_TILES, enabled))
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
+        self.chkIgnoreCrsFromMetadata.toggled.connect(lambda enabled: self._set_option(self._IGNORE_CRS, enabled))
         self.chkSetBackgroundColor.toggled.connect(self._on_bg_color_change)
         self.chkApplyStyles.toggled.connect(self._on_apply_styles_changed)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
@@ -308,6 +311,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self._load_options()
         self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
+        self._current_zoom = None
 
     def _on_auto_zoom_enabled(self, enabled):
         self._set_option(self._AUTO_ZOOM, enabled)
@@ -345,6 +349,9 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         if opt[self._SET_BACKGROUND_COLOR]:
             val = opt[self._SET_BACKGROUND_COLOR]
             self.chkSetBackgroundColor.setChecked(val == True or val == "true")
+        if opt[self._IGNORE_CRS]:
+            val = opt[self._IGNORE_CRS]
+            self.chkIgnoreCrsFromMetadata.setChecked(val == True or val == "true")
         if opt[self._MODE]:
             val = opt[self._MODE]
             self._enable_manual_mode(val == self.Mode.MANUAL)
@@ -377,8 +384,17 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self._set_option(self._MAX_ZOOM, enabled)
         self._zoom_change_handler()
 
-    def set_zoom_level(self, zoom_level):
-        self.zoomSpin.setValue(zoom_level)
+    def ignore_crs_from_metadata(self):
+        return self.chkIgnoreCrsFromMetadata.isChecked()
+
+    def is_manual_mode(self):
+        return self.btnManualSettings.isChecked()
+
+    def set_zoom_level(self, zoom_level, set_immediately=True):
+        if set_immediately:
+            self.zoomSpin.setValue(zoom_level)
+        else:
+            self._current_zoom = zoom_level
 
     def set_nr_of_tiles(self, nr_tiles):
         self.lblNumberTilesInCurrentExtent.setText("(Current extent: {} tiles)".format(nr_tiles))
@@ -393,6 +409,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
                            clip_tile_at_bounds=True, background_color=False)
+        if self._current_zoom:
+            self.set_zoom_level(self._current_zoom)
         self._set_option("mode", self.Mode.ANALYSIS)
         self._enable_manual_mode(False)
 
@@ -541,6 +559,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     _CONNECTIONS_TAB = "selected_connections_tab"
     _CURRENT_ONLINE_CONNECTION = "current_online_connection"
 
+    _qgis_zoom = None
+
     def __init__(self, default_browse_directory):
         QDialog.__init__(self)
         self.setupUi(self)
@@ -673,8 +693,15 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
 
-    def set_current_zoom_level(self, zoom_level):
-        self.options.set_zoom_level(zoom_level)
+    def set_current_zoom_level(self, zoom_level, set_immediately=True):
+        """
+         Sets the zoom level in the spinner for the manual zoom selection.
+        :param zoom_level:
+        :param set_immediately: If true, the value will directly be set in the spinner, otherwise it'll be assigned
+            to a variable and only be set, if the "Analysis defaults" button is clicked.
+        :return:
+        """
+        self.options.set_zoom_level(zoom_level, set_immediately=set_immediately)
 
     def set_nr_of_tiles(self, nr_tiles):
         self.options.set_nr_of_tiles(nr_tiles)

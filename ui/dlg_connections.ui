@@ -89,7 +89,7 @@
      </property>
      <widget class="QWidget" name="tabServer">
       <attribute name="title">
-       <string>Online</string>
+       <string>Server</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">

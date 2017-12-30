@@ -30,7 +30,7 @@ class VectorTile(object):
         self.extent = tile_to_latlon(self.zoom_level, self.column, self.row, self.scheme)
     
     def __str__(self):
-        return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)
+        return "Tile ({}, {}, {})".format(self.zoom_level, self.column, self.row)
 
     def id(self):
         return "{};{}".format(self.column, self.row)
@@ -87,25 +87,6 @@ def _center_tiles(tile_limit, extent):
         range(extent["y_min"], extent["y_max"] + 1)))
     center_tiles = get_tiles_from_center(nr_of_tiles=tile_limit, available_tiles=tiles)
     return center_tiles
-
-
-# def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
-#     if zoom is None:
-#         raise RuntimeError("zoom is required")
-#     if lat is None:
-#         raise RuntimeError("latitude is required")
-#     if lng is None:
-#         raise RuntimeError("Longitude is required")
-#     if source_crs != 4326:
-#         lng, lat = convert_coordinate(source_crs, 4326, lat=lat, lng=lng)
-#
-#     lat_rad = math.radians(lat)
-#     n = 2.0 ** zoom
-#     x = int((lng + 180.0) / 360.0 * n)
-#     y = int((1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
-#     if scheme != "xyz":
-#         y = clamp(change_scheme(zoom, y), low=0)
-#     return x, y
 
 
 def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
@@ -186,8 +167,6 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
     """
     if scheme not in ["xyz", "tms"]:
         raise RuntimeError("Scheme not supported: {}".format(scheme))
-    if not bounds:
-        warn("Bounds is not available")
     tile_bounds = None
     if bounds:
         lng_min = bounds[0]
@@ -263,7 +242,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
     max_x = max([t[0] for t in available_tiles])
     max_y = max([t[1] for t in available_tiles])
 
-    center_tile_offset = (int(round(old_div((max_x-min_x),2))), int(round(old_div((max_y-min_y),2))))
+    center_tile_offset = (int(round(old_div((max_x-min_x), 2))), int(round(old_div((max_y-min_y), 2))))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
     if len(selected_tiles) < nr_of_tiles and  center_tile in available_tiles:
@@ -272,10 +251,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
     current_tile = center_tile
     nr_of_steps = 0
     current_direction = 0
-    while len(selected_tiles) < nr_of_tiles:
-        if should_cancel_func and should_cancel_func():
-            break
-
+    while len(selected_tiles) < nr_of_tiles and not(should_cancel_func and should_cancel_func()):
         #  always after two direction changes, the step length has to be increased by one
         if current_direction % 2 == 0:
             nr_of_steps += 1

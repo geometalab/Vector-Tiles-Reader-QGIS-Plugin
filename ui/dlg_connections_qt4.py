@@ -159,7 +159,7 @@ class Ui_DlgConnections(object):
         self.btnClose.setText(_translate("DlgConnections", "Close", None))
         self.btnHelp.setText(_translate("DlgConnections", "Help", None))
         self.grpTilejsonConnections.setTitle(_translate("DlgConnections", "Connections", None))
-        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabServer), _translate("DlgConnections", "Online", None))
+        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabServer), _translate("DlgConnections", "Server", None))
         self.lblMbtilesStyleJsonUrl.setText(_translate("DlgConnections", "GL Style JSON URL", None))
         self.txtPath.setToolTip(_translate("DlgConnections", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)", None))
         self.btnBrowse.setText(_translate("DlgConnections", "Browse", None))

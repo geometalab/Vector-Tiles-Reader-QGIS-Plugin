@@ -1,5 +1,4 @@
 import os
-import glob
 import tempfile
 import sys
 import time
@@ -11,7 +10,7 @@ except ImportError:
 from .log_helper import info, critical, warn, debug
 
 
-geojson_folder = "geojson"
+geojson_folder = "tmp"
 max_cache_age_minutes = 1440  # 24 hours
 
 _temp_dir = tempfile.gettempdir()

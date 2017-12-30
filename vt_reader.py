@@ -18,6 +18,7 @@ import traceback
 
 if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
     from .util.vtr_2to3 import *
+    from .util.qgis_helper import get_loaded_layers_of_connection
     from .util.log_helper import info, critical, debug, remove_key
     from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from .util.feature_helper import (FeatureMerger,
@@ -39,6 +40,7 @@ if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 else:
     from util.vtr_2to3 import *
+    from util.qgis_helper import get_loaded_layers_of_connection
     from util.log_helper import info, critical, debug, remove_key
     from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from util.feature_helper import (FeatureMerger,
@@ -122,7 +124,6 @@ class VtReader(QObject):
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds = None
-        self._always_overwrite_geojson = False
         self._flush = False
         self._feature_count = None
         self._allowed_sources = None
@@ -224,14 +225,6 @@ class VtReader(QObject):
             "type": "FeatureCollection",
             "crs": crs,
             "features": []}
-
-    def always_overwrite_geojson(self, enabled):
-        """
-         * If activated, the geoJson written to the disk will always be overwritten, with each load
-         * As a result of this, only the latest loaded extent will be visible in qgis
-        :return:
-        """
-        self._always_overwrite_geojson = enabled
 
     def cancel(self):
         """
@@ -519,11 +512,7 @@ class VtReader(QObject):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
-        debug("Creating hierarchy in QGIS")
-
-        qgis_layers = QgsMapLayerRegistry.instance().mapLayers()
-        vt_qgis_name_layer_tuples = list(filter(lambda t: t[1].customProperty("VectorTilesReader/vector_tile_source") == self._source.source(), iter(qgis_layers.items())))
-        own_layers = list(map(lambda t: t[1], vt_qgis_name_layer_tuples))
+        own_layers = get_loaded_layers_of_connection(self._connection["name"])
         for l in own_layers:
             name = l.name()
             geo_type = l.customProperty("VectorTilesReader/geo_type")
@@ -539,6 +528,11 @@ class VtReader(QObject):
                               max_progress=len(self.feature_collections_by_layer_name_and_geotype),
                               msg="Creating layers...")
         layer_filter = self._loading_options["layer_filter"]
+
+        clipping_bounds = None
+        if merge_features:
+            clipping_bounds = self._loading_options["bounds"]
+
         new_layers = []
         count = 0
         for layer_name, geo_type in self.feature_collections_by_layer_name_and_geotype:
@@ -564,11 +558,15 @@ class VtReader(QObject):
                         break
                 if layer:
                     self._update_layer_source(file_path, feature_collection)
+                    layer.reload()
                     if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-                        FeatureMerger().merge_features(layer)
+                        merger = FeatureMerger(should_cancel_func=lambda: self.cancel_requested)
+                        merger.merge_features(layer)
                     if clip_tiles:
-                        clip_features(layer=layer, scheme=self._source.scheme())
-
+                        clip_features(layer=layer,
+                                      scheme=self._source.scheme(),
+                                      bounds=clipping_bounds,
+                                      should_cancel_func=lambda: self.cancel_requested)
             if not layer\
                     and (self._allowed_sources is None or file_path in self._allowed_sources)\
                     and (not layer_filter or layer_name in layer_filter):
@@ -578,14 +576,17 @@ class VtReader(QObject):
                                                  geo_type=geo_type,
                                                  zoom_level=zoom_level)
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
-                    FeatureMerger().merge_features(layer)
+                    merger = FeatureMerger(should_cancel_func=lambda: self.cancel_requested)
+                    merger.merge_features(layer)
                 if clip_tiles:
-                    clip_features(layer=layer, scheme=self._source.scheme())
+                    clip_features(layer=layer,
+                                  scheme=self._source.scheme(),
+                                  bounds=clipping_bounds,
+                                  should_cancel_func=lambda: self.cancel_requested)
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count+1)
 
         self._update_progress(msg="Refresh layers...")
-        QgsMapLayerRegistry.instance().reloadAllLayers()
 
         if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
@@ -636,7 +637,8 @@ class VtReader(QObject):
             styles = [
                 "{}.{}".format(name, geo_type.lower()),
                 name,
-                "transparent.{}".format(geo_type.lower())
+                "transparent.{}".format(geo_type.lower()),
+                geo_type.lower()
             ]
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
@@ -658,7 +660,7 @@ class VtReader(QObject):
         source_url = self._source.source()
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
-        layer.setCustomProperty("VectorTilesReader/vector_tile_source", source_url)
+        layer.setCustomProperty("VectorTilesReader/vector_tile_source", self._connection["name"])
         layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
         layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
@@ -726,21 +728,6 @@ class VtReader(QObject):
         feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
         return feature_collection
 
-    @staticmethod
-    def _get_feature_class_and_subclass(feature):
-        feature_class = None
-        feature_subclass = None
-        properties = feature["properties"]
-        if "class" in properties:
-            feature_class = properties["class"]
-            if "subclass" in properties:
-                feature_subclass = properties["subclass"]
-                if feature_subclass == feature_class:
-                    feature_subclass = None
-        if feature_subclass:
-            assert feature_class, "A feature with a subclass should also have a class"
-        return feature_class, feature_subclass
-
     def _create_geojson_feature(self, feature, tile, current_layer_tile_extent):
         """
         Creates a GeoJSON feature for the specified feature
@@ -754,7 +741,6 @@ class VtReader(QObject):
 
         if geo_type == GeoTypes.POINT:
             coordinates = coordinates[0]
-            properties["_symbol"] = self._get_poi_icon(feature)
             if self._clip_tiles_at_tile_bounds and not all(0 <= c <= current_layer_tile_extent for c in coordinates):
                 return None, None
         all_out_of_bounds = []
@@ -777,25 +763,6 @@ class VtReader(QObject):
                                                                              split_multi_geometries=split_geometries)
 
         return geojson_features, geo_type
-
-    def _get_poi_icon(self, feature):
-        """
-         * Returns the name of the svg icon that will be applied in QGIS.
-         * The resulting icon is determined based on class and subclass of the specified feature.
-        :param feature: 
-        :return: 
-        """
-
-        feature_class, feature_subclass = self._get_feature_class_and_subclass(feature)
-        root_path = get_icons_directory()
-        class_icon = "{}.svg".format(feature_class)
-        class_subclass_icon = "{}.{}.svg".format(feature_class, feature_subclass)
-        icon_name = "poi.svg"
-        if os.path.isfile(os.path.join(root_path, class_subclass_icon)):
-            icon_name = class_subclass_icon
-        elif os.path.isfile(os.path.join(root_path, class_icon)):
-            icon_name = class_icon
-        return icon_name
 
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):

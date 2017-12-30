@@ -12,8 +12,9 @@ from vt_reader import VtReader
 from util.connection import MBTILES_CONNECTION_TEMPLATE
 import copy
 import mock
+import shutil
 from osgeo import gdal
-from util.file_helper import clear_cache
+from util.file_helper import clear_cache, get_style_folder
 
 
 class VtReaderTests(unittest.TestCase):
@@ -21,9 +22,15 @@ class VtReaderTests(unittest.TestCase):
     Tests for Iface
     """
 
+    CONNECTION_NAME = "test_conn"
+
     @classmethod
     def setUpClass(cls):
-        pass
+        src = os.path.join(os.path.dirname(__file__), 'data', 'styles')
+        trg = get_style_folder(cls.CONNECTION_NAME)
+        if os.path.isdir(trg):
+            shutil.rmtree(trg)
+        shutil.copytree(src, trg)
 
     @classmethod
     def tearDownClass(cls):
@@ -146,7 +153,7 @@ class VtReaderTests(unittest.TestCase):
     def _load(self, iface, max_tiles, serial_tile_processing_limit=None, merge_tiles=False, clip_tiles=False, apply_styles=False):
         conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
         gdal.PushErrorHandler('CPLQuietErrorHandler')
-        conn["name"] = "Unittest_Connection"
+        conn["name"] = self.CONNECTION_NAME
         conn["path"] = os.path.join(os.path.dirname(__file__), '..', 'sample_data', 'uster_zh.mbtiles')
         reader = VtReader(iface=iface, connection=conn)
         bounds = {'y_min': 10644, 'y_max': 10645, 'zoom': 14, 'height': 2, 'width': 3, 'x_max': 8589, 'x_min': 8587}

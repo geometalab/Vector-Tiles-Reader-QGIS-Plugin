@@ -57,6 +57,10 @@ class TileHelperTests(unittest.TestCase):
         zoom = get_zoom_by_scale(10000000000)
         self.assertEqual(0, zoom)
 
+    def test_get_zoom_by_scale(self):
+        zoom = get_zoom_by_scale(12500)
+        self.assertEqual(14, zoom)
+
     def test_get_epsg(self):
         self.assertEqual(3857, get_code_from_epsg("epsg:3857"))
 
@@ -76,6 +80,16 @@ class TileHelperTests(unittest.TestCase):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=0, available_tiles=all_tiles)
         self.assertEqual(0, len(t))
+
+    def test_center_tiles_2(self):
+        all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
+        t = get_tiles_from_center(nr_of_tiles=26, available_tiles=all_tiles)
+        self.assertEqual(25, len(t))
+
+    def test_center_tiles_break(self):
+        all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
+        t = get_tiles_from_center(nr_of_tiles=5, available_tiles=all_tiles, should_cancel_func=lambda: True)
+        self.assertEqual(1, len(t))
 
     def test_center_tiles_difference(self):
         tile_limit = 4
