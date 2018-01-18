@@ -3,13 +3,7 @@
 
 # Vector Tiles Reader QGIS-Plugin
 
-This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a t-rex cache.
-
-For more information about the Vector Tiles concept and limitations of the plugin see homepage.
-
-Important web links:
-* Issues tracker : https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
-* Code repository: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin (this webpage)
+This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a directory in zxy structure.
 
 ## Help
 A help can be found here: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help
@@ -35,7 +29,7 @@ Acknowledgments:
 ## Docker Tests
 
 ```
-docker-compose build
+docker-compose build qgis2
 docker-compose run -d --name qgis2 qgis2
 docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
 ```
