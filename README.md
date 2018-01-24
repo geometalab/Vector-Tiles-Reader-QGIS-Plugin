@@ -5,8 +5,18 @@
 
 This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a directory in zxy structure.
 
+![](sample_data/ui.png)
+
 ## Help
 A help can be found here: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help
+
+## Styling
+The plugin can create a QGIS styling from a Mapbox GL JSON style on the fly.
+
+![](sample_data/osm_bright.png)
+
+![](sample_data/klokantech_basic.png)
+
 
 ## License
 
