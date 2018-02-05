@@ -3,12 +3,15 @@ from builtins import str
 from builtins import object
 from past.utils import old_div
 import sys
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import os
 import ast
-from log_helper import critical, debug, info
-from tile_helper import get_tile_bounds, latlon_to_tile, WORLD_BOUNDS
-from network_helper import load_url
+from .log_helper import critical, debug, info
+from .tile_helper import get_tile_bounds, WORLD_BOUNDS
+from .network_helper import load_url
 
 
 class TileJSON(object):
@@ -79,8 +82,8 @@ class TileJSON(object):
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
         return layers
 
-    def get_value(self, key):
-        val = self._get_value(key)
+    def get_value(self, key, is_array=False, is_required=False):
+        val = self._get_value(key, is_array=is_array, is_required=is_required)
         return val
 
     def crs(self, default=3857):
@@ -109,11 +112,15 @@ class TileJSON(object):
 
     def min_zoom(self):
         min_zoom = self._get_value("minzoom")
-        return min_zoom
+        if min_zoom is not None:
+            return int(min_zoom)
+        return None
 
     def max_zoom(self):
         max_zoom = self._get_value("maxzoom")
-        return max_zoom
+        if max_zoom is not None:
+            return int(max_zoom)
+        return None
 
     def mask_level(self):
         return self._get_value("maskLevel")

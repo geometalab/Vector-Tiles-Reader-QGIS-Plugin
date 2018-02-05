@@ -1,48 +1,58 @@
 import copy
 import csv
-import os
 import webbrowser
+import ast
 from collections import OrderedDict
-import resources_rc  # don't remove this import, otherwise the icons won't be working
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignal, pyqtSlot, QSettings
-from PyQt4.QtGui import QFileDialog, QMessageBox, QStandardItemModel, QStandardItem, QApplication
+from ..util.vtr_2to3 import *
+from ..util.log_helper import info
 
-from connections_group import Ui_ConnectionsGroup
-from dlg_about import Ui_DlgAbout
-from dlg_connections import Ui_DlgConnections
-from dlg_edit_postgis_connection import Ui_DlgEditPostgisConnection
-from dlg_edit_tilejson_connection import Ui_DlgEditTileJSONConnection
-from options import Ui_OptionsGroup
+try:
+    from .connections_group_qt5 import Ui_ConnectionsGroup
+    from .dlg_about_qt5 import Ui_DlgAbout
+    from .dlg_connections_qt5 import Ui_DlgConnections
+    from .dlg_edit_postgis_connection_qt5 import Ui_DlgEditPostgisConnection
+    from .dlg_edit_tilejson_connection_qt5 import Ui_DlgEditTileJSONConnection
+    from .options_qt5 import Ui_OptionsGroup
+except:
+    from .connections_group_qt4 import Ui_ConnectionsGroup
+    from .dlg_about_qt4 import Ui_DlgAbout
+    from .dlg_connections_qt4 import Ui_DlgConnections
+    from .dlg_edit_postgis_connection_qt4 import Ui_DlgEditPostgisConnection
+    from .dlg_edit_tilejson_connection_qt4 import Ui_DlgEditTileJSONConnection
+    from .options_qt4 import Ui_OptionsGroup
+
+
 from ..util.connection import (
     ConnectionTypes,
     MBTILES_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
-    TREX_CONNECTION_TEMPLATE)
-from ..util.log_helper import info
+    DIRECTORY_CONNECTION_TEMPLATE)
 
-_HELP_URL = "https://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin"
-
-if not resources_rc:
-    info("Resources are required, otherwise no icons will be shown")
+_HELP_URL = "https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help"
 
 
-def _update_size(dialog, fix_size=False):
+def _update_size(dialog):
     screen_resolution = QApplication.desktop().screenGeometry()
     screen_width, screen_height = screen_resolution.width(), screen_resolution.height()
+    new_width = None
+    new_height = None
     if screen_width > 1920 or screen_height > 1080:
         new_width = dialog.width() / 1920.0 * screen_width
         new_height = dialog.height() / 1080.0 * screen_height
-        if fix_size:
-            dialog.setFixedSize(new_width, new_height)
-        else:
-            dialog.setMinimumSize(new_width, new_height)
+        dialog.setMinimumSize(new_width, new_height)
+    elif dialog.width() >= screen_width or dialog.height() >= screen_height:
+        margin = 40
+        new_width = screen_width - margin
+        new_height = screen_height - margin
+
+    if new_width and new_height:
+        dialog.resize(new_width, new_height)
 
 
-class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
+class AboutDialog(QDialog, Ui_DlgAbout):
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         self._load_about()
         _update_size(self)
@@ -58,13 +68,13 @@ class AboutDialog(QtGui.QDialog, Ui_DlgAbout):
         self.exec_()
 
 
-class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
+class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal('QString')
 
     def __init__(self, target_groupbox, edit_dialog, connection_template, settings_key, settings, predefined_connections=None):
-        super(QtGui.QGroupBox, self).__init__()
+        super(QGroupBox, self).__init__()
 
         self._connection_template = connection_template
         cloned_predefined_connections = {}
@@ -153,7 +163,8 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
     def _add_loaded_connections_to_combobox(self):
         if self._predefined_connections:
             for index, name in enumerate(self._predefined_connections):
-                self.connections[name] = self._predefined_connections[name]
+                if name not in self.connections:
+                    self.connections[name] = self._predefined_connections[name]
 
         for name in sorted(self.connections):
             is_already_added = self.cbxConnections.findText(name) != -1
@@ -167,7 +178,7 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         connection = self.cbxConnections.currentText()
         msg = "Are you sure you want to remove the connection '{}' and all associated settings?".format(connection)
         reply = QMessageBox.question(self.activateWindow(), 'Confirm Delete', msg, QMessageBox.Yes, QMessageBox.No)
-        if reply == QtGui.QMessageBox.Yes:
+        if reply == QMessageBox.Yes:
             self.cbxConnections.removeItem(index)
             self.connections.pop(connection)
             self._save_connections()
@@ -186,22 +197,25 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
 
     def _edit_connection(self):
         conn = self._get_current_connection()
-        self._create_or_update_connection(conn)
+        self._create_or_update_connection(conn, edit_mode=True)
 
     def _create_connection(self):
-        self._create_or_update_connection(copy.deepcopy(self._connection_template))
+        self._create_or_update_connection(copy.deepcopy(self._connection_template), edit_mode=False)
 
-    def _create_or_update_connection(self, connection):
+    def _create_or_update_connection(self, connection, edit_mode):
         name = connection["name"]
         self.edit_connection_dialog.set_connection(connection)
+        self.edit_connection_dialog.set_mode(edit_mode=edit_mode)
         result = self.edit_connection_dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QDialog.Accepted:
             new_connection = self.edit_connection_dialog.get_connection()
             new_name = new_connection["name"]
             self.connections[new_name] = new_connection
             if new_name != name:
                 self.cbxConnections.addItem(new_name)
-                self.cbxConnections.setCurrentIndex(len(self.connections)-1)
+                if edit_mode:
+                    self.cbxConnections.removeItem(self.cbxConnections.findText(name))
+                self.cbxConnections.setCurrentIndex(self.cbxConnections.findText(new_name))
             self._save_connections()
 
     def _handle_connection_change(self, name):
@@ -234,7 +248,7 @@ class ConnectionsGroup(QtGui.QGroupBox, Ui_ConnectionsGroup):
         return connection
 
 
-class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
+class OptionsGroup(QGroupBox, Ui_OptionsGroup):
 
     on_zoom_change = pyqtSignal()
 
@@ -247,6 +261,15 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
     _FIX_ZOOM_ENABLED = "fix_zoom_enabled"
     _FIX_ZOOM = "fix_zoom"
     _APPLY_STYLES = "apply_styles"
+    _SET_BACKGROUND_COLOR = "set_background_color"
+    _MODE = "mode"
+    _IGNORE_CRS = "ignore_crs"
+
+    class Mode(object):
+        MANUAL = "manual"
+        BASE_MAP = "base_map"
+        INSPECTION = "inspection"
+        ANALYSIS = "analysis"
 
     _options = {
         _TILE_LIMIT_ENABLED: True,
@@ -255,14 +278,18 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         _CLIP_TILES: False,
         _AUTO_ZOOM: True,
         _MAX_ZOOM: False,
-        _FIX_ZOOM_ENABLED: False,
         _FIX_ZOOM: 0,
-        _APPLY_STYLES: True
+        _FIX_ZOOM_ENABLED: False,
+        _APPLY_STYLES: True,
+        _SET_BACKGROUND_COLOR: True,
+        _MODE: Mode.MANUAL,
+        _IGNORE_CRS: False
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
-        super(QtGui.QGroupBox, self).__init__()
+        super(QGroupBox, self).__init__()
         self.setupUi(target_groupbox)
+        self.settings = None
         self._reset_to_basemap_defaults()
         self.settings = settings
         self._zoom_change_handler = zoom_change_handler
@@ -270,16 +297,32 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self.spinNrOfLoadedTiles.setEnabled(enabled))
         self.chkMergeTiles.toggled.connect(lambda enabled: self._set_option(self._MERGE_TILES, enabled))
         self.chkClipTiles.toggled.connect(lambda enabled: self._set_option(self._CLIP_TILES, enabled))
-        self.chkApplyStyles.toggled.connect(lambda enabled: self._set_option(self._APPLY_STYLES, enabled))
+        self.chkIgnoreCrsFromMetadata.toggled.connect(lambda enabled: self._set_option(self._IGNORE_CRS, enabled))
+        self.chkSetBackgroundColor.toggled.connect(self._on_bg_color_change)
+        self.chkApplyStyles.toggled.connect(self._on_apply_styles_changed)
         self.chkLimitNrOfTiles.toggled.connect(lambda enabled: self._set_option(self._TILE_LIMIT_ENABLED, enabled))
-        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
-        self.rbZoomManual.toggled.connect(self._on_manual_zoom_selected)
+        self.rbZoomManual.toggled.connect(self._on_manual_zoom_enabled)
         self.rbZoomMax.toggled.connect(self._on_max_zoom_selected)
-        self.zoomSpin.valueChanged.connect(self._on_zoom_change)
+        self.chkAutoZoom.toggled.connect(self._on_auto_zoom_enabled)
         self.btnResetToBasemapDefaults.clicked.connect(self._reset_to_basemap_defaults)
         self.btnResetToInspectionDefaults.clicked.connect(self._reset_to_inspection_defaults)
         self.btnResetToAnalysisDefaults.clicked.connect(self._reset_to_analysis_defaults)
+        self.btnManualSettings.clicked.connect(lambda: self._enable_manual_mode(True))
         self._load_options()
+        self.spinNrOfLoadedTiles.valueChanged.connect(lambda v: self._set_option(self._TILE_LIMIT, v))
+        self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
+        self._current_zoom = None
+
+    def _on_auto_zoom_enabled(self, enabled):
+        self._set_option(self._AUTO_ZOOM, enabled)
+        self.rbZoomManual.setEnabled(not enabled)
+        self.rbZoomMax.setEnabled(not enabled)
+        self.zoomSpin.setEnabled(not enabled)
+
+    def _on_bg_color_change(self, enabled):
+        self._set_option(self._SET_BACKGROUND_COLOR, enabled)
+        if enabled and not self.chkApplyStyles.isChecked():
+            self.chkApplyStyles.setChecked(True)
 
     def _load_options(self):
         opt = self._options
@@ -294,54 +337,106 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         if opt[self._CLIP_TILES]:
             self.chkClipTiles.setChecked(opt[self._CLIP_TILES] == True or opt[self._CLIP_TILES] == "true")
         if opt[self._AUTO_ZOOM]:
-            self.rbAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
+            self.chkAutoZoom.setChecked(opt[self._AUTO_ZOOM] == True or opt[self._AUTO_ZOOM] == "true")
         if opt[self._MAX_ZOOM]:
             self.rbZoomMax.setChecked(opt[self._MAX_ZOOM] == True or opt[self._MAX_ZOOM] == "true")
-        if opt[self._FIX_ZOOM_ENABLED]:
-            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._FIX_ZOOM]:
             self.zoomSpin.setValue(int(opt[self._FIX_ZOOM]))
+        if opt[self._FIX_ZOOM_ENABLED]:
+            self.rbZoomManual.setChecked(opt[self._FIX_ZOOM_ENABLED] == True or opt[self._FIX_ZOOM_ENABLED] == "true")
         if opt[self._APPLY_STYLES]:
             self.chkApplyStyles.setChecked(opt[self._APPLY_STYLES] == True or opt[self._APPLY_STYLES] == "true")
+        if opt[self._SET_BACKGROUND_COLOR]:
+            val = opt[self._SET_BACKGROUND_COLOR]
+            self.chkSetBackgroundColor.setChecked(val == True or val == "true")
+        if opt[self._IGNORE_CRS]:
+            val = opt[self._IGNORE_CRS]
+            self.chkIgnoreCrsFromMetadata.setChecked(val == True or val == "true")
+        if opt[self._MODE]:
+            val = opt[self._MODE]
+            self._enable_manual_mode(val == self.Mode.MANUAL)
+            self.btnManualSettings.setChecked(val == self.Mode.MANUAL)
+            self.btnResetToInspectionDefaults.setChecked(val == self.Mode.INSPECTION)
+            self.btnResetToBasemapDefaults.setChecked(val == self.Mode.BASE_MAP)
+            self.btnResetToAnalysisDefaults.setChecked(val == self.Mode.ANALYSIS)
+        else:
+            self.btnManualSettings.setChecked(True)
+
+    def _on_apply_styles_changed(self, enabled):
+        self._set_option(self._APPLY_STYLES, enabled)
+        if not enabled:
+            self.chkSetBackgroundColor.setChecked(False)
 
     def _set_option(self, key, value):
         self._options[key] = value
         self.settings.setValue("options/{}".format(key), value)
 
-    def _on_manual_zoom_selected(self, enabled):
+    def _on_manual_zoom_enabled(self, enabled):
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
-        self.zoomSpin.setEnabled(enabled)
-        self._zoom_change_handler()
+        self._on_manual_zoom_change()
 
-    def _on_zoom_change(self):
-        self._set_option(self._FIX_ZOOM, self.zoomSpin.value())
+    def _on_manual_zoom_change(self):
+        zoom = self.zoomSpin.value()
+        self._set_option(self._FIX_ZOOM, zoom)
         self._zoom_change_handler()
 
     def _on_max_zoom_selected(self, enabled):
         self._set_option(self._MAX_ZOOM, enabled)
         self._zoom_change_handler()
 
-    def set_zoom_level(self, zoom_level):
-        self.zoomSpin.setValue(zoom_level)
+    def ignore_crs_from_metadata(self):
+        return self.chkIgnoreCrsFromMetadata.isChecked()
+
+    def is_manual_mode(self):
+        return self.btnManualSettings.isChecked()
+
+    def set_zoom_level(self, zoom_level, set_immediately=True):
+        if set_immediately:
+            self.zoomSpin.setValue(zoom_level)
+        else:
+            self._current_zoom = zoom_level
 
     def set_nr_of_tiles(self, nr_tiles):
         self.lblNumberTilesInCurrentExtent.setText("(Current extent: {} tiles)".format(nr_tiles))
 
     def _reset_to_basemap_defaults(self):
         self._set_settings(auto_zoom=True, fix_zoom=False, tile_limit=32, styles_enabled=True, merging_enabled=False,
-                           clip_tile_at_bounds=False)
+                           clip_tile_at_bounds=False, background_color=True)
+        if self.settings:
+            self._set_option("mode", self.Mode.BASE_MAP)
+        self._enable_manual_mode(False)
 
     def _reset_to_analysis_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
-                           clip_tile_at_bounds=True)
+                           clip_tile_at_bounds=True, background_color=False)
+        if self._current_zoom:
+            self.set_zoom_level(self._current_zoom)
+        self._set_option("mode", self.Mode.ANALYSIS)
+        self._enable_manual_mode(False)
 
     def _reset_to_inspection_defaults(self):
         self._set_settings(auto_zoom=False, fix_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
-                           clip_tile_at_bounds=False)
+                           clip_tile_at_bounds=False, background_color=False)
+        self._set_option("mode", self.Mode.INSPECTION)
+        self._enable_manual_mode(False)
 
-    def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds):
+    def _enable_manual_mode(self, enabled):
+        if enabled:
+            self._set_option("mode", self.Mode.MANUAL)
+        self.chkLimitNrOfTiles.setEnabled(enabled)
+        self.spinNrOfLoadedTiles.setEnabled(enabled)
+        self.chkMergeTiles.setEnabled(enabled)
+        self.chkClipTiles.setEnabled(enabled)
+        self.chkAutoZoom.setEnabled(enabled)
+        self.rbZoomMax.setEnabled(enabled and not self.chkAutoZoom.isChecked())
+        self.rbZoomManual.setEnabled(enabled and not self.chkAutoZoom.isChecked())
+        self.zoomSpin.setEnabled(enabled and not self.chkAutoZoom.isChecked())
+        self.chkApplyStyles.setEnabled(enabled)
+        self.chkSetBackgroundColor.setEnabled(enabled)
+
+    def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds, background_color):
         self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
-        self.rbAutoZoom.setChecked(auto_zoom)
+        self.chkAutoZoom.setChecked(auto_zoom)
         self.rbZoomManual.setChecked(fix_zoom)
         tile_limit_enabled = tile_limit is not None
         self.chkLimitNrOfTiles.setChecked(tile_limit_enabled)
@@ -350,18 +445,22 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setChecked(styles_enabled)
         self.chkMergeTiles.setChecked(merging_enabled)
         self.chkClipTiles.setChecked(clip_tile_at_bounds)
+        self.chkSetBackgroundColor.setChecked(background_color)
 
     def set_omt_styles_enabled(self, enabled):
         self._set_option(self._APPLY_STYLES, enabled)
         self.chkApplyStyles.setChecked(enabled)
 
+    def is_inspection_mode(self):
+        return self.btnResetToInspectionDefaults.isChecked()
+
     def set_zoom(self, min_zoom=None, max_zoom=None):
-        if min_zoom:
+        if min_zoom is not None:
             self.zoomSpin.setMinimum(min_zoom)
         else:
             self.zoomSpin.setMinimum(0)
         max_zoom_text = "Max. Zoom"
-        if max_zoom:
+        if max_zoom is not None:
             self.zoomSpin.setMaximum(max_zoom)
             max_zoom_text += " ({})".format(max_zoom)
         else:
@@ -369,7 +468,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self.rbZoomMax.setText(max_zoom_text)
 
         zoom_range_text = ""
-        if min_zoom or max_zoom:
+        if min_zoom is not None or max_zoom is not None:
             zoom_range_text = "({} - {})".format(min_zoom, max_zoom)
         self.lblZoomRange.setText(zoom_range_text)
 
@@ -379,12 +478,12 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         return enabled
 
     def auto_zoom_enabled(self):
-        enabled = self.rbAutoZoom.isChecked()
+        enabled = self.chkAutoZoom.isChecked()
         self._set_option(self._AUTO_ZOOM, enabled)
         return enabled
 
     def manual_zoom(self):
-        enabled = self.rbZoomManual.isChecked()
+        enabled = self.rbZoomManual.isChecked() and not self.chkAutoZoom.isChecked()
         fix_zoom = self.zoomSpin.value()
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
         self._set_option(self._FIX_ZOOM, fix_zoom)
@@ -406,6 +505,9 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         self._set_option(self._APPLY_STYLES, enabled)
         return enabled
 
+    def set_background_color_enabled(self):
+        return self.chkSetBackgroundColor.isChecked()
+
     def merge_tiles_enabled(self):
         enabled = self.chkMergeTiles.isChecked()
         self._set_option(self._MERGE_TILES, enabled)
@@ -415,7 +517,7 @@ class OptionsGroup(QtGui.QGroupBox, Ui_OptionsGroup):
         return False
 
 
-class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
+class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
@@ -438,12 +540,14 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         _OMT: {
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
-            "token": "6irhAXGgsi8TrIDL0211"
+            "token": "6irhAXGgsi8TrIDL0211",
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
         },
         _OMT_CUSTOM_KEY: {
             "name": _OMT_CUSTOM_KEY,
             "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
-            "can_edit": True
+            "can_edit": True,
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
         },
         _MAPZEN: {
             "name": _MAPZEN,
@@ -455,9 +559,13 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     _CONNECTIONS_TAB = "selected_connections_tab"
     _CURRENT_ONLINE_CONNECTION = "current_online_connection"
 
+    _qgis_zoom = None
+
     def __init__(self, default_browse_directory):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
+        self.action_text = "Add"
+        self._current_connection_already_loaded = False
         self.settings = QSettings("VtrSettings")
         self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
         last_tab = self.settings.value(self._CONNECTIONS_TAB, 0)
@@ -472,16 +580,16 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         if not connection_to_select:
             connection_to_select = self._OMT
         self.tilejson_connections.select_connection(connection_to_select)
+        self.btnConnectDirectory.clicked.connect(lambda: self.connect(self._directory_conn))
+        self.btnConnectFile.clicked.connect(lambda: self.connect(self._mbtiles_conn))
         self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)
-
         self.selected_layer_id = None
-
         self.btnAdd.clicked.connect(self._load_tiles_for_connection)
         self.btnHelp.clicked.connect(lambda: webbrowser.open(_HELP_URL))
         self.btnBrowse.clicked.connect(self._select_file_path)
-        self.btnBrowseTrexCache.clicked.connect(self._select_trex_cache_folder)
+        self.btnSelectDirectory.clicked.connect(self._select_directory)
         self.open_path = None
         self.browse_path = default_browse_directory
         self.model = QStandardItemModel()
@@ -489,20 +597,66 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         self.tblLayers.setModel(self.model)
         _update_size(self)
         self._current_connection = None
+        self._directory_conn = None
+        self._mbtiles_conn = None
+        self._load_mbtiles_and_directory_connections()
 
-    @pyqtSlot(int)
+    def _update_action_text(self, connection):
+        if connection and self._current_connection == connection and self._current_connection_already_loaded:
+            action_text = "Reload"
+        else:
+            action_text = "Add"
+        self.btnAdd.setText(action_text)
+        self.setWindowTitle("{} Layer(s) from a Vector Tile Source".format(action_text))
+
+    def _load_mbtiles_and_directory_connections(self):
+        mbtiles_conn = self.settings.value("mbtiles_connection")
+        directory_conn = self.settings.value("directory_connection")
+        if mbtiles_conn:
+            mbtiles_conn = ast.literal_eval(mbtiles_conn)
+            if mbtiles_conn["type"] == ConnectionTypes.MBTiles:
+                if mbtiles_conn["path"]:
+                    self.txtPath.setText(mbtiles_conn["path"])
+                if mbtiles_conn["style"]:
+                    self.txtMbtilesStyleJsonUrl.setText(mbtiles_conn["style"])
+        if directory_conn:
+            directory_conn = ast.literal_eval(directory_conn)
+            if directory_conn["type"] == ConnectionTypes.Directory:
+                if directory_conn["path"]:
+                    self.txtDirectoryPath.setText(directory_conn["path"])
+                if directory_conn["style"]:
+                    self.txtDirectoryStyleJsonUrl.setText(directory_conn["style"])
+        self._mbtiles_conn = mbtiles_conn
+        self._directory_conn = directory_conn
+
+    def connect(self, connection):
+        self._update_layers_group_title(connection)
+        if connection:
+            self._handle_connect(connection)
+            widget = None
+            if connection["type"] == ConnectionTypes.TileJSON:
+                widget = self.tabServer
+            elif connection["type"] == ConnectionTypes.MBTiles:
+                widget = self.tabFile
+            elif connection["type"] == ConnectionTypes.Directory:
+                widget = self.tabDirectory
+            if widget:
+                self.tabConnections.setCurrentWidget(widget)
+
+    def _update_layers_group_title(self, connection):
+        if connection:
+            layers_group_title = "Layers of '{}'".format(connection["name"])
+            self.grpLayers.setTitle(layers_group_title)
+
     def _handle_tab_change(self, current_index):
         self.settings.setValue(self._CONNECTIONS_TAB, current_index)
 
-    @pyqtSlot(dict)
     def _handle_connect(self, connection):
-        self._current_connection = connection
-        self.on_connect.emit(connection)
-        active_tab = self.tabConnections.currentWidget()
-        if active_tab != self.tabFile:
-            self.txtPath.setText("")
+        self._update_layers_group_title(connection)
+        if connection:
+            self._current_connection = connection
+            self.on_connect.emit(connection)
 
-    @pyqtSlot('QString')
     def _handle_connection_change(self, name):
         self.settings.setValue(self._CURRENT_ONLINE_CONNECTION, name)
         self.set_layers([])
@@ -514,22 +668,18 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
         if open_file_name and os.path.isfile(open_file_name):
             self.txtPath.setText(open_file_name)
-
             connection = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
-
             self._handle_path_or_folder_selection(connection)
 
-    def _select_trex_cache_folder(self):
-        open_file_name = QFileDialog.getExistingDirectory(None, "Select t-rex Cache directory", self.browse_path)
+    def _select_directory(self):
+        open_file_name = QFileDialog.getExistingDirectory(None, "Select directory", self.browse_path)
         if open_file_name and os.path.isdir(open_file_name):
-            self.txtTrexCachePath.setText(open_file_name)
-
-            connection = copy.deepcopy(TREX_CONNECTION_TEMPLATE)
+            self.txtDirectoryPath.setText(open_file_name)
+            connection = copy.deepcopy(DIRECTORY_CONNECTION_TEMPLATE)
             connection["name"] = os.path.basename(open_file_name)
             connection["path"] = open_file_name
-
             self._handle_path_or_folder_selection(connection)
 
     def _handle_path_or_folder_selection(self, connection):
@@ -543,18 +693,42 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
     def _on_zoom_change(self):
         self.on_zoom_change.emit()
 
-    def set_current_zoom_level(self, zoom_level):
-        self.options.set_zoom_level(zoom_level)
+    def set_current_zoom_level(self, zoom_level, set_immediately=True):
+        """
+         Sets the zoom level in the spinner for the manual zoom selection.
+        :param zoom_level:
+        :param set_immediately: If true, the value will directly be set in the spinner, otherwise it'll be assigned
+            to a variable and only be set, if the "Analysis defaults" button is clicked.
+        :return:
+        """
+        self.options.set_zoom_level(zoom_level, set_immediately=set_immediately)
 
     def set_nr_of_tiles(self, nr_tiles):
         self.options.set_nr_of_tiles(nr_tiles)
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
-        selected_layers = map(lambda i: self.model.item(i.row()).text(), indexes)
+        selected_layers = list(map(lambda i: self.model.item(i.row()).text(), indexes))
+        active_tab = self.tabConnections.currentWidget()
+        if active_tab == self.tabFile and self._current_connection["type"] == ConnectionTypes.MBTiles:
+            self._current_connection["style"] = self.txtMbtilesStyleJsonUrl.text()
+            self.settings.setValue("mbtiles_connection", str(self._current_connection))
+        elif active_tab == self.tabDirectory and self._current_connection["type"] == ConnectionTypes.Directory:
+            self._current_connection["style"] = self.txtDirectoryStyleJsonUrl.text()
+            self.settings.setValue("directory_connection", str(self._current_connection))
         self.on_add.emit(self._current_connection, selected_layers)
 
-    def show(self):
+    def set_current_connection_already_loaded(self, is_loaded):
+        self._current_connection_already_loaded = is_loaded
+        self._update_action_text(self._current_connection)
+
+    def show(self, current_connection):
+        self._update_action_text(current_connection)
+        active_tab = self.tabConnections.currentWidget()
+        if active_tab == self.tabFile and self._mbtiles_conn and current_connection != self._mbtiles_conn:
+            self.connect(self._mbtiles_conn)
+        elif active_tab == self.tabDirectory and self._directory_conn and current_connection != self._mbtiles_conn:
+            self.connect(self._directory_conn)
         self.exec_()
 
     def keep_dialog_open(self):
@@ -562,7 +736,7 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
 
     def set_layers(self, layers):
         self.model.removeRows(0, self.model.rowCount())
-        for row_index, layer in enumerate(sorted(layers)):
+        for row_index, layer in enumerate(layers):
             for header_index, header in enumerate(self._table_headers.keys()):
                 header_value = self._table_headers[header]
                 if header_value in layer:
@@ -570,17 +744,24 @@ class ConnectionsDialog(QtGui.QDialog, Ui_DlgConnections):
                 else:
                     value = "-"
                 self.model.setItem(row_index, header_index, QStandardItem(value))
+        self.model.sort(0)
         add_enabled = layers is not None and len(layers) > 0
         self.btnAdd.setEnabled(add_enabled)
 
 
-class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
+class EditPostgisConnectionDialog(QDialog, Ui_DlgEditPostgisConnection):
 
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         _update_size(self)
         self._connection = None
+
+    def set_mode(self, edit_mode):
+        if edit_mode:
+            self.setWindowTitle("Edit Connection")
+        else:
+            self.setWindowTitle("Create Connection")
 
     def set_connection(self, connection):
         self._connection = copy.deepcopy(connection)
@@ -606,25 +787,32 @@ class EditPostgisConnectionDialog(QtGui.QDialog, Ui_DlgEditPostgisConnection):
         return self._connection
 
 
-class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
+class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
 
     def __init__(self):
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
         self.setupUi(self)
         self.txtName.textChanged.connect(self._update_save_btn_state)
         self.txtUrl.textChanged.connect(self._update_save_btn_state)
         self._connection = None
         _update_size(self)
 
+    def set_mode(self, edit_mode):
+        if edit_mode:
+            self.setWindowTitle("Edit Connection")
+        else:
+            self.setWindowTitle("Create Connection")
+
     def set_connection(self, connection):
         self._connection = copy.deepcopy(connection)
-        self._set_name_and_path(connection["name"], connection["url"])
-
-    def _set_name_and_path(self, name, path_or_url):
+        name = connection["name"]
+        url = connection["url"]
         if name is not None:
             self.txtName.setText(name)
-        if path_or_url is not None:
-            self.txtUrl.setText(path_or_url)
+        if url is not None:
+            self.txtUrl.setText(url)
+        if connection["style"] is not None:
+            self.txtStyleJsonUrl.setText(connection["style"])
 
     @staticmethod
     def _is_url(path):
@@ -647,5 +835,6 @@ class EditTilejsonConnectionDialog(QtGui.QDialog, Ui_DlgEditTileJSONConnection):
     def get_connection(self):
         self._connection["name"] = self.txtName.text()
         self._connection["url"] = self.txtUrl.text()
+        self._connection["style"] = self.txtStyleJsonUrl.text()
         return self._connection
 

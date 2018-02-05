@@ -1,25 +1,30 @@
 matrix:
-  allow_failures:
-    - os: osx
   include:
     - language: python
       sudo: required
       python: '2.7'
+      branches:
+        only:
+        - master
+        - develop
       services:
         - docker
       before_install:
-        - docker-compose build
+        - docker-compose build qgis2
       install:
         - docker-compose run -d --name qgis2 qgis2
         - sleep 10
       script:
-        - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
+        - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
+      after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
 
     - language: cpp
+      branches:
+          only:
+          - develop
       os:
-      - linux
-      - osx
+        - linux
       compiler:
         - gcc
         - clang
@@ -27,13 +32,54 @@ matrix:
         - sudo apt-get update -qq
         - sudo apt-get install gcc-multilib g++-multilib -y
       script:
-      - git clone https://github.com/mapbox/protozero.git ../protozero
-      - git clone https://github.com/mapbox/vtzero.git ../vtzero
-      - cd ../vtzero
-      - git submodule update --init
-      - cd $TRAVIS_BUILD_DIR
-      - make linux
-      - make osx
+        - git clone https://github.com/mapbox/protozero.git ../protozero
+        - git clone https://github.com/mapbox/vtzero.git ../vtzero
+        - cd ../vtzero
+        - git submodule update --init
+        - cd $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
+        - sudo rm *.so && sudo rm *.dll && cd ../..
+        - make linux
+        - cd ..
+        - docker run --rm dockcross/windows-x64 > ./dockcross-windows-x64 && chmod +x ./dockcross-windows-x64
+        - docker run --rm dockcross/windows-x86 > ./dockcross-windows-x86 && chmod +x ./dockcross-windows-x86
+        - ./dockcross-windows-x64 sh -c "cd Vector-Tiles-Reader-QGIS-Plugin && make windows64_dockcross"
+        - ./dockcross-windows-x86 sh -c "cd Vector-Tiles-Reader-QGIS-Plugin && make windows32_dockcross"
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        target_branch: pbf2geojson_travis_auto_build
+        local_dir: Vector-Tiles-Reader-QGIS-Plugin/ext-libs/pbf2geojson
+        on:
+          branch: develop
+
+    - language: cpp
+      branches:
+          only:
+          - develop
+      os:
+        - osx
+      compiler:
+        - gcc
+#      before_script:
+#        - sudo apt-get update -qq
+#        - sudo apt-get install gcc-multilib g++-multilib -y
+      script:
+        - git clone https://github.com/mapbox/protozero.git ../protozero
+        - git clone https://github.com/mapbox/vtzero.git ../vtzero
+        - cd ../vtzero
+        - git submodule update --init
+        - cd $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
+        - sudo rm *.so && sudo rm *.dll && cd ../..
+        - make osx
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        target_branch: Vector-Tiles-Reader-QGIS-Plugin/pbf2geojson_travis_auto_build_osx
+        local_dir: ext-libs/pbf2geojson
+        on:
+          branch: develop
 
 notifications:
     on_success: never # default: change

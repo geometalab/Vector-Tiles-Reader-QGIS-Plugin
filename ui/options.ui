@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>752</width>
-    <height>275</height>
+    <height>283</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+   <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>275</height>
+    <height>249</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -29,16 +29,49 @@
    <string>Options</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="10" column="0" colspan="2">
+   <item row="6" column="1">
+    <widget class="QRadioButton" name="rbZoomMax">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Max. Zoom</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string notr="true">buttonGroup</string>
+     </attribute>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkClipTiles">
+     <property name="text">
+      <string>Clip each tile at bounds (slow)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0" colspan="2">
     <widget class="QCheckBox" name="chkApplyStyles">
      <property name="toolTip">
       <string>Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)</string>
      </property>
      <property name="text">
-      <string>Apply predefined OpenMapTiles style</string>
+      <string>Apply GL JSON style (if specified)</string>
      </property>
      <property name="checked">
       <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkMergeTiles">
+     <property name="text">
+      <string>Merge tiles (slow)</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
@@ -46,9 +79,15 @@
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QRadioButton" name="rbZoomManual">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string/>
        </property>
+       <attribute name="buttonGroup">
+        <string notr="true">buttonGroup</string>
+       </attribute>
       </widget>
      </item>
      <item alignment="Qt::AlignLeft">
@@ -86,46 +125,87 @@
      </item>
     </layout>
    </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>20</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Zoom</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkClipTiles">
-     <property name="text">
-      <string>Clip each tile at bounds</string>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="0" colspan="2">
+   <item row="12" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="btnResetToBasemapDefaults">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
-        <string>Base Map Defaults</string>
+        <string>Base map defaults</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+       <property name="autoExclusive">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btnResetToAnalysisDefaults">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
-        <string>Analysis Defaults</string>
+        <string>Analysis defaults</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="autoExclusive">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btnResetToInspectionDefaults">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
-        <string>Inspection Defaults</string>
+        <string>Inspection defaults</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="autoExclusive">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnManualSettings">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Manual</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <property name="autoExclusive">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -143,6 +223,16 @@
       </spacer>
      </item>
     </layout>
+   </item>
+   <item row="4" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkAutoZoom">
+     <property name="text">
+      <string>Auto reload on change of view</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item row="1" column="0" colspan="2">
     <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,0,0,0">
@@ -206,49 +296,36 @@
      </item>
     </layout>
    </item>
-   <item row="9" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="QCheckBox" name="chkMergeTiles">
+   <item row="10" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkSetBackgroundColor">
      <property name="text">
-      <string>Merge Tiles (slow)</string>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QRadioButton" name="rbAutoZoom">
-     <property name="text">
-      <string>Auto (scale based)</string>
+      <string>Set project background color</string>
      </property>
      <property name="checked">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
-    <widget class="QRadioButton" name="rbZoomMax">
-     <property name="text">
-      <string>Max. Zoom</string>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>20</height>
+      </size>
      </property>
-     <property name="checked">
-      <bool>false</bool>
+     <property name="text">
+      <string>Fix Zoom</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0" colspan="2">
+    <widget class="QCheckBox" name="chkIgnoreCrsFromMetadata">
+     <property name="toolTip">
+      <string>If checked, EPSG:3857 will be used to calculate the tile extent from the current QGIS view extent</string>
+     </property>
+     <property name="text">
+      <string>Ignore CRS from metadata</string>
      </property>
     </widget>
    </item>
@@ -259,7 +336,6 @@
   <tabstop>spinNrOfLoadedTiles</tabstop>
   <tabstop>chkMergeTiles</tabstop>
   <tabstop>chkClipTiles</tabstop>
-  <tabstop>rbAutoZoom</tabstop>
   <tabstop>rbZoomMax</tabstop>
   <tabstop>rbZoomManual</tabstop>
   <tabstop>zoomSpin</tabstop>
@@ -270,4 +346,7 @@
  </tabstops>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>

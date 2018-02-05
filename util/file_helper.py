@@ -1,15 +1,19 @@
 import os
-import glob
-import uuid
 import tempfile
 import sys
-import cPickle as pickle
 import time
-from log_helper import info, critical, warn, debug
+import shutil
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle as pickle
+from .log_helper import info, critical, warn, debug
 
 
-geojson_folder = "geojson"
+geojson_folder = "tmp"
 max_cache_age_minutes = 1440  # 24 hours
+
+_temp_dir = tempfile.gettempdir()
 
 
 def get_plugin_directory():
@@ -17,28 +21,16 @@ def get_plugin_directory():
     return path
 
 
-def paths_equal(path1, path2):
-    return _normalize_path(path1) == _normalize_path(path2)
+def get_style_folder(connection_name):
+    folder = os.path.join(get_temp_dir(), "styles", connection_name)
+    return folder
 
 
-def _normalize_path(path):
-    path = os.path.normpath(os.path.abspath(path))
-    if sys.platform.startswith("win32"):
-        try:
-            from ctypes import create_unicode_buffer, windll
-            BUFFER_SIZE = 500
-            buffer = create_unicode_buffer(BUFFER_SIZE)
-            get_long_path_name = windll.kernel32.GetLongPathNameW
-            get_long_path_name(unicode(path), buffer, BUFFER_SIZE)
-            path = os.path.normpath(buffer.value)
-        except:
-            info("failed: {}", sys.exc_info()[1])
-    return path
-
-
-def get_styles():
-    folder = os.path.join(get_plugin_directory(), "styles")
-    styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+def get_styles(connection_name):
+    folder = get_style_folder(connection_name)
+    styles = []
+    if os.path.isdir(folder):
+        styles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     return styles
 
 
@@ -50,57 +42,52 @@ def get_cache_directory():
     return get_temp_dir("cache")
 
 
-def get_cached_tile(file_name):
-    file_path = os.path.join(get_cache_directory(), file_name)
-    tile = None
+def _get_cache_entry_path(cache_name, zoom_level, x, y):
+    return os.path.join(get_cache_directory(), cache_name, str(zoom_level), str(x), "{}.bin".format(y))
+
+
+def get_cache_entry(cache_name, zoom_level, x, y):
+    file_path = _get_cache_entry_path(cache_name=cache_name, zoom_level=zoom_level, x=x, y=y)
+    decoded_data = None
     try:
-        if os.path.exists(file_path):
+        if os.path.isfile(file_path):
             age_in_seconds = int(time.time()) - os.path.getmtime(file_path)
             is_deprecated = age_in_seconds > max_cache_age_minutes * 60
             if is_deprecated:
                 os.remove(file_path)
             else:
                 with open(file_path, 'rb') as f:
-                    tile = pickle.load(f)
+                    decoded_data = pickle.load(f)
     except:
-        debug("Error while reading cache entry {}: {}", file_name, sys.exc_info()[1])
-    return tile
+        critical("Error while reading cache entry {}: {}", file_path, sys.exc_info()[1])
+    return decoded_data
 
 
-def get_cached_tile_file_name(source_name, zoom_level, col, row):
-    return "{}.{}.{}.{}.bin".format(source_name, zoom_level, col, row)
-
-
-def cache_tile(tile, source_name):
-    cache_file_name = get_cached_tile_file_name(source_name=source_name,
-                                                zoom_level=tile.zoom_level,
-                                                col=tile.column,
-                                                row=tile.row)
-    file_path = os.path.join(get_cache_directory(), cache_file_name)
+def cache_tile(cache_name, zoom_level, x, y, decoded_data):
+    file_path = _get_cache_entry_path(cache_name=cache_name, zoom_level=zoom_level, x=x, y=y)
     if not os.path.isfile(file_path):
-        if not tile.decoded_data:
-            warn("Trying to cache a tile without data: {}", tile)
+        if not decoded_data:
+            warn("Trying to cache a tile without data: {}: {},{},{}", cache_name, zoom_level, x, y)
+        else:
+            try:
+                directory = os.path.dirname(file_path)
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+                with open(file_path, 'wb') as f:
+                    pickle.dump(decoded_data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            except:
+                critical("Error during caching of '{}': {}", file_path, sys.exc_info()[1])
 
-        try:
-            with open(file_path, 'wb') as f:
-                pickle.dump(tile, f, pickle.HIGHEST_PROTOCOL)
-        except:
-            critical("Error while writing tile '{}' to cache: {}", str(tile), sys.exc_info()[1])
 
 
 def get_sample_data_directory():
     return os.path.join(get_plugin_directory(), "sample_data")
 
 
-def get_home_directory():
-    return os.path.expanduser("~")
-
-
 def get_temp_dir(path_extension=None):
-    temp_dir = os.path.join(tempfile.gettempdir(), "vector_tiles_reader")
+    temp_dir = os.path.join(_temp_dir, "vector_tiles_reader")
     if path_extension:
         temp_dir = os.path.join(temp_dir, path_extension)
-
     return temp_dir
 
 
@@ -111,12 +98,8 @@ def clear_cache():
     cache = os.path.join(get_cache_directory())
     if not os.path.exists(cache):
         return
-    files = glob.glob(os.path.join(cache, "*"))
-    for f in files:
-        try:
-            os.remove(f)
-        except:
-            warn("File could not be deleted: {}", f)
+
+    shutil.rmtree(get_cache_directory(), ignore_errors=True)
     info("Cache cleared")
 
 
@@ -137,18 +120,12 @@ def get_geojson_file_name(name):
     return os.path.join(path, name_with_extension)
 
 
-def get_unique_geojson_file_name():
-    path = os.path.join(get_temp_dir(), geojson_folder)
-    unique_name = "{}.{}".format(uuid.uuid4(), "geojson")
-    return os.path.join(path, unique_name)
-
-
 def is_sqlite_db(path):
     header_string = "SQLite"
     chunksize = len(header_string)
-    with open(path, "r") as f:
+    with open(path, "rb+") as f:
         content = f.read(chunksize)
-    expected_header = bytearray("SQLite")
+    expected_header = bytearray("SQLite", encoding="UTF-8")
     header_matching = are_headers_equal(content, expected_header)
     return header_matching
 

@@ -1,11 +1,8 @@
 from future import standard_library
 standard_library.install_aliases()
-from log_helper import warn, info
-from qgis.core import QgsNetworkAccessManager
+from .log_helper import warn, info, remove_key
 
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import QUrl
-from PyQt4.QtNetwork import QNetworkRequest
+from .vtr_2to3 import *
 
 
 def url_exists(url):
@@ -16,8 +13,14 @@ def url_exists(url):
     status = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
     result = status == 200
     error = None
-    if status != 200:
-        error = "HTTP HEAD failed: status {}".format(status)
+    if not status:
+        error = reply.errorString()
+    if status == 302:
+        error = "Loading error: Moved Temporarily.\n\nURL incorrect? Missing or incorrect API key?"
+    elif status == 404:
+        error = "Loading error: Resource not found.\n\nURL incorrect?"
+    elif error:
+        error = "Loading error: {}\n\nURL incorrect?".format(error)
 
     return result, error
 
@@ -25,7 +28,6 @@ def url_exists(url):
 def get_async_reply(url, head_only=False):
     m = QgsNetworkAccessManager.instance()
     req = QNetworkRequest(QUrl(url))
-    req.setRawHeader('User-Agent', 'Magic Browser')
     if head_only:
         reply = m.head(req)
     else:
@@ -51,12 +53,12 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed=None, cancelling
         new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
         nr_finished += len(new_finished)
         for reply, tile_coord in new_finished:
+            finished_tiles.add(tile_coord)
             error = reply.error()
             if error:
-                info("Error during network request: {}", error)
+                info("Error during network request: {}, {}", error, reply.url())
             else:
                 content = reply.readAll().data()
-                finished_tiles.add(tile_coord)
                 results.append((tile_coord, content))
             reply.deleteLater()
         QApplication.processEvents()

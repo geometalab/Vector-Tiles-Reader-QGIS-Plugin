@@ -3,22 +3,24 @@ standard_library.install_aliases()
 from builtins import str
 import sqlite3
 import urllib.parse
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import os
 import sys
 import traceback
 
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import QObject, pyqtSignal
-from tile_json import TileJSON
-from log_helper import info, warn, critical, debug
-from tile_helper import (VectorTile,
+from .vtr_2to3 import *
+from .tile_json import TileJSON
+from .log_helper import info, warn, critical, debug
+from .tile_helper import (VectorTile,
                          get_tiles_from_center,
                          get_tile_bounds,
                          create_bounds,
                          WORLD_BOUNDS)
-from network_helper import url_exists, load_tiles_async
-from file_helper import is_sqlite_db
+from .network_helper import url_exists, load_tiles_async
+from .file_helper import is_sqlite_db
 
 _DEFAULT_CRS = "EPSG:3857"
 
@@ -47,6 +49,9 @@ class AbstractSource(QObject):
         pass
 
     def name(self):
+        raise NotImplementedError
+
+    def attribution(self):
         raise NotImplementedError
 
     def min_zoom(self):
@@ -93,7 +98,6 @@ class AbstractSource(QObject):
         :param tiles_to_load: All tile coordinates which shall be loaded
         :param zoom_level: The zoom level which will be loaded
         :param max_tiles: The maximum number of tiles to be loaded
-        :param limit_reacher_handler: A function which will be called, if the potential nr of tiles is greater than the specified limit
         :return:
         """
         raise NotImplementedError
@@ -135,13 +139,16 @@ class ServerSource(AbstractSource):
         return name
 
     def min_zoom(self):
-        return int(self.json.min_zoom())
+        return self.json.min_zoom()
 
     def max_zoom(self):
-        return int(self.json.max_zoom())
+        return self.json.max_zoom()
 
     def mask_level(self):
         return self.json.mask_level()
+
+    def attribution(self):
+        return self.json.attribution()
 
     def scheme(self):
         return self.json.scheme()
@@ -189,6 +196,10 @@ class ServerSource(AbstractSource):
 
 
 class MBTilesSource(AbstractSource):
+
+    def attribution(self):
+        return self._get_metadata_value("attribution", "")
+
     def __init__(self, path):
         AbstractSource.__init__(self)
         if not os.path.isfile(path):
@@ -320,7 +331,8 @@ class MBTilesSource(AbstractSource):
                                    x_min=row["x_min"],
                                    x_max=row["x_max"],
                                    y_min=row["y_min"],
-                                   y_max=row["y_max"])
+                                   y_max=row["y_max"],
+                                   scheme=self.scheme())
         return bounds
 
     @staticmethod
@@ -446,22 +458,32 @@ class MBTilesSource(AbstractSource):
             critical("Db connection failed:", sys.exc_info())
 
 
-class TrexCacheSource(AbstractSource):
+class DirectorySource(AbstractSource):
+
     def __init__(self, path):
         AbstractSource.__init__(self)
         if not os.path.isdir(path):
             raise RuntimeError("The folder does not exist: {}".format(path))
         self.path = path
         metadata_path = os.path.join(path, "metadata.json")
+        if not os.path.isfile(metadata_path):
+            raise RuntimeError("There is no metadata.json in the directory.")
         self.json = TileJSON(metadata_path)
         self.json.load()
 
     def source(self):
         return self.path
 
+    def attribution(self):
+        return self.json.attribution()
+
     def vector_layers(self):
-        data = json.loads(self.json.get_value("json"))["vector_layers"]
-        return data
+        layers = self.json.get_value("vector_layers", is_array=True, is_required=False)
+        if not layers:
+            layers = json.loads(self.json.get_value("json"))["vector_layers"]
+        if not layers:
+            raise RuntimeError("'vector_layers' is required")
+        return layers
 
     def name(self):
         name = self.json.name()
@@ -482,6 +504,9 @@ class TrexCacheSource(AbstractSource):
 
     def scheme(self):
         return self.json.scheme()
+
+    def bounds(self):
+        return self.json.bounds_longlat()
 
     def bounds_tile(self, zoom):
         return self.json.bounds_tile(zoom)

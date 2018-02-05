@@ -4,17 +4,17 @@ from builtins import map
 from builtins import range
 from past.utils import old_div
 from builtins import object
+import math
 import itertools
 import operator
-from global_map_tiles import GlobalMercator
-from log_helper import warn, debug, info
-from qgis.core import (
-    QgsCoordinateReferenceSystem,
-    QgsCoordinateTransform,
-    QgsPoint
-)
+from .global_map_tiles import GlobalMercator
+from .log_helper import warn, debug, info
+from .vtr_2to3 import *
 
-
+"""
+ * Top left: (lng=WORLD_BOUNDS[0], lat=WORLD_BOUNDS[3])
+ * Bottom right: (lng=WORLD_BOUNDS[2], lat=WORLD_BOUNDS[1])
+"""
 WORLD_BOUNDS = [-180, -85.05112878, 180, 85.05112878]
 
 
@@ -30,7 +30,7 @@ class VectorTile(object):
         self.extent = tile_to_latlon(self.zoom_level, self.column, self.row, self.scheme)
     
     def __str__(self):
-        return "Tile (zoom={}, col={}, row={}".format(self.zoom_level, self.column, self.row)
+        return "Tile ({}, {}, {})".format(self.zoom_level, self.column, self.row)
 
     def id(self):
         return "{};{}".format(self.column, self.row)
@@ -52,7 +52,7 @@ def clamp_bounds(bounds_to_clamp, clamp_values):
     y_min = clamp(bounds_to_clamp["y_min"], low=clamp_values["y_min"])
     x_max = clamp(bounds_to_clamp["x_max"], low=x_min, high=clamp_values["x_max"])
     y_max = clamp(bounds_to_clamp["y_max"], low=y_min, high=clamp_values["y_max"])
-    return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max)
+    return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max, bounds_to_clamp["scheme"])
 
 
 def extent_overlap_bounds(extent, bounds):
@@ -62,7 +62,7 @@ def extent_overlap_bounds(extent, bounds):
              bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
 
 
-def create_bounds(zoom, x_min, x_max, y_min, y_max):
+def create_bounds(zoom, x_min, x_max, y_min, y_max, scheme):
     return {
         "zoom": int(zoom),
         "x_min": int(x_min),
@@ -70,7 +70,8 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max):
         "y_min": int(y_min),
         "y_max": int(y_max),
         "width": int(x_max - x_min + 1),
-        "height": int(y_max - y_min + 1)
+        "height": int(y_max - y_min + 1),
+        "scheme": scheme
     }
 
 
@@ -91,6 +92,8 @@ def _center_tiles(tile_limit, extent):
 def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
+    :param scheme: The tile scheme for which the tile coordinates shall be returned
+    :param source_crs: The CRS in which lat/lon are represented
     :param zoom:
     :param lat:
     :param lng:
@@ -103,19 +106,16 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     if lng is None:
         raise RuntimeError("Longitude is required")
 
-    if get_code_from_epsg(source_crs) != 4326:
-        lng, lat = convert_coordinate(source_crs=source_crs, target_crs=4326, lat=lat, lng=lng)
-
-    lng = clamp(lng, WORLD_BOUNDS[0], WORLD_BOUNDS[2])
-    lat = clamp(lat, WORLD_BOUNDS[1], WORLD_BOUNDS[3])
-
-    gm = GlobalMercator()
-    mx, my = gm.LatLonToMeters(lat=lat, lon=lng)
-    col, row = gm.MetersToTile(mx=mx, my=my, zoom=zoom)
+    if get_code_from_epsg(source_crs) != 3857:
+        lng, lat = convert_coordinate(source_crs=source_crs, target_crs=3857, lat=lat, lng=lng)
+    gm = GlobalMercator(tileSize=512)
+    global_mercator_output_scheme = "tms"
+    col, row = gm.MetersToTile(mx=lng, my=lat, zoom=zoom)   # GlobalMercator returns in TMS scheme here
     col = clamp(col, low=0)
     row = clamp(row, low=0)
-    if scheme != "tms":
-        row = change_scheme(zoom, row)
+    if scheme != global_mercator_output_scheme:
+        row = clamp(change_scheme(zoom, row), low=0)
+
     return int(col), int(row)
 
 
@@ -126,7 +126,10 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
     crs_src = QgsCoordinateReferenceSystem(source_crs)
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
     xform = QgsCoordinateTransform(crs_src, crs_dest)
-    x, y = xform.transform(QgsPoint(lng, lat))
+    try:
+        x, y = xform.transform(QgsPoint(lng, lat))
+    except TypeError:
+        x, y = xform.transform(lng, lat)
     return x, y
 
 
@@ -140,14 +143,14 @@ def get_code_from_epsg(epsg_string):
 def tile_to_latlon(zoom, x, y, scheme="tms"):
     """
      * Returns the tile extent in ESPG:3857 coordinates
-    :param zoom: 
-    :param x: 
-    :param y: 
-    :param scheme: 
-    :return: 
+    :param zoom:
+    :param x:
+    :param y:
+    :param scheme:
+    :return:
     """
 
-    gm = GlobalMercator()
+    gm = GlobalMercator(tileSize=512)
     if scheme != "tms":
         y = change_scheme(zoom, y)
     return gm.TileBounds(x, y, zoom)
@@ -164,8 +167,6 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
     """
     if scheme not in ["xyz", "tms"]:
         raise RuntimeError("Scheme not supported: {}".format(scheme))
-    if not bounds:
-        warn("Bounds is not available")
     tile_bounds = None
     if bounds:
         lng_min = bounds[0]
@@ -181,7 +182,11 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
         y_min = min(xy_min[1], xy_max[1])
         y_max = max(xy_min[1], xy_max[1])
 
-        tile_bounds = create_bounds(zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max)
+        max_tile = 2**zoom-1
+        x_max = clamp(x_max, high=max_tile)
+        y_max = clamp(y_max, high=max_tile)
+
+        tile_bounds = create_bounds(zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, scheme=scheme)
     return tile_bounds
 
 
@@ -237,7 +242,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
     max_x = max([t[0] for t in available_tiles])
     max_y = max([t[1] for t in available_tiles])
 
-    center_tile_offset = (int(round(old_div((max_x-min_x),2))), int(round(old_div((max_y-min_y),2))))
+    center_tile_offset = (int(round(old_div((max_x-min_x), 2))), int(round(old_div((max_y-min_y), 2))))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
     if len(selected_tiles) < nr_of_tiles and  center_tile in available_tiles:
@@ -246,10 +251,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
     current_tile = center_tile
     nr_of_steps = 0
     current_direction = 0
-    while len(selected_tiles) < nr_of_tiles:
-        if should_cancel_func and should_cancel_func():
-            break
-
+    while len(selected_tiles) < nr_of_tiles and not(should_cancel_func and should_cancel_func()):
         #  always after two direction changes, the step length has to be increased by one
         if current_direction % 2 == 0:
             nr_of_steps += 1
@@ -272,16 +274,16 @@ def _sum_tiles(first_tile, second_tile):
 
 def get_zoom_by_scale(scale):
     if scale < 0:
-        scale = 0
+        return 23
     zoom = 0
-    for lower_bound in sorted(_zoom_level_by_lower_scale_bound, key=lambda k: k*-1):
-        if scale >= lower_bound:
-            zoom = _zoom_level_by_lower_scale_bound[lower_bound]
+    for upper_bound in sorted(_zoom_level_by_upper_scale_bound):
+        if scale < upper_bound:
+            zoom = _zoom_level_by_upper_scale_bound[upper_bound]
             break
     return zoom
 
 
-_zoom_level_by_lower_scale_bound = {
+_zoom_level_by_upper_scale_bound = {
     1000000000: 0,
     500000000: 1,
     200000000: 2,

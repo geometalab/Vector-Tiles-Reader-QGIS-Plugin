@@ -1,19 +1,22 @@
 [![Build Status](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin.svg?branch=master)](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin)
-[![Coverage Status](https://coveralls.io/repos/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin/badge.svg?branch=develop)](https://coveralls.io/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin?branch=develop)
+[![Coverage Status](https://coveralls.io/repos/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin/badge.svg?branch=HEAD)](https://coveralls.io/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin?branch=HEAD)
 
 # Vector Tiles Reader QGIS-Plugin
 
-This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a t-rex cache.
+This Python plugin reads Mapbox Vector Tiles (MVT) from vector tile servers, local MBTiles files or from a directory in zxy structure.
 
-For more information about the Vector Tiles concept and limitations of the plugin see homepage.
+![](sample_data/ui.png)
 
-Important web links:
-* __Homepage__ : http://giswiki.hsr.ch/Vector_Tiles_Reader_QGIS_Plugin
-* Issues tracker : https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
-* Code repository: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin (this webpage)
+## Help
+A help can be found here: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help
 
-## User Guide
-A user guide can be found here: https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/User-Guide#user-guide
+## Styling
+The plugin can create a QGIS styling from a Mapbox GL JSON style on the fly.
+
+![](sample_data/osm_bright.png)
+
+![](sample_data/klokantech_basic.png)
+
 
 ## License
 
@@ -36,9 +39,9 @@ Acknowledgments:
 ## Docker Tests
 
 ```
-docker-compose build
+docker-compose build qgis2
 docker-compose run -d --name qgis2 qgis2
-docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader.tests.test_all"
+docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
 ```
 
 
@@ -53,7 +56,7 @@ Name conventions for Vector Tiles Reader QGIS Plugin:
 
 ## Requirements
 * QGIS 2.18
-* This Plugin was tested on Ubuntu 16.10 and Windows 10
+* This Plugin was tested on Ubuntu 16.10, Windows 10 and OSX
 
 ## Installation
 ### QGIS Plugins
@@ -68,10 +71,14 @@ Copy cloned folder or create symlink to:
 
 To create the symlink open a command prompt as Administrator and run:
 
-**mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" X:\{YourPathToTheCloned}\vector_tiles_reader**
+```
+mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" X:\{YourPathToTheCloned}\vector_tiles_reader
+```
 
 ### Ubuntu
-The script install.sh creates a symlink from the current directory to the qgis plugins directory
+```
+ln -sr ./ ~/.qgis2/python/plugins/Vector-Tile-Reader
+```
 
 ## FAQ
 
