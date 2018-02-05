@@ -661,6 +661,7 @@ class VtReader(QObject):
         layer = QgsVectorLayer(json_src, layer_name, "ogr")
 
         layer.setCustomProperty("VectorTilesReader/vector_tile_source", self._connection["name"])
+        layer.setCustomProperty("VectorTilesReader/vector_tile_url", source_url)
         layer.setCustomProperty("VectorTilesReader/zoom_level", zoom_level)
         layer.setCustomProperty("VectorTilesReader/geo_type", geo_type)
         layer.setShortName(layer_name)
