@@ -49,7 +49,7 @@ matrix:
         skip_cleanup: true
         github_token: $GITHUB_TOKEN
         target_branch: pbf2geojson_travis_auto_build
-        local_dir: Vector-Tiles-Reader-QGIS-Plugin/ext-libs/pbf2geojson
+        local_dir: ext-libs/pbf2geojson
         on:
           branch: develop
 
