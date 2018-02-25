@@ -245,6 +245,7 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         connection = copy.deepcopy(self.connections[name])
         if self._predefined_connections and name in self._predefined_connections and connection["token"]:
             connection["url"] = connection["url"].replace("{token}", connection["token"])
+            connection["style"] = connection["style"].replace("{token}", connection["token"])
         return connection
 
 
@@ -535,6 +536,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     _OMT = "OpenMapTiles.com (default entry with credits)"
     _OMT_CUSTOM_KEY = "OpenMapTiles.com (with custom key)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
+    _MAPCAT = "Mapcat.com (default entry with credits)"
 
     _predefined_tilejson_connections = {
         _OMT: {
@@ -553,6 +555,12 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "name": _MAPZEN,
             "url": "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}",
             "token": "mapzen-7SNUCXx"
+        },
+        _MAPCAT: {
+            "name": _MAPCAT,
+            "url": "https://api.mapcat.com/api/mapinit/tile?api_key={token}",
+            "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
+            "token": "VmKNOOCry7SE4c8FyacQ1KxojeWzY1W2aFS0TADq"
         }
     }
 
