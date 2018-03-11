@@ -885,7 +885,7 @@ class VtrPlugin():
         cancel_button.clicked.connect(self._cancel_load)
         message_bar_item.layout().addWidget(progress_bar)
         message_bar_item.layout().addWidget(cancel_button)
-        self.iface.messageBar().pushWidget(message_bar_item, self.iface.messageBar().INFO)
+        self.iface.messageBar().pushWidget(message_bar_item)
         self.message_bar_item = message_bar_item
         self.progress_bar = progress_bar
 
