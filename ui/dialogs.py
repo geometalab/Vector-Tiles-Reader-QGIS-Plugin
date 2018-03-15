@@ -314,12 +314,6 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
         self._current_zoom = None
 
-    def _on_auto_zoom_enabled(self, enabled):
-        self._set_option(self._AUTO_ZOOM, enabled)
-        self.rbZoomManual.setEnabled(not enabled)
-        self.rbZoomMax.setEnabled(not enabled)
-        self.zoomSpin.setEnabled(not enabled)
-
     def _on_bg_color_change(self, enabled):
         self._set_option(self._SET_BACKGROUND_COLOR, enabled)
         if enabled and not self.chkApplyStyles.isChecked():
@@ -371,6 +365,13 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
     def _set_option(self, key, value):
         self._options[key] = value
         self.settings.setValue("options/{}".format(key), value)
+
+    def _on_auto_zoom_enabled(self, enabled):
+        self._set_option(self._AUTO_ZOOM, enabled)
+        self.rbZoomManual.setEnabled(not enabled)
+        self.rbZoomMax.setEnabled(not enabled)
+        self.zoomSpin.setEnabled(not enabled)
+        self._zoom_change_handler()
 
     def _on_manual_zoom_enabled(self, enabled):
         self._set_option(self._FIX_ZOOM_ENABLED, enabled)
@@ -573,6 +574,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         QDialog.__init__(self)
         self.setupUi(self)
         self.action_text = "Add"
+        self._nr_of_tiles = None
         self._current_connection_already_loaded = False
         self.settings = QSettings("VtrSettings")
         self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
@@ -713,6 +715,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     def set_nr_of_tiles(self, nr_tiles):
         self.options.set_nr_of_tiles(nr_tiles)
+        self._nr_of_tiles = nr_tiles
 
     def _load_tiles_for_connection(self):
         indexes = self.tblLayers.selectionModel().selectedRows()
@@ -724,7 +727,17 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         elif active_tab == self.tabDirectory and self._current_connection["type"] == ConnectionTypes.Directory:
             self._current_connection["style"] = self.txtDirectoryStyleJsonUrl.text()
             self.settings.setValue("directory_connection", str(self._current_connection))
-        self.on_add.emit(self._current_connection, selected_layers)
+
+        load = True
+        threshold = 20 if QGIS3 else 100
+        if self._nr_of_tiles > threshold:
+            msg = "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?"\
+                .format(self._nr_of_tiles)
+            reply = QMessageBox.question(self.activateWindow(), 'Confirm Load', msg, QMessageBox.Yes, QMessageBox.No)
+            if reply != QMessageBox.Yes:
+                load = False
+        if load:
+            self.on_add.emit(self._current_connection, selected_layers)
 
     def set_current_connection_already_loaded(self, is_loaded):
         self._current_connection_already_loaded = is_loaded
@@ -737,6 +750,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             self.connect(self._mbtiles_conn)
         elif active_tab == self.tabDirectory and self._directory_conn and current_connection != self._mbtiles_conn:
             self.connect(self._directory_conn)
+        self.on_zoom_change.emit()
         self.exec_()
 
     def keep_dialog_open(self):
