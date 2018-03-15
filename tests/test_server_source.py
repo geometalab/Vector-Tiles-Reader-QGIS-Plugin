@@ -3,7 +3,6 @@
 # This code is licensed under the GPL 2.0 license.
 #
 import unittest
-import os
 import sys
 from util.tile_source import ServerSource
 import mock
@@ -26,7 +25,7 @@ class ServerSourceTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as ctx:
             ServerSource("http://localhost/mytilejson.json")
         error = "Loading error: Connection refused\n\nURL incorrect?"
-        print ctx.exception
+        print(ctx.exception)
         self.assertTrue(error in ctx.exception)
 
     @mock.patch("util.tile_source.TileJSON")

@@ -1,4 +1,4 @@
-FROM boundlessgeo/qgis-testing-environment:master
+FROM mnboos/qgis-testing-environment:release-3_0
 MAINTAINER Martin Boos
 
 RUN Xvfb :99 &

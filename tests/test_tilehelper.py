@@ -17,6 +17,14 @@ class TileHelperTests(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
+    def test_convert_coordinate(self):
+        target_lon = 951781.6462824893
+        target_lat = 6053782.39151094
+        lon, lat = convert_coordinate(4326, 3857, 47.68, 8.55)
+        print(lon, lat)
+        assert lon == target_lon
+        assert lat == target_lat
+
     def test_change_scheme(self):
         self.assertEqual(0, change_scheme(zoom=0, y=0))
         self.assertEqual(0, change_scheme(zoom=1, y=1))

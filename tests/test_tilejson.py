@@ -1,5 +1,5 @@
 import unittest
-from util.tile_helper import get_tile_bounds, latlon_to_tile, tile_to_latlon, WORLD_BOUNDS
+from util.tile_helper import get_tile_bounds, tile_to_latlon, WORLD_BOUNDS
 from util.tile_json import TileJSON
 
 

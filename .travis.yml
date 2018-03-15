@@ -10,32 +10,34 @@ matrix:
       services:
         - docker
       before_install:
+        - cd docker
         - docker-compose build qgis2
       install:
         - docker-compose run -d --name qgis2 qgis2
+        - cd ..
         - sleep 10
       script:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
       after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
-    - language: python
-      sudo: required
-      python: '3.6'
-      branches:
-        only:
-        - master
-        - develop
-      services:
-        - docker
-      before_install:
-        - docker-compose build qgis3
-      install:
-        - docker-compose run -d --name qgis3 qgis3
-        - sleep 10
-      script:
-        - docker exec -it qgis3 sh -c "qgis_testrunner.sh vector_tiles_reader"
-      after_success:
-        - docker exec -it qgis3 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
+#    - language: python
+#      sudo: required
+#      python: '3.6'
+#      branches:
+#        only:
+#        - master
+#        - develop
+#      services:
+#        - docker
+#      before_install:
+#        - cd docker
+#        - docker-compose build qgis3
+#      install:
+#        - docker-compose run -d --name qgis3 qgis3
+#        - cd ..
+#        - sleep 10
+#      script:
+#        - docker exec -it qgis3 sh -c "qgis_testrunner.sh vector_tiles_reader"
 
     - language: cpp
       branches:
