@@ -3,9 +3,9 @@
 # This code is licensed under the GPL 2.0 license.
 #
 import unittest
-import os
 import sys
-from qgis.core import *
+from qgis.utils import iface  # dont remove! is required for testing (iface wont be found otherwise)
+from util.vtr_2to3 import *
 from vt_reader import VtReader
 from util.connection import MBTILES_CONNECTION_TEMPLATE
 import copy
