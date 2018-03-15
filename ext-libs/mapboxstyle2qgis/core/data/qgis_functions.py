@@ -34,6 +34,7 @@ def interpolate_exp(zoom, base, lower_zoom, upper_zoom, lower_value, upper_value
     ratio = get_exponential_interpolation_factor(zoom, base, lower_zoom, upper_zoom)
     return interpolate(lower_value, upper_value, ratio)
 
+
 global mvtr_icons_dir
 mvtr_icons_dir = None
 global mvtr_icons_data

@@ -396,8 +396,6 @@ class VtrPlugin():
             return
         url = connection["style"]
         info("Creating styles from: {}", url)
-        from mapboxstyle2qgis import core
-        core.register_qgis_expressions()
         if not url_exists(url):
             info("StyleJSON not found. URL invalid?")
         else:
@@ -405,6 +403,8 @@ class VtrPlugin():
             status, data = load_url(url)
             if status == 200:
                 try:
+                    from mapboxstyle2qgis import core
+                    core.register_qgis_expressions()
                     info("Styles will be written to: {}", output_directory)
                     core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
                 except:
