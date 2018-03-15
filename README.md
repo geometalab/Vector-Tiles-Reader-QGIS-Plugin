@@ -65,14 +65,24 @@ Download the latest published release inside QGIS:
 2. Search for 'Vector Tiles Reader'
 3. Install
 
-### Windows
+### Windows (QGIS 2)
 Copy cloned folder or create symlink to: 
 %userprofile%/.qgis2/python/plugins
 
 To create the symlink open a command prompt as Administrator and run:
-
 ```
-mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" X:\{YourPathToTheCloned}\vector_tiles_reader
+:: Set the path on the next line to the directory where the plugin is located
+
+set PATH_TO_VTR="C:\my_projects\vector_tiles_reader"
+mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" %PATH_TO_VTR%
+```
+
+### Windows (QGIS 3)
+```
+:: Set the path on the next line to the directory where the plugin is located
+
+set PATH_TO_VTR="C:\my_projects\vector_tiles_reader"
+mklink /D "%appdata%\QGIS\QGIS3\profiles\default\python\plugins\vector_tiles_reader" %PATH_TO_VTR%
 ```
 
 ### Ubuntu
@@ -88,4 +98,4 @@ Any vector tile service, implementing the [TileJSON specification](https://githu
 
 For the feature to work, you have to create a connection using a URL pointing to the TileJSON of the tile service.
 
-For example you can use **http://free&#46;tilehosting&#46;com/data/v3.json?key={API-KEY}** and get your own API-Key from [OpenMapTiles.com](https://openmaptiles.com/hosting/)
+For example you can use `http://free.tilehosting.com/data/v3.json?key={API-KEY}` and get your own API-Key from [OpenMapTiles.com](https://openmaptiles.com/hosting/)
