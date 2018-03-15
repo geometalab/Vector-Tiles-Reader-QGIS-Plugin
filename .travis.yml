@@ -20,6 +20,15 @@ matrix:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
       after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
+#      deploy:
+#        provider: releases
+#        api_key: $GITHUB_TOKEN
+#        file: "FILE TO UPLOAD"
+#        skip_cleanup: true
+#        on:
+#          tags: true
+#          branch: master
+
 #    - language: python
 #      sudo: required
 #      python: '3.6'
