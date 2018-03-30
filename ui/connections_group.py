@@ -1,5 +1,6 @@
 import copy
 import csv
+from ..util.log_helper import info
 from ..util.vtr_2to3 import *
 try:
     from .qt.connections_group_qt5 import Ui_ConnectionsGroup
@@ -23,11 +24,11 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
                 predefined_connection = predefined_connections[name]
                 clone = self._apply_template_connection(predefined_connection)
                 cloned_predefined_connections[name] = clone
+        self._predefined_connections = cloned_predefined_connections
 
         self.setupUi(target_groupbox)
         self._settings = settings
         self._settings_key = settings_key
-        self._predefined_connections = cloned_predefined_connections
         self.btnConnect.clicked.connect(self._handle_connect)
         self.btnEdit.clicked.connect(self._edit_connection)
         self.btnDelete.clicked.connect(self._delete_connection)
@@ -52,6 +53,9 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         for key in clone:
             if key in connection and connection[key]:
                 clone[key] = connection[key]
+        for key in connection:
+            if key not in clone:
+                info("Key '{}' could not be found in the connection template!", key)
         return clone
 
     def _handle_connect(self):
@@ -103,8 +107,14 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
     def _add_loaded_connections_to_combobox(self):
         if self._predefined_connections:
             for index, name in enumerate(self._predefined_connections):
+                conn = self._predefined_connections[name]
+                disabled = "disabled" in conn and conn["disabled"]
                 if name not in self.connections:
-                    self.connections[name] = self._predefined_connections[name]
+                    if not disabled:
+                        self.connections[name] = conn
+                else:
+                    if disabled:
+                        del self.connections[name]
 
         for name in sorted(self.connections):
             is_already_added = self.cbxConnections.findText(name) != -1

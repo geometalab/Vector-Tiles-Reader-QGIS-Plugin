@@ -4,8 +4,8 @@ import ast
 from collections import OrderedDict
 
 from ..util.vtr_2to3 import *
-from options_group import OptionsGroup
-from connections_group import ConnectionsGroup
+from .options_group import OptionsGroup
+from .connections_group import ConnectionsGroup
 
 try:
     from .qt.dlg_about_qt5 import Ui_DlgAbout
@@ -98,6 +98,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
         },
         _MAPZEN: {
+            "disabled": True,
             "name": _MAPZEN,
             "url": "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}",
             "token": "mapzen-7SNUCXx"
