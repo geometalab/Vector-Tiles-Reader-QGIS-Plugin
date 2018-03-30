@@ -177,7 +177,7 @@ class VtrPlugin():
         conn = proj.readEntry("VectorTilesReader", "current_connection", None)[0]
         if conn:
             conn = ast.literal_eval(conn)
-            self.connections_dialog.connect(conn)
+            self.connections_dialog.connect_to(conn)
             self._debouncer.start()
 
     def _on_browse_dir_change(self, diretory_path):
@@ -376,7 +376,9 @@ class VtrPlugin():
                     self.reload_action.setEnabled(False)
                     self.reload_action.setText(self._reload_button_text)
             except RuntimeError:
-                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
+                msg = str(sys.exc_info()[1])
+                msg = msg if msg else 'Sorry, an unknown error occured!'
+                QMessageBox.critical(None, "Error", msg)
                 critical(str(sys.exc_info()[1]))
                 self._current_reader = None
                 self._current_connection_name = None
@@ -794,7 +796,9 @@ class VtrPlugin():
             reader.cancelled.connect(self.reader_cancelled)
             reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
-            QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
+            msg = str(sys.exc_info()[1])
+            msg = msg if msg else 'Sorry, an unknown error occured!'
+            QMessageBox.critical(None, "Error", msg)
             critical(str(sys.exc_info()[1]))
         return reader
 

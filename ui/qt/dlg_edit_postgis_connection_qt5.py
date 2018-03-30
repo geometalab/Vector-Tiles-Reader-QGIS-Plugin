@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'dlg_edit_postgis_connection.ui'
+# Form implementation generated from reading ui file 'qt/dlg_edit_postgis_connection.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #

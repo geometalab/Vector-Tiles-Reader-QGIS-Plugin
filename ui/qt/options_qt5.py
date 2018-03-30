@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'options.ui'
+# Form implementation generated from reading ui file 'qt/options.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #

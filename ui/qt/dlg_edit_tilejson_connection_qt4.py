@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'dlg_edit_tilejson_connection.ui'
+# Form implementation generated from reading ui file 'qt/dlg_edit_tilejson_connection.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #

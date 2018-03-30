@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'dlg_connections.ui'
+# Form implementation generated from reading ui file 'qt/dlg_connections.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
