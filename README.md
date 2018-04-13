@@ -49,13 +49,13 @@ docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
 
 Name conventions for Vector Tiles Reader QGIS Plugin:
 
-* Official full name : "Vector Tiles Reader" or "Vector Tiles Reader QGIS Plugin"
+* Official full name : "Vector Tiles Reader" or "Vector Tiles Reader QGIS-Plugin"
 * Camel Case no space: VectorTilesReader
 * Lower Case no space: vector_tiles_reader
 * Abbreviated name   : vtr
 
 ## Requirements
-* QGIS 2.18
+* QGIS 2.18 (QGIS 3 in preparation)
 * This Plugin was tested on Ubuntu 16.10, Windows 10 and OSX
 
 ## Installation
