@@ -64,7 +64,7 @@ def _apply_source_layer(layer, all_layers):
 
     ref = _get_value_safe(layer, "ref")
     if ref:
-        matching_layers = filter(lambda l: _get_value_safe(l, "id") == ref, all_layers)
+        matching_layers = list(filter(lambda l: _get_value_safe(l, "id") == ref, all_layers))
         if matching_layers:
             target_layer = matching_layers[0]
             for prop in target_layer:
@@ -122,7 +122,7 @@ def process(style_json):
             rule = style["rule"]
             name = style["name"]
             zoom = style["zoom_level"]
-            styles_with_same_target = filter(lambda s: s["name"] != name and s["rule"] == rule and zoom and s["zoom_level"] <= zoom, styles[:index])
+            styles_with_same_target = list(filter(lambda s: s["name"] != name and s["rule"] == rule and zoom and s["zoom_level"] <= zoom, styles[:index]))
             groups_by_name = list(groupby(styles_with_same_target, key=lambda s: s["name"]))
             style["rendering_pass"] = len(groups_by_name)
 
