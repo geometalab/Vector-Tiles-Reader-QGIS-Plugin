@@ -1,0 +1,67 @@
+Credits
+=======
+
+Shapely is written by:
+
+* Sean Gillies <sean.gillies@gmail.com>
+* Oliver Tonnhofer <olt@bogosoft.com>
+* Joshua Arnott <josh@snorfalorpagus.net>
+* Mike Toews <mwtoews@gmail.com>
+* Jacob Wasserman <jwasserman@gmail.com>
+* Aron Bierbaum <aronbierbaum@gmail.com>
+* Allan Adair <allan@rfspot.com>
+* Johannes Schönberger <jschoenberger@demuc.de>
+* georgeouzou <geothrock@gmail.com>
+* Phil Elson <pelson.pub@gmail.com>
+* Howard Butler <hobu.inc@gmail.com>
+* Kelsey Jordahl <kjordahl@enthought.com>
+* dokai <dokai@b426a367-1105-0410-b9ff-cdf4ab011145>
+* Kevin Wurster <kevin@skytruth.org>
+* Gabi Davar <grizzly.nyo@gmail.com>
+* Thibault Deutsch <thibault.deutsch@gmail.com>
+* Dave Collins <dave@hopest.net>
+* fredj <frederic.junod@camptocamp.com>
+* Brad Hards <bradh@frogmouth.net>
+* David Baumgold <david@davidbaumgold.com>
+* Henry Walshaw <henry.walshaw@gmail.com>
+* Jinkun Wang <mejkunw@gmail.com>
+* Marc Jansen <jansen@terrestris.de>
+* Sampo Syrjanen <sampo.syrjanen@here.com>
+* Steve M. Kim <steve@climate.com>
+* Thomas Kluyver <takowl@gmail.com>
+* Morris Tweed <tweed.morris@gmail.com>
+* Naveen Michaud-Agrawal <naveen.michaudagrawal@gmail.com>
+* Jeethu Rao <jeethu@jeethurao.com>
+* Peter Sagerson <psagers.github@ignorare.net>
+* Jason Sanford <jason.sanford@mapmyfitness.com>
+* mindw <grizzly.nyo@gmail.com>
+* Jamie Hall <jamie1212@gmail.com>
+* James Spencer <james.s.spencer@gmail.com>
+* Stephan Hügel <urschrei@gmail.com>
+* Bas Couwenberg <sebastic@xs4all.nl>
+* James Douglass <jamesdouglassusa@gmail.com>
+* Tobias Sauerwein <tobias.sauerwein@camptocamp.com>
+* WANG Aiyong <gepcelway@gmail.com>
+* Brandon Wood <btwood@geometeor.com>
+* BertrandGervais <bertrand.gervais.pro@gmail.com>
+* Andy Freeland <andy@andyfreeland.net>
+* Benjamin Root <ben.v.root@gmail.com>
+* giumas <gmasetti@ccom.unh.edu>
+* Leandro Lima <leandro@limaesilva.com.br>
+* Maarten Vermeyen <maarten.vermeyen@rwo.vlaanderen.be>
+* joelostblom <joelostblom@users.noreply.github.com>
+* Marco De Nadai <me@marcodena.it>
+* Johan Euphrosine <proppy@aminche.com>
+
+See also: https://github.com/Toblerity/Shapely/graphs/contributors.
+
+Additional help from:
+
+* Justin Bronn (GeoDjango) for ctypes inspiration
+* Martin Davis (JTS)
+* Sandro Santilli, Mateusz Loskot, Paul Ramsey, et al (GEOS Project)
+
+Major portions of this work were supported by a grant (for Pleiades_) from the
+U.S. National Endowment for the Humanities (http://www.neh.gov).
+
+.. _Pleiades: http://pleiades.stoa.org
