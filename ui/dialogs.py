@@ -294,9 +294,9 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self._update_action_text(current_connection)
         active_tab = self.tabConnections.currentWidget()
         if active_tab == self.tabFile and self._mbtiles_conn and current_connection != self._mbtiles_conn:
-            self.connect(self._mbtiles_conn)
+            self.connect_to(self._mbtiles_conn)
         elif active_tab == self.tabDirectory and self._directory_conn and current_connection != self._mbtiles_conn:
-            self.connect(self._directory_conn)
+            self.connect_to(self._directory_conn)
         self.on_zoom_change.emit()
         self.exec_()
 
