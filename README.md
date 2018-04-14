@@ -55,8 +55,9 @@ Name conventions for Vector Tiles Reader QGIS Plugin:
 * Abbreviated name   : vtr
 
 ## Requirements
-* QGIS 2.18 (QGIS 3 in preparation)
-* This Plugin was tested on Ubuntu 16.10, Windows 10 and OSX
+* QGIS 2.18
+* QGIS 3
+* This Plugin was tested on Ubuntu 17.10, Windows 10 and OSX
 
 ## Installation
 ### QGIS Plugins
