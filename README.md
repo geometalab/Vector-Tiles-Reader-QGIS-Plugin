@@ -85,9 +85,14 @@ set PATH_TO_VTR="C:\my_projects\vector_tiles_reader"
 mklink /D "%appdata%\QGIS\QGIS3\profiles\default\python\plugins\vector_tiles_reader" %PATH_TO_VTR%
 ```
 
-### Ubuntu
+### Ubuntu (QGIS 2)
 ```
 ln -sr ./ ~/.qgis2/python/plugins/Vector-Tile-Reader
+```
+
+### Ubuntu (QGIS 3)
+```
+ln -sr ./ ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/Vector-Tile-Reader
 ```
 
 ## FAQ
