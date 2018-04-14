@@ -147,6 +147,14 @@ class VtrPlugin():
                     if src in self._current_reader_sources:
                         self._current_reader_sources.remove(src)
 
+    def _add_plugin_to_toolbar(self, toolbar):
+        button = QToolButton()
+        button.setMenu(self.popupMenu)
+        button.setDefaultAction(self.open_connections_action)
+        button.setPopupMode(QToolButton.MenuButtonPopup)
+        toolButtonAction = toolbar.addWidget(button)
+        return toolButtonAction
+
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "mActionAddVectorTilesReader.svg",
@@ -160,11 +168,13 @@ class VtrPlugin():
         self.popupMenu.addAction(self.reload_action)
         self.popupMenu.addAction(self.clear_cache_action)
         self.popupMenu.addAction(self.about_action)
-        self.toolButton = QToolButton()
-        self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(self.open_connections_action)
-        self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
-        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
+
+        # Add plugin to layer toolbar
+        self.toolButtonAction = self._add_plugin_to_toolbar(self.iface.layerToolBar())
+
+        # Add plugin to plugin toolbar
+        self.plugin_toolbar_button_action = self._add_plugin_to_toolbar(self.iface.pluginToolBar())
+
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
@@ -968,6 +978,7 @@ class VtrPlugin():
             self._debouncer.stop()
             self._debouncer.shutdown()
             self.iface.layerToolBar().removeAction(self.toolButtonAction)
+            self.iface.pluginToolBar().removeAction(self.plugin_toolbar_button_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
