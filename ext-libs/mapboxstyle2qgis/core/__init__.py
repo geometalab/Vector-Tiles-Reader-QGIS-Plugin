@@ -31,7 +31,7 @@ def get_background_color(text):
                         bg_color = parse_color(bg_color)
             break
     if bg_color and not bg_color.startswith("#"):
-        colors = map(lambda v: int(v), bg_color.split(","))
+        colors = list(map(lambda v: int(v), bg_color.split(",")))
         bg_color = "#{0:02x}{1:02x}{2:02x}".format(colors[0], colors[1], colors[2])
     return bg_color
 
