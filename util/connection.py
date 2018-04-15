@@ -30,6 +30,7 @@ TILEJSON_CONNECTION_TEMPLATE = {
     "token": None,
     "type": ConnectionTypes.TileJSON,
     "can_edit": None,
+    "disabled": None,
     "style": ""
 }
 

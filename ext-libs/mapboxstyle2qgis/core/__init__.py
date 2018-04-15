@@ -10,14 +10,11 @@ from .xml_helper import create_style_file, escape_xml
 
 
 def register_qgis_expressions():
-    try:
-        from qgis.core import QgsExpression
-        from .data import qgis_functions
-        QgsExpression.registerFunction(qgis_functions.get_zoom_for_scale)
-        QgsExpression.registerFunction(qgis_functions.if_not_exists)
-        QgsExpression.registerFunction(qgis_functions.interpolate_exp)
-    except ImportError:
-        pass
+    from qgis.core import QgsExpression
+    from .data import qgis_functions
+    QgsExpression.registerFunction(qgis_functions.get_zoom_for_scale)
+    QgsExpression.registerFunction(qgis_functions.if_not_exists)
+    QgsExpression.registerFunction(qgis_functions.interpolate_exp)
 
 
 def get_background_color(text):
@@ -34,7 +31,7 @@ def get_background_color(text):
                         bg_color = parse_color(bg_color)
             break
     if bg_color and not bg_color.startswith("#"):
-        colors = map(lambda v: int(v), bg_color.split(","))
+        colors = list(map(lambda v: int(v), bg_color.split(",")))
         bg_color = "#{0:02x}{1:02x}{2:02x}".format(colors[0], colors[1], colors[2])
     return bg_color
 
@@ -55,6 +52,27 @@ def generate_styles(style_json, output_directory, web_request_executor=None):
     create_icons(style=style_json, web_request_executor=web_request_executor, output_directory=output_directory)
 
 
+def _apply_source_layer(layer, all_layers):
+    """
+     * Recursivly applies all properties except 'paint' from the layer specified by 'ref'.
+     * Layers can reference each other with the 'ref' property, in which case the properties are located on the
+       referenced layer.
+    :param layer:
+    :param all_layers:
+    :return:
+    """
+
+    ref = _get_value_safe(layer, "ref")
+    if ref:
+        matching_layers = list(filter(lambda l: _get_value_safe(l, "id") == ref, all_layers))
+        if matching_layers:
+            target_layer = matching_layers[0]
+            for prop in target_layer:
+                if prop != "paint":
+                    layer[prop] = target_layer[prop]
+            _apply_source_layer(target_layer, all_layers)
+
+
 def process(style_json):
     """
      * Creates the style definitions and returns them mapped by filename
@@ -67,9 +85,13 @@ def process(style_json):
     layers = style_json["layers"]
     styles_by_file_name = {}
     for l in layers:
-        if "source-layer" in l:
-            layer_type = l["type"]
-            source_layer = l["source-layer"]
+        if "ref" in l:
+            _apply_source_layer(l, layers)
+        if "source-layer" not in l:
+            continue
+        source_layer = l["source-layer"]
+        layer_type = l["type"]
+        if source_layer:
             if layer_type == "fill":
                 geo_type_name = ".polygon"
             elif layer_type == "line":
@@ -100,7 +122,7 @@ def process(style_json):
             rule = style["rule"]
             name = style["name"]
             zoom = style["zoom_level"]
-            styles_with_same_target = filter(lambda s: s["name"] != name and s["rule"] == rule and s["zoom_level"] <= zoom, styles[:index])
+            styles_with_same_target = list(filter(lambda s: s["name"] != name and s["rule"] == rule and zoom and s["zoom_level"] <= zoom, styles[:index]))
             groups_by_name = list(groupby(styles_with_same_target, key=lambda s: s["name"]))
             style["rendering_pass"] = len(groups_by_name)
 
@@ -308,10 +330,12 @@ def get_styles(layer):
 
     if "minzoom" in layer:
         minzoom = int(layer["minzoom"])
-        values_by_zoom[minzoom] = []
+        if minzoom not in values_by_zoom:
+            values_by_zoom[minzoom] = []
     if "maxzoom" in layer:
         maxzoom = int(layer["maxzoom"])
-        values_by_zoom[maxzoom] = []
+        if maxzoom not in values_by_zoom:
+            values_by_zoom[maxzoom] = []
 
     if not values_by_zoom:
         resulting_styles.append(base_style)

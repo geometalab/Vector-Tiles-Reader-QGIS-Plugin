@@ -1,13 +1,18 @@
 """Collections of points and related utilities
 """
 
+import sys
+
+if sys.version_info[0] < 3:
+    range = xrange
+
 from ctypes import byref, c_double, c_void_p, cast, POINTER
 from ctypes import ArgumentError
 
-from shapely.coords import required
 from shapely.geos import lgeos
-from shapely.geometry.base import BaseMultipartGeometry, exceptNull
-from shapely.geometry.point import Point, geos_point_from_py
+from shapely.geometry.base import (
+    BaseMultipartGeometry, exceptNull, geos_geom_from_py)
+from shapely.geometry import point
 from shapely.geometry.proxy import CachingGeometryProxy
 
 __all__ = ['MultiPoint', 'asMultiPoint']
@@ -46,14 +51,14 @@ class MultiPoint(BaseMultipartGeometry):
         """
         super(MultiPoint, self).__init__()
 
-        if points is None:
+        if points is None or len(points) == 0:
             # allow creation of empty multipoints, to support unpickling
             pass
         else:
             self._geom, self._ndim = geos_multipoint_from_py(points)
 
     def shape_factory(self, *args):
-        return Point(*args)
+        return point.Point(*args)
 
     @property
     def __geo_interface__(self):
@@ -61,6 +66,25 @@ class MultiPoint(BaseMultipartGeometry):
             'type': 'MultiPoint',
             'coordinates': tuple([g.coords[0] for g in self.geoms])
             }
+
+    def svg(self, scale_factor=1., fill_color=None):
+        """Returns a group of SVG circle elements for the MultiPoint geometry.
+
+        Parameters
+        ==========
+        scale_factor : float
+            Multiplication factor for the SVG circle diameters.  Default is 1.
+        fill_color : str, optional
+            Hex string for fill color. Default is to use "#66cc99" if
+            geometry is valid, and "#ff3333" if invalid.
+        """
+        if self.is_empty:
+            return '<g />'
+        if fill_color is None:
+            fill_color = "#66cc99" if self.is_valid else "#ff3333"
+        return '<g>' + \
+            ''.join(p.svg(scale_factor, fill_color) for p in self) + \
+            '</g>'
 
     @property
     @exceptNull
@@ -71,8 +95,8 @@ class MultiPoint(BaseMultipartGeometry):
             m = len(self.geoms)
             array_type = c_double * (m * n)
             data = array_type()
-            for i in xrange(m):
-                g = self.geoms[i]._geom    
+            for i in range(m):
+                g = self.geoms[i]._geom
                 cs = lgeos.GEOSGeom_getCoordSeq(g)
                 lgeos.GEOSCoordSeq_getX(cs, 0, byref(temp))
                 data[n*i] = temp.value
@@ -96,7 +120,7 @@ class MultiPoint(BaseMultipartGeometry):
 class MultiPointAdapter(CachingGeometryProxy, MultiPoint):
 
     context = None
-    _owned = False
+    _other_owned = False
 
     def __init__(self, context):
         self.context = context
@@ -129,57 +153,23 @@ def asMultiPoint(context):
 
 
 def geos_multipoint_from_py(ob):
-    # If numpy is present, we use numpy.require to ensure that we have a
-    # C-continguous array that owns its data. View data will be copied.
-    ob = required(ob)
+    if isinstance(ob, MultiPoint):
+        return geos_geom_from_py(ob)
+
+    m = len(ob)
     try:
-        # From array protocol
-        array = ob.__array_interface__
-        assert len(array['shape']) == 2
-        m = array['shape'][0]
-        n = array['shape'][1]
-        assert m >= 1
-        assert n == 2 or n == 3
+        n = len(ob[0])
+    except TypeError:
+        n = ob[0]._ndim
+    assert n == 2 or n == 3
 
-        # Make pointer to the coordinate array
-        if isinstance(array['data'], tuple):
-            # numpy tuple (addr, read-only)
-            cp = cast(array['data'][0], POINTER(c_double))
-        else:
-            cp = array['data']
+    # Array of pointers to point geometries
+    subs = (c_void_p * m)()
 
-        # Array of pointers to sub-geometries
-        subs = (c_void_p * m)()
+    # add to coordinate sequence
+    for i in range(m):
+        coords = ob[i]
+        geom, ndims = point.geos_point_from_py(coords)
+        subs[i] = cast(geom, c_void_p)
 
-        for i in xrange(m):
-            geom, ndims = geos_point_from_py(cp[n*i:n*i+2])
-            subs[i] = cast(geom, c_void_p)
-
-    except AttributeError:
-        # Fall back on list
-        m = len(ob)
-        try:
-            n = len(ob[0])
-        except TypeError:
-            n = ob[0]._ndim
-        assert n == 2 or n == 3
-
-        # Array of pointers to point geometries
-        subs = (c_void_p * m)()
-        
-        # add to coordinate sequence
-        for i in xrange(m):
-            coords = ob[i]
-            geom, ndims = geos_point_from_py(coords)
-            subs[i] = cast(geom, c_void_p)
-            
     return lgeos.GEOSGeom_createCollection(4, subs, m), n
-
-# Test runner
-def _test():
-    import doctest
-    doctest.testmod()
-
-
-if __name__ == "__main__":
-    _test()

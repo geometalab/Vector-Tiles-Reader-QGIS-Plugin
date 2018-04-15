@@ -1,0 +1,22 @@
+# The contents of this file are subject to the license and copyright
+# detailed in the LICENSE and NOTICE files at the root of the source
+
+version: '3'
+
+services:
+  qgis2:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      args:
+        TAG: "release-2_18"
+    volumes:
+      - ./..:/vector-tiles-reader
+      - ./..:/tests_directory
+  qgis3:
+    build:
+      context: ../
+      dockerfile: docker/DockerfileQGIS3
+    volumes:
+      - ..:/vector-tiles-reader
+      - ..:/tests_directory

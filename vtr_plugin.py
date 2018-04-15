@@ -147,6 +147,14 @@ class VtrPlugin():
                     if src in self._current_reader_sources:
                         self._current_reader_sources.remove(src)
 
+    def _add_plugin_to_toolbar(self, toolbar):
+        button = QToolButton()
+        button.setMenu(self.popupMenu)
+        button.setDefaultAction(self.open_connections_action)
+        button.setPopupMode(QToolButton.MenuButtonPopup)
+        toolButtonAction = toolbar.addWidget(button)
+        return toolButtonAction
+
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
         self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "mActionAddVectorTilesReader.svg",
@@ -160,11 +168,13 @@ class VtrPlugin():
         self.popupMenu.addAction(self.reload_action)
         self.popupMenu.addAction(self.clear_cache_action)
         self.popupMenu.addAction(self.about_action)
-        self.toolButton = QToolButton()
-        self.toolButton.setMenu(self.popupMenu)
-        self.toolButton.setDefaultAction(self.open_connections_action)
-        self.toolButton.setPopupMode(QToolButton.MenuButtonPopup)
-        self.toolButtonAction = self.iface.layerToolBar().addWidget(self.toolButton)
+
+        # Add plugin to layer toolbar
+        self.toolButtonAction = self._add_plugin_to_toolbar(self.iface.layerToolBar())
+
+        # Add plugin to plugin toolbar
+        self.plugin_toolbar_button_action = self._add_plugin_to_toolbar(self.iface.pluginToolBar())
+
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.open_connections_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
@@ -177,7 +187,7 @@ class VtrPlugin():
         conn = proj.readEntry("VectorTilesReader", "current_connection", None)[0]
         if conn:
             conn = ast.literal_eval(conn)
-            self.connections_dialog.connect(conn)
+            self.connections_dialog.connect_to(conn)
             self._debouncer.start()
 
     def _on_browse_dir_change(self, diretory_path):
@@ -376,7 +386,9 @@ class VtrPlugin():
                     self.reload_action.setEnabled(False)
                     self.reload_action.setText(self._reload_button_text)
             except RuntimeError:
-                QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
+                msg = str(sys.exc_info()[1])
+                msg = msg if msg else 'Sorry, an unknown error occured!'
+                QMessageBox.critical(None, "Error", msg)
                 critical(str(sys.exc_info()[1]))
                 self._current_reader = None
                 self._current_connection_name = None
@@ -396,8 +408,6 @@ class VtrPlugin():
             return
         url = connection["style"]
         info("Creating styles from: {}", url)
-        from mapboxstyle2qgis import core
-        core.register_qgis_expressions()
         if not url_exists(url):
             info("StyleJSON not found. URL invalid?")
         else:
@@ -405,6 +415,8 @@ class VtrPlugin():
             status, data = load_url(url)
             if status == 200:
                 try:
+                    from mapboxstyle2qgis import core
+                    core.register_qgis_expressions()
                     info("Styles will be written to: {}", output_directory)
                     core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
                 except:
@@ -546,7 +558,10 @@ class VtrPlugin():
     def _show_connections_dialog(self):
         zoom = self._get_zoom_of_current_mode()
         if self._current_reader:
-            self._update_nr_of_tiles(zoom=zoom)
+            try:
+                self._update_nr_of_tiles(zoom=zoom)
+            except Exception as e:
+                critical("Updating nr of tiles failed: {}", e)
         update_zoom_immediately = not self.connections_dialog.options.is_manual_mode()
         self.connections_dialog.set_current_zoom_level(zoom_level=self._get_zoom_for_current_map_scale(),
                                                        set_immediately=update_zoom_immediately)
@@ -794,7 +809,9 @@ class VtrPlugin():
             reader.cancelled.connect(self.reader_cancelled)
             reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
-            QMessageBox.critical(None, "Error", str(sys.exc_info()[1]))
+            msg = str(sys.exc_info()[1])
+            msg = msg if msg else 'Sorry, an unknown error occured!'
+            QMessageBox.critical(None, "Error", msg)
             critical(str(sys.exc_info()[1]))
         return reader
 
@@ -885,7 +902,7 @@ class VtrPlugin():
         cancel_button.clicked.connect(self._cancel_load)
         message_bar_item.layout().addWidget(progress_bar)
         message_bar_item.layout().addWidget(cancel_button)
-        self.iface.messageBar().pushWidget(message_bar_item, self.iface.messageBar().INFO)
+        self.iface.messageBar().pushWidget(message_bar_item)
         self.message_bar_item = message_bar_item
         self.progress_bar = progress_bar
 
@@ -964,6 +981,7 @@ class VtrPlugin():
             self._debouncer.stop()
             self._debouncer.shutdown()
             self.iface.layerToolBar().removeAction(self.toolButtonAction)
+            self.iface.pluginToolBar().removeAction(self.plugin_toolbar_button_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
             self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)

@@ -97,7 +97,7 @@ try:
         filename=log_path,
         format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
 except IOError:
-    _log_to_qgis("Creating logging config failed: {}".format(sys.exc_info(), _WARN))
+    _log_to_qgis("Creating logging config failed: {}".format(sys.exc_info()), _WARN)
 
 
 _logger = logging.getLogger("Vector-Tile-Reader")

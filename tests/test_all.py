@@ -47,7 +47,7 @@ def run_all():
     cov.stop()
     cov.save()
     cov.html_report(directory='tests/htmlcov')
-    print cov.report()
+    print(cov.report())
 
 
 if __name__ == "__main__":

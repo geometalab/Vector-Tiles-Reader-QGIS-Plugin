@@ -11,38 +11,40 @@ def affine_transform(geom, matrix):
     The coefficient matrix is provided as a list or tuple with 6 or 12 items
     for 2D or 3D transformations, respectively.
 
-    For 2D affine transformations, the 6 parameter matrix is:
+    For 2D affine transformations, the 6 parameter matrix is::
 
         [a, b, d, e, xoff, yoff]
 
-    which represents the augmented matrix:
+    which represents the augmented matrix::
 
                             / a  b xoff \ 
         [x' y' 1] = [x y 1] | d  e yoff |
                             \ 0  0   1  /
 
-    or the equations for the transformed coordinates:
+    or the equations for the transformed coordinates::
 
         x' = a * x + b * y + xoff
         y' = d * x + e * y + yoff
 
-    For 3D affine transformations, the 12 parameter matrix is:
+    For 3D affine transformations, the 12 parameter matrix is::
 
         [a, b, c, d, e, f, g, h, i, xoff, yoff, zoff]
 
-    which represents the augmented matrix:
+    which represents the augmented matrix::
 
                                  / a  b  c xoff \ 
         [x' y' z' 1] = [x y z 1] | d  e  f yoff |
                                  | g  h  i zoff |
                                  \ 0  0  0   1  /
 
-    or the equations for the transformed coordinates:
+    or the equations for the transformed coordinates::
 
         x' = a * x + b * y + c * z + xoff
         y' = d * x + e * y + f * z + yoff
         z' = g * x + h * y + i * z + zoff
     """
+    if geom.is_empty:
+        return geom
     if len(matrix) == 6:
         ndim = 2
         a, b, d, e, xoff, yoff = matrix
@@ -75,7 +77,7 @@ def affine_transform(geom, matrix):
                 yield (xp, yp, zp)
 
     # Process coordinates from each supported geometry type
-    if geom.type in ('Point', 'LineString'):
+    if geom.type in ('Point', 'LineString', 'LinearRing'):
         return type(geom)(list(affine_pts(geom.coords)))
     elif geom.type == 'Polygon':
         ring = geom.exterior
@@ -87,7 +89,8 @@ def affine_transform(geom, matrix):
     elif geom.type.startswith('Multi') or geom.type == 'GeometryCollection':
         # Recursive call
         # TODO: fix GeometryCollection constructor
-        return type(geom)([affine_transform(part, matrix) for part in geom.geoms])
+        return type(geom)([affine_transform(part, matrix)
+                           for part in geom.geoms])
     else:
         raise ValueError('Type %r not recognized' % geom.type)
 

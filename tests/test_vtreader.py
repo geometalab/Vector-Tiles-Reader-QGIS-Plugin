@@ -3,11 +3,9 @@
 # This code is licensed under the GPL 2.0 license.
 #
 import unittest
-import os
 import sys
-from qgis.core import *
-from qgis.utils import iface
-from PyQt4.QtCore import *
+from qgis.utils import iface  # dont remove! is required for testing (iface wont be found otherwise)
+from util.vtr_2to3 import *
 from vt_reader import VtReader
 from util.connection import MBTILES_CONNECTION_TEMPLATE
 import copy
@@ -48,8 +46,8 @@ class VtReaderTests(unittest.TestCase):
         clear_cache()
         QgsMapLayerRegistry.instance().removeAllMapLayers()
         self._load(iface=iface, max_tiles=1, apply_styles=True)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
+        print(mock_info.call_args_list)
+        print(mock_critical.call_args_list)
         # print mock_style.assert_called_with()
         mock_info.assert_any_call("Import complete")
 
@@ -63,7 +61,7 @@ class VtReaderTests(unittest.TestCase):
 
         self._load(iface=iface, max_tiles=1)
 
-        print mock_info.call_args_list
+        print(mock_info.call_args_list)
         mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
@@ -77,7 +75,7 @@ class VtReaderTests(unittest.TestCase):
 
         self._load(iface=iface, max_tiles=2, serial_tile_processing_limit=1)
 
-        print mock_info.call_args_list
+        print(mock_info.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!!")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 2)
         mock_info.assert_any_call("Import complete")
@@ -88,7 +86,7 @@ class VtReaderTests(unittest.TestCase):
         clear_cache()
         QgsMapLayerRegistry.instance().removeAllMapLayers()
         self._load(iface=iface, max_tiles=1)
-        print mock_info.call_args_list
+        print(mock_info.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!!")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
@@ -98,8 +96,8 @@ class VtReaderTests(unittest.TestCase):
     def test_load_from_vtreader_3_with_cache(self, mock_critical, mock_info):
         global iface
         self._load(iface=iface, max_tiles=1)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
+        print(mock_info.call_args_list)
+        print(mock_critical.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!!")
         mock_info.assert_any_call("{} tiles in cache. Max. {} will be loaded additionally.", 1, 0)
         mock_info.assert_any_call("Import complete")
@@ -110,8 +108,8 @@ class VtReaderTests(unittest.TestCase):
         global iface
         clear_cache()
         self._load(iface=iface, max_tiles=2, merge_tiles=True)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
+        print(mock_info.call_args_list)
+        print(mock_critical.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!!")
         mock_info.assert_any_call("Import complete")
 
@@ -121,8 +119,8 @@ class VtReaderTests(unittest.TestCase):
         global iface
         clear_cache()
         self._load(iface=iface, max_tiles=2, clip_tiles=True)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
+        print(mock_info.call_args_list)
+        print(mock_critical.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!!")
         mock_info.assert_any_call("Import complete")
 
@@ -133,8 +131,8 @@ class VtReaderTests(unittest.TestCase):
         global iface
         clear_cache()
         self._load(iface=iface, max_tiles=2, merge_tiles=True)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
+        print(mock_info.call_args_list)
+        print(mock_critical.call_args_list)
         mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
         mock_info.assert_any_call("Import complete")
 
@@ -145,8 +143,8 @@ class VtReaderTests(unittest.TestCase):
         global iface
         clear_cache()
         self._load(iface=iface, max_tiles=2, clip_tiles=True)
-        print mock_info.call_args_list
-        print mock_critical.call_args_list
+        print(mock_info.call_args_list)
+        print(mock_critical.call_args_list)
         mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
         mock_info.assert_any_call("Import complete")
 

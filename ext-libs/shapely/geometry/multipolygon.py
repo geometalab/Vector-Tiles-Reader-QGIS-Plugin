@@ -1,11 +1,16 @@
 """Collections of polygons and related utilities
 """
 
+import sys
+
+if sys.version_info[0] < 3:
+    range = xrange
+
 from ctypes import c_void_p, cast
 
 from shapely.geos import lgeos
-from shapely.geometry.base import BaseMultipartGeometry
-from shapely.geometry.polygon import Polygon, geos_polygon_from_py
+from shapely.geometry.base import BaseMultipartGeometry, geos_geom_from_py
+from shapely.geometry import polygon
 from shapely.geometry.proxy import CachingGeometryProxy
 
 __all__ = ['MultiPolygon', 'asMultiPolygon']
@@ -59,7 +64,7 @@ class MultiPolygon(BaseMultipartGeometry):
             self._geom, self._ndim = geos_multipolygon_from_py(polygons)
 
     def shape_factory(self, *args):
-        return Polygon(*args)
+        return polygon.Polygon(*args)
 
     @property
     def __geo_interface__(self):
@@ -75,11 +80,30 @@ class MultiPolygon(BaseMultipartGeometry):
             'coordinates': allcoords
             }
 
+    def svg(self, scale_factor=1., fill_color=None):
+        """Returns group of SVG path elements for the MultiPolygon geometry.
+
+        Parameters
+        ==========
+        scale_factor : float
+            Multiplication factor for the SVG stroke-width.  Default is 1.
+        fill_color : str, optional
+            Hex string for fill color. Default is to use "#66cc99" if
+            geometry is valid, and "#ff3333" if invalid.
+        """
+        if self.is_empty:
+            return '<g />'
+        if fill_color is None:
+            fill_color = "#66cc99" if self.is_valid else "#ff3333"
+        return '<g>' + \
+            ''.join(p.svg(scale_factor, fill_color) for p in self) + \
+            '</g>'
+
 
 class MultiPolygonAdapter(CachingGeometryProxy, MultiPolygon):
     
     context = None
-    _owned = False
+    _other_owned = False
 
     def __init__(self, context, context_type='polygons'):
         self.context = context
@@ -115,18 +139,31 @@ def geos_multipolygon_from_py(ob):
     assert N == 2 or N == 3
 
     subs = (c_void_p * L)()
-    for l in xrange(L):
-        geom, ndims = geos_polygon_from_py(ob[l][0], ob[l][1:])
+    for l in range(L):
+        geom, ndims = polygon.geos_polygon_from_py(ob[l][0], ob[l][1:])
         subs[l] = cast(geom, c_void_p)
             
     return (lgeos.GEOSGeom_createCollection(6, subs, L), N)
 
-def geos_multipolygon_from_polygons(ob):
-    """ob must be either a sequence or array of sequences or arrays."""
-    obs = getattr(ob, 'geoms', None) or ob
-    L = len(obs)
-    assert L >= 1
+
+def geos_multipolygon_from_polygons(arg):
+    """
+    ob must be either a MultiPolygon, sequence or array of sequences 
+    or arrays.
     
+    """
+    if isinstance(arg, MultiPolygon):
+        return geos_geom_from_py(arg)
+
+    obs = getattr(arg, 'geoms', arg)
+    obs = [ob for ob in obs
+           if ob and not (isinstance(ob, polygon.Polygon) and ob.is_empty)]
+    L = len(obs)
+
+    # Bail immediately if we have no input points.
+    if L <= 0:
+        return (lgeos.GEOSGeom_createEmptyCollection(6), 3)
+
     exemplar = obs[0]
     try:
         N = len(exemplar[0][0])
@@ -136,16 +173,18 @@ def geos_multipolygon_from_polygons(ob):
     assert N == 2 or N == 3
 
     subs = (c_void_p * L)()
-    for l in xrange(L):
-        shell = getattr(obs[l], 'exterior', None)
-        if shell is None:
-            shell = obs[l][0]
-        holes = getattr(obs[l], 'interiors', None)
-        if holes is None:
-            holes =  obs[l][1]
-        geom, ndims = geos_polygon_from_py(shell, holes)
-        subs[l] = cast(geom, c_void_p)
-            
+
+    for i, ob in enumerate(obs):
+        if isinstance(ob, polygon.Polygon):
+            shell = ob.exterior
+            holes = ob.interiors
+        else:
+            shell = ob[0]
+            holes = ob[1]
+
+        geom, ndims = polygon.geos_polygon_from_py(shell, holes)
+        subs[i] = cast(geom, c_void_p)
+
     return (lgeos.GEOSGeom_createCollection(6, subs, L), N)
 
 # Test runner

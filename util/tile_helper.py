@@ -125,7 +125,11 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
 
     crs_src = QgsCoordinateReferenceSystem(source_crs)
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
-    xform = QgsCoordinateTransform(crs_src, crs_dest)
+    if QGIS3:
+        xform = QgsCoordinateTransform(crs_src, crs_dest, QgsProject.instance())
+    else:
+        xform = QgsCoordinateTransform(crs_src, crs_dest)
+
     try:
         x, y = xform.transform(QgsPoint(lng, lat))
     except TypeError:

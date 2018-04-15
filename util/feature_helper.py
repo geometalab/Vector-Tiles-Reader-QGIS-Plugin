@@ -190,7 +190,7 @@ def get_array_depth(arr, depth):
     :return:
     """
 
-    if all(isinstance(c, numbers.Real) for c in arr[0]):
+    if not arr or all(isinstance(c, numbers.Real) for c in arr[0]):
         return depth
     else:
         depth += 1
