@@ -64,6 +64,8 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
 
     def _export_connections(self):
         file_name = QFileDialog.getSaveFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
+        if isinstance(file_name, tuple):
+            file_name = file_name[0]
         if file_name:
             with open(file_name, 'w') as csvfile:
                 fieldnames = self._connection_template.keys()
@@ -77,9 +79,11 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
                         writer.writerow(self.connections[name])
 
     def _import_connections(self):
-        file_name = QFileDialog.getOpenFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
-        if file_name:
-            with open(file_name, 'r') as csvfile:
+        open_file_name = QFileDialog.getOpenFileName(None, "Export Vector Tile Reader Connections", "", "csv (*.csv)")
+        if isinstance(open_file_name, tuple):
+            open_file_name = open_file_name[0]
+        if open_file_name:
+            with open(open_file_name, 'r') as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
                     new_connection = copy.deepcopy(self._connection_template)
