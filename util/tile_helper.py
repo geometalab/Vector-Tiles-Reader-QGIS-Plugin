@@ -1,14 +1,7 @@
-from __future__ import division
-from builtins import str
-from builtins import map
-from builtins import range
-from past.utils import old_div
-from builtins import object
-import math
 import itertools
 import operator
 from .global_map_tiles import GlobalMercator
-from .log_helper import warn, debug, info
+from .log_helper import debug
 from .vtr_2to3 import *
 
 """

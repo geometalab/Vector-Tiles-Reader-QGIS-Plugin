@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import map
-from builtins import filter
-from builtins import str
 from itertools import *
 import sys
 import os
