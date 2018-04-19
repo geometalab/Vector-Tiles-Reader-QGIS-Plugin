@@ -13,7 +13,7 @@ about=Reads vector tiles according to Mapbox Vector Tiles specification as layer
 
     - OpenMapTiles.com
     - Mapcat.com
-version=2.0.0
+version=2.0.1
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -23,6 +23,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---2.0.1---
+    * Bugfixes that were introduces with the QGIS 3 compatibility
     ---2.0.0---
     * Connection sponsors added to plugin metadata
     * QGIS 3 support
