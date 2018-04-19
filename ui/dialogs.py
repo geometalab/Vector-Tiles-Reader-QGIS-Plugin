@@ -83,6 +83,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     _OMT_CUSTOM_KEY = "OpenMapTiles.com (with custom key)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
     _MAPCAT = "Mapcat.com (default entry with credits)"
+    _NEXTZEN = "Nextzen.org (default entry with credits)"
 
     _predefined_tilejson_connections = {
         _OMT: {
@@ -108,7 +109,12 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "url": "https://api.mapcat.com/api/mapinit/tile?api_key={token}",
             "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
             "token": "VmKNOOCry7SE4c8FyacQ1KxojeWzY1W2aFS0TADq"
-        }
+        },
+        # _NEXTZEN: {
+        #     "name": _NEXTZEN,
+        #     "url": "https://tile.nextzen.org/tilezen/vector/v1/512/all/tilejson.mvt.json?api_key={token}",
+        #     "token": "80xAN5o0QuyFrcPVVIieTA"
+        # }
     }
 
     _CONNECTIONS_TAB = "selected_connections_tab"
