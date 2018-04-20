@@ -83,6 +83,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     _OMT_CUSTOM_KEY = "OpenMapTiles.com (with custom key)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
     _MAPCAT = "Mapcat.com (default entry with credits)"
+    _NEXTZEN = "Nextzen.org (default entry with credits)"
 
     _predefined_tilejson_connections = {
         _OMT: {
@@ -108,7 +109,12 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "url": "https://api.mapcat.com/api/mapinit/tile?api_key={token}",
             "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
             "token": "VmKNOOCry7SE4c8FyacQ1KxojeWzY1W2aFS0TADq"
-        }
+        },
+        # _NEXTZEN: {
+        #     "name": _NEXTZEN,
+        #     "url": "https://tile.nextzen.org/tilezen/vector/v1/512/all/tilejson.mvt.json?api_key={token}",
+        #     "token": "80xAN5o0QuyFrcPVVIieTA"
+        # }
     }
 
     _CONNECTIONS_TAB = "selected_connections_tab"
@@ -223,6 +229,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     def _select_file_path(self):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
+        if isinstance(open_file_name, tuple):
+            open_file_name = open_file_name[0]
         if open_file_name and os.path.isfile(open_file_name):
             self.txtPath.setText(open_file_name)
             connection = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
@@ -232,6 +240,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
     def _select_directory(self):
         open_file_name = QFileDialog.getExistingDirectory(None, "Select directory", self.browse_path)
+        if isinstance(open_file_name, tuple):
+            open_file_name = open_file_name[0]
         if open_file_name and os.path.isdir(open_file_name):
             self.txtDirectoryPath.setText(open_file_name)
             connection = copy.deepcopy(DIRECTORY_CONNECTION_TEMPLATE)
@@ -389,6 +399,8 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
 
     def _select_file_path(self):
         open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
+        if isinstance(open_file_name, tuple):
+            open_file_name = open_file_name[0]
         if open_file_name:
             if not self._is_url(open_file_name):
                 self.browse_path = open_file_name

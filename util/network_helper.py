@@ -1,7 +1,4 @@
-from future import standard_library
-standard_library.install_aliases()
 from .log_helper import warn, info, remove_key
-
 from .vtr_2to3 import *
 
 

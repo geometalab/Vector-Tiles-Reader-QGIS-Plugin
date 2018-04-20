@@ -1,14 +1,7 @@
-from __future__ import division
-from builtins import str
-from builtins import map
-from builtins import range
-from past.utils import old_div
-from builtins import object
-import math
 import itertools
 import operator
 from .global_map_tiles import GlobalMercator
-from .log_helper import warn, debug, info
+from .log_helper import debug
 from .vtr_2to3 import *
 
 """
@@ -246,7 +239,7 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
     max_x = max([t[0] for t in available_tiles])
     max_y = max([t[1] for t in available_tiles])
 
-    center_tile_offset = (int(round(old_div((max_x-min_x), 2))), int(round(old_div((max_y-min_y), 2))))
+    center_tile_offset = (int(round((max_x-min_x) / 2)), int(round((max_y-min_y) / 2)))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
     if len(selected_tiles) < nr_of_tiles and  center_tile in available_tiles:
