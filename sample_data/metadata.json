@@ -1,0 +1,45 @@
+{
+  "tilejson": "2.0.0",
+  "name": "OpenStreetMap",
+  "description": "A free editable map of the whole world.",
+  "version": "1.0.0",
+  "attribution": "(c) OpenStreetMap contributors, CC-BY-SA",
+  "scheme": "xyz",
+  "tiles": [
+    "c:\\temp\\test2\\{z}\\{z}_{x}_{y}.pbf"
+  ],
+  "minzoom": 0,
+  "maxzoom": 3,
+  "bounds": [
+    -180,
+    -85,
+    180,
+    85
+  ],
+  "vector_layers": [
+    {
+      "maxzoom": 3,
+      "minzoom": 0,
+      "id": "water",
+      "fields": {
+        "class": "String",
+        "name": "String"
+      }
+    },
+    {
+      "maxzoom": 3,
+      "minzoom": 0,
+      "id": "island"
+    },
+    {
+      "maxzoom": 3,
+      "minzoom": 0,
+      "id": "digarea"
+    },
+    {
+      "maxzoom": 3,
+      "minzoom": 0,
+      "id": "ruralgreen"
+    }
+  ]
+}
