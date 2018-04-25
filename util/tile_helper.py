@@ -3,6 +3,11 @@ import operator
 from .global_map_tiles import GlobalMercator
 from .log_helper import debug
 from .vtr_2to3 import *
+import sys
+
+if sys.version_info[0] < 3:
+    range = xrange
+
 
 """
  * Top left: (lng=WORLD_BOUNDS[0], lat=WORLD_BOUNDS[3])
