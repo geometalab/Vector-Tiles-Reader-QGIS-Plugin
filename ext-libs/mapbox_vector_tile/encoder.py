@@ -1,8 +1,6 @@
+import sys
 from math import fabs
 from numbers import Number
-from past.builtins import long
-from past.builtins import unicode
-from past.builtins import xrange
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.polygon import orient
@@ -14,6 +12,12 @@ from shapely.wkt import loads as load_wkt
 import decimal
 from .compat import PY3, vector_tile, apply_map
 
+
+if sys.version_info[0] < 3:
+    range = xrange
+else:
+    long = int
+    unicode = str
 
 # tiles are padded by this number of pixels for the current zoom level
 padding = 0
@@ -325,7 +329,7 @@ class VectorTile:
         return (length << cmd_bits) | (cmd & ((1 << cmd_bits) - 1))
 
     def _chunker(self, seq, size):
-        return [seq[pos:pos + size] for pos in xrange(0, len(seq), size)]
+        return [seq[pos:pos + size] for pos in range(0, len(seq), size)]
 
     def _can_handle_key(self, k):
         return isinstance(k, (str, unicode))

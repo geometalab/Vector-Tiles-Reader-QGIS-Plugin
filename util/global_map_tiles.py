@@ -62,14 +62,9 @@ I would like to know where it was used.
 
 Class is available under the open-source GDAL license (www.gdal.org).
 """
-from __future__ import division
 
-from builtins import str
-from builtins import range
-from builtins import object
-from past.utils import old_div
 import math
-    
+
 
 class GlobalMercator(object):
     """
@@ -82,20 +77,20 @@ class GlobalMercator(object):
     Such tiles are compatible with Google Maps, Microsoft Virtual Earth, Yahoo Maps,
     UK Ordnance Survey OpenSpace API, ...
     and you can overlay them on top of base maps of those web mapping applications.
-    
+
     Pixel and tile coordinates are in TMS notation (origin [0,0] in bottom-left).
 
     What coordinate conversions do we need for TMS Global Mercator tiles::
 
-         LatLon      <->       Meters      <->     Pixels    <->       Tile     
+         LatLon      <->       Meters      <->     Pixels    <->       Tile
 
      WGS84 coordinates   Spherical Mercator  Pixels in pyramid  Tiles in pyramid
-         lat/lon            XY in metres     XY pixels Z zoom      XYZ from TMS 
-        EPSG:4326           EPSG:900913                                         
-         .----.              ---------               --                TMS      
-        /      \     <->     |       |     <->     /----/    <->      Google    
-        \      /             |       |           /--------/          QuadTree   
-         -----               ---------         /------------/                   
+         lat/lon            XY in metres     XY pixels Z zoom      XYZ from TMS
+        EPSG:4326           EPSG:900913
+         .----.              ---------               --                TMS
+        /      \     <->     |       |     <->     /----/    <->      Google
+        \      /             |       |           /--------/          QuadTree
+         -----               ---------         /------------/
        KML, public         WebMapService         Web Clients      TileMapService
 
     What is the coordinate extent of Earth in EPSG:900913?
@@ -128,7 +123,7 @@ class GlobalMercator(object):
       Well, the web clients like Google Maps are projecting those coordinates by
       Spherical Mercator, so in fact lat/lon coordinates on sphere are treated as if
       the were on the WGS84 ellipsoid.
-     
+
       From MSDN documentation:
       To simplify the calculations, we use the spherical form of projection, not
       the ellipsoidal form. Since the projection is used only for map display,
@@ -182,7 +177,7 @@ class GlobalMercator(object):
         "Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913"
 
         mx = lon * self.originShift / 180.0
-        my = old_div(math.log(math.tan((90 + lat) * math.pi / 360.0)), (old_div(math.pi, 180.0)))
+        my = math.log(math.tan((90 + lat) * math.pi / 360.0)) / (math.pi / 180.0)
 
         my = my * self.originShift / 180.0
         return mx, my
@@ -190,10 +185,10 @@ class GlobalMercator(object):
     def MetersToLatLon(self, mx, my):
         "Converts XY point from Spherical Mercator EPSG:900913 to lat/lon in WGS84 Datum"
 
-        lon = (old_div(mx, self.originShift)) * 180.0
-        lat = (old_div(my, self.originShift)) * 180.0
+        lon = (mx / self.originShift) * 180.0
+        lat = (my / self.originShift) * 180.0
 
-        lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180.0)) - old_div(math.pi, 2.0))
+        lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180.0)) - math.pi / 2.0)
         return lat, lon
 
     def PixelsToMeters(self, px, py, zoom):
@@ -208,15 +203,15 @@ class GlobalMercator(object):
         "Converts EPSG:900913 to pyramid pixel coordinates in given zoom level"
 
         res = self.Resolution(zoom)
-        px = old_div((mx + self.originShift), res)
-        py = old_div((my + self.originShift), res)
+        px = (mx + self.originShift) / res
+        py = (my + self.originShift) / res
         return px, py
 
     def PixelsToTile(self, px, py):
         "Returns a tile covering region in given pixel coordinates"
 
-        tx = int(math.ceil(old_div(px, float(self.tileSize))) - 1)
-        ty = int(math.ceil(old_div(py, float(self.tileSize))) - 1)
+        tx = int(math.ceil(px / float(self.tileSize)) - 1)
+        ty = int(math.ceil(py / float(self.tileSize)) - 1)
         return tx, ty
 
     def PixelsToRaster(self, px, py, zoom):
@@ -251,7 +246,7 @@ class GlobalMercator(object):
         "Resolution (meters/pixel) for given zoom level (measured at Equator)"
 
         # return (2 * math.pi * 6378137) / (self.tileSize * 2**zoom)
-        return old_div(self.initialResolution, (2 ** zoom))
+        return self.initialResolution / (2 ** zoom)
 
     def ZoomForPixelSize(self, pixelSize):
         "Maximal scaledown zoom of the pyramid closest to the pixelSize."
@@ -295,7 +290,7 @@ class GlobalGeodetic(object):
 
     Such tiles are compatible with Google Earth (as any other EPSG:4326 rasters)
     and you can overlay the tiles on top of OpenLayers base map.
-    
+
     Pixel and tile coordinates are in TMS notation (origin [0,0] in bottom-left).
 
     What coordinate conversions do we need for TMS Global Geodetic tiles?
@@ -308,15 +303,15 @@ class GlobalGeodetic(object):
       TMS has coordinate origin (for pixels and tiles) in bottom-left corner.
       Rasters are in EPSG:4326 and therefore are compatible with Google Earth.
 
-         LatLon      <->      Pixels      <->     Tiles     
+         LatLon      <->      Pixels      <->     Tiles
 
      WGS84 coordinates   Pixels in pyramid  Tiles in pyramid
-         lat/lon         XY pixels Z zoom      XYZ from TMS 
-        EPSG:4326                                           
-         .----.                ----                         
-        /      \     <->    /--------/    <->      TMS      
-        \      /         /--------------/                   
-         -----        /--------------------/                
+         lat/lon         XY pixels Z zoom      XYZ from TMS
+        EPSG:4326
+         .----.                ----
+        /      \     <->    /--------/    <->      TMS
+        \      /         /--------------/
+         -----        /--------------------/
        WMS, KML    Web Clients, Google Earth  TileMapService
     """
 
@@ -327,15 +322,15 @@ class GlobalGeodetic(object):
         "Converts lat/lon to pixel coordinates in given zoom of the EPSG:4326 pyramid"
 
         res = 180 / 256.0 / 2 ** zoom
-        px = old_div((180 + lat), res)
-        py = old_div((90 + lon), res)
+        px = (180 + lat) / res
+        py = (90 + lon) / res
         return px, py
 
     def PixelsToTile(self, px, py):
         "Returns coordinates of the tile covering region in pixel coordinates"
 
-        tx = int(math.ceil(old_div(px, float(self.tileSize))) - 1)
-        ty = int(math.ceil(old_div(py, float(self.tileSize))) - 1)
+        tx = int(math.ceil(px / float(self.tileSize)) - 1)
+        ty = int(math.ceil(py / float(self.tileSize)) - 1)
         return tx, ty
 
     def Resolution(self, zoom):

@@ -1,5 +1,9 @@
-from past.builtins import xrange
 from .compat import vector_tile
+import sys
+
+if sys.version_info[0] < 3:
+    range = xrange
+
 
 cmd_bits = 3
 
@@ -117,7 +121,7 @@ class TileData:
                         parts.append(coords)
                         coords = []
 
-                for point in xrange(0, cmd_len):
+                for point in range(0, cmd_len):
                     x = geom[i]
                     i = i + 1
 

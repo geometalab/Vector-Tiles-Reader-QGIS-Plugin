@@ -519,11 +519,16 @@ class DirectorySource(AbstractSource):
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
 
+        tile_path = self.json.get_value(key='tiles', is_array=True)
+        if tile_path:
+            tile_path = tile_path[0]
+        else:
+            tile_path = os.path.join(self.path, "{z}/{x}/{y}.pbf")
+
         self.max_progress_changed.emit(tiles_to_load)
         for index, t in enumerate(tiles_to_load):
             self.progress_changed.emit(index)
-            tile_path = "{}/{}/{}.pbf".format(int(zoom_level), t[0], t[1])
-            full_path = os.path.join(self.path, tile_path)
+            full_path = tile_path.format(z=int(zoom_level), x=t[0], y=t[1])
             col = t[0]
             row = t[1]
             tile = VectorTile(self.scheme(), zoom_level, col, row)
@@ -531,4 +536,6 @@ class DirectorySource(AbstractSource):
                 with open(full_path, 'rb') as f:
                     encoded_data = f.read()
                     tile_data_tuples.append((tile, encoded_data))
+            else:
+                info("File not found: {}", full_path)
         return tile_data_tuples
