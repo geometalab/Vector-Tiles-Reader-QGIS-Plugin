@@ -6,13 +6,14 @@
 name=Vector Tiles Reader
 qgisMinimumVersion=2.18
 qgisMaximumVersion=3.98
-description=Vector tiles reader which supports server connections, MBTiles file and other sources
-about=Reads vector tiles according to Mapbox Vector Tiles specification as layers in a group. Sources can be an internet server, from an MBTiles file or from a directory. This Python plugin uses prebuild C++ binaries for performance reasons.
+description=Reader (short VT reader) which reads Vector Tiles from various predefined and configurable sources
+about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specification as QGIS layers in a group. Styled vector tiles are typically used as high quality base maps. Sources can be an internet server, an MBTiles file or a directory of files. If an Mapbox GL JSON style is configured, the style is (partially) converted to QGIS styles. 
 
-    The plugin has connections already configured for the following providers:
+The plugin has connections already configured for the following providers:
+* OpenMapTiles.com with OSM Bright MB GL style (default)
+* Mapcat.com with Mapcat style
 
-    - OpenMapTiles.com
-    - Mapcat.com
+This Python plugin uses prebuilt C++ binaries for performance reasons.
 version=2.0.2
 author=Martin Boos
 email=geometalab@gmail.com
@@ -151,9 +152,9 @@ changelog=
     * Loading of tiles can be cancelled
 
 # Tags are comma separated with spaces allowed
-tags=vector tile, mbtiles, vector
+tags=vector tiles, tiles, mbtiles, mapbox, vector, basemap
 
-homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
+homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/blob/master/README.md
 tracker=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
 repository=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
 category=Vector
