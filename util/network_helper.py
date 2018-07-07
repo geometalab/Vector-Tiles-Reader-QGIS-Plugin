@@ -3,7 +3,6 @@ from .vtr_2to3 import *
 
 
 def url_exists(url):
-    new_url = url
     reply = get_async_reply(url, head_only=True)
     while not reply.isFinished():
         QApplication.processEvents()
@@ -15,21 +14,22 @@ def url_exists(url):
             info("Moved permanently, new location is: {}", location)
             return url_exists(location)
 
-    result = status == 200
+    success = status == 200
     error = None
-    if not status:
-        error = reply.errorString()
-    if status == 302:
-        error = "Loading error: Moved Temporarily.\n\nURL incorrect? Missing or incorrect API key?"
-    elif status == 404:
-        error = "Loading error: Resource not found.\n\nURL incorrect?"
-    elif error:
-        error = "Loading error: {}\n\nURL incorrect? (HTTP Status {})".format(error, status)
-    else:
-        error = "Something went wrong with '{}'. HTTP Status is {}".format(remove_key(url), status)
     info("URL check for '{}': status '{}'", url, status)
+    if not success:
+        if not status:
+            error = reply.errorString()
+        if status == 302:
+            error = "Loading error: Moved Temporarily.\n\nURL incorrect? Missing or incorrect API key?"
+        elif status == 404:
+            error = "Loading error: Resource not found.\n\nURL incorrect?"
+        elif error:
+            error = "Loading error: {}\n\nURL incorrect? (HTTP Status {})".format(error, status)
+        else:
+            error = "Something went wrong with '{}'. HTTP Status is {}".format(remove_key(url), status)
 
-    return result, error, new_url
+    return success, error, url
 
 
 def get_async_reply(url, head_only=False):
