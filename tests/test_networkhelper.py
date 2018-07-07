@@ -16,10 +16,10 @@ class NetworkHelperTests(unittest.TestCase):
         pass
 
     def test_url_exists(self):
-        exists, error = url_exists("https://travis-ci.org/")
+        exists, error, _ = url_exists("https://travis-ci.org/")
         self.assertTrue(exists)
         self.assertIsNone(error)
 
     def test_url_exists_not(self):
-        exists, error = url_exists("https://traaadsfadsfadssfdsfdsfdsvis-ci.org/")
+        exists, error, _ = url_exists("https://traaadsfadsfadssfdsfdsfdsvis-ci.org/")
         self.assertFalse(exists)

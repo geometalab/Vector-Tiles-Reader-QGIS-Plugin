@@ -417,7 +417,7 @@ class VtrPlugin():
         url = connection["style"]
         info("Creating styles from: {}", url)
         valid, error, url = url_exists(url)
-        if not url_exists(url):
+        if not valid:
             info("StyleJSON not found. URL invalid?")
         else:
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))

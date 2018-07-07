@@ -24,7 +24,7 @@ class ServerSourceTests(unittest.TestCase):
     def test_non_existing_url(self):
         with self.assertRaises(RuntimeError) as ctx:
             ServerSource("http://localhost/mytilejson.json")
-        error = "Loading error: Connection refused\n\nURL incorrect?"
+        error = "Loading error: Connection refused\n\nURL incorrect? (HTTP Status None)"
         print(ctx.exception)
         self.assertTrue(error in ctx.exception)
 

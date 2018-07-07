@@ -11,8 +11,9 @@ def url_exists(url):
     status = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
     if status == 301:
         location = reply.header(QNetworkRequest.LocationHeader).toString()
-        info("Moved permanently, new location is: {}", location)
-        return url_exists(location)
+        if location != url:
+            info("Moved permanently, new location is: {}", location)
+            return url_exists(location)
 
     result = status == 200
     error = None
