@@ -157,7 +157,8 @@ class VtrPlugin():
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_connections_action = self._create_action("Add Vector Tiles Layer...", "mActionAddVectorTilesReader.svg",
+        self.open_connections_action = self._create_action("Add Vector Tiles Layer...",
+                                                           "mActionAddVectorTilesReader.svg",
                                                            self._show_connections_dialog)
         self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
                                                  self._load_features_overlapping_tile_extent, False)
@@ -306,13 +307,13 @@ class VtrPlugin():
 
             is_new_extent_within_loaded_extent = self._loaded_extent \
                                                  and self._loaded_extent["x_min"] <= new_extent["x_min"] <= \
-                                                     self._loaded_extent["x_max"] \
+                                                 self._loaded_extent["x_max"] \
                                                  and self._loaded_extent["x_min"] <= new_extent["x_max"] <= \
-                                                     self._loaded_extent["x_max"] \
+                                                 self._loaded_extent["x_max"] \
                                                  and self._loaded_extent["y_min"] <= new_extent["y_min"] <= \
-                                                     self._loaded_extent["y_max"] \
+                                                 self._loaded_extent["y_max"] \
                                                  and self._loaded_extent["y_min"] <= new_extent["y_max"] <= \
-                                                     self._loaded_extent["y_max"]
+                                                 self._loaded_extent["y_max"]
 
             old_scale = self._loaded_scale
 
@@ -352,12 +353,16 @@ class VtrPlugin():
         self.connections_dialog.set_nr_of_tiles(nr_of_tiles)
 
     def _on_connect(self, connection):
-        if self._current_reader and self._current_reader.connection()["name"] != connection["name"]:
-            if self._get_all_own_layers():
-                msg = "You just changed the current connection from '{old}' to '{new}'. The current implementation of the plugin supports only one active connection at a time.\"" \
-                      "Due to this, only the latest connection will be updated. You mave save or delete the layer group from '{old}'."\
-                    .format(old=self._current_reader.connection()["name"], new=connection["name"])
-                QMessageBox.warning(None, "Connection", msg)
+        if self._current_reader:
+            current_conn = self._current_reader.connection()
+            if current_conn and current_conn["name"] != connection["name"]:
+                if self._get_all_own_layers():
+                    msg = "You just changed the current connection from '{old}' to '{new}'. The current " \
+                          "implementation of the plugin supports only one active connection at a time.\"" \
+                          "Only the latest connection will be updated. You mave save or delete the layer " \
+                          "group from '{old}'." \
+                        .format(old=self._current_reader.connection()["name"], new=connection["name"])
+                    QMessageBox.warning(None, "Connection", msg)
 
         self._current_connection_name = connection["name"]
         self.reload_action.setText("{} ({})".format(self._reload_button_text, self._current_connection_name))
@@ -389,7 +394,10 @@ class VtrPlugin():
                 msg = str(sys.exc_info()[1])
                 msg = msg if msg else 'Sorry, an unknown error occured!'
                 QMessageBox.critical(None, "Error", msg)
-                critical(str(sys.exc_info()[1]))
+                tb = ""
+                if traceback:
+                    tb = traceback.format_exc()
+                critical("Connecting failed: {}, {}", sys.exc_info(), tb)
                 self._current_reader = None
                 self._current_connection_name = None
         self._update_current_reader_sources()
@@ -408,6 +416,7 @@ class VtrPlugin():
             return
         url = connection["style"]
         info("Creating styles from: {}", url)
+        valid, error, url = url_exists(url)
         if not url_exists(url):
             info("StyleJSON not found. URL invalid?")
         else:
@@ -711,7 +720,7 @@ class VtrPlugin():
         try:
             self.iface.mapCanvas().setCrsTransformEnabled(True)
         except:
-            pass # not available in QGIS3 anymore
+            pass  # not available in QGIS3 anymore
 
     def _cancel_load(self):
         if self._current_reader:
@@ -811,8 +820,11 @@ class VtrPlugin():
         except RuntimeError:
             msg = str(sys.exc_info()[1])
             msg = msg if msg else 'Sorry, an unknown error occured!'
-            QMessageBox.critical(None, "Error", msg)
-            critical(str(sys.exc_info()[1]))
+            QMessageBox.critical(None, "Error", "Creating reader failed: {}".format(msg))
+            tb = ""
+            if traceback:
+                tb = traceback.format_exc()
+            critical("Creating reader failed: {}, {}", sys.exc_info(), tb)
         return reader
 
     def add_layers(self, layers):

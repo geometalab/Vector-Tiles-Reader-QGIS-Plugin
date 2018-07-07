@@ -3,11 +3,17 @@ from .vtr_2to3 import *
 
 
 def url_exists(url):
+    new_url = url
     reply = get_async_reply(url, head_only=True)
     while not reply.isFinished():
         QApplication.processEvents()
 
     status = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+    if status == 301:
+        location = reply.header(QNetworkRequest.LocationHeader).toString()
+        info("Moved permanently, new location is: {}", location)
+        return url_exists(location)
+
     result = status == 200
     error = None
     if not status:
@@ -17,9 +23,12 @@ def url_exists(url):
     elif status == 404:
         error = "Loading error: Resource not found.\n\nURL incorrect?"
     elif error:
-        error = "Loading error: {}\n\nURL incorrect?".format(error)
+        error = "Loading error: {}\n\nURL incorrect? (HTTP Status {})".format(error, status)
+    else:
+        error = "Something went wrong with '{}'. HTTP Status is {}".format(remove_key(url), status)
+    info("URL check for '{}': status '{}'", url, status)
 
-    return result, error
+    return result, error, new_url
 
 
 def get_async_reply(url, head_only=False):
