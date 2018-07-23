@@ -469,7 +469,7 @@ class VtrPlugin():
         if limit:
             self.iface.messageBar().pushMessage(
                 "Only {} tiles were loaded according to the limit in the options".format(limit),
-                level=QgsMessageBar.WARNING,
+                level=Qgis.Warning,
                 duration=5)
 
     def _has_extent_changed(self):
