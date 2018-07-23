@@ -20,6 +20,8 @@ import sys
 import traceback
 import ast
 
+from qgis.core import Qgis
+
 from builtins import map
 from builtins import str
 import logging
