@@ -96,6 +96,18 @@ ln -sr ./ ~/.qgis2/python/plugins/Vector-Tile-Reader
 ln -sr ./ ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/Vector-Tile-Reader
 ```
 
+### OSX
+Location of QGIS plugins directory:
+
+QGIS|Path
+---|---
+2 | ~/.qgis2/python/plugins
+3 | ~/Library/Application\ Support/QGIS/QGIS3/profiles/default/python/plugins
+
+```
+ls -s ./
+```
+
 ## FAQ
 
 #### How can I use the server connection feature?

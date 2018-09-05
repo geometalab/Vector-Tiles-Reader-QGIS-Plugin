@@ -107,8 +107,9 @@ class ServerSource(AbstractSource):
         if not url:
             raise RuntimeError("URL is required")
 
-        valid, error = url_exists(url)
+        valid, error, url = url_exists(url)
         if not valid:
+            critical("The URL seems to be invalid: {}", url)
             raise RuntimeError(error)
 
         self.url = url
