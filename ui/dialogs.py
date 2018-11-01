@@ -105,6 +105,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "token": "mapzen-7SNUCXx"
         },
         _MAPCAT: {
+            "disabled": True,
             "name": _MAPCAT,
             "url": "https://api.mapcat.com/api/mapinit/tile?api_key={token}",
             "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
