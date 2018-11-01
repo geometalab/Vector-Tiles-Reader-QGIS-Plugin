@@ -23,7 +23,6 @@ from qgis.core import (
     QgsGeometry,
     QgsNetworkAccessManager
     )
-from qgis.gui import QgsMessageBar
 
 import os
 try:

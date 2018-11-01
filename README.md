@@ -74,7 +74,7 @@ To create the symlink open a command prompt as Administrator and run:
 ```
 :: Set the path on the next line to the directory where the plugin is located
 
-set PATH_TO_VTR="C:\my_projects\vector_tiles_reader"
+set PATH_TO_VTR="C:\DEV\Vector-Tiles-Reader-QGIS-Plugin"
 mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" %PATH_TO_VTR%
 ```
 
@@ -82,7 +82,7 @@ mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" %PATH_TO_VTR
 ```
 :: Set the path on the next line to the directory where the plugin is located
 
-set PATH_TO_VTR="C:\my_projects\vector_tiles_reader"
+set PATH_TO_VTR="C:\DEV\Vector-Tiles-Reader-QGIS-Plugin"
 mklink /D "%appdata%\QGIS\QGIS3\profiles\default\python\plugins\vector_tiles_reader" %PATH_TO_VTR%
 ```
 

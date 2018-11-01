@@ -105,6 +105,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "token": "mapzen-7SNUCXx"
         },
         _MAPCAT: {
+            "disabled": True,
             "name": _MAPCAT,
             "url": "https://api.mapcat.com/api/mapinit/tile?api_key={token}",
             "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
@@ -142,8 +143,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         if not connection_to_select:
             connection_to_select = self._OMT
         self.tilejson_connections.select_connection(connection_to_select)
-        self.btnConnectDirectory.clicked.connect(lambda: self.connect(self._directory_conn))
-        self.btnConnectFile.clicked.connect(lambda: self.connect(self._mbtiles_conn))
+        self.btnConnectDirectory.clicked.connect(lambda: self.connect_to(self._directory_conn))
+        self.btnConnectFile.clicked.connect(lambda: self.connect_to(self._mbtiles_conn))
         self.tabConnections.currentChanged.connect(self._handle_tab_change)
         self.tilejson_connections.on_connect.connect(self._handle_connect)
         self.tilejson_connections.on_connection_change.connect(self._handle_connection_change)

@@ -476,10 +476,8 @@ class VtrPlugin():
         :return:
         """
         if limit:
-            self.iface.messageBar().pushMessage(
-                "Only {} tiles were loaded according to the limit in the options".format(limit),
-                level=QgsMessageBar.WARNING,
-                duration=5)
+            self.iface.messageBar().pushWarning("", "Only {} tiles were loaded according to the limit in the options"
+                                                .format(limit))
 
     def _has_extent_changed(self):
         scale = self._scale_to_load
@@ -783,10 +781,7 @@ class VtrPlugin():
                 for line in tb_lines:
                     tb_text += line
                 critical("{}", tb_text)
-                self.iface.messageBar().pushMessage(
-                    "Something went horribly wrong. Please have a look at the log.",
-                    level=QgsMessageBar.CRITICAL,
-                    duration=5)
+                self.iface.messageBar().pushCritical("", "Something went horribly wrong. Please have a look at the log.")
                 self._is_loading = False
 
     def _set_background_color(self, color_string):
