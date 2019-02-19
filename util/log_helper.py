@@ -5,6 +5,7 @@ import pkgutil
 import importlib
 import tempfile
 import re
+from .vtr_2to3 import QGIS3
 
 _KEY_REGEX = re.compile(r"(\?|&)(api_)?key=[^\s?&]*")
 
@@ -59,8 +60,8 @@ def _log_message(msg, level, *args):
 
         _log_to_qgis(msg, level)
     except:
-        _logger.info("Unexpected error during logging: {}", sys.exc_info()[1])
-        _logger.info("Original message: '{}', params: '{}'", args)
+        _logger.error("Unexpected error during logging: {}", sys.exc_info()[1])
+        _logger.error("Original message: '{}', params: '{}'", args)
 
 
 def _import_qgis():
@@ -72,32 +73,50 @@ def _import_qgis():
 def _log_to_qgis(msg, level):
     qgis = _import_qgis()
     if not qgis:
+        _logger.error("QGIS not found for logging")
         return
 
-    qgis_level = None
-    if level == _DEBUG:
-        pass
-    elif level == _INFO:
-        qgis_level = qgis.QgsMessageLog.INFO
-    elif level == _WARN:
-        qgis_level = qgis.QgsMessageLog.WARNING
-    elif level == _CRITICAL:
-        qgis_level = qgis.QgsMessageLog.CRITICAL
+    if QGIS3:
+        if level != _DEBUG:
+            qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader'.format(level))
+    else:
+        qgis_level = None
+        if level == _DEBUG:
+            pass
+        elif level == _INFO:
+            qgis_level = qgis.QgsMessageLog.INFO
+        elif level == _WARN:
+            qgis_level = qgis.QgsMessageLog.WARNING
+        elif level == _CRITICAL:
+            qgis_level = qgis.QgsMessageLog.CRITICAL
 
-    if qgis_level is not None:
-        qgis.QgsMessageLog.logMessage(msg, 'Vector Tile Reader', qgis_level)
-
+        if qgis_level is not None:
+            qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader', qgis_level)
 
 try:
     log_path = get_temp_dir("log.txt")
     temp_dir = os.path.dirname(log_path)
+
+    max_logsize_mb = 4
+    if os.path.isfile(log_path) and os.stat(log_path).st_size >= max_logsize_mb*1024*1024:
+        os.remove(log_path)
+
     if not os.path.isfile(log_path):
         open(log_path, 'a').close()
+
+    from imp import reload
+    reload(logging)
+
     logging.basicConfig(
         filename=log_path,
+        filemode='a',
+        level=logging.INFO,
         format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
+
+    # fh = logging.FileHandler(os.path.join(temp_dir, "bla.log"))
+    _logger = logging.getLogger()
+    # _logger.setLevel(logging.INFO)
+    # _logger.addHandler(fh)
 except IOError:
     _log_to_qgis("Creating logging config failed: {}".format(sys.exc_info()), _WARN)
 
-
-_logger = logging.getLogger("Vector-Tile-Reader")

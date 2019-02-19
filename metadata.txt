@@ -12,7 +12,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * OpenMapTiles.com with OSM Bright MB GL style (default)
     * Mapcat.com with Mapcat style
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=2.0.4
+version=2.0.5
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +22,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---2.0.5---
+    * Bugfix: Logging fixed for QGIS 3
     ---2.0.4---
     * Bugfix: 'Refresh' button working again
     * Bugfix: Warning about tile limit works now in both QGIS 2 and 3
