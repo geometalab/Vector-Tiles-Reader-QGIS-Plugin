@@ -238,8 +238,9 @@ class VtReader(QObject):
         return zoom_level
 
     def _load_tiles(self):
-        # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
-        self._source = self._create_source(self.connection())
+        if not self._source or self.connection()["type"] == ConnectionTypes.MBTiles:
+            # recreate source to assure the source belongs to the new thread, SQLite3 isn't happy about it otherwise
+            self._source = self._create_source(self.connection())
 
         try:
             if can_load_lib():
