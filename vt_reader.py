@@ -4,6 +4,7 @@
 from itertools import *
 import sys
 import os
+
 try:
     import simplejson as json
 except ImportError:
@@ -11,17 +12,17 @@ except ImportError:
 import uuid
 import traceback
 
-if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
+if not os.environ.get("VTR_TESTS"):
     from .util.vtr_2to3 import *
     from .util.qgis_helper import get_loaded_layers_of_connection
     from .util.log_helper import info, critical, debug, remove_key
     from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
     from .util.feature_helper import (FeatureMerger,
-                                     geo_types,
-                                     is_multi,
-                                     map_coordinates_recursive,
-                                     GeoTypes,
-                                     clip_features)
+                                      geo_types,
+                                      is_multi,
+                                      map_coordinates_recursive,
+                                      GeoTypes,
+                                      clip_features)
     from .util.file_helper import (get_styles,
                                    get_style_folder,
                                    assure_temp_dirs_exist,
@@ -60,7 +61,6 @@ from gzip import GzipFile
 
 import multiprocessing as mp
 
-
 is_windows = sys.platform.startswith("win32")
 if is_windows:
     # OSGeo4W does not bundle python in exec_prefix for python
@@ -70,7 +70,6 @@ if is_windows:
 
 
 class VtReader(QObject):
-
     progress_changed = pyqtSignal(int, name='progressChanged')
     max_progress_changed = pyqtSignal(int, name='maxProgressChanged')
     message_changed = pyqtSignal('QString', name='messageChanged')
@@ -81,15 +80,15 @@ class VtReader(QObject):
     add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
 
     _loading_options = {
-            'zoom_level': None,
-            'layer_filter': None,
-            'load_mask_layer': None,
-            'merge_tiles': None,
-            'clip_tiles': None,
-            'apply_styles': None,
-            'max_tiles': None,
-            'bounds': None
-        }
+        'zoom_level': None,
+        'layer_filter': None,
+        'load_mask_layer': None,
+        'merge_tiles': None,
+        'clip_tiles': None,
+        'apply_styles': None,
+        'max_tiles': None,
+        'bounds': None
+    }
 
     _nr_tiles_to_process_serial = 30
     _layers_to_dissolve = []
@@ -209,7 +208,7 @@ class VtReader(QObject):
         crs = {
             "type": "name",
             "properties": {
-                    "name": "urn:ogc:def:crs:EPSG::{}".format(epsg_id)}}
+                "name": "urn:ogc:def:crs:EPSG::{}".format(epsg_id)}}
 
         return {
             "tiles": [],
@@ -247,7 +246,7 @@ class VtReader(QObject):
                 info("Native decoding supported!!!")
             else:
                 bits = "32"
-                if sys.maxsize > 2**32:
+                if sys.maxsize > 2 ** 32:
                     bits = "64"
                 info("Native decoding not supported: {}, {}bit", sys.platform, bits)
 
@@ -499,7 +498,7 @@ class VtReader(QObject):
             if tile.decoded_data:
                 self._all_tiles.append(tile)
                 self._add_features_to_feature_collection(tile, layer_filter=layer_filter)
-            self._update_progress(progress=index+1)
+            self._update_progress(progress=index + 1)
 
     def _get_geojson_filename(self, layer_name, geo_type):
         return "{}.{}.{}".format(self._source.name().replace(" ", "_"), layer_name, geo_type)
@@ -563,8 +562,8 @@ class VtReader(QObject):
                                       scheme=self._source.scheme(),
                                       bounds=clipping_bounds,
                                       should_cancel_func=lambda: self.cancel_requested)
-            if not layer\
-                    and (self._allowed_sources is None or file_path in self._allowed_sources)\
+            if not layer \
+                    and (self._allowed_sources is None or file_path in self._allowed_sources) \
                     and (not layer_filter or layer_name in layer_filter):
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(json_src=file_path,
@@ -580,7 +579,7 @@ class VtReader(QObject):
                                   bounds=clipping_bounds,
                                   should_cancel_func=lambda: self.cancel_requested)
                 new_layers.append((layer_name, geo_type, layer))
-            self._update_progress(progress=count+1)
+            self._update_progress(progress=count + 1)
 
         self._update_progress(msg="Refresh layers...")
 
