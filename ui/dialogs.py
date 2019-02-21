@@ -272,6 +272,11 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self.options.set_zoom_level(zoom_level, set_immediately=set_immediately)
 
     def set_nr_of_tiles(self, nr_tiles):
+        """
+        Sets the number of expected tiles to be loaded
+        :param nr_tiles:
+        :return:
+        """
         self.options.set_nr_of_tiles(nr_tiles)
         self._nr_of_tiles = nr_tiles
 
@@ -288,7 +293,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
         load = True
         threshold = 20 if QGIS3 else 100
-        if self._nr_of_tiles > threshold:
+        if self._nr_of_tiles > threshold and not self.options.tile_number_limit():
             msg = "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?"\
                 .format(self._nr_of_tiles)
             reply = QMessageBox.question(self.activateWindow(), 'Confirm Load', msg, QMessageBox.Yes, QMessageBox.No)
