@@ -19,6 +19,7 @@ import site
 import sys
 import traceback
 import ast
+import platform
 
 from builtins import map
 from builtins import str
@@ -97,6 +98,8 @@ class VtrPlugin():
         iface.newProjectCreated.connect(self._on_project_change)
         iface.projectRead.connect(self._on_project_change)
         QgsMapLayerRegistry.instance().layersWillBeRemoved.connect(self._on_remove)
+        python_version = platform.python_version()
+        info("Vector Tiles Reader (Python {})".format(python_version))
         self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
@@ -180,7 +183,6 @@ class VtrPlugin():
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.reload_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
         self.iface.addPluginToVectorMenu("&Vector Tiles Reader", self.about_action)
-        info("Vector Tiles Reader Plugin loaded...")
         self._connect_to_first_source()
 
     def _connect_to_first_source(self):
