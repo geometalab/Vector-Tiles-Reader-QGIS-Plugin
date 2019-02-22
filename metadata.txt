@@ -24,6 +24,7 @@ email=geometalab@gmail.com
 changelog=
     ---2.0.6---
     * Loading performance increased for TileJSON connections by avoiding unnecessary URL checks
+    * Bugfix: Show tile excess warning only if tile loading limit is disabled
     ---2.0.5---
     * Bugfix: Logging fixed for QGIS 3
     ---2.0.4---
