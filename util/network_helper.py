@@ -92,6 +92,9 @@ def load_url(url):
     http_status_code = reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
     if http_status_code == 200:
         content = reply.readAll().data()
+        # todo: rather get content type from response than from file extension
+        if url.endswith(".json") and isinstance(content, bytes):
+            content = content.decode("utf-8")
     else:
         if http_status_code is None:
             content = "Request failed: {}".format(reply.errorString())

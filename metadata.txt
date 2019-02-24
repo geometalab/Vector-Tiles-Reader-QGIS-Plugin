@@ -12,7 +12,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * OpenMapTiles.com with OSM Bright MB GL style (default)
     * Mapcat.com with Mapcat style
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=2.0.6
+version=2.0.7
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +22,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---2.0.7---
+    * Bugfix: Make sure response of webrequest is str and not bytes if url is for a json file
     ---2.0.6---
     * Loading performance increased for TileJSON connections by avoiding unnecessary URL checks
     * Bugfix: Show tile excess warning only if tile loading limit is disabled
