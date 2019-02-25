@@ -66,6 +66,12 @@ Download the latest published release inside QGIS:
 2. Search for 'Vector Tiles Reader'
 3. Install
 
+### Cloning
+This project uses submodules, so make sure you clone them too.
+```
+git clone --recurse-submodules https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin.git
+```
+
 ### Windows (QGIS 2)
 Copy cloned folder or create symlink to: 
 %userprofile%/.qgis2/python/plugins
