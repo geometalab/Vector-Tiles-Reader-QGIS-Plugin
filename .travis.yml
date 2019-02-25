@@ -21,6 +21,12 @@ matrix:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
       after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
+
+    - sudo: required
+      branches:
+        only:
+        - master
+        - style-conver-as-submodule
       before_deploy:
         - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2gis/sample_data\* ext-libs/mapboxstyle2gis/tests\* ext-libs/mapboxstyle2gis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
         - unzip tmp.zip -d vector_tiles_reader
