@@ -1,0 +1,8 @@
+<svg width="{width}px" height="{height}px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="{x} {y} {width} {height}">
+        <defs>
+                <clipPath id="cut-off-bottom">
+                        <rect x="{x}" y="{y}" width="{width}" height="{height}"/>
+                </clipPath>
+        </defs>
+        <image clip-path="url(#cut-off-bottom)" xlink:href="data:image/png;base64,{base64_data}" />
+</svg>

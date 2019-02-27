@@ -1,0 +1,31 @@
+{
+	"version": 8,
+	"name": "Basic",
+	"metadata": {
+		"mapbox:autocomposite": true,
+		"mapbox:type": "template"
+	},
+	"sources": {
+		"mapbox": {
+			"url": "mapbox://mapbox.mapbox-streets-v7",
+			"type": "vector"
+		}
+	},
+	"sprite": "mapbox://sprites/mapbox/basic-v9",
+	"glyphs": "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+	"layers": [{
+			"id": "landuse_overlay_national_park",
+			"type": "fill",
+			"source": "mapbox",
+			"source-layer": "landuse_overlay",
+			"filter": [
+				"==",
+				"class",
+				"national_park"
+			],
+			"paint": {
+				"fill-color": "#d2edae",
+				"fill-opacity": 0.75
+			}
+		}]
+}
