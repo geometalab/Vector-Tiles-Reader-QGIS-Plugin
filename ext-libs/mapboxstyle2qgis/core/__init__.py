@@ -131,6 +131,16 @@ def process(style_json):
 
 
 def create_icons(style, web_request_executor, output_directory):
+    """
+    Loads the sprites defined by sprites.json and sprites.data and extracts the specific items by creating
+    svg icons that clip the defined region (defined in sprites.json) from the sprites.png so that only one icons
+    remains.
+    :param style:
+    :param web_request_executor:
+    :param output_directory:
+    :return:
+    """
+
     image_data, image_definition_data = _load_sprite_data(style, web_request_executor)
     if image_data and image_definition_data:
         _create_icons(image_data, image_definition_data, output_directory)
@@ -171,6 +181,9 @@ def _load_sprite_data(style, web_request_executor):
     if "sprite" in style:
         image_url = "{}.png".format(style["sprite"])
         image_definitions_url = "{}.json".format(style["sprite"])
+        if not image_url.startswith("http") or not image_definitions_url.startswith("http"):
+            return None, None
+
         image_data = web_request_executor(image_url)
         image_definition_data = web_request_executor(image_definitions_url)
         if not image_data:
@@ -203,6 +216,13 @@ def _add_default_transparency_styles(style_dict):
 
 
 def write_styles(styles_by_target_layer, output_directory):
+    """
+    Creates the qml files that can be applied to qgis layers.
+    :param styles_by_target_layer:
+    :param output_directory:
+    :return:
+    """
+
     if os.path.isdir(output_directory):
         for the_file in os.listdir(output_directory):
             file_path = os.path.join(output_directory, the_file)
@@ -215,6 +235,7 @@ def write_styles(styles_by_target_layer, output_directory):
 
 
 _comparision_operators = {
+    "match": "=",
     "==": "=",
     "<=": "<=",
     ">=": ">=",
@@ -296,28 +317,28 @@ def get_styles(layer):
 
     all_values = []
     if layer_type == "fill":
-        all_values.extend(get_properties_by_zoom(layer, "paint/fill-color", is_color=True, default="rgba(0,0,0,0)"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/fill-outline-color", is_color=True))
-        all_values.extend(get_properties_by_zoom(layer, "paint/fill-translate"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/fill-opacity"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/fill-pattern", is_expression=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-color", is_color=True, default="rgba(0,0,0,0)"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-outline-color", is_color=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-translate"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-opacity"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-pattern", is_expression=True))
     elif layer_type == "line":
-        all_values.extend(get_properties_by_zoom(layer, "layout/line-join"))
-        all_values.extend(get_properties_by_zoom(layer, "layout/line-cap"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/line-width", default=0, can_interpolate=True))
-        all_values.extend(get_properties_by_zoom(layer, "paint/line-color", is_color=True, default="rgba(0,0,0,0)"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/line-opacity"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/line-dasharray"))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/line-join"))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/line-cap"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/line-width", default=0, can_interpolate=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/line-color", is_color=True, default="rgba(0,0,0,0)"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/line-opacity"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/line-dasharray"))
     elif layer_type == "symbol":
-        all_values.extend(get_properties_by_zoom(layer, "layout/icon-image", is_expression=True))
-        all_values.extend(get_properties_by_zoom(layer, "layout/text-font"))
-        all_values.extend(get_properties_by_zoom(layer, "layout/text-transform"))
-        all_values.extend(get_properties_by_zoom(layer, "layout/text-size", can_interpolate=True))
-        all_values.extend(get_properties_by_zoom(layer, "layout/text-field", is_expression=True, take=1))
-        all_values.extend(get_properties_by_zoom(layer, "layout/text-max-width"))
-        all_values.extend(get_properties_by_zoom(layer, "paint/text-color", is_color=True))
-        all_values.extend(get_properties_by_zoom(layer, "paint/text-halo-width", can_interpolate=True))
-        all_values.extend(get_properties_by_zoom(layer, "paint/text-halo-color", is_color=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/icon-image", is_expression=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/text-font"))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/text-transform"))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/text-size", can_interpolate=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/text-field", is_expression=True, take=1))
+        all_values.extend(get_properties_values_for_zoom(layer, "layout/text-max-width"))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/text-color", is_color=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/text-halo-width", can_interpolate=True))
+        all_values.extend(get_properties_values_for_zoom(layer, "paint/text-halo-color", is_color=True))
 
     for v in all_values:
         zoom = v["zoom_level"]
@@ -364,12 +385,25 @@ def get_styles(layer):
 
 def _parse_expr(expr, take=None):
     """
-     * Creates a QGIS expression
+     * Creates a QGIS expression (e.g. '{maki}-11'  becomes '"maki"'+'11'
     :param expr:
     :param take: The nr of fields to take. All if value is None.
                  E.g.: "{name:latin}\n{name:nonlatin}" consists of two fields
     :return:
     """
+    if isinstance(expr, list):
+        op = expr[0]
+        data_expression_operators = ["get", "has", "id", "geometry-type", "properties", "feature-state"]
+        is_data_expression = True if op in data_expression_operators else False
+        if not is_data_expression:
+            return ""
+            raise RuntimeError("Unknown expression: ", expr)
+        else:
+            if op == "get":
+                assert len(expr) == 2
+                return _parse_expr("{}".format(expr[1]))
+            else:
+                raise RuntimeError("Data expression operator not implemented: ", op)
 
     fields = _get_qgis_fields(expr)[:take]
     result = "+".join(fields)
@@ -377,6 +411,12 @@ def _parse_expr(expr, take=None):
 
 
 def _map_value_to_qgis_expr(val):
+    """
+    Wraps the value either in double quotes if it's an expression or in single quotes if it's a string/value
+    :param val:
+    :return:
+    """
+
     if val["is_expr"]:
         return '"{}"'.format(val["text"].encode("utf-8"))
     else:
@@ -384,6 +424,11 @@ def _map_value_to_qgis_expr(val):
 
 
 def _get_qgis_fields(expr):
+    if isinstance(expr, list):
+        # todo: what happens here?
+        raise RuntimeError("invalid: ", expr)
+        return []
+
     values = []
     val = None
     is_expr = False
@@ -405,7 +450,8 @@ def _get_qgis_fields(expr):
                 "text": "",
                 "is_expr": is_expr
             }
-
+        if isinstance(s, list):
+            raise RuntimeError("Unknown s: ", expr)
         val["text"] += s
     if val:
         values.append(val)
@@ -421,7 +467,12 @@ def _get_field_expr(index, field):
 
 
 def parse_color(color):
-    if color.startswith("#"):
+    if isinstance(color, list):
+        if color[0] != "match":
+            # raise RuntimeError("Unknown color: ", color)
+            return "255,0,0,0"
+        return _get_match_expr(color)
+    elif color.startswith("#"):
         color = color.replace("#", "")
         if len(color) == 3:
             color = "".join(list(map(lambda c: c+c, color)))
@@ -471,14 +522,34 @@ def _apply_scale_range(styles):
         s["max_scale_denom"] = max_scale_denom
 
 
-def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=False, can_interpolate=False, default=None, take=None):
+def _get_property_value(obj, property_path):
+    parts = property_path.split("/")
+    value = obj
+    for p in parts:
+        value = _get_value_safe(value, p)
+    property_name = parts[-1]
+    return value, property_name
+
+
+def get_properties_values_for_zoom(paint, property_path, is_color=False, is_expression=False, can_interpolate=False, default=None, take=None):
+    """
+    Returns a list of properties (defined by name, zoom_level, value and is_qgis_expr)
+    If stops are defined, multiple properties will be in the list. One for each zoom-level defined by the stops.
+    If no stops are defined, only a single property (for zoom_level None) will be added to the list.
+    :param paint: The paint object (according to the Mapbox GL Style spec)
+    :param property_path: The path to the property, delimited by a forward-slash. E.g. 'paint/fill-color'
+    :param is_color: True if the property defines a color, like fill-color, line-color, etc.
+    :param is_expression: True if the value represents a qgis expression
+    :param can_interpolate:
+    :param default:
+    :param take:
+    :return:
+    """
+
     if (is_color or is_expression) and can_interpolate:
         raise RuntimeError("Colors and expressions cannot be interpolated")
 
-    parts = property_path.split("/")
-    value = paint
-    for p in parts:
-        value = _get_value_safe(value, p)
+    value, property_name = _get_property_value(obj=paint, property_path=property_path)
 
     stops = None
     if value is not None:
@@ -518,7 +589,7 @@ def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=F
                             first_value=value,
                             second_value=second_value)
             properties.append({
-                "name": parts[-1],
+                "name": property_name,
                 "zoom_level": int(lower_zoom),
                 "value": value,
                 "is_qgis_expr": is_qgis_expr})
@@ -528,7 +599,7 @@ def get_properties_by_zoom(paint, property_path, is_color=False, is_expression=F
         if is_expression:
             value = _parse_expr(value, take=take)
         properties.append({
-            "name": parts[-1],
+            "name": property_name,
             "zoom_level": None,
             "value": value,
             "is_qgis_expr": is_expression})
@@ -581,6 +652,67 @@ def get_qgis_rule(mb_filter, escape_result=True, depth=0):
         if escape_result:
             result = escape_xml(result)
     return result
+
+
+class If(object):
+    def __init__(self, comparision, if_value, else_if=None):
+        self.comparision = comparision
+        self.if_value = if_value
+        self.else_if = else_if
+
+    def dumps(self):
+        else_dump = '""'
+        if self.else_if:
+            if isinstance(self.else_if, str):
+                else_dump = "'{}'".format(self.else_if)
+            else:
+                assert isinstance(self.else_if, If)
+                else_dump = self.else_if.dumps()
+
+        return "if ({}, {}, {})".format(
+            self.comparision,
+            "'{}'".format(self.if_value),
+            else_dump
+        )
+
+    def __repr__(self):
+        return self.dumps()
+
+
+def _get_match_expr(match):
+    """
+    Implements the expression match
+    See: https://docs.mapbox.com/mapbox-gl-js/style-spec/#expressions-match
+    :param match:
+    :return:
+    """
+
+    assert isinstance(match, list)
+    assert len(match) >= 4 and divmod(len(match), 2)[1] == 1  # the last value is the fallback
+    assert match[0] in _comparision_operators
+
+    labels = match[2:-1:2]
+    all_outputs = list(map(lambda c: parse_color(c), match[3::2]))
+    fallback = parse_color(match[-1])
+    labels_with_output = zip(labels, all_outputs)
+    op = match[0]
+    attr = match[1][1]
+    root_if = None
+    current_if = None
+
+    for label, output in labels_with_output:
+        expr = _get_comparision_expr([op, attr, label])
+        new_if = If(expr, output)
+        if not root_if:
+            root_if = new_if
+            current_if = root_if
+
+        if current_if != new_if:
+            current_if.else_if = new_if
+            current_if = new_if
+    current_if.else_if = fallback
+
+    return root_if.dumps()
 
 
 def _get_comparision_expr(mb_filter):

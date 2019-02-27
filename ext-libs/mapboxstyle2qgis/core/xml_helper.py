@@ -50,7 +50,6 @@ def create_style_file(output_directory, layer_style):
                                        icon_expr=s["icon-image"])
                 symbols.append(icn)
 
-
     rule_string = """<rules key="{key}">
     {rules}
     </rules>""".format(key=str(uuid.uuid4()), rules="\n".join(rules))
@@ -109,7 +108,7 @@ def _get_labeling_settings(style):
 
     italic_font = 0
     if isinstance(font, list):
-        if any("italic" in f.lower() for f in font):
+        if any(isinstance(f, str) and "italic" in f.lower() for f in font):
             italic_font = 1
         font = font[0]
     font_size = _get_value_safe(style, "text-size", 16)
@@ -324,7 +323,8 @@ def _get_line_symbol(index, style):
         width_dd_active = 1
     else:
         width_expr = "1"
-    capstyle = _cap_styles[_get_value_safe(style, "line-cap")]
+    line_cap = _get_value_safe(style, "line-cap")
+    capstyle = _cap_styles[None] if isinstance(line_cap, list) else _cap_styles[line_cap]
     joinstyle = _join_styles[_get_value_safe(style, "line-join")]
     opacity = _get_value_safe(style, "line-opacity", 1)
     dashes = _get_value_safe(style, "line-dasharray")
