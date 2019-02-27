@@ -10,9 +10,9 @@ description=Reader (short VT reader) which reads Vector Tiles from various prede
 about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specification as QGIS layers in a group. Styled vector tiles are typically used as high quality base maps. Sources can be an internet server, an MBTiles file or a directory of files. If an Mapbox GL JSON style is configured, the style is (partially) converted to QGIS styles.
     The plugin has connections already configured for the following providers:
     * OpenMapTiles.com with OSM Bright MB GL style (default)
-    * Mapcat.com with Mapcat style
+    * Nextzen.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=2.0.7
+version=2.1.0
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +22,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---2.1.0---
+    * New predefined connection 'Nextzen.org' added
     ---2.0.7---
     * Bugfix: Make sure response of webrequest is str and not bytes if url is for a json file
     ---2.0.6---
@@ -117,50 +119,6 @@ changelog=
     * UI changed: file can be opened directly without adding as connection
     * Experimental flag removed
     * Bugfixes & improvements
-    ---0.14.0---
-    * Tile loading behaviour improved
-    * Bugfixes & improvements
-    ---0.13.1---
-    * Bugfix: Too many tiles may be loaded under some circumstances
-    ---0.13.0---
-    * Export functionality added
-    * Bugfixes & stability improvements
-    ---0.12.0---
-    * Decoding performance improved: all available CPU cores will be used
-    * Feature merging improved: only merge features of the same class
-    ---0.11.0---
-    * Buttons added to reset options to predefined defaults
-    * Feature merging fixed
-    * Tiles will be loaded in the middle of the current extent, not at the borders
-    * Expected number of tiles for current extent is shown in connections dialog
-    * Predefined OMT style improved
-    ---0.10.0---
-    * Plugin uses QGIS proxies if configured
-    * Bugfixes
-    * Error handling improved
-    ---0.9.0---
-    * Bugfixes
-    * Loading performance improved
-    * Caching implemented
-    * Mask layer can be loaded
-    ---0.8.0---
-    * Files connections now be handled with the former server connections dialog
-    * Reload feature added
-    * Bugfixes and stability improvements
-    ---0.7.1---
-    * Bugfixes
-    ---0.7.0---
-    * Predefined server connection included
-    * Loading performance improved
-    * Styling improved
-    ---0.6.1---
-    * Server connections improved
-    ---0.6.0---
-    * Server connections CRS handling improved
-    ---0.5.0---
-    * Stability improved
-    * Server connections added
-    * Loading of tiles can be cancelled
 
 # Tags are comma separated with spaces allowed
 tags=vector tiles, tiles, mbtiles, mapbox, vector, basemap

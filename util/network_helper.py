@@ -1,5 +1,6 @@
 from .log_helper import warn, info, remove_key
 from .vtr_2to3 import *
+from time import sleep
 
 
 def url_exists(url):
@@ -52,6 +53,7 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed=None, cancelling
     all_results = []
     cancelling = False
     while not all_finished:
+        sleep(0.075)
         cancelling = cancelling_func and cancelling_func()
         if cancelling:
             break
@@ -63,7 +65,7 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed=None, cancelling
             finished_tiles.add(tile_coord)
             error = reply.error()
             if error:
-                info("Error during network request: {}, {}", error, reply.url())
+                warn("Error during network request: {}, {}", error, remove_key(reply.url().toDisplayString()))
             else:
                 content = reply.readAll().data()
                 results.append((tile_coord, content))
