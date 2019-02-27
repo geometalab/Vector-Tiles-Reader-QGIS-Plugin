@@ -1,0 +1,3 @@
+[submodule "ext-libs/mapboxstyle2gis"]
+	path = ext-libs/mapboxstyle2gis
+	url = https://github.com/mnboos/mapbox-gl-style-to-qgis.git

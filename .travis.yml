@@ -20,16 +20,33 @@ matrix:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
       after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
-#      deploy:
-#        provider: releases
-#        api_key: $GITHUB_TOKEN
-#        file: "FILE TO UPLOAD"
-#        skip_cleanup: true
-#        on:
-#          tags: true
-#          branch: master
 
-#    - language: python
+    - language: python
+      sudo: required
+      python: '2.7'
+      branches:
+        only:
+        - master
+      install:
+      script:
+        - python -c "print('fast release')"
+      before_deploy:
+        - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2gis/sample_data\* ext-libs/mapboxstyle2gis/tests\* ext-libs/mapboxstyle2gis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
+        - unzip tmp.zip -d vector_tiles_reader
+        - zip -r Vector-Tiles-Reader-${TRAVIS_TAG}.zip vector_tiles_reader
+        - rm -rf vector_tiles_reader
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file: Vector-Tiles-Reader-${TRAVIS_TAG}.zip
+        skip_cleanup: true
+        draft: true
+        on:
+          tags: true
+          branch: master
+
+
+    #    - language: python
 #      sudo: required
 #      python: '3.6'
 #      branches:
