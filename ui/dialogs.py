@@ -111,11 +111,11 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
             "token": "VmKNOOCry7SE4c8FyacQ1KxojeWzY1W2aFS0TADq"
         },
-        # _NEXTZEN: {
-        #     "name": _NEXTZEN,
-        #     "url": "https://tile.nextzen.org/tilezen/vector/v1/512/all/tilejson.mvt.json?api_key={token}",
-        #     "token": "80xAN5o0QuyFrcPVVIieTA"
-        # }
+        _NEXTZEN: {
+            "name": _NEXTZEN,
+            "url": "https://tile.nextzen.org/tilezen/vector/v1/512/all/tilejson.mvt.json?api_key={token}",
+            "token": "80xAN5o0QuyFrcPVVIieTA"
+        }
     }
 
     _CONNECTIONS_TAB = "selected_connections_tab"

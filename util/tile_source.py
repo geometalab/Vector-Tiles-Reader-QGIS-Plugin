@@ -161,6 +161,9 @@ class ServerSource(AbstractSource):
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         self._cancelling = False
         base_url = self.json.tiles()[0]
+        if "{s}" in base_url:
+            info("Special treatment for Nextzen url...")
+
         urls = []
         if max_tiles and len(tiles_to_load) > max_tiles:
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
@@ -170,14 +173,17 @@ class ServerSource(AbstractSource):
         api_key = ""
         if "api_key" in list(parameters.keys()):
             api_key = parameters["api_key"][0]
-        for t in tiles_to_load:
+        nextzen_servers = ["a", "b", "c", "d"]
+        for i, t in enumerate(tiles_to_load):
             col = t[0]
             row = t[1]
             load_url = base_url\
                 .replace("{z}", str(int(zoom_level)))\
                 .replace("{x}", str(int(col)))\
                 .replace("{y}", str(int(row)))\
-                .replace("{api_key}", str(api_key))
+                .replace("{api_key}", str(api_key))\
+                .replace("{s}", nextzen_servers[divmod(i, len(nextzen_servers))[1]])  # nextzen server placeholder
+            load_url += "?api_key={}".format(api_key)
             urls.append((load_url, col, row))
 
         self.max_progress_changed.emit(len(urls))
