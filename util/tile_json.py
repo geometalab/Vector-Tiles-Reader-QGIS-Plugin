@@ -56,7 +56,7 @@ class TileJSON(object):
     def center_longlat(self) -> List[float]:
         return self._get_value("center", is_array=True)
 
-    def bounds_longlat(self) -> List[float]:
+    def bounds_longlat(self) -> Tuple[float, float, float, float]:
         bounds = self._get_value("bounds", is_array=True)
         if bounds:
             assert len(bounds) == 4
@@ -64,14 +64,14 @@ class TileJSON(object):
             bounds = WORLD_BOUNDS
         return bounds
 
-    def bounds_tile(self, zoom: int) -> List[Tuple[float, float], Tuple[float, float]]:
+    def bounds_tile(self, zoom: int) -> dict:
         """
          * Returns the tile boundaries in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
         :param zoom: 
         :return:         """
         bounds = self.bounds_longlat()
         scheme = self.scheme()
-        tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+        tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs="EPSG:4326")
         return tile_bounds
 
     def vector_layers(self) -> List[dict]:

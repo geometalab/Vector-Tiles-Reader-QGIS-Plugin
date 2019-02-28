@@ -1,12 +1,8 @@
 import itertools
-import operator
 from .global_map_tiles import GlobalMercator
 from .log_helper import debug
 from .vtr_2to3 import *
-import sys
-
-if sys.version_info[0] < 3:
-    range = xrange
+from typing import List, Tuple, Callable
 
 
 """
@@ -60,7 +56,8 @@ def extent_overlap_bounds(extent, bounds):
              bounds["y_min"] <= extent["y_max"] <= bounds["y_max"])
 
 
-def create_bounds(zoom, x_min, x_max, y_min, y_max, scheme):
+def create_bounds(zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, scheme: str) -> dict:
+    # todo: create class instead of using a dict
     return {
         "zoom": int(zoom),
         "x_min": int(x_min),
@@ -73,13 +70,13 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max, scheme):
     }
 
 
-def center_tiles_equal(tile_limit, extent_a, extent_b):
+def center_tiles_equal(tile_limit: int, extent_a: dict, extent_b: dict) -> bool:
     center_tiles_a = _center_tiles(tile_limit=tile_limit, extent=extent_a)
     center_tiles_b = _center_tiles(tile_limit=tile_limit, extent=extent_b)
     return center_tiles_a == center_tiles_b
 
 
-def _center_tiles(tile_limit, extent):
+def _center_tiles(tile_limit: int, extent: dict):
     tiles = list(itertools.product(
         range(extent["x_min"], extent["x_max"] + 1),
         range(extent["y_min"], extent["y_max"] + 1)))
@@ -105,7 +102,7 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
         raise RuntimeError("Longitude is required")
 
     if get_code_from_epsg(source_crs) != 3857:
-        lng, lat = convert_coordinate(source_crs=source_crs, target_crs=3857, lat=lat, lng=lng)
+        lng, lat = convert_coordinate(source_crs=source_crs, target_crs="epsg:3857", lat=lat, lng=lng)
     gm = GlobalMercator(tileSize=512)
     global_mercator_output_scheme = "tms"
     col, row = gm.MetersToTile(mx=lng, my=lat, zoom=zoom)   # GlobalMercator returns in TMS scheme here
@@ -117,7 +114,7 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     return int(col), int(row)
 
 
-def convert_coordinate(source_crs, target_crs, lat, lng):
+def convert_coordinate(source_crs: str, target_crs: str, lat: float, lng: float):
     source_crs = get_code_from_epsg(source_crs)
     target_crs = get_code_from_epsg(target_crs)
 
@@ -135,14 +132,14 @@ def convert_coordinate(source_crs, target_crs, lat, lng):
     return x, y
 
 
-def get_code_from_epsg(epsg_string):
+def get_code_from_epsg(epsg_string: str) -> int:
     code = str(epsg_string).upper()
     if code.startswith("EPSG:"):
         code = code.replace("EPSG:", "")
     return int(code)
 
 
-def tile_to_latlon(zoom, x, y, scheme="tms"):
+def tile_to_latlon(zoom: int, x: int, y: int, scheme: str = "tms") -> Tuple[float, float, float, float]:
     """
      * Returns the tile extent in ESPG:3857 coordinates
     :param zoom:
@@ -158,7 +155,8 @@ def tile_to_latlon(zoom, x, y, scheme="tms"):
     return gm.TileBounds(x, y, zoom)
 
 
-def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
+def get_tile_bounds(zoom: int, bounds: Tuple[float, float, float, float], source_crs: str, scheme: str = "xyz") -> dict:
+    # todo: fix the comment -> not a list is returned but a dict
     """
      * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param scheme: 
@@ -192,7 +190,7 @@ def get_tile_bounds(zoom, bounds, source_crs, scheme="xyz"):
     return tile_bounds
 
 
-def get_all_tiles(bounds, is_cancel_requested_handler):
+def get_all_tiles(bounds: dict, is_cancel_requested_handler: Callable) -> List[Tuple[int, int]]:
     tiles = []
     width = bounds["width"]
     height = bounds["height"]
@@ -209,7 +207,7 @@ def get_all_tiles(bounds, is_cancel_requested_handler):
     return tiles
 
 
-def change_scheme(zoom, y):
+def change_scheme(zoom: int, y: int) -> int:
     """
      * Transforms the y coordinate (row) from TMS scheme to XYZ scheme and vice-versa
     :param zoom: 
@@ -231,7 +229,8 @@ _directions = {
     }
 
 
-def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None):
+def get_tiles_from_center(nr_of_tiles: bool, available_tiles: List[Tuple[int, int]], should_cancel_func: Callable[[], bool] = None)\
+        -> list:
     if nr_of_tiles > len(available_tiles):
         nr_of_tiles = len(available_tiles)
 
@@ -239,15 +238,15 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
     if nr_of_tiles is None or nr_of_tiles >= len(available_tiles) or len(available_tiles) == 0:
         return available_tiles
 
-    min_x = min([t[0] for t in available_tiles])
-    min_y = min([t[1] for t in available_tiles])
-    max_x = max([t[0] for t in available_tiles])
-    max_y = max([t[1] for t in available_tiles])
+    min_x: int = min([t[0] for t in available_tiles])
+    min_y: int = min([t[1] for t in available_tiles])
+    max_x: int = max([t[0] for t in available_tiles])
+    max_y: int = max([t[1] for t in available_tiles])
 
     center_tile_offset = (int(round((max_x-min_x) / 2)), int(round((max_y-min_y) / 2)))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
-    if len(selected_tiles) < nr_of_tiles and  center_tile in available_tiles:
+    if len(selected_tiles) < nr_of_tiles and center_tile in available_tiles:
         selected_tiles.add(center_tile)
 
     current_tile = center_tile
@@ -267,14 +266,14 @@ def get_tiles_from_center(nr_of_tiles, available_tiles, should_cancel_func=None)
                     break
         current_direction = (current_direction + 1) % 4
     debug("Center tiles completed")
-    return selected_tiles
+    return list(selected_tiles)
 
 
-def _sum_tiles(first_tile, second_tile):
-    return tuple(map(operator.add, first_tile, second_tile))
+def _sum_tiles(first_tile: Tuple[int, int], second_tile: Tuple[int, int]) -> Tuple[int, int]:
+    return first_tile[0]+second_tile[0], first_tile[1]+second_tile[1]
 
 
-def get_zoom_by_scale(scale):
+def get_zoom_by_scale(scale: int) -> int:
     if scale < 0:
         return 23
     zoom = 0
