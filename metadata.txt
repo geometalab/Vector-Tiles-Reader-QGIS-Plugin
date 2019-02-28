@@ -12,7 +12,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * OpenMapTiles.com with OSM Bright MB GL style (default)
     * Nextzen.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=2.1.0
+version=2.2.0
 author=Martin Boos
 email=geometalab@gmail.com
 
