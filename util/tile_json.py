@@ -8,6 +8,7 @@ import ast
 from .log_helper import critical, debug, info
 from .tile_helper import get_tile_bounds, WORLD_BOUNDS
 from .network_helper import load_url
+from typing import List, Optional, Tuple
 
 
 class TileJSON(object):
@@ -16,11 +17,11 @@ class TileJSON(object):
      * https://github.com/mapbox/tilejson-spec/tree/master/2.2.0
     """
 
-    def __init__(self, url):
+    def __init__(self, url: str):
         self.url = url
-        self.json = None
+        self.json: dict = None
 
-    def load(self):
+    def load(self) -> bool:
         debug("Loading TileJSON")
         success = False
         try:
@@ -43,19 +44,19 @@ class TileJSON(object):
             critical("Loading TileJSON failed ({}): {}", self.url, sys.exc_info())
         return success
 
-    def _validate(self):
+    def _validate(self) -> None:
         bounds = self.bounds_longlat()
         center = self.center_longlat()
         if not bounds and not center:
             raise RuntimeError("Either 'bounds' or 'center' MUST be available in the TileJSON for the plugin to work")
 
-    def attribution(self):
+    def attribution(self) -> str:
         return self._get_value("attribution")
 
-    def center_longlat(self):
+    def center_longlat(self) -> List[float]:
         return self._get_value("center", is_array=True)
 
-    def bounds_longlat(self):
+    def bounds_longlat(self) -> List[float]:
         bounds = self._get_value("bounds", is_array=True)
         if bounds:
             assert len(bounds) == 4
@@ -63,67 +64,68 @@ class TileJSON(object):
             bounds = WORLD_BOUNDS
         return bounds
 
-    def bounds_tile(self, zoom):
+    def bounds_tile(self, zoom: int) -> List[Tuple[float, float], Tuple[float, float]]:
         """
          * Returns the tile boundaries in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
         :param zoom: 
-        :param manual_bounds: 
         :return:         """
         bounds = self.bounds_longlat()
         scheme = self.scheme()
         tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
         return tile_bounds
 
-    def vector_layers(self):
+    def vector_layers(self) -> List[dict]:
         layers = self._get_value("vector_layers", is_array=True, is_required=True)
         return layers
 
-    def get_value(self, key, is_array=False, is_required=False):
+    def get_value(self, key: str, is_array: bool = False, is_required: bool = False):
         val = self._get_value(key, is_array=is_array, is_required=is_required)
         return val
 
-    def crs(self, default=3857):
-        crs = self._get_value("crs")
+    def crs(self, default: int = 3857) -> str:
+        crs: str = self._get_value("crs")
         if not crs:
             crs = self._get_value("srs")
         if not crs:
-            crs = default
+            crs = str(default)
         return crs
 
-    def scheme(self, default="xyz"):
+    def scheme(self, default="xyz") -> str:
         scheme = self._get_value("scheme")
         if not scheme:
             scheme = default
         return scheme
 
-    def tiles(self):
+    def tiles(self) -> List[str]:
+        """
+        Returns a list containing at one or more urls to the .pbf files
+        :return:
+        """
+
         tiles = self._get_value("tiles", is_array=True, is_required=True)
         return tiles
 
-    def name(self):
+    def name(self) -> str:
         return self._get_value("name")
 
-    def id(self):
+    def id(self) -> str:
         return self._get_value("id")
 
-    def min_zoom(self):
-        min_zoom = self._get_value("minzoom")
+    def min_zoom(self) -> Optional[int]:
+        min_zoom: str = self._get_value("minzoom")
         if min_zoom is not None:
             return int(min_zoom)
         return None
 
-    def max_zoom(self):
-        max_zoom = self._get_value("maxzoom")
+    def max_zoom(self) -> Optional[int]:
+        max_zoom: str = self._get_value("maxzoom")
         if max_zoom is not None:
             return int(max_zoom)
         return None
 
-    def mask_level(self):
-        return self._get_value("maskLevel")
-
-    def _get_value(self, field_name, is_array=False, is_required=False):
+    def _get_value(self, field_name: str, is_array: bool = False, is_required: bool = False):
         if not self.json or (is_required and field_name not in self.json):
-            raise RuntimeError("The field '{}' is required but not found. This is invalid TileJSON.".format(field_name))
+            raise RuntimeError(f"The field '{field_name}' is required but not found. This is invalid TileJSON.")
 
         result = None
         if field_name in self.json:
@@ -133,7 +135,7 @@ class TileJSON(object):
                 result.extend(result_arr)
                 if is_required and len(result) == 0:
                     raise RuntimeError(
-                        "The field '{}' is required but is empty. At least one entry is expected.".format(field_name))
+                        f"The field '{field_name}' is required but is empty. At least one entry is expected.")
             else:
                 result = self.json[field_name]
         return result
