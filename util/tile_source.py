@@ -142,9 +142,6 @@ class ServerSource(AbstractSource):
     def max_zoom(self):
         return self.json.max_zoom()
 
-    def mask_level(self):
-        return self.json.mask_level()
-
     def attribution(self):
         return self.json.attribution()
 
