@@ -4,6 +4,9 @@
 from itertools import *
 import sys
 import os
+from io import BytesIO
+from gzip import GzipFile
+import multiprocessing as mp
 
 try:
     import simplejson as json
@@ -12,8 +15,15 @@ except ImportError:
 import uuid
 import traceback
 
+from qgis.core import (
+    QgsProject,
+    QgsVectorLayer,
+    )
+
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PyQt5.QtWidgets import QApplication
+
 if not os.environ.get("VTR_TESTS"):
-    from .util.vtr_2to3 import *
     from .util.qgis_helper import get_loaded_layers_of_connection
     from .util.log_helper import info, critical, debug, remove_key
     from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
@@ -35,7 +45,6 @@ if not os.environ.get("VTR_TESTS"):
     from .util.connection import ConnectionTypes
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 else:
-    from util.vtr_2to3 import *
     from util.qgis_helper import get_loaded_layers_of_connection
     from util.log_helper import info, critical, debug, remove_key
     from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
@@ -56,10 +65,6 @@ else:
     from util.tile_source import ServerSource, MBTilesSource, DirectorySource
     from util.connection import ConnectionTypes
     from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
-from io import BytesIO
-from gzip import GzipFile
-
-import multiprocessing as mp
 
 is_windows = sys.platform.startswith("win32")
 if is_windows:
@@ -127,7 +132,8 @@ class VtReader(QObject):
 
     def set_allowed_sources(self, sources):
         """
-         * A list of layer sources (i.e. file paths) can be specified. These layers will later be ignored, i.e. not added.
+         * A list of layer sources (i.e. file paths) can be specified.
+         These layers will later be ignored, i.e. not added.
         :param sources: The sources which can be created. If None, all are allowed, if empty list, none is allowed
         :return:
         """
@@ -381,10 +387,9 @@ class VtReader(QObject):
             'inspection_mode': is_inspection_mode
         }
 
-    def load_tiles_async(self, bounds):
+    def load_tiles_async(self, bounds: dict):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
-        :param zoom_level: The zoom level to load
         :param bounds:
         :return: 
         """
@@ -392,6 +397,7 @@ class VtReader(QObject):
         info("Loading zoom level '{}', bounds: {}", zoom_level, bounds)
         self._loading_options["zoom_level"] = zoom_level
         self._loading_options["bounds"] = bounds
+        # todo: better use QGIS 3 tasks for this
         _worker_thread = QThread(self.iface.mainWindow())
         self.moveToThread(_worker_thread)
         _worker_thread.started.connect(self._load_tiles)
@@ -586,7 +592,7 @@ class VtReader(QObject):
         if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
             only_layers = list([layer_name_tuple[2] for layer_name_tuple in new_layers])
-            QgsMapLayerRegistry.instance().addMapLayers(only_layers, False)
+            QgsProject.instance().addMapLayers(only_layers, False)
         for name, geo_type, layer in new_layers:
             if self.cancel_requested:
                 break

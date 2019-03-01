@@ -1,12 +1,10 @@
 import copy
 import csv
 from ..util.log_helper import info
-from ..util.vtr_2to3 import *
-try:
-    from .qt.connections_group_qt5 import Ui_ConnectionsGroup
-except ImportError:
-    from .qt.connections_group_qt4 import Ui_ConnectionsGroup
+from .qt.connections_group_qt5 import Ui_ConnectionsGroup
 from ..util.connection import ConnectionTypes
+from PyQt5.QtWidgets import QGroupBox, QFileDialog, QMessageBox, QDialog
+from PyQt5.QtCore import pyqtSignal
 
 
 class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
@@ -14,7 +12,8 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal('QString')
 
-    def __init__(self, target_groupbox, edit_dialog, connection_template, settings_key, settings, predefined_connections=None):
+    def __init__(self, target_groupbox, edit_dialog, connection_template, settings_key, settings,
+                 predefined_connections=None):
         super(QGroupBox, self).__init__()
 
         self._connection_template = connection_template

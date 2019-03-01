@@ -5,7 +5,6 @@
 import unittest
 import sys
 from qgis.utils import iface  # dont remove! is required for testing (iface wont be found otherwise)
-from util.vtr_2to3 import *
 from vt_reader import VtReader
 from util.connection import MBTILES_CONNECTION_TEMPLATE
 import copy
@@ -13,6 +12,10 @@ import mock
 import shutil
 from osgeo import gdal
 from util.file_helper import clear_cache, get_style_folder
+from qgis.core import (
+    QgsProject,
+    QgsVectorLayer,
+)
 
 
 class VtReaderTests(unittest.TestCase):
@@ -40,11 +43,11 @@ class VtReaderTests(unittest.TestCase):
 
     @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.critical")
-    @mock.patch("vtr_2to3.QgsVectorLayer.loadNamedStyle")
+    @mock.patch("QgsVectorLayer.loadNamedStyle")
     def test_load_from_vtreader_0_apply_styles(self, mock_style, mock_critical, mock_info):
         global iface
         clear_cache()
-        QgsMapLayerRegistry.instance().removeAllMapLayers()
+        QgsProject.instance().removeAllMapLayers()
         self._load(iface=iface, max_tiles=1, apply_styles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
@@ -56,7 +59,7 @@ class VtReaderTests(unittest.TestCase):
     @mock.patch.object(VtReader, "_create_qgis_layers")
     def test_load_from_vtreader_0_python_processing(self, mock_qgis, mock_can_load_lib, mock_info):
         global iface
-        QgsMapLayerRegistry.instance().removeAllMapLayers()
+        QgsProject.instance().removeAllMapLayers()
         clear_cache()
 
         self._load(iface=iface, max_tiles=1)
@@ -70,7 +73,7 @@ class VtReaderTests(unittest.TestCase):
     @mock.patch.object(VtReader, "_create_qgis_layers")
     def test_load_from_vtreader_1_multiprocessed(self, mock_qgis, mock_info):
         global iface
-        QgsMapLayerRegistry.instance().removeAllMapLayers()
+        QgsProject.instance().removeAllMapLayers()
         clear_cache()
 
         self._load(iface=iface, max_tiles=2, serial_tile_processing_limit=1)
@@ -84,7 +87,7 @@ class VtReaderTests(unittest.TestCase):
     def test_load_from_vtreader_2(self, mock_info):
         global iface
         clear_cache()
-        QgsMapLayerRegistry.instance().removeAllMapLayers()
+        QgsProject.instance().removeAllMapLayers()
         self._load(iface=iface, max_tiles=1)
         print(mock_info.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!!")

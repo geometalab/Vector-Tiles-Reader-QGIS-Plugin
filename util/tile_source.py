@@ -1,5 +1,7 @@
 import sqlite3
 import urllib.parse
+from typing import Tuple
+
 try:
     import simplejson as json
 except ImportError:
@@ -8,22 +10,21 @@ import os
 import sys
 import traceback
 
-from .vtr_2to3 import *
 from .tile_json import TileJSON
 from .log_helper import info, warn, critical, debug
 from .tile_helper import (VectorTile,
-                         get_tiles_from_center,
-                         get_tile_bounds,
-                         create_bounds,
-                         WORLD_BOUNDS)
+                          get_tiles_from_center,
+                          get_tile_bounds,
+                          create_bounds,
+                          WORLD_BOUNDS)
 from .network_helper import url_exists, load_tiles_async
 from .file_helper import is_sqlite_db
+from PyQt5.QtCore import pyqtSignal, QObject
 
 _DEFAULT_CRS = "EPSG:3857"
 
 
 class AbstractSource(QObject):
-
     progress_changed = pyqtSignal(int, name='tileSourceProgressChanged')
     max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
     message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
@@ -65,13 +66,6 @@ class AbstractSource(QObject):
         """
         raise NotImplementedError
 
-    def mask_level(self):
-        """
-         * Returns the mask level from the metadata table
-        :return:
-        """
-        raise NotImplementedError
-
     def scheme(self):
         raise NotImplementedError
 
@@ -91,7 +85,8 @@ class AbstractSource(QObject):
 
     def load_tiles(self, zoom_level, tiles_to_load, max_tiles=None):
         """
-         * Loads the tiles for the specified zoom_level and bounds from the web service this source has been created with
+         * Loads the tiles for the specified zoom_level and bounds from the web service,
+          this source has been created with
         :param tiles_to_load: All tile coordinates which shall be loaded
         :param zoom_level: The zoom level which will be loaded
         :param max_tiles: The maximum number of tiles to be loaded
@@ -150,7 +145,7 @@ class ServerSource(AbstractSource):
 
     def bounds_tile(self, zoom):
         lng_lat = self.json.bounds_longlat()
-        return get_tile_bounds(zoom=zoom, scheme=self.scheme(), bounds=lng_lat, source_crs=4326)
+        return get_tile_bounds(zoom=zoom, scheme=self.scheme(), bounds=lng_lat, source_crs="4326")
 
     def crs(self):
         return self.json.crs()
@@ -174,11 +169,11 @@ class ServerSource(AbstractSource):
         for i, t in enumerate(tiles_to_load):
             col = t[0]
             row = t[1]
-            load_url = base_url\
-                .replace("{z}", str(int(zoom_level)))\
-                .replace("{x}", str(int(col)))\
-                .replace("{y}", str(int(row)))\
-                .replace("{api_key}", str(api_key))\
+            load_url = base_url \
+                .replace("{z}", str(int(zoom_level))) \
+                .replace("{x}", str(int(col))) \
+                .replace("{y}", str(int(row))) \
+                .replace("{api_key}", str(api_key)) \
                 .replace("{s}", nextzen_servers[divmod(i, len(nextzen_servers))[1]])  # nextzen server placeholder
             load_url += "?api_key={}".format(api_key)
             urls.append((load_url, col, row))
@@ -231,15 +226,15 @@ class MBTilesSource(AbstractSource):
             warn("No json found in metadata table")
         return layers
 
-    def bounds(self):
-        bounds = self._get_metadata_value("bounds")
+    def bounds(self) -> Tuple:
+        bounds = tuple(self._get_metadata_value("bounds"))
         if bounds and isinstance(bounds, basestring):
-            bounds = bounds\
-                .replace(" ", "")\
-                .replace("[", "")\
-                .replace("]", "")\
+            bounds = bounds \
+                .replace(" ", "") \
+                .replace("[", "") \
+                .replace("]", "") \
                 .split(",")
-            bounds = [float(s) for s in bounds]
+            bounds = tuple(float(s) for s in bounds)
         return bounds
 
     def bounds_tile(self, zoom):
@@ -247,12 +242,12 @@ class MBTilesSource(AbstractSource):
         tile_bounds = None
         scheme = self.scheme()
         if bounds:
-            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs="4326")
         if not tile_bounds:
             tile_bounds = self._get_bounds_from_data(zoom_level=zoom)
         if not tile_bounds:
             bounds = WORLD_BOUNDS
-            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs=4326)
+            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs="4326")
         return tile_bounds
 
     def name(self):
@@ -313,7 +308,7 @@ class MBTilesSource(AbstractSource):
                     break
                 tile, data = self._create_tile(row)
                 tile_data_tuples.append((tile, data))
-                self.progress_changed.emit(index+1)
+                self.progress_changed.emit(index + 1)
         return tile_data_tuples
 
     def _get_bounds_from_data(self, zoom_level):

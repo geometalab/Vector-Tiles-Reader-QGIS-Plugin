@@ -5,7 +5,6 @@ import pkgutil
 import importlib
 import tempfile
 import re
-from .vtr_2to3 import QGIS3
 
 _KEY_REGEX = re.compile(r"(\?|&)(api_)?key=[^\s?&]*")
 
@@ -76,22 +75,9 @@ def _log_to_qgis(msg, level):
         _logger.error("QGIS not found for logging")
         return
 
-    if QGIS3:
-        if level != _DEBUG:
-            qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader'.format(level))
-    else:
-        qgis_level = None
-        if level == _DEBUG:
-            pass
-        elif level == _INFO:
-            qgis_level = qgis.QgsMessageLog.INFO
-        elif level == _WARN:
-            qgis_level = qgis.QgsMessageLog.WARNING
-        elif level == _CRITICAL:
-            qgis_level = qgis.QgsMessageLog.CRITICAL
+    if level != _DEBUG:
+        qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader'.format(level))
 
-        if qgis_level is not None:
-            qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader', qgis_level)
 
 try:
     log_path = get_temp_dir("log.txt")
@@ -119,4 +105,3 @@ try:
     # _logger.addHandler(fh)
 except IOError:
     _log_to_qgis("Creating logging config failed: {}".format(sys.exc_info()), _WARN)
-

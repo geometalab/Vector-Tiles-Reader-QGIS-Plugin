@@ -2,22 +2,22 @@ import copy
 import webbrowser
 import ast
 from collections import OrderedDict
+import os
 
-from ..util.vtr_2to3 import *
 from .options_group import OptionsGroup
 from .connections_group import ConnectionsGroup
 
-try:
-    from .qt.dlg_about_qt5 import Ui_DlgAbout
-    from .qt.dlg_connections_qt5 import Ui_DlgConnections
-    from .qt.dlg_edit_postgis_connection_qt5 import Ui_DlgEditPostgisConnection
-    from .qt.dlg_edit_tilejson_connection_qt5 import Ui_DlgEditTileJSONConnection
-except ImportError:
-    from .qt.dlg_about_qt4 import Ui_DlgAbout
-    from .qt.dlg_connections_qt4 import Ui_DlgConnections
-    from .qt.dlg_edit_postgis_connection_qt4 import Ui_DlgEditPostgisConnection
-    from .qt.dlg_edit_tilejson_connection_qt4 import Ui_DlgEditTileJSONConnection
+from .qt.dlg_about_qt5 import Ui_DlgAbout
+from .qt.dlg_connections_qt5 import Ui_DlgConnections
+from .qt.dlg_edit_postgis_connection_qt5 import Ui_DlgEditPostgisConnection
+from .qt.dlg_edit_tilejson_connection_qt5 import Ui_DlgEditTileJSONConnection
 
+from PyQt5.QtWidgets import QDialog, QApplication, QFileDialog, QMessageBox
+from PyQt5.QtCore import pyqtSignal, QSettings, pyqtBoundSignal
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+
+if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
+    from ..ui import resources_rc_qt5
 
 from ..util.connection import (
     ConnectionTypes,
@@ -28,14 +28,14 @@ from ..util.connection import (
 _HELP_URL = "https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help"
 
 
-def _update_size(dialog):
+def _update_size(dialog: QDialog):
     screen_resolution = QApplication.desktop().screenGeometry()
     screen_width, screen_height = screen_resolution.width(), screen_resolution.height()
     new_width = None
     new_height = None
     if screen_width > 1920 or screen_height > 1080:
-        new_width = dialog.width() / 1920.0 * screen_width
-        new_height = dialog.height() / 1080.0 * screen_height
+        new_width = int(dialog.width() / 1920.0 * screen_width)
+        new_height = int(dialog.height() / 1080.0 * screen_height)
         dialog.setMinimumSize(new_width, new_height)
     elif dialog.width() >= screen_width or dialog.height() >= screen_height:
         margin = 40
@@ -53,7 +53,7 @@ class AboutDialog(QDialog, Ui_DlgAbout):
         self._load_about()
         _update_size(self)
 
-    def _load_about(self):
+    def _load_about(self) -> None:
         about_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "about.html")
         if os.path.isfile(about_path):
             with open(about_path, 'r') as f:
@@ -292,7 +292,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             self.settings.setValue("directory_connection", str(self._current_connection))
 
         load = True
-        threshold = 20 if QGIS3 else 100
+        threshold = 20
         if self._nr_of_tiles > threshold and not self.options.tile_number_limit():
             msg = "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?"\
                 .format(self._nr_of_tiles)
@@ -302,11 +302,11 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         if load:
             self.on_add.emit(self._current_connection, selected_layers)
 
-    def set_current_connection_already_loaded(self, is_loaded):
+    def set_current_connection_already_loaded(self, is_loaded: bool):
         self._current_connection_already_loaded = is_loaded
         self._update_action_text(self._current_connection)
 
-    def show(self, current_connection):
+    def display(self, current_connection):
         self._update_action_text(current_connection)
         active_tab = self.tabConnections.currentWidget()
         if active_tab == self.tabFile and self._mbtiles_conn and current_connection != self._mbtiles_conn:
@@ -404,7 +404,10 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
         return path.lower().startswith("http://") or path.lower().startswith("https://")
 
     def _select_file_path(self):
-        open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
+        open_file_name = QFileDialog.getOpenFileName(None,
+                                                     caption="Select Mapbox Tiles",
+                                                     directory=self.browse_path,
+                                                     filter="Mapbox Tiles (*.mbtiles)")
         if isinstance(open_file_name, tuple):
             open_file_name = open_file_name[0]
         if open_file_name:
@@ -424,4 +427,3 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
         self._connection["url"] = self.txtUrl.text()
         self._connection["style"] = self.txtStyleJsonUrl.text()
         return self._connection
-

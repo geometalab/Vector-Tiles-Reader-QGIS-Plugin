@@ -1,8 +1,13 @@
 import itertools
 from .global_map_tiles import GlobalMercator
 from .log_helper import debug
-from .vtr_2to3 import *
 from typing import List, Tuple, Callable
+from qgis.core import (
+    QgsProject,
+    QgsPoint,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform
+    )
 
 
 """
@@ -41,7 +46,7 @@ def clamp(value, low=None, high=None):
     return value
 
 
-def clamp_bounds(bounds_to_clamp, clamp_values):
+def clamp_bounds(bounds_to_clamp: dict, clamp_values: dict) -> dict:
     x_min = clamp(bounds_to_clamp["x_min"], low=clamp_values["x_min"])
     y_min = clamp(bounds_to_clamp["y_min"], low=clamp_values["y_min"])
     x_max = clamp(bounds_to_clamp["x_max"], low=x_min, high=clamp_values["x_max"])
@@ -49,7 +54,7 @@ def clamp_bounds(bounds_to_clamp, clamp_values):
     return create_bounds(bounds_to_clamp["zoom"], x_min, x_max, y_min, y_max, bounds_to_clamp["scheme"])
 
 
-def extent_overlap_bounds(extent, bounds):
+def extent_overlap_bounds(extent: dict, bounds: dict) -> bool:
     return (bounds["x_min"] <= extent["x_min"] <= bounds["x_max"] or
             bounds["x_min"] <= extent["x_max"] <= bounds["x_max"]) and\
             (bounds["y_min"] <= extent["y_min"] <= bounds["y_max"] or
@@ -84,7 +89,7 @@ def _center_tiles(tile_limit: int, extent: dict):
     return center_tiles
 
 
-def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
+def latlon_to_tile(zoom: int, lat: float, lng: float, source_crs: str, scheme="xyz") -> Tuple[int, int]:
     """
      * Returns the tile-xy from the specified WGS84 lat/long coordinates
     :param scheme: The tile scheme for which the tile coordinates shall be returned
@@ -114,16 +119,13 @@ def latlon_to_tile(zoom, lat, lng, source_crs, scheme="xyz"):
     return int(col), int(row)
 
 
-def convert_coordinate(source_crs: str, target_crs: str, lat: float, lng: float):
+def convert_coordinate(source_crs: str, target_crs: str, lat: float, lng: float) -> Tuple[float, float]:
     source_crs = get_code_from_epsg(source_crs)
     target_crs = get_code_from_epsg(target_crs)
 
     crs_src = QgsCoordinateReferenceSystem(source_crs)
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
-    if QGIS3:
-        xform = QgsCoordinateTransform(crs_src, crs_dest, QgsProject.instance())
-    else:
-        xform = QgsCoordinateTransform(crs_src, crs_dest)
+    xform = QgsCoordinateTransform(crs_src, crs_dest, QgsProject.instance())
 
     try:
         x, y = xform.transform(QgsPoint(lng, lat))
@@ -158,7 +160,8 @@ def tile_to_latlon(zoom: int, x: int, y: int, scheme: str = "tms") -> Tuple[floa
 def get_tile_bounds(zoom: int, bounds: Tuple[float, float, float, float], source_crs: str, scheme: str = "xyz") -> dict:
     # todo: fix the comment -> not a list is returned but a dict
     """
-     * Returns the tile boundaries in XYZ scheme in the form [(x_min, y_min), (x_max, y_max)] where both values are tuples
+     * Returns the tile boundaries in XYZ scheme in the form
+     [(x_min, y_min), (x_max, y_max)] where both values are tuples
     :param scheme: 
     :param zoom: 
     :param bounds: 
@@ -216,6 +219,7 @@ def change_scheme(zoom: int, y: int) -> int:
     """
     return (2 ** zoom) - y - 1
 
+
 _UP = 0
 _RIGHT = 1
 _DOWN = 2
@@ -229,8 +233,8 @@ _directions = {
     }
 
 
-def get_tiles_from_center(nr_of_tiles: bool, available_tiles: List[Tuple[int, int]], should_cancel_func: Callable[[], bool] = None)\
-        -> list:
+def get_tiles_from_center(nr_of_tiles: int, available_tiles: List[Tuple[int, int]],
+                          should_cancel_func: Callable[[], bool] = None) -> list:
     if nr_of_tiles > len(available_tiles):
         nr_of_tiles = len(available_tiles)
 

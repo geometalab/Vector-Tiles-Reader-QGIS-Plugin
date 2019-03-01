@@ -36,8 +36,7 @@ def run_all():
                                   '/vector-tiles-reader/tests/*',
                                   '/vector-tiles-reader/util/*',
                                   '/vector-tiles-reader/ext-libs/*',
-                                  '/vector-tiles-reader/vtr_plugin.py',  # todo: remove from here when tests exist
-                                  'util/vtr_2to3.py'  # rather use a QGIS3 docker for testing
+                                  '/vector-tiles-reader/vtr_plugin.py'  # todo: remove from here when tests exist
                                   ])
     cov.start()
     complete_suite = unittest.TestSuite(get_tests())

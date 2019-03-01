@@ -1,8 +1,6 @@
-from ..util.vtr_2to3 import *
-try:
-    from .qt.options_qt5 import Ui_OptionsGroup
-except ImportError:
-    from .qt.options_qt4 import Ui_OptionsGroup
+from .qt.options_qt5 import Ui_OptionsGroup
+from PyQt5.QtWidgets import QGroupBox, QAbstractButton
+from PyQt5.QtCore import pyqtSignal
 
 
 class OptionsGroup(QGroupBox, Ui_OptionsGroup):
@@ -70,16 +68,16 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.zoomSpin.valueChanged.connect(self._on_manual_zoom_change)
         self._current_zoom = None
 
-    def _on_bg_color_change(self, enabled):
+    def _on_bg_color_change(self, enabled: bool) -> None:
         self._set_option(self._SET_BACKGROUND_COLOR, enabled)
         if enabled and not self.chkApplyStyles.isChecked():
             self.chkApplyStyles.setChecked(True)
 
-    def set_checked(self, target, key):
+    def set_checked(self, target: QAbstractButton, key: str) -> None:
         checked = self._options[key] in (True, 'true', 'True')
         target.setChecked(checked)
 
-    def _load_options(self):
+    def _load_options(self) -> None:
         opt = self._options
         for key in self._options:
             self._options[key] = self.settings.value("options/{}".format(key), None)
@@ -193,7 +191,8 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setEnabled(enabled)
         self.chkSetBackgroundColor.setEnabled(enabled)
 
-    def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds, background_color):
+    def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds,
+                      background_color):
         self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
         self.chkAutoZoom.setChecked(auto_zoom)
         self.rbZoomManual.setChecked(fix_zoom)
@@ -273,6 +272,3 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         enabled = self.chkMergeTiles.isChecked()
         self._set_option(self._MERGE_TILES, enabled)
         return enabled
-
-    def load_mask_layer_enabled(self):
-        return False

@@ -1,7 +1,13 @@
 from builtins import str
 from builtins import object
 
-from .vtr_2to3 import *
+from qgis.core import (
+    QgsRectangle,
+    QgsGeometry,
+    QgsField,
+    QgsSpatialIndex,
+    QgsCoordinateTransform
+    )
 
 import uuid
 import numbers
@@ -91,13 +97,13 @@ class FeatureMerger(object):
             layer.updateFeature(f)
 
     def _merge_feature(self, layer, index, f, feature_dict, feature_handler):
-        BUFFER_SIZE = 10
+        buffer_size = 10
         geom = f.geometry().buffer(0, 0)
         if not geom or self._should_cancel_func():
             return
 
         index.deleteFeature(f)
-        intersecting_ids = index.intersects(geom.buffer(BUFFER_SIZE, 0).boundingBox())
+        intersecting_ids = index.intersects(geom.buffer(buffer_size, 0).boundingBox())
 
         new_neighbours = []
         while len(intersecting_ids) > 0 and not self._should_cancel_func():
@@ -134,6 +140,7 @@ class FeatureMerger(object):
                                 f=n,
                                 feature_dict=feature_dict,
                                 feature_handler=feature_handler)
+
 
 class _GeoTypes(object):
     def __init__(self):
