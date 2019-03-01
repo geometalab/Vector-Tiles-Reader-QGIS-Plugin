@@ -1,8 +1,9 @@
 matrix:
   include:
     - language: python
-      sudo: required
-      python: '3.7'
+      python: 3.7
+      dist: xenial
+      sudo: true
       branches:
         only:
         - master-qgis3
@@ -20,16 +21,6 @@ matrix:
         - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
       after_success:
         - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
-
-    - language: python
-      sudo: required
-      python: '3.7'
-      branches:
-        only:
-        - master
-      install:
-      script:
-        - python -c "print('fast release')"
       before_deploy:
         - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2qgis/sample_data\* ext-libs/mapboxstyle2qgis/tests\* ext-libs/mapboxstyle2qgis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
         - unzip tmp.zip -d vector_tiles_reader
