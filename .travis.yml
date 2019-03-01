@@ -12,15 +12,15 @@ matrix:
         - docker
       before_install:
         - cd docker
-        - docker-compose build qgis2
+        - docker-compose build qgis3
       install:
-        - docker-compose run -d --name qgis2 qgis2
+        - docker-compose run -d --name qgis3 qgis3
         - cd ..
         - sleep 10
       script:
-        - docker exec -it qgis2 sh -c "qgis_testrunner.sh vector_tiles_reader"
+        - docker exec -it qgis3 sh -c "qgis_testrunner.sh vector_tiles_reader"
       after_success:
-        - docker exec -it qgis2 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
+        - docker exec -it qgis3 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
       before_deploy:
         - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2qgis/sample_data\* ext-libs/mapboxstyle2qgis/tests\* ext-libs/mapboxstyle2qgis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
         - unzip tmp.zip -d vector_tiles_reader
