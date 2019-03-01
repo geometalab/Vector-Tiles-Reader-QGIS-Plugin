@@ -2,11 +2,11 @@ matrix:
   include:
     - language: python
       sudo: required
-      python: '2.7'
+      python: '3.7'
       branches:
         only:
-        - master
-        - develop
+        - master-qgis3
+        - dev-qgis3
       services:
         - docker
       before_install:
@@ -23,7 +23,7 @@ matrix:
 
     - language: python
       sudo: required
-      python: '2.7'
+      python: '3.7'
       branches:
         only:
         - master
@@ -44,26 +44,6 @@ matrix:
         on:
           tags: true
           branch: master
-
-
-    #    - language: python
-#      sudo: required
-#      python: '3.6'
-#      branches:
-#        only:
-#        - master
-#        - develop
-#      services:
-#        - docker
-#      before_install:
-#        - cd docker
-#        - docker-compose build qgis3
-#      install:
-#        - docker-compose run -d --name qgis3 qgis3
-#        - cd ..
-#        - sleep 10
-#      script:
-#        - docker exec -it qgis3 sh -c "qgis_testrunner.sh vector_tiles_reader"
 
     - language: cpp
       branches:
@@ -90,14 +70,6 @@ matrix:
         - docker run --rm dockcross/windows-x86 > ./dockcross-windows-x86 && chmod +x ./dockcross-windows-x86
         - ./dockcross-windows-x64 sh -c "cd Vector-Tiles-Reader-QGIS-Plugin && make windows64_dockcross"
         - ./dockcross-windows-x86 sh -c "cd Vector-Tiles-Reader-QGIS-Plugin && make windows32_dockcross"
-#      deploy:
-#        provider: pages
-#        skip_cleanup: true
-#        github_token: $GITHUB_TOKEN
-#        target_branch: pbf2geojson_travis_auto_build
-#        local_dir: ext-libs/pbf2geojson
-#        on:
-#          branch: develop
 
     - language: cpp
       branches:
@@ -115,14 +87,6 @@ matrix:
         - cd $TRAVIS_BUILD_DIR/ext-libs/pbf2geojson
         - sudo rm *.so && sudo rm *.dll && cd ../..
         - make osx
-#      deploy:
-#        provider: pages
-#        skip_cleanup: true
-#        github_token: $GITHUB_TOKEN
-#        target_branch: Vector-Tiles-Reader-QGIS-Plugin/pbf2geojson_travis_auto_build_osx
-#        local_dir: ext-libs/pbf2geojson
-#        on:
-#          branch: develop
 
 notifications:
     on_success: never # default: change
