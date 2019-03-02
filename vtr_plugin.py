@@ -60,7 +60,7 @@ from qgis.core import (
 
 from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton
 from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QSettings, Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QColor
 
 
 # try:
@@ -118,7 +118,6 @@ class VtrPlugin:
         QgsProject.instance().layersWillBeRemoved.connect(self._on_remove)
         python_version = platform.python_version()
         info("Vector Tiles Reader (Python {})".format(python_version))
-        self._add_path_to_dependencies_to_syspath()
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
         self.connections_dialog = ConnectionsDialog(self._get_initial_browse_directory())
@@ -984,15 +983,6 @@ class VtrPlugin:
         if layer_name in omt_layer_ordering:
             sort_id = omt_layer_ordering.index(layer_name)
         return sort_id
-
-    @staticmethod
-    def _add_path_to_dependencies_to_syspath():
-        """
-         * Adds the path to the external libraries to the sys.path if not already added
-        """
-        ext_libs_path = os.path.join(get_plugin_directory(), 'ext-libs')
-        if ext_libs_path not in sys.path:
-            site.addsitedir(ext_libs_path)
 
     def unload(self):
         if self._current_reader:
