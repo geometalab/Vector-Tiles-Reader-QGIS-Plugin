@@ -97,7 +97,7 @@ class AbstractSource(QObject):
 
 class ServerSource(AbstractSource):
 
-    def __init__(self, url):
+    def __init__(self, url: str):
         AbstractSource.__init__(self)
         if not url:
             raise RuntimeError("URL is required")
@@ -175,7 +175,8 @@ class ServerSource(AbstractSource):
                 .replace("{y}", str(int(row))) \
                 .replace("{api_key}", str(api_key)) \
                 .replace("{s}", nextzen_servers[divmod(i, len(nextzen_servers))[1]])  # nextzen server placeholder
-            load_url += "?api_key={}".format(api_key)
+            if api_key:
+                load_url += "?api_key={}".format(api_key)
             urls.append((load_url, col, row))
 
         self.max_progress_changed.emit(len(urls))
