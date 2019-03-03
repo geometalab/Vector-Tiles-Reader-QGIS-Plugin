@@ -54,8 +54,8 @@ class Bounds(dict):
     def scheme(self) -> str:
         return self["scheme"]
 
-    @staticmethod
-    def create(zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, scheme: str) -> Bounds:
+    @classmethod
+    def create(cls, zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, scheme: str) -> 'Bounds':
         return Bounds(zoom=zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, scheme=scheme)
 
 

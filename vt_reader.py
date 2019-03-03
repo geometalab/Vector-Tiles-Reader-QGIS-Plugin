@@ -14,7 +14,7 @@ except ImportError:
     import json
 import uuid
 import traceback
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 from qgis.core import (
     QgsProject,

@@ -60,7 +60,7 @@ from qgis.core import (
 )
 from qgis.gui import QgsMessageBarItem
 
-from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton
+from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton, QMessageBox
 from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QSettings, Qt
 from PyQt5.QtGui import QIcon, QColor
 
