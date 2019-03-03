@@ -85,6 +85,8 @@ class VtReader(QObject):
     cancelled = pyqtSignal(name='cancelled')
     add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
 
+    ready_for_next_loading_step = pyqtSignal()
+
     _loading_options = {
         'zoom_level': None,
         'layer_filter': None,
@@ -127,6 +129,7 @@ class VtReader(QObject):
         self._flush = False
         self._feature_count: int = None
         self._allowed_sources: List[str] = None
+        self.ready_for_next_loading_step.connect(self._continue_loading)
 
     def connection(self):
         return self._connection
@@ -318,7 +321,7 @@ class VtReader(QObject):
                         cache_tile(cache_name=source_name, zoom_level=zoom_level, x=t.column, y=t.row,
                                    decoded_data=t.decoded_data)
                     self._all_tiles.extend(tiles)
-            self._continue_loading()
+            self.ready_for_next_loading_step.emit()
 
         except Exception as e:
             tb = ""
@@ -328,6 +331,11 @@ class VtReader(QObject):
             self.cancelled.emit()
 
     def _continue_loading(self):
+        """
+        Creates / updates the layers
+        :return:
+        """
+
         zoom_level = self._loading_options["zoom_level"]
         merge_tiles = self._loading_options["merge_tiles"]
         apply_styles = self._loading_options["apply_styles"]
