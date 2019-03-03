@@ -49,7 +49,8 @@ def get_async_reply(url: str, head_only: bool = False) -> QNetworkReply:
 
 def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable = None)\
         -> List:
-    replies = [(get_async_reply(url), (col, row)) for url, col, row in urls_with_col_and_row]
+    replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = \
+        [(get_async_reply(url), (col, row)) for url, col, row in urls_with_col_and_row]
     total_nr_of_requests = len(replies)
     all_finished = False
     nr_finished_before = 0
@@ -84,7 +85,7 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None
             if on_progress_changed:
                 on_progress_changed(nr_finished)
     if not all_finished and cancelling:
-        unfinished_requests = [r for r in replies if not r[0].isFinished]
+        unfinished_requests = [reply for reply, tile_coord in replies if not reply.isFinished]
         for r in unfinished_requests:
             r.abort()
     if cancelling:

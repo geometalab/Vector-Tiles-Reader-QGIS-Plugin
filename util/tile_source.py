@@ -1,6 +1,6 @@
 import sqlite3
 import urllib.parse
-from typing import Tuple
+from typing import Tuple, List
 
 try:
     import simplejson as json
