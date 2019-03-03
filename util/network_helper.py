@@ -65,8 +65,7 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None
             break
 
         results = []
-        new_finished = [(reply, tile_coord) for reply, tile_coord in replies if reply.isFinished()
-                        and tile_coord not in finished_tiles]
+        new_finished = list(filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies))
         nr_finished += len(new_finished)
         for reply, tile_coord in new_finished:
             finished_tiles.add(tile_coord)
