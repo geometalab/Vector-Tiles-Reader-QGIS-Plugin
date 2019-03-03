@@ -5,6 +5,12 @@ import pkgutil
 import importlib
 import tempfile
 import re
+try:
+    from qgis.core import QgsApplication
+    _qgis_available = True
+except ImportError:
+    _qgis_available = False
+    # _logger.error("QGIS not found for logging")
 
 _KEY_REGEX = re.compile(r"(\?|&)(api_)?key=[^\s?&]*")
 
@@ -12,7 +18,6 @@ _DEBUG = "debug"
 _INFO = "info"
 _WARN = "warn"
 _CRITICAL = "critical"
-_qgis_available = None
 
 
 def remove_key(text):
@@ -70,13 +75,16 @@ def _import_qgis():
 
 
 def _log_to_qgis(msg, level):
-    qgis = _import_qgis()
-    if not qgis:
-        _logger.error("QGIS not found for logging")
-        return
+    if _qgis_available:
+        if level != _DEBUG:
+            QgsApplication.messageLog().logMessage(msg, 'Vector Tiles Reader'.format(level))
 
-    if level != _DEBUG:
-        qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader'.format(level))
+        # if level == _INFO:
+        #     Qgis.Info = qgis.QgsMessageLog.INFO
+        # elif level == _WARN:
+        #     qgis_level = qgis.QgsMessageLog.WARNING
+        # elif level == _CRITICAL:
+        #     qgis_level = qgis.QgsMessageLog.CRITICAL
 
 
 try:
