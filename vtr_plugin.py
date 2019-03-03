@@ -43,12 +43,13 @@ from .vt_reader import VtReader
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
 from .util.qgis_helper import get_loaded_layers_of_connection
+from .util.tile_helper import Bounds
 from .util.file_helper import (
     get_icons_directory,
     clear_cache,
     get_plugin_directory,
     get_temp_dir)
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from qgis.core import (
     QgsMapLayer,
     QgsProject,
@@ -57,6 +58,7 @@ from qgis.core import (
     QgsProject,
     QgsCoordinateReferenceSystem,
 )
+from qgis.gui import QgsMessageBarItem
 
 from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton
 from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QSettings, Qt
@@ -91,9 +93,6 @@ omt_layer_ordering = [
     "landuse"
 ]
 
-# todo: create real bounds type
-BOUNDS_TYPE = dict
-
 
 # noinspection PyUnresolvedReferences,PyArgumentList
 class VtrPlugin:
@@ -125,16 +124,17 @@ class VtrPlugin:
         self.connections_dialog.on_connect.connect(self._on_connect)
         self.connections_dialog.on_add.connect(self._on_add_layer)
         self.connections_dialog.on_zoom_change.connect(self._on_zoom_change)
-        self.progress_dialog = None
-        self._current_reader = None
+        self._current_reader: VtReader = None
         self._add_path_to_icons()
-        self._current_layer_filter = []
+        self._current_layer_filter: List[str] = []
         self._auto_zoom = False
-        self._current_connection_name = None
-        self._current_zoom = None
-        self._current_scale = None
-        self._loaded_extent = None
-        self._loaded_scale = None
+        self._current_connection_name: str = None
+        self._current_zoom: int = None
+        self._current_scale: int = None
+        self._loaded_extent: Bounds = None
+        self._extent_to_load: Bounds = None
+        self._current_extent: Bounds = None
+        self._loaded_scale: int = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
         self._debouncer = SignalDebouncer(timeout=500,
@@ -146,13 +146,11 @@ class VtrPlugin:
                                           predicate=self._have_extent_or_scale_changed)
         self._debouncer.on_notify.connect(self._handle_map_scale_or_extents_changed)
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
-        self._scale_to_load = None
-        self._extent_to_load = None
-        self._current_extent = None
-        self.message_bar_item = None
-        self.progress_bar = None
+        self._scale_to_load: int = None
+        self.message_bar_item: QgsMessageBarItem = None
+        self.progress_bar: QProgressBar = None
         self._inspection_mode_active = False
-        self._current_reader_sources = None
+        self._current_reader_sources: List[str] = None
         self._debouncer.start()
 
     def _on_remove(self, layer_ids: List):
@@ -321,15 +319,15 @@ class VtrPlugin:
             has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()
 
-            self._scale_to_load = None
-            self._extent_to_load = None
+            self._scale_to_load: int = None
+            self._extent_to_load: Bounds = None
 
             is_new_extent_within_loaded_extent = \
                 self._loaded_extent\
-                and self._loaded_extent["x_min"] <= new_extent["x_min"] <= self._loaded_extent["x_max"]\
-                and self._loaded_extent["x_min"] <= new_extent["x_max"] <= self._loaded_extent["x_max"]\
-                and self._loaded_extent["y_min"] <= new_extent["y_min"] <= self._loaded_extent["y_max"]\
-                and self._loaded_extent["y_min"] <= new_extent["y_max"] <= self._loaded_extent["y_max"]
+                and self._loaded_extent.x_min() <= new_extent.x_min() <= self._loaded_extent.x_max()\
+                and self._loaded_extent.x_min() <= new_extent.x_max() <= self._loaded_extent.x_max()\
+                and self._loaded_extent.y_min() <= new_extent.y_min() <= self._loaded_extent.y_max()\
+                and self._loaded_extent.y_min() <= new_extent.y_max() <= self._loaded_extent.y_max()
 
             old_scale = self._loaded_scale
 
@@ -495,7 +493,7 @@ class VtrPlugin:
             self.iface.messageBar() \
                 .pushWarning("", f"Only {limit} tiles were loaded according to the limit in the options")
 
-    def _has_extent_changed(self) -> Tuple[bool, BOUNDS_TYPE]:
+    def _has_extent_changed(self) -> Tuple[bool, Bounds]:
         scale = self._scale_to_load
         if not scale:
             scale = self._get_current_map_scale()
@@ -512,9 +510,9 @@ class VtrPlugin:
             new_extent = clamp_bounds(bounds_to_clamp=new_extent, clamp_values=source_bounds)
 
         has_changed = \
-            not self._loaded_extent or new_extent["zoom"] != self._loaded_extent["zoom"]\
-            or new_extent["x_min"] != self._loaded_extent["x_min"]\
-            or new_extent["y_min"] != self._loaded_extent["y_min"]
+            not self._loaded_extent or new_extent.zoom() != self._loaded_extent.zoom()\
+            or new_extent.x_min() != self._loaded_extent.x_min()\
+            or new_extent.y_min() != self._loaded_extent.y_min()
 
         return has_changed, new_extent
 
@@ -666,7 +664,7 @@ class VtrPlugin:
             source_crs = 3857
 
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating
-        tile_bounds = get_tile_bounds(zoom, bounds=bounds, scheme=scheme, source_crs=str(source_crs))
+        tile_bounds = get_tile_bounds(zoom, extent=bounds, scheme=scheme, source_crs=str(source_crs))
         return tile_bounds
 
     @staticmethod

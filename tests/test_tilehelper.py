@@ -73,7 +73,7 @@ class TileHelperTests(unittest.TestCase):
         self.assertEqual(3857, get_code_from_epsg("epsg:3857"))
 
     def test_world_bounds(self):
-        tile = get_tile_bounds(zoom=14, bounds=WORLD_BOUNDS, source_crs=4326, scheme="xyz")
+        tile = get_tile_bounds(zoom=14, extent=WORLD_BOUNDS, source_crs=4326, scheme="xyz")
         bounds_expected = {'y_min': 0,
                            'y_max': 16383,
                            'zoom': 14,

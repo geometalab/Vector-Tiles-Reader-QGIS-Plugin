@@ -6,7 +6,7 @@ import sys
 import os
 from io import BytesIO
 from gzip import GzipFile
-import multiprocessing as mp
+import multiprocessing
 
 try:
     import simplejson as json
@@ -14,6 +14,7 @@ except ImportError:
     import json
 import uuid
 import traceback
+from typing import Dict, List, Tuple
 
 from qgis.core import (
     QgsProject,
@@ -26,7 +27,7 @@ from PyQt5.QtWidgets import QApplication
 if not os.environ.get("VTR_TESTS"):
     from .util.qgis_helper import get_loaded_layers_of_connection
     from .util.log_helper import info, critical, debug, remove_key
-    from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
+    from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
     from .util.feature_helper import (FeatureMerger,
                                       geo_types,
                                       is_multi,
@@ -41,13 +42,13 @@ if not os.environ.get("VTR_TESTS"):
                                    get_geojson_file_name,
                                    get_icons_directory,
                                    cache_tile)
-    from .util.tile_source import ServerSource, MBTilesSource, DirectorySource
+    from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
     from .util.connection import ConnectionTypes
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 else:
     from util.qgis_helper import get_loaded_layers_of_connection
     from util.log_helper import info, critical, debug, remove_key
-    from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, create_bounds, VectorTile
+    from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
     from util.feature_helper import (FeatureMerger,
                                      geo_types,
                                      is_multi,
@@ -62,7 +63,7 @@ else:
                                   get_geojson_file_name,
                                   get_icons_directory,
                                   cache_tile)
-    from util.tile_source import ServerSource, MBTilesSource, DirectorySource
+    from util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
     from util.connection import ConnectionTypes
     from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
 
@@ -70,7 +71,7 @@ is_windows = sys.platform.startswith("win32")
 if is_windows:
     # OSGeo4W does not bundle python in exec_prefix for python
     path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
-    mp.set_executable(path)
+    multiprocessing.set_executable(path)
     sys.argv = [None]
 
 
@@ -103,7 +104,7 @@ class VtReader(QObject):
 
     _all_tiles = []
 
-    def __init__(self, iface, connection):
+    def __init__(self, iface, connection: dict):
         """
          * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
@@ -113,24 +114,24 @@ class VtReader(QObject):
         if not connection:
             raise RuntimeError("The datasource is required")
 
-        self._connection = connection
-        self._source = self._create_source(connection)
-        self._external_source = self._create_source(connection)
+        self._connection: dict = connection
+        self._source: AbstractSource = self._create_source(connection)
+        self._external_source: AbstractSource = self._create_source(connection)
 
         assure_temp_dirs_exist()
         self.iface = iface
-        self.feature_collections_by_layer_name_and_geotype = {}
+        self.feature_collections_by_layer_name_and_geotype: Dict[Tuple[str, str], dict] = {}
         self.cancel_requested = False
         self._loaded_pois_by_id = {}
-        self._clip_tiles_at_tile_bounds = None
+        self._clip_tiles_at_tile_bounds: False = None
         self._flush = False
-        self._feature_count = None
-        self._allowed_sources = None
+        self._feature_count: int = None
+        self._allowed_sources: List[str] = None
 
     def connection(self):
         return self._connection
 
-    def set_allowed_sources(self, sources):
+    def set_allowed_sources(self, sources: List[str]):
         """
          * A list of layer sources (i.e. file paths) can be specified.
          These layers will later be ignored, i.e. not added.
@@ -139,7 +140,7 @@ class VtReader(QObject):
         """
         self._allowed_sources = sources
 
-    def get_source(self):
+    def get_source(self) -> AbstractSource:
         """
          * Returns the source being used of the current reader. This method is intended for external use,
          i.e. from outside of this reader. SQlite objects must only be used in the thread they were created.
@@ -150,7 +151,7 @@ class VtReader(QObject):
 
         return self._external_source
 
-    def _create_source(self, connection):
+    def _create_source(self, connection: dict) -> AbstractSource:
         conn_type = connection["type"]
         if conn_type == ConnectionTypes.TileJSON:
             source = ServerSource(url=connection["url"])
@@ -173,23 +174,24 @@ class VtReader(QObject):
         self._source.message_changed.disconnect()
         self._source.close_connection()
 
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     def _source_tile_limit_reached(self):
         if self._loading_options["max_tiles"]:
             self.tile_limit_reached.emit(self._loading_options["max_tiles"])
 
-    def _source_progress_changed(self, progress):
+    def _source_progress_changed(self, progress: int):
         self._update_progress(progress=progress)
 
-    def _source_max_progress_changed(self, max_progress):
+    def _source_max_progress_changed(self, max_progress: int):
         self._update_progress(max_progress=max_progress)
 
-    def _source_message_changed(self, msg):
+    def _source_message_changed(self, msg: str):
         self._update_progress(msg=msg)
 
-    def _update_progress(self, show_dialog=None, progress=None, max_progress=None, msg=None):
+    def _update_progress(self, show_dialog: bool = None, progress: int = None,
+                         max_progress: int = None, msg: str = None):
         if progress is not None:
             self.progress_changed.emit(progress)
         if max_progress is not None:
@@ -199,7 +201,7 @@ class VtReader(QObject):
         if show_dialog:
             self.show_progress_changed.emit(show_dialog)
 
-    def _get_empty_feature_collection(self, layer_name, zoom_level):
+    def _get_empty_feature_collection(self, layer_name: str, zoom_level: int) -> dict:
         """
          * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
@@ -235,7 +237,7 @@ class VtReader(QObject):
         if self._source:
             self._source.cancel()
 
-    def _get_clamped_zoom_level(self):
+    def _get_clamped_zoom_level(self) -> int:
         zoom_level = self._loading_options["zoom_level"]
         min_zoom = self._source.min_zoom()
         max_zoom = self._source.max_zoom()
@@ -347,13 +349,13 @@ class VtReader(QObject):
             self.loading_finished.emit(zoom_level, loaded_extent)
 
     @staticmethod
-    def _get_extent(tiles, zoom_level, scheme):
+    def _get_extent(tiles: List[VectorTile], zoom_level: int, scheme: str) -> Optional[Bounds]:
         loaded_tiles_x = [t.coord()[0] for t in tiles]
         loaded_tiles_y = [t.coord()[1] for t in tiles]
-        if len(loaded_tiles_x) == 0 or len(loaded_tiles_y) == 0:
+        if not tiles:
             return None
 
-        bounds = create_bounds(zoom=zoom_level,
+        bounds = Bounds.create(zoom=zoom_level,
                                x_min=min(loaded_tiles_x),
                                x_max=max(loaded_tiles_x),
                                y_min=min(loaded_tiles_y),
@@ -387,13 +389,13 @@ class VtReader(QObject):
             'inspection_mode': is_inspection_mode
         }
 
-    def load_tiles_async(self, bounds: dict):
+    def load_tiles_async(self, bounds: Bounds):
         """
          * Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param bounds:
         :return: 
         """
-        zoom_level = bounds["zoom"]
+        zoom_level = bounds.zoom()
         info("Loading zoom level '{}', bounds: {}", zoom_level, bounds)
         self._loading_options["zoom_level"] = zoom_level
         self._loading_options["bounds"] = bounds
@@ -404,13 +406,13 @@ class VtReader(QObject):
         _worker_thread.start()
 
     @staticmethod
-    def _get_pool():
+    def _get_pool() -> multiprocessing.Pool:
         nr_processors = 4
         try:
-            nr_processors = mp.cpu_count()
+            nr_processors = multiprocessing.cpu_count()
         except NotImplementedError:
             info("CPU count cannot be retrieved. Falling back to default = 4")
-        pool = mp.Pool(nr_processors)
+        pool = multiprocessing.Pool(nr_processors)
         return pool
 
     def _decode_tiles(self, tiles_with_encoded_data):
@@ -513,9 +515,9 @@ class VtReader(QObject):
         """
          * Creates a hierarchy of groups and layers in qgis
         """
-        own_layers = get_loaded_layers_of_connection(self._connection["name"])
+        own_layers: List[QgsVectorLayer] = get_loaded_layers_of_connection(self._connection["name"])
         for l in own_layers:
-            name = l.name()
+            name: str = l.name()
             geo_type = l.customProperty("VectorTilesReader/geo_type")
             if (name, geo_type) not in self.feature_collections_by_layer_name_and_geotype:
                 if not bool(l.customProperty("VectorTilesReader/is_empty")):

@@ -94,7 +94,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         },
         _OMT_CUSTOM_KEY: {
             "name": _OMT_CUSTOM_KEY,
-            "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
+            "url": "https://maps.tilehosting.com/data/v3.json?key={token}",
             "can_edit": True,
             "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
         },

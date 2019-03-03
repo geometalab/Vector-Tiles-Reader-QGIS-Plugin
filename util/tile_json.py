@@ -71,7 +71,7 @@ class TileJSON(object):
         :return:         """
         bounds = self.bounds_longlat()
         scheme = self.scheme()
-        tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs="EPSG:4326")
+        tile_bounds = get_tile_bounds(zoom=zoom, extent=bounds, scheme=scheme, source_crs="EPSG:4326")
         return tile_bounds
 
     def vector_layers(self) -> List[dict]:

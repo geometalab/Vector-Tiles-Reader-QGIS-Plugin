@@ -15,7 +15,7 @@ from .log_helper import info, warn, critical, debug
 from .tile_helper import (VectorTile,
                           get_tiles_from_center,
                           get_tile_bounds,
-                          create_bounds,
+                            Bounds,
                           WORLD_BOUNDS)
 from .network_helper import url_exists, load_tiles_async
 from .file_helper import is_sqlite_db
@@ -34,45 +34,45 @@ class AbstractSource(QObject):
         QObject.__init__(self)
         self._cancelling = False
 
-    def cancel(self):
+    def cancel(self) -> None:
         self._cancelling = True
 
-    def source(self):
+    def source(self) -> str:
         raise NotImplementedError
 
-    def vector_layers(self):
+    def vector_layers(self) -> List:
         raise NotImplementedError
 
     def close_connection(self):
         pass
 
-    def name(self):
+    def name(self) -> str:
         raise NotImplementedError
 
-    def attribution(self):
+    def attribution(self) -> str:
         raise NotImplementedError
 
-    def min_zoom(self):
+    def min_zoom(self) -> int:
         """
          * Returns the minimum zoom that is found in either the metadata or the tile table
         :return:
         """
         raise NotImplementedError
 
-    def max_zoom(self):
+    def max_zoom(self) -> int:
         """
          * Returns the maximum zoom that is found in either the metadata or the tile table
         :return:
         """
         raise NotImplementedError
 
-    def scheme(self):
+    def scheme(self) -> str:
         raise NotImplementedError
 
     def bounds(self):
         raise NotImplementedError
 
-    def bounds_tile(self, zoom):
+    def bounds_tile(self, zoom: int) -> Bounds:
         """
          * Returns the tile boundaries
         :param zoom:
@@ -145,7 +145,7 @@ class ServerSource(AbstractSource):
 
     def bounds_tile(self, zoom):
         lng_lat = self.json.bounds_longlat()
-        return get_tile_bounds(zoom=zoom, scheme=self.scheme(), bounds=lng_lat, source_crs="4326")
+        return get_tile_bounds(zoom=zoom, scheme=self.scheme(), extent=lng_lat, source_crs="4326")
 
     def crs(self):
         return self.json.crs()
@@ -243,12 +243,12 @@ class MBTilesSource(AbstractSource):
         tile_bounds = None
         scheme = self.scheme()
         if bounds:
-            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs="4326")
+            tile_bounds = get_tile_bounds(zoom=zoom, extent=bounds, scheme=scheme, source_crs="4326")
         if not tile_bounds:
             tile_bounds = self._get_bounds_from_data(zoom_level=zoom)
         if not tile_bounds:
             bounds = WORLD_BOUNDS
-            tile_bounds = get_tile_bounds(zoom=zoom, bounds=bounds, scheme=scheme, source_crs="4326")
+            tile_bounds = get_tile_bounds(zoom=zoom, extent=bounds, scheme=scheme, source_crs="4326")
         return tile_bounds
 
     def name(self):
@@ -324,7 +324,7 @@ class MBTilesSource(AbstractSource):
         bounds = None
         if rows:
             row = rows[0]
-            bounds = create_bounds(zoom=zoom_level,
+            bounds = Bounds.create(zoom=zoom_level,
                                    x_min=row["x_min"],
                                    x_max=row["x_max"],
                                    y_min=row["y_min"],

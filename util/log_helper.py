@@ -46,7 +46,8 @@ def debug(msg, *args):
 
 def _log_message(msg, level, *args):
     try:
-        msg = remove_key(msg.format(*args))
+        # msg = remove_key(msg.format(*args))
+        msg = msg.format(*args)
 
         if level == _INFO:
             _logger.info(msg)

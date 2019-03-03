@@ -88,7 +88,7 @@ class TileJsonTests(unittest.TestCase):
         tj = _get_loaded(js)
         b = tj.bounds_tile(14)
         self.assertIsNotNone(b)
-        world_bounds_tile = get_tile_bounds(zoom=14, source_crs=4326, scheme="xyz", bounds=WORLD_BOUNDS)
+        world_bounds_tile = get_tile_bounds(zoom=14, source_crs=4326, scheme="xyz", extent=WORLD_BOUNDS)
         self.assertEqual(world_bounds_tile, b)
 
 
