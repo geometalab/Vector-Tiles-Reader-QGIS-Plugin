@@ -65,14 +65,14 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None
             break
 
         results = []
-        new_finished = [r for r in replies if r[0].isFinished() and r[1] not in finished_tiles]
+        new_finished = [(reply, tile_coord) for reply, tile_coord in replies if reply.isFinished()
+                        and tile_coord not in finished_tiles]
         nr_finished += len(new_finished)
         for reply, tile_coord in new_finished:
             finished_tiles.add(tile_coord)
-            error = reply.errorString()
-            if error:
+            if reply.error():
                 warn("Error during network request: {}, {}",
-                     remove_key(error), remove_key(reply.url().toDisplayString()))
+                     remove_key(reply.errorString()), remove_key(reply.url().toDisplayString()))
             else:
                 content = reply.readAll().data()
                 results.append((tile_coord, content))
