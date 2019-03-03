@@ -1,13 +1,13 @@
 from .log_helper import warn, info, remove_key
 from time import sleep
-from typing import Tuple, Callable, List
+from typing import Tuple, Callable, List, Optional
 from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt5.QtCore import QUrl
 from PyQt5.QtWidgets import QApplication
 from qgis.core import QgsNetworkAccessManager
 
 
-def url_exists(url: str) -> Tuple[bool, str, str]:
+def url_exists(url: str) -> Tuple[bool, Optional[str], str]:
     reply = get_async_reply(url, head_only=True)
     while not reply.isFinished():
         QApplication.processEvents()
@@ -19,8 +19,8 @@ def url_exists(url: str) -> Tuple[bool, str, str]:
             info("Moved permanently, new location is: {}", location)
             return url_exists(location)
 
-    success = status == 200
-    error = None
+    success: bool = status == 200
+    error: Optional[str] = None
     info("URL check for '{}': status '{}'", url, status)
     if not success:
         if not status:
@@ -47,8 +47,8 @@ def get_async_reply(url: str, head_only: bool = False) -> QNetworkReply:
     return reply
 
 
-def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable = None)\
-        -> List:
+def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None,
+                     cancelling_func: Callable[[], bool] = None) -> List:
     replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = \
         [(get_async_reply(url), (col, row)) for url, col, row in urls_with_col_and_row]
     total_nr_of_requests = len(replies)
@@ -60,7 +60,7 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None
     cancelling = False
     while not all_finished:
         sleep(0.075)
-        cancelling = cancelling_func and cancelling_func()
+        cancelling: bool = cancelling_func and cancelling_func()
         if cancelling:
             break
 

@@ -19,7 +19,7 @@ class TileJSON(object):
 
     def __init__(self, url: str):
         self.url = url
-        self.json: dict = None
+        self.json: Optional[dict] = None
 
     def load(self) -> bool:
         debug("Loading TileJSON")
