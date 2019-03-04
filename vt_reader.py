@@ -268,7 +268,7 @@ class VtReader(QObject):
             self._feature_count = 0
             self._all_tiles = []
 
-            bounds = self._loading_options["bounds"]
+            bounds: Bounds = self._loading_options["bounds"]
             clip_tiles = self._loading_options["clip_tiles"]
             max_tiles = self._loading_options["max_tiles"]
             layer_filter = self._loading_options["layer_filter"]

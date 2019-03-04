@@ -21,8 +21,6 @@ import traceback
 import ast
 import platform
 
-from builtins import map
-from builtins import str
 import logging
 from .util.log_helper import info, critical, debug
 from .util.network_helper import url_exists, load_url
@@ -42,7 +40,7 @@ from .util.tile_helper import (
 
 from .vt_reader import VtReader
 
-from .ui.dialogs import AboutDialog, ConnectionsDialog
+from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import Bounds
 from .util.file_helper import get_icons_directory, clear_cache, get_plugin_directory, get_temp_dir
@@ -53,6 +51,8 @@ from qgis.gui import QgsMessageBarItem
 from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton, QMessageBox
 from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QSettings, Qt
 from PyQt5.QtGui import QIcon, QColor
+
+from mapboxstyle2qgis import core
 
 
 # try:
@@ -440,9 +440,6 @@ class VtrPlugin:
             status, data = load_url(url)
             if status == 200:
                 try:
-                    # todo: move import to top
-                    from mapboxstyle2qgis import core
-
                     core.register_qgis_expressions()
                     info("Styles will be written to: {}", output_directory)
                     core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
@@ -679,26 +676,26 @@ class VtrPlugin:
     def show_about():
         AboutDialog().show()
 
-    def _is_valid_qgis_extent(self, extent_to_load: dict, zoom: int) -> bool:
+    def _is_valid_qgis_extent(self, extent_to_load: Bounds, zoom: int) -> bool:
         source_bounds = self._current_reader.get_source().bounds_tile(zoom)
         if (
             source_bounds
-            and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"]
-            and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"]
-            and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"]
-            and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]
+            and not source_bounds.x_min() <= extent_to_load.x_min() <= source_bounds.x_max()
+            and not source_bounds.x_min() <= extent_to_load.x_max() <= source_bounds.x_max()
+            and not source_bounds.y_min() <= extent_to_load.y_min() <= source_bounds.y_max()
+            and not source_bounds.y_min() <= extent_to_load.y_max() <= source_bounds.y_max()
         ):
             return False
         return True
 
     @staticmethod
-    def is_extent_within_bounds(extent: dict, bounds: dict) -> bool:
+    def is_extent_within_bounds(extent: Bounds, bounds: Bounds) -> bool:
         is_within = True
         if bounds and extent:
-            x_min_within = extent["x_min"] >= bounds["x_min"]
-            y_min_within = extent["y_min"] >= bounds["y_min"]
-            x_max_within = extent["x_max"] <= bounds["x_max"]
-            y_max_within = extent["y_max"] <= bounds["y_max"]
+            x_min_within = extent.x_min() >= bounds.x_min()
+            y_min_within = extent.y_min() >= bounds.y_min()
+            x_max_within = extent.x_max() <= bounds.x_max()
+            y_max_within = extent.y_max() <= bounds.y_max()
             is_within = x_min_within and y_min_within and x_max_within and y_max_within
         else:
             debug("Bounds not available on source. Assuming extent is within bounds")
@@ -722,13 +719,13 @@ class VtrPlugin:
         zoom = clamp(zoom, low=min_zoom, high=max_zoom)
         return zoom
 
-    def _set_qgis_extent(self, zoom, scheme, bounds):
+    def _set_qgis_extent(self, zoom: int, scheme: str, bounds: Bounds):
         """
          * Sets the current extent of the QGIS map canvas to the specified bounds
         :return: 
         """
-        min_xy = tile_to_latlon(zoom, bounds["x_min"], bounds["y_min"], scheme=scheme)
-        max_xy = tile_to_latlon(zoom, bounds["x_max"], bounds["y_max"], scheme=scheme)
+        min_xy = tile_to_latlon(zoom, bounds.x_min(), bounds.y_min(), scheme=scheme)
+        max_xy = tile_to_latlon(zoom, bounds.x_max(), bounds.y_max(), scheme=scheme)
         min_pos = convert_coordinate("900913", str(self._get_qgis_crs()), lat=min_xy[1], lng=min_xy[0])
         max_pos = convert_coordinate("900913", self._get_qgis_crs(), lat=min_xy[1], lng=max_xy[0])
 
@@ -754,7 +751,7 @@ class VtrPlugin:
         new_action.setEnabled(is_enabled)
         return new_action
 
-    def _load_tiles(self, options, layers_to_load, bounds, ignore_limit=False, is_add=False):
+    def _load_tiles(self, options: OptionsGroup, layers_to_load, bounds: Bounds, ignore_limit=False, is_add=False):
         self._current_extent = bounds
         if self._debouncer.is_running():
             if is_add:
@@ -784,7 +781,7 @@ class VtrPlugin:
             self._is_loading = False
         else:
             try:
-                source_bounds = reader.get_source().bounds_tile(bounds["zoom"])
+                source_bounds = reader.get_source().bounds_tile(bounds.zoom())
                 if (
                     source_bounds
                     and not extent_overlap_bounds(bounds, source_bounds)
@@ -797,7 +794,7 @@ class VtrPlugin:
                         source_bounds,
                     )
                     bounds = source_bounds
-                self._current_zoom = bounds["zoom"]
+                self._current_zoom = bounds.zoom()
                 reader.set_allowed_sources(self._current_reader_sources)
                 reader.set_options(
                     load_mask_layer=load_mask_layer,
@@ -902,7 +899,7 @@ class VtrPlugin:
         if auto_zoom:
             self._debouncer.start()
 
-    def _set_layer_extent(self, loaded_extent):
+    def _set_layer_extent(self, loaded_extent: Bounds):
         layers = self._get_all_own_layers()
         if self.connections_dialog.options.auto_zoom_enabled():
             bounds = WORLD_BOUNDS
@@ -917,16 +914,16 @@ class VtrPlugin:
                 bounds = self._get_visible_extent_as_latlon()
             else:
                 min_bounds = tile_to_latlon(
-                    zoom=loaded_extent["zoom"],
-                    x=loaded_extent["x_min"],
-                    y=loaded_extent["y_min"],
-                    scheme=loaded_extent["scheme"],
+                    zoom=loaded_extent.zoom(),
+                    x=loaded_extent.x_min(),
+                    y=loaded_extent.y_min(),
+                    scheme=loaded_extent.scheme(),
                 )
                 max_bounds = tile_to_latlon(
-                    zoom=loaded_extent["zoom"],
-                    x=loaded_extent["x_max"],
-                    y=loaded_extent["y_max"],
-                    scheme=loaded_extent["scheme"],
+                    zoom=loaded_extent.zoom(),
+                    x=loaded_extent.x_max(),
+                    y=loaded_extent.y_max(),
+                    scheme=loaded_extent.scheme(),
                 )
                 bounds = [min_bounds[0], min_bounds[1], max_bounds[2], max_bounds[3]]
         for l in layers:

@@ -223,10 +223,10 @@ def get_tile_bounds(
     return tile_bounds
 
 
-def get_all_tiles(bounds: dict, is_cancel_requested_handler: Callable) -> List[Tuple[int, int]]:
+def get_all_tiles(bounds: Bounds, is_cancel_requested_handler: Callable) -> List[Tuple[int, int]]:
     tiles = []
-    width = bounds["width"]
-    height = bounds["height"]
+    width = bounds.width()
+    height = bounds.height()
     x_min = bounds.x_min()
     y_min = bounds.y_min()
     debug("Preprocessing {} tiles", width * height)
