@@ -280,6 +280,7 @@ class GlobalMercator(object):
 
 # ---------------------
 
+
 class GlobalGeodetic(object):
     """
     TMS Global Geodetic Profile
@@ -343,9 +344,4 @@ class GlobalGeodetic(object):
     def TileBounds(tx, ty, zoom):
         "Returns bounds of the given tile"
         res = 180 / 256.0 / 2 ** zoom
-        return (
-            tx * 256 * res - 180,
-            ty * 256 * res - 90,
-            (tx + 1) * 256 * res - 180,
-            (ty + 1) * 256 * res - 90
-        )
+        return (tx * 256 * res - 180, ty * 256 * res - 90, (tx + 1) * 256 * res - 180, (ty + 1) * 256 * res - 90)

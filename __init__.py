@@ -16,13 +16,14 @@ import os
 import sys
 import site
 
-ext_libs_path = os.path.join(os.path.dirname(__file__), 'ext-libs')
+ext_libs_path = os.path.join(os.path.dirname(__file__), "ext-libs")
 if ext_libs_path not in sys.path:
     site.addsitedir(ext_libs_path)
 
 
 def classFactory(iface):
     from .vtr_plugin import VtrPlugin
+
     return VtrPlugin(iface)
 
 
@@ -34,4 +35,5 @@ def run_all():
     sys.path.append(os.path.join(plugin_dir, "util"))
     sys.path.append(os.path.join(plugin_dir, "tests"))
     from .tests import test_all
+
     test_all.run_all()

@@ -29,7 +29,7 @@ class ServerSourceTests(unittest.TestCase):
         self.assertTrue(error in ctx.exception)
 
     @mock.patch("util.tile_source.TileJSON")
-    @mock.patch("util.tile_source.load_tiles_async", return_value=[((1, 2), 'data')])
+    @mock.patch("util.tile_source.load_tiles_async", return_value=[((1, 2), "data")])
     @mock.patch("util.tile_source.url_exists", return_value=(True, None, "https://localhost"))
     def test_load(self, mock_url_exists, mock_load_tiles_async, mock_tile_json):
         src = ServerSource("https://localhost")
@@ -39,7 +39,7 @@ class ServerSourceTests(unittest.TestCase):
 
 
 def suite():
-    s = unittest.makeSuite(ServerSourceTests, 'test')
+    s = unittest.makeSuite(ServerSourceTests, "test")
     return s
 
 

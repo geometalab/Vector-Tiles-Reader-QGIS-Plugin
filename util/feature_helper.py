@@ -1,13 +1,7 @@
 from builtins import str
 from builtins import object
 
-from qgis.core import (
-    QgsRectangle,
-    QgsGeometry,
-    QgsField,
-    QgsSpatialIndex,
-    QgsCoordinateTransform
-    )
+from qgis.core import QgsRectangle, QgsGeometry, QgsField, QgsSpatialIndex, QgsCoordinateTransform
 
 import uuid
 import numbers
@@ -89,11 +83,13 @@ class FeatureMerger(object):
             if f[self._DISSOLVE_GROUP_FIELD]:
                 continue
             f[self._DISSOLVE_GROUP_FIELD] = "{}".format(uuid.uuid4())
-            self._merge_feature(layer=layer,
-                                index=index,
-                                f=f,
-                                feature_dict=feature_dict,
-                                feature_handler=lambda feat: layer.updateFeature(feat))
+            self._merge_feature(
+                layer=layer,
+                index=index,
+                f=f,
+                feature_dict=feature_dict,
+                feature_handler=lambda feat: layer.updateFeature(feat),
+            )
             layer.updateFeature(f)
 
     def _merge_feature(self, layer, index, f, feature_dict, feature_handler):
@@ -135,11 +131,9 @@ class FeatureMerger(object):
         for n in new_neighbours:
             if self._should_cancel_func():
                 break
-            self._merge_feature(layer=layer,
-                                index=index,
-                                f=n,
-                                feature_dict=feature_dict,
-                                feature_handler=feature_handler)
+            self._merge_feature(
+                layer=layer, index=index, f=n, feature_dict=feature_dict, feature_handler=feature_handler
+            )
 
 
 class _GeoTypes(object):
@@ -149,6 +143,7 @@ class _GeoTypes(object):
     POINT = "Point"
     LINE_STRING = "LineString"
     POLYGON = "Polygon"
+
 
 GeoTypes = _GeoTypes()
 
@@ -161,10 +156,7 @@ geo_types_by_name = {
     "MultiLineString": GeoTypes.LINE_STRING,
 }
 
-geo_types = {
-    1: GeoTypes.POINT,
-    2: GeoTypes.LINE_STRING,
-    3: GeoTypes.POLYGON}
+geo_types = {1: GeoTypes.POINT, 2: GeoTypes.LINE_STRING, 3: GeoTypes.POLYGON}
 
 
 def is_multi(geo_type, coordinates):
@@ -226,10 +218,14 @@ def map_coordinates_recursive(coordinates, tile_extent, mapper_func, all_out_of_
                 newval = mapper_func(coord)
                 tmp.append(newval)
             else:
-                tmp.append(map_coordinates_recursive(coordinates=coord,
-                                                     tile_extent=tile_extent,
-                                                     mapper_func=mapper_func,
-                                                     all_out_of_bounds_func=all_out_of_bounds_func))
+                tmp.append(
+                    map_coordinates_recursive(
+                        coordinates=coord,
+                        tile_extent=tile_extent,
+                        mapper_func=mapper_func,
+                        all_out_of_bounds_func=all_out_of_bounds_func,
+                    )
+                )
 
     all_out_of_bounds = tuple_count_on_current_array_depth > 0 and not any_tuples_inside_bounds
     if all_out_of_bounds_func:

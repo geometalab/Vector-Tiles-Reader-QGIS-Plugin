@@ -12,10 +12,7 @@ import mock
 import shutil
 from osgeo import gdal
 from util.file_helper import clear_cache, get_style_folder
-from qgis.core import (
-    QgsProject,
-    QgsVectorLayer,
-)
+from qgis.core import QgsProject, QgsVectorLayer
 
 
 class VtReaderTests(unittest.TestCase):
@@ -27,7 +24,7 @@ class VtReaderTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        src = os.path.join(os.path.dirname(__file__), 'data', 'styles')
+        src = os.path.join(os.path.dirname(__file__), "data", "styles")
         trg = get_style_folder(cls.CONNECTION_NAME)
         if os.path.isdir(trg):
             shutil.rmtree(trg)
@@ -65,7 +62,7 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=1)
 
         print(mock_info.call_args_list)
-        mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
+        mock_info.assert_any_call("Native decoding not supported: {}, {}bit", "linux2", "64")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
 
@@ -136,7 +133,7 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=2, merge_tiles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
+        mock_info.assert_any_call("Native decoding not supported: {}, {}bit", "linux2", "64")
         mock_info.assert_any_call("Import complete")
 
     @mock.patch("vt_reader.info")
@@ -148,18 +145,31 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=2, clip_tiles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call('Native decoding not supported: {}, {}bit', 'linux2', '64')
+        mock_info.assert_any_call("Native decoding not supported: {}, {}bit", "linux2", "64")
         mock_info.assert_any_call("Import complete")
 
-    def _load(self, iface, max_tiles, serial_tile_processing_limit=None, merge_tiles=False, clip_tiles=False, apply_styles=False):
+    def _load(
+        self,
+        iface,
+        max_tiles,
+        serial_tile_processing_limit=None,
+        merge_tiles=False,
+        clip_tiles=False,
+        apply_styles=False,
+    ):
         conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
-        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        gdal.PushErrorHandler("CPLQuietErrorHandler")
         conn["name"] = self.CONNECTION_NAME
-        conn["path"] = os.path.join(os.path.dirname(__file__), '..', 'sample_data', 'uster_zh.mbtiles')
+        conn["path"] = os.path.join(os.path.dirname(__file__), "..", "sample_data", "uster_zh.mbtiles")
         reader = VtReader(iface=iface, connection=conn)
-        bounds = {'y_min': 10644, 'y_max': 10645, 'zoom': 14, 'height': 2, 'width': 3, 'x_max': 8589, 'x_min': 8587}
-        reader.set_options(merge_tiles=merge_tiles, clip_tiles=clip_tiles, max_tiles=max_tiles,
-                           layer_filter=['landcover', 'place', 'water_name'], apply_styles=apply_styles)
+        bounds = {"y_min": 10644, "y_max": 10645, "zoom": 14, "height": 2, "width": 3, "x_max": 8589, "x_min": 8587}
+        reader.set_options(
+            merge_tiles=merge_tiles,
+            clip_tiles=clip_tiles,
+            max_tiles=max_tiles,
+            layer_filter=["landcover", "place", "water_name"],
+            apply_styles=apply_styles,
+        )
         reader._loading_options["zoom_level"] = 14
         reader._loading_options["bounds"] = bounds
         if serial_tile_processing_limit:
@@ -169,7 +179,7 @@ class VtReaderTests(unittest.TestCase):
 
 
 def suite():
-    suite = unittest.makeSuite(VtReaderTests, 'test')
+    suite = unittest.makeSuite(VtReaderTests, "test")
     return suite
 
 

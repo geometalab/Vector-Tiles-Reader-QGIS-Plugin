@@ -30,14 +30,17 @@ def get_tests():
 
 # run all tests using unittest skipping nose or testplugin
 def run_all():
-    cov = coverage.Coverage(omit=['*/usr/*',
-                                  '*__init__.py',
-                                  '*global_map_tiles*',
-                                  '/vector-tiles-reader/tests/*',
-                                  '/vector-tiles-reader/util/*',
-                                  '/vector-tiles-reader/ext-libs/*',
-                                  '/vector-tiles-reader/vtr_plugin.py'  # todo: remove from here when tests exist
-                                  ])
+    cov = coverage.Coverage(
+        omit=[
+            "*/usr/*",
+            "*__init__.py",
+            "*global_map_tiles*",
+            "/vector-tiles-reader/tests/*",
+            "/vector-tiles-reader/util/*",
+            "/vector-tiles-reader/ext-libs/*",
+            "/vector-tiles-reader/vtr_plugin.py",  # todo: remove from here when tests exist
+        ]
+    )
     cov.start()
     complete_suite = unittest.TestSuite(get_tests())
     print("")
@@ -45,7 +48,7 @@ def run_all():
     print("")
     cov.stop()
     cov.save()
-    cov.html_report(directory='tests/htmlcov')
+    cov.html_report(directory="tests/htmlcov")
     print(cov.report())
 
 

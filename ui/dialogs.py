@@ -16,14 +16,15 @@ from PyQt5.QtWidgets import QDialog, QApplication, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal, QSettings, pyqtBoundSignal
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != '1':
+if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != "1":
     from ..ui import resources_rc_qt5
 
 from ..util.connection import (
     ConnectionTypes,
     MBTILES_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
-    DIRECTORY_CONNECTION_TEMPLATE)
+    DIRECTORY_CONNECTION_TEMPLATE,
+)
 
 _HELP_URL = "https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help"
 
@@ -56,7 +57,7 @@ class AboutDialog(QDialog, Ui_DlgAbout):
     def _load_about(self) -> None:
         about_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "about.html")
         if os.path.isfile(about_path):
-            with open(about_path, 'r') as f:
+            with open(about_path, "r") as f:
                 html = f.read()
                 self.txtAbout.setHtml(html)
 
@@ -72,12 +73,9 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     on_zoom_change = pyqtSignal()
     on_directory_change = pyqtSignal("QString")
 
-    _table_headers = OrderedDict([
-        ("ID", "id"),
-        ("Min. Zoom", "minzoom"),
-        ("Max. Zoom", "maxzoom"),
-        ("Description", "description")
-    ])
+    _table_headers = OrderedDict(
+        [("ID", "id"), ("Min. Zoom", "minzoom"), ("Max. Zoom", "maxzoom"), ("Description", "description")]
+    )
 
     _OMT = "OpenMapTiles.com (default entry with credits)"
     _OMT_CUSTOM_KEY = "OpenMapTiles.com (with custom key)"
@@ -90,32 +88,32 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
             "token": "6irhAXGgsi8TrIDL0211",
-            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json",
         },
         _OMT_CUSTOM_KEY: {
             "name": _OMT_CUSTOM_KEY,
-            "url": "https://free.tilehosting.com/data/v3.json?key={api_key}",
+            "url": "https://maps.tilehosting.com/data/v3.json?key={token}",
             "can_edit": True,
-            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json"
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json",
         },
         _MAPZEN: {
             "disabled": True,
             "name": _MAPZEN,
             "url": "http://tile.mapzen.com/mapzen/vector/v1/tilejson/mapbox.json?api_key={token}",
-            "token": "mapzen-7SNUCXx"
+            "token": "mapzen-7SNUCXx",
         },
         _MAPCAT: {
             "disabled": True,
             "name": _MAPCAT,
             "url": "https://api.mapcat.com/api/mapinit/tile?api_key={token}",
             "style": "https://api.mapcat.com/api/mapinit/vector?api_key={token}",
-            "token": "VmKNOOCry7SE4c8FyacQ1KxojeWzY1W2aFS0TADq"
+            "token": "VmKNOOCry7SE4c8FyacQ1KxojeWzY1W2aFS0TADq",
         },
         _NEXTZEN: {
             "name": _NEXTZEN,
             "url": "https://tile.nextzen.org/tilezen/vector/v1/512/all/tilejson.mvt.json?api_key={token}",
-            "token": "80xAN5o0QuyFrcPVVIieTA"
-        }
+            "token": "80xAN5o0QuyFrcPVVIieTA",
+        },
     }
 
     _CONNECTIONS_TAB = "selected_connections_tab"
@@ -133,12 +131,14 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self.options = OptionsGroup(self.settings, self.grpOptions, self._on_zoom_change)
         last_tab = self.settings.value(self._CONNECTIONS_TAB, 0)
         self.tabConnections.setCurrentIndex(int(last_tab))
-        self.tilejson_connections = ConnectionsGroup(target_groupbox=self.grpTilejsonConnections,
-                                                     edit_dialog=EditTilejsonConnectionDialog(),
-                                                     connection_template=TILEJSON_CONNECTION_TEMPLATE,
-                                                     settings_key="connections",
-                                                     settings=self.settings,
-                                                     predefined_connections=self._predefined_tilejson_connections)
+        self.tilejson_connections = ConnectionsGroup(
+            target_groupbox=self.grpTilejsonConnections,
+            edit_dialog=EditTilejsonConnectionDialog(),
+            connection_template=TILEJSON_CONNECTION_TEMPLATE,
+            settings_key="connections",
+            settings=self.settings,
+            predefined_connections=self._predefined_tilejson_connections,
+        )
         connection_to_select = self.settings.value(self._CURRENT_ONLINE_CONNECTION, None)
         if not connection_to_select:
             connection_to_select = self._OMT
@@ -229,7 +229,9 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         self.on_connection_change.emit()
 
     def _select_file_path(self):
-        open_file_name = QFileDialog.getOpenFileName(None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)")
+        open_file_name = QFileDialog.getOpenFileName(
+            None, "Select Mapbox Tiles", self.browse_path, "Mapbox Tiles (*.mbtiles)"
+        )
         if isinstance(open_file_name, tuple):
             open_file_name = open_file_name[0]
         if open_file_name and os.path.isfile(open_file_name):
@@ -294,9 +296,10 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         load = True
         threshold = 20
         if self._nr_of_tiles > threshold and not self.options.tile_number_limit():
-            msg = "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?"\
-                .format(self._nr_of_tiles)
-            reply = QMessageBox.question(self.activateWindow(), 'Confirm Load', msg, QMessageBox.Yes, QMessageBox.No)
+            msg = "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?".format(
+                self._nr_of_tiles
+            )
+            reply = QMessageBox.question(self.activateWindow(), "Confirm Load", msg, QMessageBox.Yes, QMessageBox.No)
             if reply != QMessageBox.Yes:
                 load = False
         if load:
@@ -335,7 +338,6 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
 
 class EditPostgisConnectionDialog(QDialog, Ui_DlgEditPostgisConnection):
-
     def __init__(self):
         QDialog.__init__(self)
         self.setupUi(self)
@@ -373,7 +375,6 @@ class EditPostgisConnectionDialog(QDialog, Ui_DlgEditPostgisConnection):
 
 
 class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
-
     def __init__(self):
         QDialog.__init__(self)
         self.setupUi(self)
@@ -404,10 +405,9 @@ class EditTilejsonConnectionDialog(QDialog, Ui_DlgEditTileJSONConnection):
         return path.lower().startswith("http://") or path.lower().startswith("https://")
 
     def _select_file_path(self):
-        open_file_name = QFileDialog.getOpenFileName(None,
-                                                     caption="Select Mapbox Tiles",
-                                                     directory=self.browse_path,
-                                                     filter="Mapbox Tiles (*.mbtiles)")
+        open_file_name = QFileDialog.getOpenFileName(
+            None, caption="Select Mapbox Tiles", directory=self.browse_path, filter="Mapbox Tiles (*.mbtiles)"
+        )
         if isinstance(open_file_name, tuple):
             open_file_name = open_file_name[0]
         if open_file_name:

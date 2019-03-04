@@ -3,6 +3,7 @@ import tempfile
 import sys
 import time
 import shutil
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -56,7 +57,7 @@ def get_cache_entry(cache_name, zoom_level, x, y):
             if is_deprecated:
                 os.remove(file_path)
             else:
-                with open(file_path, 'rb') as f:
+                with open(file_path, "rb") as f:
                     decoded_data = pickle.load(f)
     except:
         critical("Error while reading cache entry {}: {}", file_path, sys.exc_info()[1])
@@ -73,11 +74,10 @@ def cache_tile(cache_name, zoom_level, x, y, decoded_data):
                 directory = os.path.dirname(file_path)
                 if not os.path.isdir(directory):
                     os.makedirs(directory)
-                with open(file_path, 'wb') as f:
+                with open(file_path, "wb") as f:
                     pickle.dump(decoded_data, f, protocol=pickle.HIGHEST_PROTOCOL)
             except:
                 critical("Error during caching of '{}': {}", file_path, sys.exc_info()[1])
-
 
 
 def get_sample_data_directory():
@@ -133,7 +133,7 @@ def is_sqlite_db(path):
 def is_gzipped(content):
     result = False
     if content and len(content) >= 2:
-        gzip_headers = bytearray([0x1f, 0x8b])
+        gzip_headers = bytearray([0x1F, 0x8B])
         first_two_bytes = bytearray([content[0], content[1]])
         result = are_headers_equal(first_two_bytes, expected_header_bytes=gzip_headers)
     return result

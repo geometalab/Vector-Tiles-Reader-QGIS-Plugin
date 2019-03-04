@@ -6,13 +6,20 @@ import importlib
 import tempfile
 import re
 
+try:
+    from qgis.core import QgsApplication
+
+    _qgis_available = True
+except ImportError:
+    _qgis_available = False
+    # _logger.error("QGIS not found for logging")
+
 _KEY_REGEX = re.compile(r"(\?|&)(api_)?key=[^\s?&]*")
 
 _DEBUG = "debug"
 _INFO = "info"
 _WARN = "warn"
 _CRITICAL = "critical"
-_qgis_available = None
 
 
 def remove_key(text):
@@ -70,13 +77,16 @@ def _import_qgis():
 
 
 def _log_to_qgis(msg, level):
-    qgis = _import_qgis()
-    if not qgis:
-        _logger.error("QGIS not found for logging")
-        return
+    if _qgis_available:
+        if level != _DEBUG:
+            QgsApplication.messageLog().logMessage(msg, "Vector Tiles Reader".format(level))
 
-    if level != _DEBUG:
-        qgis.QgsMessageLog.logMessage(msg, 'Vector Tiles Reader'.format(level))
+        # if level == _INFO:
+        #     Qgis.Info = qgis.QgsMessageLog.INFO
+        # elif level == _WARN:
+        #     qgis_level = qgis.QgsMessageLog.WARNING
+        # elif level == _CRITICAL:
+        #     qgis_level = qgis.QgsMessageLog.CRITICAL
 
 
 try:
@@ -84,20 +94,22 @@ try:
     temp_dir = os.path.dirname(log_path)
 
     max_logsize_mb = 4
-    if os.path.isfile(log_path) and os.stat(log_path).st_size >= max_logsize_mb*1024*1024:
+    if os.path.isfile(log_path) and os.stat(log_path).st_size >= max_logsize_mb * 1024 * 1024:
         os.remove(log_path)
 
     if not os.path.isfile(log_path):
-        open(log_path, 'a').close()
+        open(log_path, "a").close()
 
     from imp import reload
+
     reload(logging)
 
     logging.basicConfig(
         filename=log_path,
-        filemode='a',
+        filemode="a",
         level=logging.INFO,
-        format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
+        format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s",
+    )
 
     # fh = logging.FileHandler(os.path.join(temp_dir, "bla.log"))
     _logger = logging.getLogger()
