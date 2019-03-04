@@ -30,10 +30,8 @@ def run_all():
     print("Running tests now")
     os.environ["VTR_TESTS"] = '1'
     plugin_dir = os.path.dirname(__file__)
-    sys.path.append(os.getcwd())
     sys.path.append(plugin_dir)
     sys.path.append(os.path.join(plugin_dir, "util"))
     sys.path.append(os.path.join(plugin_dir, "tests"))
-    __package__ = "tests_directory"
     from .tests import test_all
     test_all.run_all()
