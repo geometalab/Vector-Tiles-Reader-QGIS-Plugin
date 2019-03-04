@@ -5,8 +5,10 @@ import pkgutil
 import importlib
 import tempfile
 import re
+
 try:
     from qgis.core import QgsApplication
+
     _qgis_available = True
 except ImportError:
     _qgis_available = False
@@ -77,7 +79,7 @@ def _import_qgis():
 def _log_to_qgis(msg, level):
     if _qgis_available:
         if level != _DEBUG:
-            QgsApplication.messageLog().logMessage(msg, 'Vector Tiles Reader'.format(level))
+            QgsApplication.messageLog().logMessage(msg, "Vector Tiles Reader".format(level))
 
         # if level == _INFO:
         #     Qgis.Info = qgis.QgsMessageLog.INFO
@@ -92,20 +94,22 @@ try:
     temp_dir = os.path.dirname(log_path)
 
     max_logsize_mb = 4
-    if os.path.isfile(log_path) and os.stat(log_path).st_size >= max_logsize_mb*1024*1024:
+    if os.path.isfile(log_path) and os.stat(log_path).st_size >= max_logsize_mb * 1024 * 1024:
         os.remove(log_path)
 
     if not os.path.isfile(log_path):
-        open(log_path, 'a').close()
+        open(log_path, "a").close()
 
     from imp import reload
+
     reload(logging)
 
     logging.basicConfig(
         filename=log_path,
-        filemode='a',
+        filemode="a",
         level=logging.INFO,
-        format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s")
+        format="[%(asctime)s] [%(threadName)-12s] [%(levelname)-8s]  %(message)s",
+    )
 
     # fh = logging.FileHandler(os.path.join(temp_dir, "bla.log"))
     _logger = logging.getLogger()

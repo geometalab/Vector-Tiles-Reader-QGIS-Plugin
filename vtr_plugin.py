@@ -37,27 +37,17 @@ from .util.tile_helper import (
     center_tiles_equal,
     clamp_bounds,
     convert_coordinate,
-    WORLD_BOUNDS)
+    WORLD_BOUNDS,
+)
 
 from .vt_reader import VtReader
 
 from .ui.dialogs import AboutDialog, ConnectionsDialog
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import Bounds
-from .util.file_helper import (
-    get_icons_directory,
-    clear_cache,
-    get_plugin_directory,
-    get_temp_dir)
+from .util.file_helper import get_icons_directory, clear_cache, get_plugin_directory, get_temp_dir
 from typing import Tuple, List, Dict
-from qgis.core import (
-    QgsMapLayer,
-    QgsProject,
-    QgsApplication,
-    QgsRectangle,
-    QgsProject,
-    QgsCoordinateReferenceSystem,
-)
+from qgis.core import QgsMapLayer, QgsProject, QgsApplication, QgsRectangle, QgsProject, QgsCoordinateReferenceSystem
 from qgis.gui import QgsMessageBarItem
 
 from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton, QMessageBox
@@ -90,7 +80,7 @@ omt_layer_ordering = [
     "water",
     "waterway",
     "landcover",
-    "landuse"
+    "landuse",
 ]
 
 
@@ -137,13 +127,15 @@ class VtrPlugin:
         self._loaded_scale: int = None
         self._is_loading = False
         self.iface.mapCanvas().xyCoordinates.connect(self._handle_mouse_move)
-        self._debouncer = SignalDebouncer(timeout=500,
-                                          signals=[
-                                              # self.iface.mapCanvas().scaleChanged,  # doesn't seem to be required,
-                                              # is fired anyway, even when only the extent has changed
-                                              self.iface.mapCanvas().extentsChanged
-                                          ],
-                                          predicate=self._have_extent_or_scale_changed)
+        self._debouncer = SignalDebouncer(
+            timeout=500,
+            signals=[
+                # self.iface.mapCanvas().scaleChanged,  # doesn't seem to be required,
+                # is fired anyway, even when only the extent has changed
+                self.iface.mapCanvas().extentsChanged
+            ],
+            predicate=self._have_extent_or_scale_changed,
+        )
         self._debouncer.on_notify.connect(self._handle_map_scale_or_extents_changed)
         self._debouncer.on_notify_in_pause.connect(self._on_scale_or_extent_change_during_pause)
         self._scale_to_load: int = None
@@ -175,11 +167,12 @@ class VtrPlugin:
 
     def initGui(self):
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.open_connections_action = self._create_action("Add Vector Tiles Layer...",
-                                                           "mActionAddVectorTilesReader.svg",
-                                                           self._show_connections_dialog)
-        self.reload_action = self._create_action(self._reload_button_text, "reload.svg",
-                                                 self._load_features_overlapping_tile_extent, False)
+        self.open_connections_action = self._create_action(
+            "Add Vector Tiles Layer...", "mActionAddVectorTilesReader.svg", self._show_connections_dialog
+        )
+        self.reload_action = self._create_action(
+            self._reload_button_text, "reload.svg", self._load_features_overlapping_tile_extent, False
+        )
         self.clear_cache_action = self._create_action("Clear cache", "delete.svg", clear_cache)
         self.about_action = self._create_action("About", "info.svg", self.show_about)
         self.iface.insertAddLayerAction(self.open_connections_action)  # Add action to the menu: Layer->Add Layer
@@ -233,7 +226,7 @@ class VtrPlugin:
     @staticmethod
     def _get_plugin_version() -> str:
         version = None
-        with open(os.path.join(get_plugin_directory(), 'metadata.txt'), 'r') as f:
+        with open(os.path.join(get_plugin_directory(), "metadata.txt"), "r") as f:
             content = f.read()
         match = re.search(r"version=\d+\.\d+.\d+", content)
         if match:
@@ -308,10 +301,9 @@ class VtrPlugin:
         keep_dialog_open = self.connections_dialog.keep_dialog_open()
         if not keep_dialog_open:
             self.connections_dialog.close()
-        self._load_tiles(options=self.connections_dialog.options,
-                         layers_to_load=selected_layers,
-                         bounds=extent,
-                         is_add=True)
+        self._load_tiles(
+            options=self.connections_dialog.options, layers_to_load=selected_layers, bounds=extent, is_add=True
+        )
         self._current_layer_filter = selected_layers
 
     def _handle_map_scale_or_extents_changed(self):
@@ -322,12 +314,13 @@ class VtrPlugin:
             self._scale_to_load: int = None
             self._extent_to_load: Bounds = None
 
-            is_new_extent_within_loaded_extent = \
-                self._loaded_extent\
-                and self._loaded_extent.x_min() <= new_extent.x_min() <= self._loaded_extent.x_max()\
-                and self._loaded_extent.x_min() <= new_extent.x_max() <= self._loaded_extent.x_max()\
-                and self._loaded_extent.y_min() <= new_extent.y_min() <= self._loaded_extent.y_max()\
+            is_new_extent_within_loaded_extent = (
+                self._loaded_extent
+                and self._loaded_extent.x_min() <= new_extent.x_min() <= self._loaded_extent.x_max()
+                and self._loaded_extent.x_min() <= new_extent.x_max() <= self._loaded_extent.x_max()
+                and self._loaded_extent.y_min() <= new_extent.y_min() <= self._loaded_extent.y_max()
                 and self._loaded_extent.y_min() <= new_extent.y_max() <= self._loaded_extent.y_max()
+            )
 
             old_scale = self._loaded_scale
 
@@ -341,8 +334,13 @@ class VtrPlugin:
                 self._loaded_scale = new_scale
                 self._loaded_extent = new_extent
 
-                info("Reloading due to scale change from '{}' (zoom {}) to '{}' (zoom {})", old_scale,
-                     self._current_zoom, new_scale, new_zoom)
+                info(
+                    "Reloading due to scale change from '{}' (zoom {}) to '{}' (zoom {})",
+                    old_scale,
+                    self._current_zoom,
+                    new_scale,
+                    new_zoom,
+                )
                 self._handle_scale_change(new_scale)
             elif has_extent_changed and not is_new_extent_within_loaded_extent:
                 tile_limit = self.connections_dialog.options.tile_number_limit()
@@ -371,11 +369,14 @@ class VtrPlugin:
             current_conn = self._current_reader.connection()
             if current_conn and current_conn["name"] != connection["name"]:
                 if self._get_all_own_layers():
-                    msg = "You just changed the current connection from '{old}' to '{new}'. The current " \
-                          "implementation of the plugin supports only one active connection at a time.\"" \
-                          "Only the latest connection will be updated. You mave save or delete the layer " \
-                          "group from '{old}'." \
-                        .format(old=self._current_reader.connection()["name"], new=connection["name"])
+                    msg = (
+                        "You just changed the current connection from '{old}' to '{new}'. The current "
+                        'implementation of the plugin supports only one active connection at a time."'
+                        "Only the latest connection will be updated. You mave save or delete the layer "
+                        "group from '{old}'.".format(
+                            old=self._current_reader.connection()["name"], new=connection["name"]
+                        )
+                    )
                     QMessageBox.warning(None, "Connection", msg)
 
         self._current_connection_name = connection["name"]
@@ -394,8 +395,9 @@ class VtrPlugin:
                 if reader:
                     layers = reader.get_source().vector_layers()
                     self.connections_dialog.set_layers(layers)
-                    self.connections_dialog.options.set_zoom(min_zoom=reader.get_source().min_zoom(),
-                                                             max_zoom=reader.get_source().max_zoom())
+                    self.connections_dialog.options.set_zoom(
+                        min_zoom=reader.get_source().min_zoom(), max_zoom=reader.get_source().max_zoom()
+                    )
                     self.reload_action.setEnabled(True)
                     self._current_reader = reader
                     proj = QgsProject.instance()
@@ -406,7 +408,7 @@ class VtrPlugin:
                     self.reload_action.setText(self._reload_button_text)
             except RuntimeError:
                 msg = str(sys.exc_info()[1])
-                msg = msg if msg else 'Sorry, an unknown error occured!'
+                msg = msg if msg else "Sorry, an unknown error occured!"
                 QMessageBox.critical(None, "Error", msg)
                 tb = ""
                 if traceback:
@@ -438,7 +440,9 @@ class VtrPlugin:
             status, data = load_url(url)
             if status == 200:
                 try:
+                    # todo: move import to top
                     from mapboxstyle2qgis import core
+
                     core.register_qgis_expressions()
                     info("Styles will be written to: {}", output_directory)
                     core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
@@ -490,8 +494,9 @@ class VtrPlugin:
         :return:
         """
         if limit:
-            self.iface.messageBar() \
-                .pushWarning("", f"Only {limit} tiles were loaded according to the limit in the options")
+            self.iface.messageBar().pushWarning(
+                "", f"Only {limit} tiles were loaded according to the limit in the options"
+            )
 
     def _has_extent_changed(self) -> Tuple[bool, Bounds]:
         scale = self._scale_to_load
@@ -509,10 +514,12 @@ class VtrPlugin:
             source_bounds = self._current_reader.get_source().bounds_tile(zoom)
             new_extent = clamp_bounds(bounds_to_clamp=new_extent, clamp_values=source_bounds)
 
-        has_changed = \
-            not self._loaded_extent or new_extent.zoom() != self._loaded_extent.zoom()\
-            or new_extent.x_min() != self._loaded_extent.x_min()\
+        has_changed = (
+            not self._loaded_extent
+            or new_extent.zoom() != self._loaded_extent.zoom()
+            or new_extent.x_min() != self._loaded_extent.x_min()
             or new_extent.y_min() != self._loaded_extent.y_min()
+        )
 
         return has_changed, new_extent
 
@@ -560,15 +567,13 @@ class VtrPlugin:
 
         mapbox_addition = ""
         if current_crs != 3857:
-            mapbox_addition = "  (Mapbox-Tile: {zoom},{mapbox_x},{mapbox_y})".format(zoom=zoom,
-                                                                                     mapbox_x=mapbox_x,
-                                                                                     mapbox_y=mapbox_y)
+            mapbox_addition = "  (Mapbox-Tile: {zoom},{mapbox_x},{mapbox_y})".format(
+                zoom=zoom, mapbox_x=mapbox_x, mapbox_y=mapbox_y
+            )
 
-        msg = "Zoom: {qgis_zoom}   Tile: {zoom},{x},{y} {mapbox}".format(qgis_zoom=qgis_zoom,
-                                                                         zoom=zoom,
-                                                                         x=x,
-                                                                         y=y,
-                                                                         mapbox=mapbox_addition)
+        msg = "Zoom: {qgis_zoom}   Tile: {zoom},{x},{y} {mapbox}".format(
+            qgis_zoom=qgis_zoom, zoom=zoom, x=x, y=y, mapbox=mapbox_addition
+        )
         self.iface.mainWindow().statusBar().showMessage(msg)
 
     @staticmethod
@@ -587,8 +592,9 @@ class VtrPlugin:
             except Exception as e:
                 critical("Updating nr of tiles failed: {}", e)
         update_zoom_immediately = not self.connections_dialog.options.is_manual_mode()
-        self.connections_dialog.set_current_zoom_level(zoom_level=self._get_zoom_for_current_map_scale(),
-                                                       set_immediately=update_zoom_immediately)
+        self.connections_dialog.set_current_zoom_level(
+            zoom_level=self._get_zoom_for_current_map_scale(), set_immediately=update_zoom_immediately
+        )
         current_connection = None
         if self._current_reader:
             current_connection = self._current_reader.connection()
@@ -627,10 +633,12 @@ class VtrPlugin:
             else:
                 bounds = self._get_visible_extent_as_tile_bounds(zoom=self._current_zoom)
 
-            self._load_tiles(options=self.connections_dialog.options,
-                             layers_to_load=self._current_layer_filter,
-                             bounds=bounds,
-                             ignore_limit=ignore_limit)
+            self._load_tiles(
+                options=self.connections_dialog.options,
+                layers_to_load=self._current_layer_filter,
+                bounds=bounds,
+                ignore_limit=ignore_limit,
+            )
 
     def _get_current_extent_as_wkt(self) -> str:
         return self.iface.mapCanvas().extent().asWktCoordinates()
@@ -673,10 +681,13 @@ class VtrPlugin:
 
     def _is_valid_qgis_extent(self, extent_to_load: dict, zoom: int) -> bool:
         source_bounds = self._current_reader.get_source().bounds_tile(zoom)
-        if source_bounds and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"] \
-                and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"] \
-                and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"] \
-                and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]:
+        if (
+            source_bounds
+            and not source_bounds["x_min"] <= extent_to_load["x_min"] <= source_bounds["x_max"]
+            and not source_bounds["x_min"] <= extent_to_load["x_max"] <= source_bounds["x_max"]
+            and not source_bounds["y_min"] <= extent_to_load["y_min"] <= source_bounds["y_max"]
+            and not source_bounds["y_min"] <= extent_to_load["y_max"] <= source_bounds["y_max"]
+        ):
             return False
         return True
 
@@ -684,10 +695,10 @@ class VtrPlugin:
     def is_extent_within_bounds(extent: dict, bounds: dict) -> bool:
         is_within = True
         if bounds and extent:
-            x_min_within = extent['x_min'] >= bounds['x_min']
-            y_min_within = extent['y_min'] >= bounds['y_min']
-            x_max_within = extent['x_max'] <= bounds['x_max']
-            y_max_within = extent['y_max'] <= bounds['y_max']
+            x_min_within = extent["x_min"] >= bounds["x_min"]
+            y_min_within = extent["y_min"] >= bounds["y_min"]
+            x_max_within = extent["x_max"] <= bounds["x_max"]
+            y_max_within = extent["y_max"] <= bounds["y_max"]
             is_within = x_min_within and y_min_within and x_max_within and y_max_within
         else:
             debug("Bounds not available on source. Assuming extent is within bounds")
@@ -738,7 +749,7 @@ class VtrPlugin:
             self._current_reader.cancel()
 
     def _create_action(self, title, icon, callback, is_enabled=True):
-        new_action = QAction(QIcon(':/plugins/vector_tiles_reader/{}'.format(icon)), title, self.iface.mainWindow())
+        new_action = QAction(QIcon(":/plugins/vector_tiles_reader/{}".format(icon)), title, self.iface.mainWindow())
         new_action.triggered.connect(callback)
         new_action.setEnabled(is_enabled)
         return new_action
@@ -774,17 +785,29 @@ class VtrPlugin:
         else:
             try:
                 source_bounds = reader.get_source().bounds_tile(bounds["zoom"])
-                if source_bounds and not extent_overlap_bounds(bounds, source_bounds) \
-                        and not extent_overlap_bounds(source_bounds, bounds):
-                    info("The current map extent is not within the bounds of the source. The extent to load "
-                         "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'", bounds,
-                         source_bounds)
+                if (
+                    source_bounds
+                    and not extent_overlap_bounds(bounds, source_bounds)
+                    and not extent_overlap_bounds(source_bounds, bounds)
+                ):
+                    info(
+                        "The current map extent is not within the bounds of the source. The extent to load "
+                        "will be set to the bounds of the source. Map extent: '{}', source bounds: '{}'",
+                        bounds,
+                        source_bounds,
+                    )
                     bounds = source_bounds
                 self._current_zoom = bounds["zoom"]
                 reader.set_allowed_sources(self._current_reader_sources)
-                reader.set_options(load_mask_layer=load_mask_layer, merge_tiles=merge_tiles, clip_tiles=clip_tiles,
-                                   apply_styles=apply_styles, max_tiles=tile_limit, layer_filter=layers_to_load,
-                                   is_inspection_mode=inspection_mode)
+                reader.set_options(
+                    load_mask_layer=load_mask_layer,
+                    merge_tiles=merge_tiles,
+                    clip_tiles=clip_tiles,
+                    apply_styles=apply_styles,
+                    max_tiles=tile_limit,
+                    layer_filter=layers_to_load,
+                    is_inspection_mode=inspection_mode,
+                )
                 self._is_loading = True
                 reader.load_tiles_async(bounds=bounds)
             except Exception as e:
@@ -794,8 +817,9 @@ class VtrPlugin:
                 for line in tb_lines:
                     tb_text += line
                 critical("{}", tb_text)
-                self.iface.messageBar().pushCritical("",
-                                                     "Something went horribly wrong. Please have a look at the log.")
+                self.iface.messageBar().pushCritical(
+                    "", "Something went horribly wrong. Please have a look at the log."
+                )
                 self._is_loading = False
 
     def _set_background_color(self, color_string):
@@ -815,6 +839,7 @@ class VtrPlugin:
     def _create_reader(self, connection: dict) -> VtReader:
         # A lazy import is required because the vtreader depends on the external libs
         from .vt_reader import VtReader
+
         reader = None
         try:
             reader = VtReader(self.iface, connection=connection)
@@ -828,7 +853,7 @@ class VtrPlugin:
             reader.add_layer_to_group.connect(self.add_layer_to_group)
         except RuntimeError:
             msg = str(sys.exc_info()[1])
-            msg = msg if msg else 'Sorry, an unknown error occured!'
+            msg = msg if msg else "Sorry, an unknown error occured!"
             QMessageBox.critical(None, "Error", "Creating reader failed: {}".format(msg))
             tb = ""
             if traceback:
@@ -891,14 +916,18 @@ class VtrPlugin:
             if not loaded_extent:
                 bounds = self._get_visible_extent_as_latlon()
             else:
-                min_bounds = tile_to_latlon(zoom=loaded_extent["zoom"],
-                                            x=loaded_extent["x_min"],
-                                            y=loaded_extent["y_min"],
-                                            scheme=loaded_extent["scheme"])
-                max_bounds = tile_to_latlon(zoom=loaded_extent["zoom"],
-                                            x=loaded_extent["x_max"],
-                                            y=loaded_extent["y_max"],
-                                            scheme=loaded_extent["scheme"])
+                min_bounds = tile_to_latlon(
+                    zoom=loaded_extent["zoom"],
+                    x=loaded_extent["x_min"],
+                    y=loaded_extent["y_min"],
+                    scheme=loaded_extent["scheme"],
+                )
+                max_bounds = tile_to_latlon(
+                    zoom=loaded_extent["zoom"],
+                    x=loaded_extent["x_max"],
+                    y=loaded_extent["y_max"],
+                    scheme=loaded_extent["scheme"],
+                )
                 bounds = [min_bounds[0], min_bounds[1], max_bounds[2], max_bounds[3]]
         for l in layers:
             l.setExtent(QgsRectangle(*bounds))
@@ -920,7 +949,7 @@ class VtrPlugin:
         progress_bar = QProgressBar()
         progress_bar.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         cancel_button = QPushButton()
-        cancel_button.setText('Cancel')
+        cancel_button.setText("Cancel")
         cancel_button.clicked.connect(self._cancel_load)
         message_bar_item.layout().addWidget(progress_bar)
         message_bar_item.layout().addWidget(cancel_button)

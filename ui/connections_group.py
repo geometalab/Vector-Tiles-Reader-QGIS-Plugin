@@ -10,10 +10,11 @@ from PyQt5.QtCore import pyqtSignal
 class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
 
     on_connect = pyqtSignal(dict)
-    on_connection_change = pyqtSignal('QString')
+    on_connection_change = pyqtSignal("QString")
 
-    def __init__(self, target_groupbox, edit_dialog, connection_template, settings_key, settings,
-                 predefined_connections=None):
+    def __init__(
+        self, target_groupbox, edit_dialog, connection_template, settings_key, settings, predefined_connections=None
+    ):
         super(QGroupBox, self).__init__()
 
         self._connection_template = connection_template
@@ -33,7 +34,7 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         self.btnDelete.clicked.connect(self._delete_connection)
         self.btnSave.clicked.connect(self._export_connections)
         self.btnLoad.clicked.connect(self._import_connections)
-        self.cbxConnections.currentIndexChanged['QString'].connect(self._handle_connection_change)
+        self.cbxConnections.currentIndexChanged["QString"].connect(self._handle_connection_change)
         self.btnCreateConnection.clicked.connect(self._create_connection)
         self.connections = {}
         self.selected_connection = None
@@ -66,7 +67,7 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         if isinstance(file_name, tuple):
             file_name = file_name[0]
         if file_name:
-            with open(file_name, 'w') as csvfile:
+            with open(file_name, "w") as csvfile:
                 fieldnames = self._connection_template.keys()
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
@@ -82,7 +83,7 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         if isinstance(open_file_name, tuple):
             open_file_name = open_file_name[0]
         if open_file_name:
-            with open(open_file_name, 'r') as csvfile:
+            with open(open_file_name, "r") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
                     new_connection = copy.deepcopy(self._connection_template)
@@ -130,7 +131,7 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         index = self.cbxConnections.currentIndex()
         connection = self.cbxConnections.currentText()
         msg = "Are you sure you want to remove the connection '{}' and all associated settings?".format(connection)
-        reply = QMessageBox.question(self.activateWindow(), 'Confirm Delete', msg, QMessageBox.Yes, QMessageBox.No)
+        reply = QMessageBox.question(self.activateWindow(), "Confirm Delete", msg, QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.cbxConnections.removeItem(index)
             self.connections.pop(connection)
@@ -182,7 +183,9 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
             if is_predefined_connection:
                 predefined_connection = self._predefined_connections[name]
                 can_edit = "can_edit" in predefined_connection and predefined_connection["can_edit"]
-            enable_edit = not is_predefined_connection or can_edit is not None and (can_edit == "true" or can_edit == True)
+            enable_edit = (
+                not is_predefined_connection or can_edit is not None and (can_edit == "true" or can_edit == True)
+            )
         self.btnConnect.setEnabled(enable_connect)
         self.btnEdit.setEnabled(enable_edit)
         self.btnDelete.setEnabled(not is_predefined_connection)

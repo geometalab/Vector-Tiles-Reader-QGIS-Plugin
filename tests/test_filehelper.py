@@ -18,25 +18,25 @@ class FileHelperTests(unittest.TestCase):
         pass
 
     def test_get_plugin_dir(self):
-        self.assertEqual('/tests_directory/util/..', get_plugin_directory())
+        self.assertEqual("/tests_directory/util/..", get_plugin_directory())
 
     def test_get_temp_dir(self):
-        self.assertEqual('/tmp/vector_tiles_reader', get_temp_dir())
+        self.assertEqual("/tmp/vector_tiles_reader", get_temp_dir())
 
     def test_get_temp_dir_extended(self):
-        self.assertEqual('/tmp/vector_tiles_reader/hello/world.txt', get_temp_dir("hello/world.txt"))
+        self.assertEqual("/tmp/vector_tiles_reader/hello/world.txt", get_temp_dir("hello/world.txt"))
 
     def test_get_styles_dir(self):
-        self.assertEqual('/tmp/vector_tiles_reader/styles/my_connection', get_style_folder("my_connection"))
+        self.assertEqual("/tmp/vector_tiles_reader/styles/my_connection", get_style_folder("my_connection"))
 
     def test_get_icons_dir(self):
-        self.assertEqual('/tests_directory/util/../styles/icons', get_icons_directory())
+        self.assertEqual("/tests_directory/util/../styles/icons", get_icons_directory())
 
     def test_get_cache_dir(self):
-        self.assertEqual('/tmp/vector_tiles_reader/cache', get_cache_directory())
+        self.assertEqual("/tmp/vector_tiles_reader/cache", get_cache_directory())
 
     def test_get_geojson_filename(self):
-        self.assertEqual('/tmp/vector_tiles_reader/tmp/name.geojson', get_geojson_file_name("name"))
+        self.assertEqual("/tmp/vector_tiles_reader/tmp/name.geojson", get_geojson_file_name("name"))
 
     def test_is_sqlite_db_true(self):
         sample_file = os.path.join(get_sample_data_directory(), "uster_zh.mbtiles")
@@ -46,13 +46,13 @@ class FileHelperTests(unittest.TestCase):
         self.assertFalse(is_sqlite_db(os.path.realpath(__file__)))
 
     def test_get_sample_dir(self):
-        self.assertEqual('/tests_directory/util/../sample_data', get_sample_data_directory())
+        self.assertEqual("/tests_directory/util/../sample_data", get_sample_data_directory())
 
     def test_create_temp_dirs(self):
         assure_temp_dirs_exist()
 
     def test_is_gzipped_true(self):
-        self.assertTrue(is_gzipped([0x1f, 0x8b]))
+        self.assertTrue(is_gzipped([0x1F, 0x8B]))
 
     def test_is_gzipped_false(self):
         self.assertFalse(is_gzipped([0xC0, 0xFF, 0xEE]))
@@ -69,7 +69,7 @@ class FileHelperTests(unittest.TestCase):
 
 
 def suite():
-    s = unittest.makeSuite(FileHelperTests, 'test')
+    s = unittest.makeSuite(FileHelperTests, "test")
     return s
 
 

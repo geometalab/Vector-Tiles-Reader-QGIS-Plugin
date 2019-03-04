@@ -12,11 +12,7 @@ import traceback
 
 from .tile_json import TileJSON
 from .log_helper import info, warn, critical, debug
-from .tile_helper import (VectorTile,
-                          get_tiles_from_center,
-                          get_tile_bounds,
-                            Bounds,
-                          WORLD_BOUNDS)
+from .tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds, Bounds, WORLD_BOUNDS
 from .network_helper import url_exists, load_tiles_async
 from .file_helper import is_sqlite_db
 from PyQt5.QtCore import pyqtSignal, QObject
@@ -25,10 +21,10 @@ _DEFAULT_CRS = "EPSG:3857"
 
 
 class AbstractSource(QObject):
-    progress_changed = pyqtSignal(int, name='tileSourceProgressChanged')
-    max_progress_changed = pyqtSignal(int, name='tileSourceMaxProgressChanged')
-    message_changed = pyqtSignal('QString', name='tileSourceMessageChanged')
-    tile_limit_reached = pyqtSignal(name='tile_limit_reached')
+    progress_changed = pyqtSignal(int, name="tileSourceProgressChanged")
+    max_progress_changed = pyqtSignal(int, name="tileSourceMaxProgressChanged")
+    message_changed = pyqtSignal("QString", name="tileSourceMessageChanged")
+    tile_limit_reached = pyqtSignal(name="tile_limit_reached")
 
     def __init__(self):
         QObject.__init__(self)
@@ -96,7 +92,6 @@ class AbstractSource(QObject):
 
 
 class ServerSource(AbstractSource):
-
     def __init__(self, url: str):
         AbstractSource.__init__(self)
         if not url:
@@ -169,21 +164,24 @@ class ServerSource(AbstractSource):
         for i, t in enumerate(tiles_to_load):
             col = t[0]
             row = t[1]
-            load_url = base_url \
-                .replace("{z}", str(int(zoom_level))) \
-                .replace("{x}", str(int(col))) \
-                .replace("{y}", str(int(row))) \
-                .replace("{api_key}", str(api_key)) \
-                .replace("{s}", nextzen_servers[divmod(i, len(nextzen_servers))[1]])  # nextzen server placeholder
+            load_url = (
+                base_url.replace("{z}", str(int(zoom_level)))
+                .replace("{x}", str(int(col)))
+                .replace("{y}", str(int(row)))
+                .replace("{api_key}", str(api_key))
+                .replace("{s}", nextzen_servers[divmod(i, len(nextzen_servers))[1]])
+            )  # nextzen server placeholder
             if api_key:
                 load_url += "?api_key={}".format(api_key)
             urls.append((load_url, col, row))
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
-        tile_coords_with_content = load_tiles_async(urls_with_col_and_row=urls,
-                                                    on_progress_changed=lambda p: self.progress_changed.emit(p),
-                                                    cancelling_func=lambda: self._cancelling)
+        tile_coords_with_content = load_tiles_async(
+            urls_with_col_and_row=urls,
+            on_progress_changed=lambda p: self.progress_changed.emit(p),
+            cancelling_func=lambda: self._cancelling,
+        )
         tiles_with_data = []
         for coord, data in tile_coords_with_content:
             tile = VectorTile(self.scheme(), zoom_level=zoom_level, x=coord[0], y=coord[1])
@@ -193,7 +191,6 @@ class ServerSource(AbstractSource):
 
 
 class MBTilesSource(AbstractSource):
-
     def attribution(self):
         return self._get_metadata_value("attribution", "")
 
@@ -204,7 +201,8 @@ class MBTilesSource(AbstractSource):
 
         if not is_sqlite_db(path):
             raise RuntimeError(
-                "The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(path))
+                "The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(path)
+            )
 
         self.path = path
         self.conn = None
@@ -230,11 +228,7 @@ class MBTilesSource(AbstractSource):
     def bounds(self) -> Tuple:
         bounds = tuple(self._get_metadata_value("bounds"))
         if bounds and isinstance(bounds, basestring):
-            bounds = bounds \
-                .replace(" ", "") \
-                .replace("[", "") \
-                .replace("]", "") \
-                .split(",")
+            bounds = bounds.replace(" ", "").replace("[", "").replace("]", "").split(",")
             bounds = tuple(float(s) for s in bounds)
         return bounds
 
@@ -285,9 +279,9 @@ class MBTilesSource(AbstractSource):
             raise RuntimeError("tiles_to_load is required")
 
         if max_tiles is not None:
-            center_tiles = get_tiles_from_center(nr_of_tiles=max_tiles,
-                                                 available_tiles=tiles_to_load,
-                                                 should_cancel_func=lambda: self._cancelling)
+            center_tiles = get_tiles_from_center(
+                nr_of_tiles=max_tiles, available_tiles=tiles_to_load, should_cancel_func=lambda: self._cancelling
+            )
         else:
             center_tiles = tiles_to_load
         where_clause = self._get_where_clause(tiles_to_load=center_tiles, zoom_level=zoom_level)
@@ -319,17 +313,21 @@ class MBTilesSource(AbstractSource):
                 min(tile_row) 'y_min', 
                 max(tile_row) 'y_max'
                 from tiles
-                WHERE zoom_level = {}""".format(zoom_level)
+                WHERE zoom_level = {}""".format(
+            zoom_level
+        )
         rows = self._get_from_db(sql)
         bounds = None
         if rows:
             row = rows[0]
-            bounds = Bounds.create(zoom=zoom_level,
-                                   x_min=row["x_min"],
-                                   x_max=row["x_max"],
-                                   y_min=row["y_min"],
-                                   y_max=row["y_max"],
-                                   scheme=self.scheme())
+            bounds = Bounds.create(
+                zoom=zoom_level,
+                x_min=row["x_min"],
+                x_max=row["x_max"],
+                y_min=row["y_min"],
+                y_max=row["y_max"],
+                scheme=self.scheme(),
+            )
         return bounds
 
     @staticmethod
@@ -342,9 +340,8 @@ class MBTilesSource(AbstractSource):
                 if tiles_to_load is not None:
                     where_clause += " AND"
             if tiles_to_load is not None:
-                tile_coords = str(["{};{}".format(x[0], x[1]) for x in tiles_to_load]).replace("[", "").replace(
-                    "]", "")
-                where_clause += " tile_column || \";\" || tile_row IN ({})".format(tile_coords)
+                tile_coords = str(["{};{}".format(x[0], x[1]) for x in tiles_to_load]).replace("[", "").replace("]", "")
+                where_clause += ' tile_column || ";" || tile_row IN ({})'.format(tile_coords)
         return where_clause
 
     def _create_tile(self, row):
@@ -394,7 +391,9 @@ class MBTilesSource(AbstractSource):
             from tiles
             order by zoom_level {}
             limit 1
-        """.format(order)
+        """.format(
+            order
+        )
         return self._get_single_value(sql_query=query, field_name="zoom_level")
 
     def _get_metadata_value(self, field_name, default=None):
@@ -456,7 +455,6 @@ class MBTilesSource(AbstractSource):
 
 
 class DirectorySource(AbstractSource):
-
     def __init__(self, path):
         AbstractSource.__init__(self)
         if not os.path.isdir(path):
@@ -519,7 +517,7 @@ class DirectorySource(AbstractSource):
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
 
-        tile_path = self.json.get_value(key='tiles', is_array=True)
+        tile_path = self.json.get_value(key="tiles", is_array=True)
         if tile_path:
             tile_path = tile_path[0]
         else:
@@ -533,7 +531,7 @@ class DirectorySource(AbstractSource):
             row = t[1]
             tile = VectorTile(self.scheme(), zoom_level, col, row)
             if os.path.isfile(full_path):
-                with open(full_path, 'rb') as f:
+                with open(full_path, "rb") as f:
                     encoded_data = f.read()
                     tile_data_tuples.append((tile, encoded_data))
             else:

@@ -2,14 +2,9 @@ import itertools
 from .global_map_tiles import GlobalMercator
 from .log_helper import debug
 from typing import List, Tuple, Callable, TypeVar
-from qgis.core import (
-    QgsProject,
-    QgsPoint,
-    QgsCoordinateReferenceSystem,
-    QgsCoordinateTransform
-    )
+from qgis.core import QgsProject, QgsPoint, QgsCoordinateReferenceSystem, QgsCoordinateTransform
 
-StrOrInt = TypeVar('StrOrInt', str, int)
+StrOrInt = TypeVar("StrOrInt", str, int)
 
 """
  * Top left: (lng=WORLD_BOUNDS[0], lat=WORLD_BOUNDS[3])
@@ -55,12 +50,12 @@ class Bounds(dict):
         return self["scheme"]
 
     @classmethod
-    def create(cls, zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, scheme: str) -> 'Bounds':
+    def create(cls, zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, scheme: str) -> "Bounds":
         return Bounds(zoom=zoom, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, scheme=scheme)
 
 
 class VectorTile:
-    
+
     decoded_data = None
 
     def __init__(self, scheme, zoom_level, x, y):
@@ -69,7 +64,7 @@ class VectorTile:
         self.column = int(x)
         self.row = int(y)
         self.extent = tile_to_latlon(self.zoom_level, self.column, self.row, self.scheme)
-    
+
     def __str__(self):
         return "Tile ({}, {}, {})".format(self.zoom_level, self.column, self.row)
 
@@ -94,19 +89,15 @@ def clamp_bounds(bounds_to_clamp: Bounds, clamp_values: Bounds) -> Bounds:
     y_min = clamp(bounds_to_clamp.y_min(), low=clamp_values.y_min())
     x_max = clamp(bounds_to_clamp.x_max(), low=x_min, high=clamp_values.x_max())
     y_max = clamp(bounds_to_clamp.y_max(), low=y_min, high=clamp_values.y_max())
-    return Bounds.create(zoom=bounds_to_clamp.zoom(),
-                         x_min=x_min,
-                         x_max=x_max,
-                         y_min=y_min,
-                         y_max=y_max,
-                         scheme=bounds_to_clamp.scheme())
+    return Bounds.create(
+        zoom=bounds_to_clamp.zoom(), x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, scheme=bounds_to_clamp.scheme()
+    )
 
 
 def extent_overlap_bounds(extent: Bounds, bounds: Bounds) -> bool:
-    return (bounds.x_min() <= extent.x_min() <= bounds.x_max() or
-            bounds.x_min() <= extent.x_max() <= bounds.x_max()) and\
-            (bounds.y_min() <= extent.y_min() <= bounds.y_max() or
-             bounds.y_min() <= extent.y_max() <= bounds.y_max())
+    return (
+        bounds.x_min() <= extent.x_min() <= bounds.x_max() or bounds.x_min() <= extent.x_max() <= bounds.x_max()
+    ) and (bounds.y_min() <= extent.y_min() <= bounds.y_max() or bounds.y_min() <= extent.y_max() <= bounds.y_max())
 
 
 def create_bounds(zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, scheme: str) -> Bounds:
@@ -120,9 +111,9 @@ def center_tiles_equal(tile_limit: int, extent_a: Bounds, extent_b: Bounds) -> b
 
 
 def _center_tiles(tile_limit: int, extent: Bounds):
-    tiles = list(itertools.product(
-        range(extent.x_min(), extent.x_max() + 1),
-        range(extent.y_min(), extent.y_max() + 1)))
+    tiles = list(
+        itertools.product(range(extent.x_min(), extent.x_max() + 1), range(extent.y_min(), extent.y_max() + 1))
+    )
     center_tiles = get_tiles_from_center(nr_of_tiles=tile_limit, available_tiles=tiles)
     return center_tiles
 
@@ -148,7 +139,7 @@ def latlon_to_tile(zoom: int, lat: float, lng: float, source_crs: str, scheme="x
         lng, lat = convert_coordinate(source_crs=source_crs, target_crs="epsg:3857", lat=lat, lng=lng)
     gm = GlobalMercator(tileSize=512)
     global_mercator_output_scheme = "tms"
-    col, row = gm.MetersToTile(mx=lng, my=lat, zoom=zoom)   # GlobalMercator returns in TMS scheme here
+    col, row = gm.MetersToTile(mx=lng, my=lat, zoom=zoom)  # GlobalMercator returns in TMS scheme here
     col = clamp(col, low=0)
     row = clamp(row, low=0)
     if scheme != global_mercator_output_scheme:
@@ -195,8 +186,9 @@ def tile_to_latlon(zoom: int, x: int, y: int, scheme: str = "tms") -> Tuple[floa
     return gm.TileBounds(x, y, zoom)
 
 
-def get_tile_bounds(zoom: int, extent: Tuple[float, float, float, float], source_crs: str, scheme: str = "xyz") \
-        -> Bounds:
+def get_tile_bounds(
+    zoom: int, extent: Tuple[float, float, float, float], source_crs: str, scheme: str = "xyz"
+) -> Bounds:
     """
      * Returns the tile boundaries in XYZ scheme in the form
      [(x_min, y_min), (x_max, y_max)] where both values are tuples
@@ -223,7 +215,7 @@ def get_tile_bounds(zoom: int, extent: Tuple[float, float, float, float], source
         y_min = min(xy_min[1], xy_max[1])
         y_max = max(xy_min[1], xy_max[1])
 
-        max_tile = 2**zoom-1
+        max_tile = 2 ** zoom - 1
         x_max = clamp(x_max, high=max_tile)
         y_max = clamp(y_max, high=max_tile)
 
@@ -237,7 +229,7 @@ def get_all_tiles(bounds: dict, is_cancel_requested_handler: Callable) -> List[T
     height = bounds["height"]
     x_min = bounds.x_min()
     y_min = bounds.y_min()
-    debug("Preprocessing {} tiles", width*height)
+    debug("Preprocessing {} tiles", width * height)
     for x in range(width):
         if is_cancel_requested_handler():
             break
@@ -263,16 +255,12 @@ _RIGHT = 1
 _DOWN = 2
 _LEFT = 3
 
-_directions = {
-    _UP: (0, -1),
-    _RIGHT: (1, 0),
-    _DOWN: (0, 1),
-    _LEFT: (-1, 0)
-    }
+_directions = {_UP: (0, -1), _RIGHT: (1, 0), _DOWN: (0, 1), _LEFT: (-1, 0)}
 
 
-def get_tiles_from_center(nr_of_tiles: int, available_tiles: List[Tuple[int, int]],
-                          should_cancel_func: Callable[[], bool] = None) -> list:
+def get_tiles_from_center(
+    nr_of_tiles: int, available_tiles: List[Tuple[int, int]], should_cancel_func: Callable[[], bool] = None
+) -> list:
     if nr_of_tiles > len(available_tiles):
         nr_of_tiles = len(available_tiles)
 
@@ -285,7 +273,7 @@ def get_tiles_from_center(nr_of_tiles: int, available_tiles: List[Tuple[int, int
     max_x: int = max([t[0] for t in available_tiles])
     max_y: int = max([t[1] for t in available_tiles])
 
-    center_tile_offset = (int(round((max_x-min_x) / 2)), int(round((max_y-min_y) / 2)))
+    center_tile_offset = (int(round((max_x - min_x) / 2)), int(round((max_y - min_y) / 2)))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
     if len(selected_tiles) < nr_of_tiles and center_tile in available_tiles:
@@ -294,7 +282,7 @@ def get_tiles_from_center(nr_of_tiles: int, available_tiles: List[Tuple[int, int
     current_tile = center_tile
     nr_of_steps = 0
     current_direction = 0
-    while len(selected_tiles) < nr_of_tiles and not(should_cancel_func and should_cancel_func()):
+    while len(selected_tiles) < nr_of_tiles and not (should_cancel_func and should_cancel_func()):
         #  always after two direction changes, the step length has to be increased by one
         if current_direction % 2 == 0:
             nr_of_steps += 1
@@ -312,7 +300,7 @@ def get_tiles_from_center(nr_of_tiles: int, available_tiles: List[Tuple[int, int
 
 
 def _sum_tiles(first_tile: Tuple[int, int], second_tile: Tuple[int, int]) -> Tuple[int, int]:
-    return first_tile[0]+second_tile[0], first_tile[1]+second_tile[1]
+    return first_tile[0] + second_tile[0], first_tile[1] + second_tile[1]
 
 
 def get_zoom_by_scale(scale: int) -> int:
@@ -350,5 +338,5 @@ _zoom_level_by_upper_scale_bound = {
     500: 20,
     250: 21,
     100: 22,
-    0: 23
+    0: 23,
 }

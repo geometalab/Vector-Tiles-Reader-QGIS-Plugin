@@ -38,7 +38,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         _APPLY_STYLES: True,
         _SET_BACKGROUND_COLOR: True,
         _MODE: Mode.MANUAL,
-        _IGNORE_CRS: False
+        _IGNORE_CRS: False,
     }
 
     def __init__(self, settings, target_groupbox, zoom_change_handler):
@@ -74,7 +74,7 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
             self.chkApplyStyles.setChecked(True)
 
     def set_checked(self, target: QAbstractButton, key: str) -> None:
-        checked = self._options[key] in (True, 'true', 'True')
+        checked = self._options[key] in (True, "true", "True")
         target.setChecked(checked)
 
     def _load_options(self) -> None:
@@ -157,23 +157,44 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.lblNumberTilesInCurrentExtent.setText("(Current extent: {} tiles)".format(nr_tiles))
 
     def _reset_to_basemap_defaults(self):
-        self._set_settings(auto_zoom=True, fix_zoom=False, tile_limit=32, styles_enabled=True, merging_enabled=False,
-                           clip_tile_at_bounds=False, background_color=True)
+        self._set_settings(
+            auto_zoom=True,
+            fix_zoom=False,
+            tile_limit=32,
+            styles_enabled=True,
+            merging_enabled=False,
+            clip_tile_at_bounds=False,
+            background_color=True,
+        )
         if self.settings:
             self._set_option("mode", self.Mode.BASE_MAP)
         self._enable_manual_mode(False)
 
     def _reset_to_analysis_defaults(self):
-        self._set_settings(auto_zoom=False, fix_zoom=True, tile_limit=10, styles_enabled=False, merging_enabled=True,
-                           clip_tile_at_bounds=True, background_color=False)
+        self._set_settings(
+            auto_zoom=False,
+            fix_zoom=True,
+            tile_limit=10,
+            styles_enabled=False,
+            merging_enabled=True,
+            clip_tile_at_bounds=True,
+            background_color=False,
+        )
         if self._current_zoom:
             self.set_zoom_level(self._current_zoom)
         self._set_option("mode", self.Mode.ANALYSIS)
         self._enable_manual_mode(False)
 
     def _reset_to_inspection_defaults(self):
-        self._set_settings(auto_zoom=False, fix_zoom=False, tile_limit=1, styles_enabled=False, merging_enabled=False,
-                           clip_tile_at_bounds=False, background_color=False)
+        self._set_settings(
+            auto_zoom=False,
+            fix_zoom=False,
+            tile_limit=1,
+            styles_enabled=False,
+            merging_enabled=False,
+            clip_tile_at_bounds=False,
+            background_color=False,
+        )
         self._set_option("mode", self.Mode.INSPECTION)
         self._enable_manual_mode(False)
 
@@ -191,8 +212,9 @@ class OptionsGroup(QGroupBox, Ui_OptionsGroup):
         self.chkApplyStyles.setEnabled(enabled)
         self.chkSetBackgroundColor.setEnabled(enabled)
 
-    def _set_settings(self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds,
-                      background_color):
+    def _set_settings(
+        self, auto_zoom, fix_zoom, tile_limit, styles_enabled, merging_enabled, clip_tile_at_bounds, background_color
+    ):
         self.rbZoomMax.setChecked(not auto_zoom and not fix_zoom)
         self.chkAutoZoom.setChecked(auto_zoom)
         self.rbZoomManual.setChecked(fix_zoom)

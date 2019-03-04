@@ -16,10 +16,7 @@ import uuid
 import traceback
 from typing import Dict, List, Tuple, Optional
 
-from qgis.core import (
-    QgsProject,
-    QgsVectorLayer,
-    )
+from qgis.core import QgsProject, QgsVectorLayer
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
@@ -28,20 +25,24 @@ if not os.environ.get("VTR_TESTS"):
     from .util.qgis_helper import get_loaded_layers_of_connection
     from .util.log_helper import info, critical, debug, remove_key
     from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
-    from .util.feature_helper import (FeatureMerger,
-                                      geo_types,
-                                      is_multi,
-                                      map_coordinates_recursive,
-                                      GeoTypes,
-                                      clip_features)
-    from .util.file_helper import (get_styles,
-                                   get_style_folder,
-                                   assure_temp_dirs_exist,
-                                   get_cache_entry,
-                                   is_gzipped,
-                                   get_geojson_file_name,
-                                   get_icons_directory,
-                                   cache_tile)
+    from .util.feature_helper import (
+        FeatureMerger,
+        geo_types,
+        is_multi,
+        map_coordinates_recursive,
+        GeoTypes,
+        clip_features,
+    )
+    from .util.file_helper import (
+        get_styles,
+        get_style_folder,
+        assure_temp_dirs_exist,
+        get_cache_entry,
+        is_gzipped,
+        get_geojson_file_name,
+        get_icons_directory,
+        cache_tile,
+    )
     from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
     from .util.connection import ConnectionTypes
     from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
@@ -49,20 +50,24 @@ else:
     from util.qgis_helper import get_loaded_layers_of_connection
     from util.log_helper import info, critical, debug, remove_key
     from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
-    from util.feature_helper import (FeatureMerger,
-                                     geo_types,
-                                     is_multi,
-                                     map_coordinates_recursive,
-                                     GeoTypes,
-                                     clip_features)
-    from util.file_helper import (get_styles,
-                                  get_style_folder,
-                                  assure_temp_dirs_exist,
-                                  get_cache_entry,
-                                  is_gzipped,
-                                  get_geojson_file_name,
-                                  get_icons_directory,
-                                  cache_tile)
+    from util.feature_helper import (
+        FeatureMerger,
+        geo_types,
+        is_multi,
+        map_coordinates_recursive,
+        GeoTypes,
+        clip_features,
+    )
+    from util.file_helper import (
+        get_styles,
+        get_style_folder,
+        assure_temp_dirs_exist,
+        get_cache_entry,
+        is_gzipped,
+        get_geojson_file_name,
+        get_icons_directory,
+        cache_tile,
+    )
     from util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
     from util.connection import ConnectionTypes
     from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
@@ -70,32 +75,32 @@ else:
 is_windows = sys.platform.startswith("win32")
 if is_windows:
     # OSGeo4W does not bundle python in exec_prefix for python
-    path = os.path.abspath(os.path.join(sys.exec_prefix, '../../bin/pythonw.exe'))
+    path = os.path.abspath(os.path.join(sys.exec_prefix, "../../bin/pythonw.exe"))
     multiprocessing.set_executable(path)
     sys.argv = [None]
 
 
 class VtReader(QObject):
-    progress_changed = pyqtSignal(int, name='progressChanged')
-    max_progress_changed = pyqtSignal(int, name='maxProgressChanged')
-    message_changed = pyqtSignal('QString', name='messageChanged')
-    show_progress_changed = pyqtSignal(bool, name='show_progress_changed')
-    loading_finished = pyqtSignal(int, dict, name='loadingFinished')
-    tile_limit_reached = pyqtSignal(int, name='tile_limit_reached')
-    cancelled = pyqtSignal(name='cancelled')
-    add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
+    progress_changed = pyqtSignal(int, name="progressChanged")
+    max_progress_changed = pyqtSignal(int, name="maxProgressChanged")
+    message_changed = pyqtSignal("QString", name="messageChanged")
+    show_progress_changed = pyqtSignal(bool, name="show_progress_changed")
+    loading_finished = pyqtSignal(int, dict, name="loadingFinished")
+    tile_limit_reached = pyqtSignal(int, name="tile_limit_reached")
+    cancelled = pyqtSignal(name="cancelled")
+    add_layer_to_group = pyqtSignal(object, name="add_layer_to_group")
 
     ready_for_next_loading_step = pyqtSignal()
 
     _loading_options = {
-        'zoom_level': None,
-        'layer_filter': None,
-        'load_mask_layer': None,
-        'merge_tiles': None,
-        'clip_tiles': None,
-        'apply_styles': None,
-        'max_tiles': None,
-        'bounds': None
+        "zoom_level": None,
+        "layer_filter": None,
+        "load_mask_layer": None,
+        "merge_tiles": None,
+        "clip_tiles": None,
+        "apply_styles": None,
+        "max_tiles": None,
+        "bounds": None,
     }
 
     _nr_tiles_to_process_serial = 30
@@ -193,8 +198,9 @@ class VtReader(QObject):
     def _source_message_changed(self, msg: str):
         self._update_progress(msg=msg)
 
-    def _update_progress(self, show_dialog: bool = None, progress: int = None,
-                         max_progress: int = None, msg: str = None):
+    def _update_progress(
+        self, show_dialog: bool = None, progress: int = None, max_progress: int = None, msg: str = None
+    ):
         if progress is not None:
             self.progress_changed.emit(progress)
         if max_progress is not None:
@@ -216,10 +222,7 @@ class VtReader(QObject):
         else:
             epsg_id = 3857
 
-        crs = {
-            "type": "name",
-            "properties": {
-                "name": "urn:ogc:def:crs:EPSG::{}".format(epsg_id)}}
+        crs = {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::{}".format(epsg_id)}}
 
         return {
             "tiles": [],
@@ -229,7 +232,8 @@ class VtReader(QObject):
             "zoom_level": zoom_level,
             "type": "FeatureCollection",
             "crs": crs,
-            "features": []}
+            "features": [],
+        }
 
     def cancel(self):
         """
@@ -276,10 +280,7 @@ class VtReader(QObject):
 
             zoom_level = self._get_clamped_zoom_level()
 
-            all_tiles = get_all_tiles(
-                bounds=bounds,
-                is_cancel_requested_handler=lambda: self.cancel_requested,
-            )
+            all_tiles = get_all_tiles(bounds=bounds, is_cancel_requested_handler=lambda: self.cancel_requested)
             tiles_to_load = set()
             cached_tiles = []
             tiles_to_ignore = set()
@@ -311,15 +312,20 @@ class VtReader(QObject):
             debug("Loading data for zoom level '{}' source '{}'", zoom_level, self._source.name())
 
             if remaining_nr_of_tiles:
-                tile_data_tuples = self._source.load_tiles(zoom_level=zoom_level,
-                                                           tiles_to_load=tiles_to_load,
-                                                           max_tiles=remaining_nr_of_tiles)
+                tile_data_tuples = self._source.load_tiles(
+                    zoom_level=zoom_level, tiles_to_load=tiles_to_load, max_tiles=remaining_nr_of_tiles
+                )
                 if len(tile_data_tuples) > 0 and not self.cancel_requested:
                     tiles = self._decode_tiles(tile_data_tuples)
                     self._process_tiles(tiles, layer_filter)
                     for t in tiles:
-                        cache_tile(cache_name=source_name, zoom_level=zoom_level, x=t.column, y=t.row,
-                                   decoded_data=t.decoded_data)
+                        cache_tile(
+                            cache_name=source_name,
+                            zoom_level=zoom_level,
+                            x=t.column,
+                            y=t.row,
+                            decoded_data=t.decoded_data,
+                        )
                     self._all_tiles.extend(tiles)
             self.ready_for_next_loading_step.emit()
 
@@ -341,9 +347,7 @@ class VtReader(QObject):
         apply_styles = self._loading_options["apply_styles"]
         clip_tiles = self._loading_options["clip_tiles"]
         if not self.cancel_requested:
-            self._create_qgis_layers(merge_features=merge_tiles,
-                                     apply_styles=apply_styles,
-                                     clip_tiles=clip_tiles)
+            self._create_qgis_layers(merge_features=merge_tiles, apply_styles=apply_styles, clip_tiles=clip_tiles)
 
         self._update_progress(show_dialog=False)
         if self.cancel_requested:
@@ -363,16 +367,26 @@ class VtReader(QObject):
         if not tiles:
             return None
 
-        bounds = Bounds.create(zoom=zoom_level,
-                               x_min=min(loaded_tiles_x),
-                               x_max=max(loaded_tiles_x),
-                               y_min=min(loaded_tiles_y),
-                               y_max=max(loaded_tiles_y),
-                               scheme=scheme)
+        bounds = Bounds.create(
+            zoom=zoom_level,
+            x_min=min(loaded_tiles_x),
+            x_max=max(loaded_tiles_x),
+            y_min=min(loaded_tiles_y),
+            y_max=max(loaded_tiles_y),
+            scheme=scheme,
+        )
         return bounds
 
-    def set_options(self, load_mask_layer=False, merge_tiles=True, clip_tiles=False, apply_styles=False, max_tiles=None,
-                    layer_filter=None, is_inspection_mode=False):
+    def set_options(
+        self,
+        load_mask_layer=False,
+        merge_tiles=True,
+        clip_tiles=False,
+        apply_styles=False,
+        max_tiles=None,
+        layer_filter=None,
+        is_inspection_mode=False,
+    ):
         """
          * Specify the reader options
         :param is_inspection_mode:
@@ -388,13 +402,13 @@ class VtReader(QObject):
         if layer_filter:
             layer_filter = list(layer_filter)
         self._loading_options = {
-            'load_mask_layer': load_mask_layer,
-            'merge_tiles': merge_tiles,
-            'clip_tiles': clip_tiles,
-            'apply_styles': apply_styles,
-            'max_tiles': max_tiles,
-            'layer_filter': layer_filter,
-            'inspection_mode': is_inspection_mode
+            "load_mask_layer": load_mask_layer,
+            "merge_tiles": merge_tiles,
+            "clip_tiles": clip_tiles,
+            "apply_styles": apply_styles,
+            "max_tiles": max_tiles,
+            "layer_filter": layer_filter,
+            "inspection_mode": is_inspection_mode,
         }
 
     def load_tiles_async(self, bounds: Bounds):
@@ -495,7 +509,7 @@ class VtReader(QObject):
 
         is_zipped = is_gzipped(data)
         if is_zipped:
-            file_content = GzipFile('', 'r', 0, BytesIO(data)).read()
+            file_content = GzipFile("", "r", 0, BytesIO(data)).read()
         else:
             file_content = data
         return file_content
@@ -506,8 +520,7 @@ class VtReader(QObject):
         :param tiles: 
         :return: 
         """
-        self._update_progress(msg="Processing features of {} tiles...".format(len(tiles)),
-                              max_progress=len(tiles))
+        self._update_progress(msg="Processing features of {} tiles...".format(len(tiles)), max_progress=len(tiles))
         for index, tile in enumerate(tiles):
             if self.cancel_requested:
                 break
@@ -535,9 +548,9 @@ class VtReader(QObject):
             else:
                 l.setCustomProperty("VectorTilesReader/is_empty", False)
 
-        self._update_progress(progress=0,
-                              max_progress=len(self.feature_collections_by_layer_name_and_geotype),
-                              msg="Creating layers...")
+        self._update_progress(
+            progress=0, max_progress=len(self.feature_collections_by_layer_name_and_geotype), msg="Creating layers..."
+        )
         layer_filter = self._loading_options["layer_filter"]
 
         clipping_bounds = None
@@ -574,26 +587,31 @@ class VtReader(QObject):
                         merger = FeatureMerger(should_cancel_func=lambda: self.cancel_requested)
                         merger.merge_features(layer)
                     if clip_tiles:
-                        clip_features(layer=layer,
-                                      scheme=self._source.scheme(),
-                                      bounds=clipping_bounds,
-                                      should_cancel_func=lambda: self.cancel_requested)
-            if not layer \
-                    and (self._allowed_sources is None or file_path in self._allowed_sources) \
-                    and (not layer_filter or layer_name in layer_filter):
+                        clip_features(
+                            layer=layer,
+                            scheme=self._source.scheme(),
+                            bounds=clipping_bounds,
+                            should_cancel_func=lambda: self.cancel_requested,
+                        )
+            if (
+                not layer
+                and (self._allowed_sources is None or file_path in self._allowed_sources)
+                and (not layer_filter or layer_name in layer_filter)
+            ):
                 self._update_layer_source(file_path, feature_collection)
-                layer = self._create_named_layer(json_src=file_path,
-                                                 layer_name=layer_name,
-                                                 geo_type=geo_type,
-                                                 zoom_level=zoom_level)
+                layer = self._create_named_layer(
+                    json_src=file_path, layer_name=layer_name, geo_type=geo_type, zoom_level=zoom_level
+                )
                 if merge_features and geo_type in [GeoTypes.LINE_STRING, GeoTypes.POLYGON]:
                     merger = FeatureMerger(should_cancel_func=lambda: self.cancel_requested)
                     merger.merge_features(layer)
                 if clip_tiles:
-                    clip_features(layer=layer,
-                                  scheme=self._source.scheme(),
-                                  bounds=clipping_bounds,
-                                  should_cancel_func=lambda: self.cancel_requested)
+                    clip_features(
+                        layer=layer,
+                        scheme=self._source.scheme(),
+                        bounds=clipping_bounds,
+                        should_cancel_func=lambda: self.cancel_requested,
+                    )
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count + 1)
 
@@ -618,10 +636,9 @@ class VtReader(QObject):
                 count += 1
                 if self.cancel_requested:
                     break
-                VtReader._apply_named_style(existing_styles=styles,
-                                            style_dir=styles_folder,
-                                            layer=layer,
-                                            geo_type=geo_type)
+                VtReader._apply_named_style(
+                    existing_styles=styles, style_dir=styles_folder, layer=layer, geo_type=geo_type
+                )
                 self._update_progress(progress=count)
 
     @staticmethod
@@ -649,7 +666,7 @@ class VtReader(QObject):
                 "{}.{}".format(name, geo_type.lower()),
                 name,
                 "transparent.{}".format(geo_type.lower()),
-                geo_type.lower()
+                geo_type.lower(),
             ]
             for p in styles:
                 style_name = "{}.qml".format(p).lower()
@@ -704,9 +721,9 @@ class VtReader(QObject):
                     geo_type = geo_types[geo_type_id]
                     features = layer[geo_type]
                     if features:
-                        feature_collection = self._get_feature_collection(layer_name=layer_name,
-                                                                          geo_type=geo_type,
-                                                                          zoom_level=tile.zoom_level)
+                        feature_collection = self._get_feature_collection(
+                            layer_name=layer_name, geo_type=geo_type, zoom_level=tile.zoom_level
+                        )
                         feature_collection["features"].extend(features)
                         if tile_id not in feature_collection["tiles"]:
                             feature_collection["tiles"].append(tile_id)
@@ -725,9 +742,9 @@ class VtReader(QObject):
                             f["properties"]["_zoom"] = tile.zoom_level
                             self._feature_count += 1
 
-                        feature_collection = self._get_feature_collection(layer_name=layer_name,
-                                                                          geo_type=geo_type,
-                                                                          zoom_level=tile.zoom_level)
+                        feature_collection = self._get_feature_collection(
+                            layer_name=layer_name, geo_type=geo_type, zoom_level=tile.zoom_level
+                        )
                         feature_collection["features"].extend(geojson_features)
                         if tile_id not in feature_collection["tiles"]:
                             feature_collection["tiles"].append(tile_id)
@@ -735,8 +752,9 @@ class VtReader(QObject):
     def _get_feature_collection(self, layer_name, geo_type, zoom_level):
         name_and_geotype = (layer_name, geo_type)
         if name_and_geotype not in self.feature_collections_by_layer_name_and_geotype:
-            self.feature_collections_by_layer_name_and_geotype[
-                name_and_geotype] = self._get_empty_feature_collection(zoom_level=zoom_level, layer_name=layer_name)
+            self.feature_collections_by_layer_name_and_geotype[name_and_geotype] = self._get_empty_feature_collection(
+                zoom_level=zoom_level, layer_name=layer_name
+            )
         feature_collection = self.feature_collections_by_layer_name_and_geotype[name_and_geotype]
         return feature_collection
 
@@ -756,23 +774,22 @@ class VtReader(QObject):
             if self._clip_tiles_at_tile_bounds and not all(0 <= c <= current_layer_tile_extent for c in coordinates):
                 return None, None
         all_out_of_bounds = []
-        coordinates = map_coordinates_recursive(coordinates=coordinates,
-                                                tile_extent=current_layer_tile_extent,
-                                                mapper_func=lambda coords: self._get_absolute_coordinates(
-                                                    coordinates=coords,
-                                                    tile=tile,
-                                                    extent=current_layer_tile_extent),
-                                                all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(
-                                                    out_of_bounds))
+        coordinates = map_coordinates_recursive(
+            coordinates=coordinates,
+            tile_extent=current_layer_tile_extent,
+            mapper_func=lambda coords: self._get_absolute_coordinates(
+                coordinates=coords, tile=tile, extent=current_layer_tile_extent
+            ),
+            all_out_of_bounds_func=lambda out_of_bounds: all_out_of_bounds.append(out_of_bounds),
+        )
 
         if self._clip_tiles_at_tile_bounds and all(c is True for c in all_out_of_bounds):
             return None, None
 
         split_geometries = self._loading_options["merge_tiles"]
-        geojson_features = VtReader._create_geojson_feature_from_coordinates(geo_type=geo_type,
-                                                                             coordinates=coordinates,
-                                                                             properties=properties,
-                                                                             split_multi_geometries=split_geometries)
+        geojson_features = VtReader._create_geojson_feature_from_coordinates(
+            geo_type=geo_type, coordinates=coordinates, properties=properties, split_multi_geometries=split_geometries
+        )
 
         return geojson_features, geo_type
 
@@ -802,11 +819,8 @@ class VtReader(QObject):
         for c in coordinate_sets:
             feature_json = {
                 "type": "Feature",
-                "geometry": {
-                    "type": type_string,
-                    "coordinates": c
-                },
-                "properties": properties
+                "geometry": {"type": type_string, "coordinates": c},
+                "properties": properties,
             }
             all_features.append(feature_json)
 

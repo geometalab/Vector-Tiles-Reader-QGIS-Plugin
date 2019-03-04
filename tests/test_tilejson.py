@@ -43,7 +43,7 @@ class TileJsonTests(unittest.TestCase):
             "zoom": 14,
             "width": 2,
             "height": 2,
-            "scheme": "xyz"
+            "scheme": "xyz",
         }
         self.assertEqual(bounds_expected, t)
 
@@ -59,7 +59,7 @@ class TileJsonTests(unittest.TestCase):
             "zoom": 14,
             "width": 2,
             "height": 2,
-            "scheme": "tms"
+            "scheme": "tms",
         }
         self.assertIsNotNone(t)
         self.assertEqual(bounds_expected, t)
@@ -75,15 +75,13 @@ class TileJsonTests(unittest.TestCase):
             "zoom": 14,
             "width": 16384,
             "height": 16384,
-            "scheme": "xyz"
+            "scheme": "xyz",
         }
         self.assertIsNotNone(b)
         self.assertEqual(bounds_expected, b)
 
     def test_no_bounds(self):
-        js = {
-            "scheme": "xyz"
-        }
+        js = {"scheme": "xyz"}
 
         tj = _get_loaded(js)
         b = tj.bounds_tile(14)
@@ -103,12 +101,17 @@ def _get_loaded(json=None):
 
 def _get_test_tilejson():
     return {
-        "tiles": ["https://free-0.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT", "https://free-1.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT", "https://free-2.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT", "https://free-3.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT"],
+        "tiles": [
+            "https://free-0.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT",
+            "https://free-1.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT",
+            "https://free-2.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT",
+            "https://free-3.tilehosting.com/data/v3/{z}/{x}/{y}.pbf.pict?key=GiVhgsc1enVLFVtuIdLT",
+        ],
         "name": "OpenMapTiles",
         "format": "pbf",
         "basename": "v3.5.mbtiles",
         "id": "openmaptiles",
-        "attribution": "<a href=\"http://www.openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"http://www.openstreetmap.org/about/\" target=\"_blank\">&copy; OpenStreetMap contributors</a>",
+        "attribution": '<a href="http://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="http://www.openstreetmap.org/about/" target="_blank">&copy; OpenStreetMap contributors</a>',
         "center": [-12.2168, 28.6135, 4],
         "description": "A tileset showcasing all layers in OpenMapTiles. http://openmaptiles.org",
         "maxzoom": 14,
@@ -118,43 +121,24 @@ def _get_test_tilejson():
         "maskLevel": "8",
         "planettime": "1491177600000",
         "tilejson": "2.0.0",
-        "vector_layers": [{
+        "vector_layers": [
+            {"maxzoom": 14, "fields": {"class": "String"}, "minzoom": 0, "id": "water", "description": ""},
+            {
                 "maxzoom": 14,
-                "fields": {
-                    "class": "String"
-                },
-                "minzoom": 0,
-                "id": "water",
-                "description": ""
-            }, {
-                "maxzoom": 14,
-                "fields": {
-                    "name_en": "String",
-                    "name": "String",
-                    "name_de": "String",
-                    "class": "String"
-                },
+                "fields": {"name_en": "String", "name": "String", "name_de": "String", "class": "String"},
                 "minzoom": 0,
                 "id": "waterway",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {
                 "maxzoom": 14,
-                "fields": {
-                    "class": "String",
-                    "subclass": "String"
-                },
+                "fields": {"class": "String", "subclass": "String"},
                 "minzoom": 0,
                 "id": "landcover",
-                "description": ""
-            }, {
-                "maxzoom": 14,
-                "fields": {
-                    "class": "String"
-                },
-                "minzoom": 0,
-                "id": "landuse",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {"maxzoom": 14, "fields": {"class": "String"}, "minzoom": 0, "id": "landuse", "description": ""},
+            {
                 "maxzoom": 14,
                 "fields": {
                     "name": "String",
@@ -163,70 +147,49 @@ def _get_test_tilejson():
                     "ele": "Number",
                     "name_de": "String",
                     "ele_ft": "Number",
-                    "name_en": "String"
+                    "name_en": "String",
                 },
                 "minzoom": 0,
                 "id": "mountain_peak",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {"maxzoom": 14, "fields": {"class": "String"}, "minzoom": 0, "id": "park", "description": ""},
+            {
                 "maxzoom": 14,
-                "fields": {
-                    "class": "String"
-                },
-                "minzoom": 0,
-                "id": "park",
-                "description": ""
-            }, {
-                "maxzoom": 14,
-                "fields": {
-                    "admin_level": "Number",
-                    "disputed": "Number",
-                    "maritime": "Number"
-                },
+                "fields": {"admin_level": "Number", "disputed": "Number", "maritime": "Number"},
                 "minzoom": 0,
                 "id": "boundary",
-                "description": ""
-            }, {
-                "maxzoom": 14,
-                "fields": {
-                    "class": "String"
-                },
-                "minzoom": 0,
-                "id": "aeroway",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {"maxzoom": 14, "fields": {"class": "String"}, "minzoom": 0, "id": "aeroway", "description": ""},
+            {
                 "maxzoom": 14,
                 "fields": {
                     "brunnel": "String",
                     "ramp": "Number",
                     "class": "String",
                     "service": "String",
-                    "oneway": "Number"
+                    "oneway": "Number",
                 },
                 "minzoom": 0,
                 "id": "transportation",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {
                 "maxzoom": 14,
-                "fields": {
-                    "render_min_height": "Number",
-                    "render_height": "Number"
-                },
+                "fields": {"render_min_height": "Number", "render_height": "Number"},
                 "minzoom": 0,
                 "id": "building",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {
                 "maxzoom": 14,
-                "fields": {
-                    "name_en": "String",
-                    "name": "String",
-                    "name_de": "String",
-                    "class": "String"
-                },
+                "fields": {"name_en": "String", "name": "String", "name_de": "String", "class": "String"},
                 "minzoom": 0,
                 "id": "water_name",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {
                 "maxzoom": 14,
                 "fields": {
                     "name": "String",
@@ -235,12 +198,13 @@ def _get_test_tilejson():
                     "name_en": "String",
                     "ref": "String",
                     "class": "String",
-                    "network": "String"
+                    "network": "String",
                 },
                 "minzoom": 0,
                 "id": "transportation_name",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {
                 "maxzoom": 14,
                 "fields": {
                     "name": "String",
@@ -248,20 +212,14 @@ def _get_test_tilejson():
                     "name_de": "String",
                     "capital": "Number",
                     "name_en": "String",
-                    "class": "String"
+                    "class": "String",
                 },
                 "minzoom": 0,
                 "id": "place",
-                "description": ""
-            }, {
-                "maxzoom": 14,
-                "fields": {
-                    "housenumber": "String"
-                },
-                "minzoom": 0,
-                "id": "housenumber",
-                "description": ""
-            }, {
+                "description": "",
+            },
+            {"maxzoom": 14, "fields": {"housenumber": "String"}, "minzoom": 0, "id": "housenumber", "description": ""},
+            {
                 "maxzoom": 14,
                 "fields": {
                     "name": "String",
@@ -269,11 +227,11 @@ def _get_test_tilejson():
                     "name_de": "String",
                     "subclass": "String",
                     "name_en": "String",
-                    "class": "String"
+                    "class": "String",
                 },
                 "minzoom": 0,
                 "id": "poi",
-                "description": ""
-            }
-        ]
+                "description": "",
+            },
+        ],
     }

@@ -1,4 +1,5 @@
 import sys
+
 try:
     import simplejson as json
 except ImportError:
@@ -26,7 +27,7 @@ class TileJSON(object):
         success = False
         try:
             if os.path.isfile(self.url):
-                with open(self.url, 'r') as f:
+                with open(self.url, "r") as f:
                     data = f.read()
             else:
                 status, data = load_url(self.url)
@@ -135,7 +136,8 @@ class TileJSON(object):
                 result.extend(result_arr)
                 if is_required and len(result) == 0:
                     raise RuntimeError(
-                        f"The field '{field_name}' is required but is empty. At least one entry is expected.")
+                        f"The field '{field_name}' is required but is empty. At least one entry is expected."
+                    )
             else:
                 result = self.json[field_name]
         return result

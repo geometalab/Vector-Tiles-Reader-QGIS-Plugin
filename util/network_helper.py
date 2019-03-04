@@ -47,10 +47,12 @@ def get_async_reply(url: str, head_only: bool = False) -> QNetworkReply:
     return reply
 
 
-def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None,
-                     cancelling_func: Callable[[], bool] = None) -> List:
-    replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = \
-        [(get_async_reply(url), (col, row)) for url, col, row in urls_with_col_and_row]
+def load_tiles_async(
+    urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None
+) -> List:
+    replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = [
+        (get_async_reply(url), (col, row)) for url, col, row in urls_with_col_and_row
+    ]
     total_nr_of_requests = len(replies)
     all_finished = False
     nr_finished_before = 0
@@ -70,8 +72,11 @@ def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None
         for reply, tile_coord in new_finished:
             finished_tiles.add(tile_coord)
             if reply.error():
-                warn("Error during network request: {}, {}",
-                     remove_key(reply.errorString()), remove_key(reply.url().toDisplayString()))
+                warn(
+                    "Error during network request: {}, {}",
+                    remove_key(reply.errorString()),
+                    remove_key(reply.url().toDisplayString()),
+                )
             else:
                 content = reply.readAll().data()
                 results.append((tile_coord, content))

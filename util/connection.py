@@ -10,19 +10,9 @@ class _ConnectionTypes(object):
 
 ConnectionTypes = _ConnectionTypes()
 
-MBTILES_CONNECTION_TEMPLATE = {
-    "name": None,
-    "path": None,
-    "type": ConnectionTypes.MBTiles,
-    "style": None
-}
+MBTILES_CONNECTION_TEMPLATE = {"name": None, "path": None, "type": ConnectionTypes.MBTiles, "style": None}
 
-DIRECTORY_CONNECTION_TEMPLATE = {
-    "name": None,
-    "path": None,
-    "type": ConnectionTypes.Directory,
-    "style": None
-}
+DIRECTORY_CONNECTION_TEMPLATE = {"name": None, "path": None, "type": ConnectionTypes.Directory, "style": None}
 
 TILEJSON_CONNECTION_TEMPLATE = {
     "name": "",
@@ -31,7 +21,7 @@ TILEJSON_CONNECTION_TEMPLATE = {
     "type": ConnectionTypes.TileJSON,
     "can_edit": None,
     "disabled": None,
-    "style": ""
+    "style": "",
 }
 
 POSTGIS_CONNECTION_TEMPLATE = {
@@ -43,5 +33,5 @@ POSTGIS_CONNECTION_TEMPLATE = {
     "database": None,
     "save_password": True,
     "type": ConnectionTypes.PostGIS,
-    "style": None
+    "style": None,
 }
