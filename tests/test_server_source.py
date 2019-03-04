@@ -2,7 +2,7 @@
 #
 # This code is licensed under the GPL 2.0 license.
 #
-import unittest
+from qgis.testing import unittest
 import sys
 from util.tile_source import ServerSource
 import mock

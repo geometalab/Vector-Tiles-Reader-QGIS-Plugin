@@ -2,7 +2,7 @@
 #
 # This code is licensed under the GPL 2.0 license.
 #
-import unittest
+from qgis.testing import unittest
 import coverage
 import sys
 

@@ -2,7 +2,7 @@
 #
 # This code is licensed under the GPL 2.0 license.
 #
-import unittest
+from qgis.testing import unittest
 import sys
 from qgis.utils import iface  # dont remove! is required for testing (iface wont be found otherwise)
 from vt_reader import VtReader

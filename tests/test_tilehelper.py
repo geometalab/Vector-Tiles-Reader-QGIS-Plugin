@@ -1,5 +1,5 @@
 import sys
-import unittest
+from qgis.testing import unittest
 from util.tile_helper import *
 import itertools
 

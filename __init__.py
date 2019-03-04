@@ -27,12 +27,13 @@ def classFactory(iface):
 
 
 def run_all():
-    import sys
-    import os
+    print("Running tests now")
     os.environ["VTR_TESTS"] = '1'
-    sys.path.append(".")
-    sys.path.append("../vector-tiles-reader/util")
-    sys.path.append("../vector-tiles-reader")
-    sys.path.append("../vector-tiles-reader/ext-libs")
+    plugin_dir = os.path.dirname(__file__)
+    sys.path.append(os.getcwd())
+    sys.path.append(plugin_dir)
+    sys.path.append(os.path.join(plugin_dir, "util"))
+    sys.path.append(os.path.join(plugin_dir, "tests"))
+    __package__ = "tests_directory"
     from .tests import test_all
     test_all.run_all()

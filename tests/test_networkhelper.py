@@ -1,4 +1,4 @@
-import unittest
+from qgis.testing import unittest
 from util.network_helper import *
 
 

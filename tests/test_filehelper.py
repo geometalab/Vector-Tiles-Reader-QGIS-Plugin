@@ -1,5 +1,5 @@
 import sys
-import unittest
+from qgis.testing import unittest
 from util.file_helper import *
 from util import file_helper
 

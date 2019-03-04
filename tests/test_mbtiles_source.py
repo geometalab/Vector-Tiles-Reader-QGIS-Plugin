@@ -2,10 +2,10 @@
 #
 # This code is licensed under the GPL 2.0 license.
 #
-import unittest
+from qgis.testing import unittest
 import os
 import sys
-from ..util.tile_source import MBTilesSource
+from util.tile_source import MBTilesSource
 
 
 class MbtileSourceTests(unittest.TestCase):
