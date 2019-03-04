@@ -8,4 +8,5 @@ exclude =
     __pycache__,
     ext-libs,
     .mypy_cache,
-    global_map_tiles.py
+    global_map_tiles.py,
+    ui/qt
