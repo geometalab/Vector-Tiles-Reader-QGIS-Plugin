@@ -7,4 +7,5 @@ exclude =
     .git,
     __pycache__,
     ext-libs,
-    .mypy_cache
+    .mypy_cache,
+    global_map_tiles.py
