@@ -10,17 +10,20 @@ matrix:
         - dev-qgis3
       services:
         - docker
-      before_install:
-        - cd docker
-        - docker-compose build qgis3
       install:
-        - docker-compose run -d --name qgis3 qgis3
-        - cd ..
-        - sleep 10
+          - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 qgis/qgis:latest
+          - sleep 10 # This is required to allow xvfb to start
+          # Setup qgis and enables the plugin
+          - docker exec -it sh -c "pip3 install coveralls"
+          - docker exec -it qgis-testing-environment sh -c "qgis_setup.sh vector_tiles_reader"
+          # Additional steps (for example make or paver setup) here
+          # Fix the symlink created by qgis_setup.sh
+          - docker exec  -it qgis-testing-environment sh -c "rm -f  /root/.local/share/QGIS/QGIS3/profiles/default/python/plugins/vector_tiles_reader"
+          - docker exec -it qgis-testing-environment sh -c "ln -s /tests_directory/ /root/.local/share/QGIS/QGIS3/profiles/default/python/plugins/vector_tiles_reader"
       script:
-        - docker exec -it qgis3 sh -c "qgis_testrunner.sh vector_tiles_reader"
+          - docker exec -it qgis-testing-environment sh -c "qgis_testrunner.sh tests_directory"
       after_success:
-        - docker exec -it qgis3 sh -c "cd vector-tiles-reader && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
+        - docker exec -it qgis3 sh -c "cd tests_directory/ && export COVERALLS_REPO_TOKEN=$COVERALLS_TOKEN && coveralls"
       before_deploy:
         - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2qgis/sample_data\* ext-libs/mapboxstyle2qgis/tests\* ext-libs/mapboxstyle2qgis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
         - unzip tmp.zip -d vector_tiles_reader
