@@ -45,7 +45,7 @@ if not os.environ.get("VTR_TESTS"):
     )
     from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
     from .util.connection import ConnectionTypes
-    from .util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
+    from .util.mp_helper import decode_tile_native, decode_tile_python, load_lib
 else:
     from util.qgis_helper import get_loaded_layers_of_connection
     from util.log_helper import info, critical, debug, remove_key
@@ -135,6 +135,14 @@ class VtReader(QObject):
         self._feature_count: int = None
         self._allowed_sources: List[str] = None
         self.ready_for_next_loading_step.connect(self._continue_loading)
+        self.native_lib_handle = load_lib()
+        bits = "32"
+        if sys.maxsize > 2 ** 32:
+            bits = "64"
+        if self.native_lib_handle:
+            info("Native decoding supported!!! ({}, {}bit)", sys.platform, bits)
+        else:
+            info("Native decoding not supported: {}, {}bit", sys.platform, bits)
 
     def connection(self):
         return self._connection
@@ -257,14 +265,6 @@ class VtReader(QObject):
             self._source = self._create_source(self.connection())
 
         try:
-            if can_load_lib():
-                info("Native decoding supported!!!")
-            else:
-                bits = "32"
-                if sys.maxsize > 2 ** 32:
-                    bits = "64"
-                info("Native decoding not supported: {}, {}bit", sys.platform, bits)
-
             self._feature_count = 0
             self._all_tiles = []
 
@@ -447,8 +447,11 @@ class VtReader(QObject):
         clip_tiles = not self._loading_options["inspection_mode"]
         tiles_with_encoded_data = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
 
-        if can_load_lib():
-            decoder_func = decode_tile_native
+        def _decode_native(x):
+            decode_tile_native(self.native_lib_handle, x)
+
+        if self.native_lib_handle:
+            decoder_func = _decode_native
         else:
             decoder_func = decode_tile_python
 
@@ -458,12 +461,12 @@ class VtReader(QObject):
 
         if len(tiles_with_encoded_data) <= self._nr_tiles_to_process_serial:
             for t in tiles_with_encoded_data:
-                tile, decoded_data = decoder_func(t)
+                tile, decoded_data = decoder_func(self.native_lib_handle, t)
                 if decoded_data:
                     tile_data_tuples.append((tile, decoded_data))
         else:
             pool = self._get_pool()
-            rs = pool.map_async(decoder_func, tiles_with_encoded_data, callback=tile_data_tuples.extend)
+            rs = pool.map_async(func=decoder_func, iterable=tiles_with_encoded_data, callback=tile_data_tuples.extend)
             pool.close()
             current_progress = 0
             nr_of_tiles = len(tiles_with_encoded_data)

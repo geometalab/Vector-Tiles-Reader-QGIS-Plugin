@@ -11,7 +11,7 @@ import os
 from .log_helper import info, warn
 
 
-def decode_tile_python(tile_data_clip):
+def decode_tile_python(_, tile_data_clip):
     tile = tile_data_clip[0]
     encoded_data = tile_data_clip[1]
     clip_tile = tile_data_clip[2]
@@ -71,7 +71,7 @@ def load_lib():
     return lib
 
 
-def decode_tile_native(tile_data_clip):
+def decode_tile_native(lib, tile_data_clip):
     tile = tile_data_clip[0]
     data = tile_data_clip[1]
     clip_tile = tile_data_clip[2]
@@ -91,7 +91,6 @@ def decode_tile_native(tile_data_clip):
             tile_x = tile.extent[0]
             tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
-            lib = load_lib()
             ptr = lib.decodeMvtToJson(
                 clip_tile,
                 int(tile.zoom_level),
