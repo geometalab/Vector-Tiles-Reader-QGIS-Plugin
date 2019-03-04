@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin.svg?branch=master)](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin)
 [![Coverage Status](https://coveralls.io/repos/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin/badge.svg?branch=HEAD)](https://coveralls.io/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin?branch=HEAD)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 # Vector Tiles Reader QGIS-Plugin
 
