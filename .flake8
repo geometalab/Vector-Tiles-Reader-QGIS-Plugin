@@ -1,6 +1,10 @@
 [flake8]
-ignore = D203
+ignore = W503
+max-line-length = 120
+statistics = True
+show-source = True
 exclude =
     .git,
     __pycache__,
-    ext-libs
+    ext-libs,
+    .mypy_cache

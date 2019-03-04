@@ -10,6 +10,9 @@ matrix:
         - dev-qgis3
       services:
         - docker
+      before_install:
+        - pip install flake8 mypy
+        - flake8 .
       install:
           - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 qgis/qgis:latest
           - sleep 10 # This is required to allow xvfb to start
