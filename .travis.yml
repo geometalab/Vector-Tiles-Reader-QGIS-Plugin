@@ -17,7 +17,7 @@ matrix:
           - docker run -d --name qgis-testing-environment -v ${TRAVIS_BUILD_DIR}:/tests_directory -e DISPLAY=:99 qgis/qgis:latest
           - sleep 10 # This is required to allow xvfb to start
           # Setup qgis and enables the plugin
-          - docker exec -it sh -c "pip3 install coveralls"
+          - docker exec -it qgis-testing-environment sh -c "pip3 install coveralls"
           - docker exec -it qgis-testing-environment sh -c "qgis_setup.sh vector_tiles_reader"
           # Additional steps (for example make or paver setup) here
           # Fix the symlink created by qgis_setup.sh
