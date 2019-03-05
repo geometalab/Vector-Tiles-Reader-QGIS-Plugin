@@ -445,8 +445,8 @@ class VtReader(QObject):
         clip_tiles = not self._loading_options["inspection_mode"]
         tiles_with_encoded_data = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
 
-        def _decode_native(x):
-            decode_tile_native(self.native_lib_handle, x)
+        def _decode_native(x) -> Tuple:
+            return decode_tile_native(self.native_lib_handle, x)
 
         if self.native_lib_handle:
             decoder_func = _decode_native
@@ -459,7 +459,7 @@ class VtReader(QObject):
 
         if len(tiles_with_encoded_data) <= self._nr_tiles_to_process_serial:
             for t in tiles_with_encoded_data:
-                tile, decoded_data = decoder_func(self.native_lib_handle, t)
+                tile, decoded_data = decoder_func(t)
                 if decoded_data:
                     tile_data_tuples.append((tile, decoded_data))
         else:
@@ -687,7 +687,8 @@ class VtReader(QObject):
         """
 
         source_url = self._source.source()
-        layer = QgsVectorLayer(json_src, layer_name, "ogr")
+        options = QgsVectorLayer.LayerOptions(loadDefaultStyle=False)
+        layer = QgsVectorLayer(json_src, layer_name, "ogr", options=options)
 
         layer.setCustomProperty("VectorTilesReader/vector_tile_source", self._connection["name"])
         layer.setCustomProperty("VectorTilesReader/vector_tile_url", source_url)
