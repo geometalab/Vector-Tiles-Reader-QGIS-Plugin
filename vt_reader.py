@@ -547,9 +547,7 @@ class VtReader(QObject):
                 l.setCustomProperty("VectorTilesReader/is_empty", False)
 
         nr_layers = len(self.feature_collections_by_layer_name_and_geotype)
-        self._update_progress(
-            progress=0, max_progress=nr_layers, msg=f"Creating {nr_layers} layers..."
-        )
+        self._update_progress(progress=0, max_progress=nr_layers, msg=f"Creating {nr_layers} layers...")
         layer_filter = self._loading_options["layer_filter"]
 
         clipping_bounds = None
