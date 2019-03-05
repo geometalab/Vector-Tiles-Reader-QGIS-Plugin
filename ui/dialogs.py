@@ -1,3 +1,10 @@
+from ..util.connection import (
+    ConnectionTypes,
+    MBTILES_CONNECTION_TEMPLATE,
+    TILEJSON_CONNECTION_TEMPLATE,
+    DIRECTORY_CONNECTION_TEMPLATE,
+)
+
 import copy
 import webbrowser
 import ast
@@ -13,18 +20,12 @@ from .qt.dlg_edit_postgis_connection_qt5 import Ui_DlgEditPostgisConnection
 from .qt.dlg_edit_tilejson_connection_qt5 import Ui_DlgEditTileJSONConnection
 
 from PyQt5.QtWidgets import QDialog, QApplication, QFileDialog, QMessageBox
-from PyQt5.QtCore import pyqtSignal, QSettings, pyqtBoundSignal
+from PyQt5.QtCore import pyqtSignal, QSettings
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != "1":
-    from ..ui import resources_rc_qt5
+    from ..ui import resources_rc_qt5  # noqa
 
-from ..util.connection import (
-    ConnectionTypes,
-    MBTILES_CONNECTION_TEMPLATE,
-    TILEJSON_CONNECTION_TEMPLATE,
-    DIRECTORY_CONNECTION_TEMPLATE,
-)
 
 _HELP_URL = "https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/wiki/Help"
 
@@ -66,7 +67,6 @@ class AboutDialog(QDialog, Ui_DlgAbout):
 
 
 class ConnectionsDialog(QDialog, Ui_DlgConnections):
-
     on_connect = pyqtSignal(dict)
     on_connection_change = pyqtSignal()
     on_add = pyqtSignal(dict, list)
@@ -296,8 +296,9 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         load = True
         threshold = 20
         if self._nr_of_tiles > threshold and not self.options.tile_number_limit():
-            msg = "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?".format(
-                self._nr_of_tiles
+            msg = (
+                f"You are about to load {self._nr_of_tiles} tiles. That's a lot and may take some while. Do you "
+                f"want to continue? "
             )
             reply = QMessageBox.question(self.activateWindow(), "Confirm Load", msg, QMessageBox.Yes, QMessageBox.No)
             if reply != QMessageBox.Yes:

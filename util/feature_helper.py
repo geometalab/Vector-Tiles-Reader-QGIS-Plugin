@@ -1,11 +1,9 @@
-from builtins import str
-from builtins import object
-
-from qgis.core import QgsRectangle, QgsGeometry, QgsField, QgsSpatialIndex, QgsCoordinateTransform
+from qgis.core import QgsRectangle, QgsGeometry, QgsField, QgsSpatialIndex
+from PyQt5.QtCore import QVariant
 
 import uuid
 import numbers
-from .log_helper import info, debug
+from .log_helper import info
 from .tile_helper import tile_to_latlon
 
 
@@ -13,6 +11,7 @@ def clip_features(layer, scheme, bounds=None, should_cancel_func=None):
     layer.startEditing()
 
     try:
+        rect = None
         if bounds:
             zoom_level = bounds["zoom"]
             min_extent = tile_to_latlon(zoom=zoom_level, x=bounds["x_min"], y=bounds["y_min"], scheme=scheme)

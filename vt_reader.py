@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from itertools import *
+from itertools import groupby
 import sys
 import os
 from io import BytesIO
@@ -40,7 +40,6 @@ if not os.environ.get("VTR_TESTS"):
         get_cache_entry,
         is_gzipped,
         get_geojson_file_name,
-        get_icons_directory,
         cache_tile,
     )
     from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
@@ -65,12 +64,11 @@ else:
         get_cache_entry,
         is_gzipped,
         get_geojson_file_name,
-        get_icons_directory,
         cache_tile,
     )
     from util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
     from util.connection import ConnectionTypes
-    from util.mp_helper import decode_tile_native, decode_tile_python, can_load_lib
+    from util.mp_helper import decode_tile_native, decode_tile_python, load_lib
 
 is_windows = sys.platform.startswith("win32")
 if is_windows:

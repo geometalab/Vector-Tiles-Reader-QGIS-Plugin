@@ -1,6 +1,16 @@
 import sys
 from qgis.testing import unittest
-from util.tile_helper import *
+from util.tile_helper import (
+    center_tiles_equal,
+    convert_coordinate,
+    change_scheme,
+    WORLD_BOUNDS,
+    latlon_to_tile,
+    get_zoom_by_scale,
+    get_code_from_epsg,
+    get_tile_bounds,
+    get_tiles_from_center,
+)
 import itertools
 
 

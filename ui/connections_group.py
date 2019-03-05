@@ -5,6 +5,7 @@ from .qt.connections_group_qt5 import Ui_ConnectionsGroup
 from ..util.connection import ConnectionTypes
 from PyQt5.QtWidgets import QGroupBox, QFileDialog, QMessageBox, QDialog
 from PyQt5.QtCore import pyqtSignal
+from typing import Dict
 
 
 class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
@@ -24,7 +25,7 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
                 predefined_connection = predefined_connections[name]
                 clone = self._apply_template_connection(predefined_connection)
                 cloned_predefined_connections[name] = clone
-        self._predefined_connections = cloned_predefined_connections
+        self._predefined_connections: Dict[str, dict] = cloned_predefined_connections
 
         self.setupUi(target_groupbox)
         self._settings = settings
@@ -182,10 +183,8 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
             is_predefined_connection = name in self._predefined_connections
             if is_predefined_connection:
                 predefined_connection = self._predefined_connections[name]
-                can_edit = "can_edit" in predefined_connection and predefined_connection["can_edit"]
-            enable_edit = (
-                not is_predefined_connection or can_edit is not None and (can_edit == "true" or can_edit == True)
-            )
+                can_edit = predefined_connection.get("can_edit")
+            enable_edit = not is_predefined_connection or can_edit in ["true", True]
         self.btnConnect.setEnabled(enable_connect)
         self.btnEdit.setEnabled(enable_edit)
         self.btnDelete.setEnabled(not is_predefined_connection)

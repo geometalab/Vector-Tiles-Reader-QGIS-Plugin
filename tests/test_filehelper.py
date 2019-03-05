@@ -1,6 +1,20 @@
 import sys
+import os
 from qgis.testing import unittest
-from util.file_helper import *
+from util.file_helper import (
+    get_temp_dir,
+    get_style_folder,
+    get_plugin_directory,
+    get_icons_directory,
+    get_cache_directory,
+    get_geojson_file_name,
+    is_sqlite_db,
+    is_gzipped,
+    get_sample_data_directory,
+    assure_temp_dirs_exist,
+    get_styles,
+    get_cache_entry,
+)
 from util import file_helper
 
 

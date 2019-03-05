@@ -1,5 +1,6 @@
+from ctypes import cdll, c_bool, c_uint16, c_double, c_char_p, c_void_p, cast
+
 import mapbox_vector_tile
-from ctypes import *
 
 try:
     import simplejson as json
@@ -14,7 +15,7 @@ from .log_helper import info, warn
 def decode_tile_python(_, tile_data_clip):
     tile = tile_data_clip[0]
     encoded_data = tile_data_clip[1]
-    clip_tile = tile_data_clip[2]
+    # clip_tile = tile_data_clip[2]
 
     decoded_data = None
     if encoded_data and not tile.decoded_data:

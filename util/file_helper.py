@@ -8,7 +8,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle as pickle
-from .log_helper import info, critical, warn, debug
+from .log_helper import info, critical, warn
 
 
 geojson_folder = "tmp"

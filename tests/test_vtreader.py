@@ -4,7 +4,7 @@
 #
 from qgis.testing import unittest
 import sys
-from qgis.utils import iface  # dont remove! is required for testing (iface wont be found otherwise)
+from qgis.utils import iface  # noqa # dont remove! is required for testing (iface wont be found otherwise)
 from vt_reader import VtReader
 from util.connection import MBTILES_CONNECTION_TEMPLATE
 import copy
@@ -12,7 +12,8 @@ import mock
 import shutil
 from osgeo import gdal
 from util.file_helper import clear_cache, get_style_folder
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsProject
+import os
 
 
 class VtReaderTests(unittest.TestCase):

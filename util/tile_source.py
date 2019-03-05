@@ -227,7 +227,7 @@ class MBTilesSource(AbstractSource):
 
     def bounds(self) -> Tuple:
         bounds = tuple(self._get_metadata_value("bounds"))
-        if bounds and isinstance(bounds, basestring):
+        if bounds and isinstance(bounds, str):
             bounds = bounds.replace(" ", "").replace("[", "").replace("]", "").split(",")
             bounds = tuple(float(s) for s in bounds)
         return bounds

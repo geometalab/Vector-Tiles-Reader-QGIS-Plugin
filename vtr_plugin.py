@@ -15,7 +15,6 @@ of the License, or (at your option) any later version.
 
 import os
 import re
-import site
 import sys
 import traceback
 import ast
@@ -44,8 +43,8 @@ from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import Bounds
 from .util.file_helper import get_icons_directory, clear_cache, get_plugin_directory, get_temp_dir
-from typing import Tuple, List, Dict
-from qgis.core import QgsMapLayer, QgsProject, QgsApplication, QgsRectangle, QgsProject, QgsCoordinateReferenceSystem
+from typing import Tuple, List
+from qgis.core import QgsMapLayer, QgsProject, QgsApplication, QgsRectangle, QgsCoordinateReferenceSystem, QgsPoint
 from qgis.gui import QgsMessageBarItem
 
 from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton, QMessageBox

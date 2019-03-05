@@ -49,7 +49,7 @@ class TileJsonTests(unittest.TestCase):
 
     def test_manual_bounds_tms(self):
         # boundary for mbtiles zurich 4 tiles in bottom left corner
-        b = [8.268328, 47.222658, 8.298712, 47.243988]
+        b = (8.268328, 47.222658, 8.298712, 47.243988)
         t = get_tile_bounds(14, b, scheme="tms", source_crs=4326)
         bounds_expected = {
             "x_min": 8568,
@@ -111,7 +111,9 @@ def _get_test_tilejson():
         "format": "pbf",
         "basename": "v3.5.mbtiles",
         "id": "openmaptiles",
-        "attribution": '<a href="http://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="http://www.openstreetmap.org/about/" target="_blank">&copy; OpenStreetMap contributors</a>',
+        "attribution": '<a href="http://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a '
+        'href="http://www.openstreetmap.org/about/" target="_blank">&copy; OpenStreetMap '
+        "contributors</a>",
         "center": [-12.2168, 28.6135, 4],
         "description": "A tileset showcasing all layers in OpenMapTiles. http://openmaptiles.org",
         "maxzoom": 14,
