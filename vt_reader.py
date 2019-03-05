@@ -8,10 +8,7 @@ from io import BytesIO
 from gzip import GzipFile
 import multiprocessing
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 import uuid
 import traceback
 from typing import Dict, List, Tuple, Optional
@@ -549,8 +546,9 @@ class VtReader(QObject):
             else:
                 l.setCustomProperty("VectorTilesReader/is_empty", False)
 
+        nr_layers = len(self.feature_collections_by_layer_name_and_geotype)
         self._update_progress(
-            progress=0, max_progress=len(self.feature_collections_by_layer_name_and_geotype), msg="Creating layers..."
+            progress=0, max_progress=nr_layers, msg=f"Creating {nr_layers} layers..."
         )
         layer_filter = self._loading_options["layer_filter"]
 
@@ -599,6 +597,7 @@ class VtReader(QObject):
                 and (self._allowed_sources is None or file_path in self._allowed_sources)
                 and (not layer_filter or layer_name in layer_filter)
             ):
+                info("Updating layer source: {}", file_path)
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(
                     json_src=file_path, layer_name=layer_name, geo_type=geo_type, zoom_level=zoom_level
@@ -616,12 +615,14 @@ class VtReader(QObject):
                 new_layers.append((layer_name, geo_type, layer))
             self._update_progress(progress=count + 1)
 
-        self._update_progress(msg="Refresh layers...")
+        self._update_progress(msg="Refreshing layers...")
 
         if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
             only_layers = list([layer_name_tuple[2] for layer_name_tuple in new_layers])
+            info(f"Adding {len(only_layers)} layers to QGIS...")
             QgsProject.instance().addMapLayers(only_layers, False)
+        info(f"Adding {len(new_layers)} new layers to layer group...")
         for name, geo_type, layer in new_layers:
             if self.cancel_requested:
                 break
@@ -632,6 +633,7 @@ class VtReader(QObject):
             conn_name = self.connection()["name"]
             styles_folder = get_style_folder(conn_name)
             styles = get_styles(conn_name)
+            info(f"Applying styles to {len(new_layers)} layers...")
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
             for name, geo_type, layer in new_layers:
                 count += 1
@@ -641,6 +643,7 @@ class VtReader(QObject):
                     existing_styles=styles, style_dir=styles_folder, layer=layer, geo_type=geo_type
                 )
                 self._update_progress(progress=count)
+        info("Layer creation complete")
 
     @staticmethod
     def _update_layer_source(layer_source, feature_collection):
