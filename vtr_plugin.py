@@ -44,7 +44,7 @@ from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import Bounds
 from .util.file_helper import get_icons_directory, clear_cache, get_plugin_directory, get_temp_dir
 from typing import Tuple, List
-from qgis.core import QgsMapLayer, QgsProject, QgsApplication, QgsRectangle, QgsCoordinateReferenceSystem, QgsPoint
+from qgis.core import QgsMapLayer, QgsProject, QgsApplication, QgsRectangle, QgsCoordinateReferenceSystem, QgsPointXY
 from qgis.gui import QgsMessageBarItem
 
 from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton, QMessageBox
@@ -728,8 +728,8 @@ class VtrPlugin:
         min_pos = convert_coordinate("900913", str(self._get_qgis_crs()), lat=min_xy[1], lng=min_xy[0])
         max_pos = convert_coordinate("900913", self._get_qgis_crs(), lat=min_xy[1], lng=max_xy[0])
 
-        map_min_pos = QgsPoint(min_pos[0], min_pos[1])
-        map_max_pos = QgsPoint(max_pos[0], max_pos[1])
+        map_min_pos = QgsPointXY(min_pos[0], min_pos[1])
+        map_max_pos = QgsPointXY(max_pos[0], max_pos[1])
         rect = QgsRectangle(map_min_pos, map_max_pos)
         self.iface.mapCanvas().setExtent(rect)
         self.iface.mapCanvas().refresh()

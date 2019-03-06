@@ -3,6 +3,7 @@
 
 from itertools import groupby
 import sys
+import platform
 import os
 from io import BytesIO
 from gzip import GzipFile
@@ -135,9 +136,9 @@ class VtReader(QObject):
         if sys.maxsize > 2 ** 32:
             bits = "64"
         if self.native_lib_handle:
-            info("Native decoding supported!!! ({}, {}bit)", sys.platform, bits)
+            info("Native decoding supported!!! ({}, {}bit)", platform.system(), bits)
         else:
-            info("Native decoding not supported: {}, {}bit", sys.platform, bits)
+            info("Native decoding not supported. ({}, {}bit)", platform.system(), bits)
 
     def connection(self):
         return self._connection
@@ -267,7 +268,7 @@ class VtReader(QObject):
             clip_tiles = self._loading_options["clip_tiles"]
             max_tiles = self._loading_options["max_tiles"]
             layer_filter = self._loading_options["layer_filter"]
-            info("Tile limit enabled: {}", max_tiles is not None and max_tiles > 0)
+            info("Tile limit enabled: {} ({})", max_tiles is not None and max_tiles > 0, max_tiles)
             self.cancel_requested = False
             self.feature_collections_by_layer_name_and_geotype = {}
             self._update_progress(show_dialog=True)

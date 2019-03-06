@@ -44,7 +44,7 @@ class MbtileSourceTests(unittest.TestCase):
     def test_get_bounds(self):
         src = _create("uster_zh.mbtiles", directory=_sample_dir())
         b = src.bounds()
-        self.assertEqual([8.67765, 47.3201, 8.76074, 47.38406], b)
+        self.assertEqual((8.67765, 47.3201, 8.76074, 47.38406), b)
 
     def test_scheme_metadata(self):
         src = _create("uster_zh.mbtiles", directory=_sample_dir())

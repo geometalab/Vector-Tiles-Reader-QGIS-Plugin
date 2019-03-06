@@ -12,7 +12,8 @@ import mock
 import shutil
 from osgeo import gdal
 from util.file_helper import clear_cache, get_style_folder
-from qgis.core import QgsProject
+from util.tile_helper import Bounds
+from qgis.core import QgsProject, QgsVectorLayer
 import os
 
 
@@ -53,17 +54,17 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Import complete")
 
     @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.can_load_lib", return_value=False)
+    @mock.patch("vt_reader.load_lib", return_value=None)
     @mock.patch.object(VtReader, "_create_qgis_layers")
-    def test_load_from_vtreader_0_python_processing(self, mock_qgis, mock_can_load_lib, mock_info):
+    def test_load_from_vtreader_0_python_processing(self, mock_qgis, mock_load_lib, mock_info):
         global iface
         QgsProject.instance().removeAllMapLayers()
         clear_cache()
 
         self._load(iface=iface, max_tiles=1)
 
-        print(mock_info.call_args_list)
-        mock_info.assert_any_call("Native decoding not supported: {}, {}bit", "linux2", "64")
+        print("calls: ", mock_info.call_args_list)
+        mock_info.assert_any_call("Native decoding not supported. ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
 
@@ -77,7 +78,7 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=2, serial_tile_processing_limit=1)
 
         print(mock_info.call_args_list)
-        mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 2)
         mock_info.assert_any_call("Import complete")
 
@@ -88,7 +89,7 @@ class VtReaderTests(unittest.TestCase):
         QgsProject.instance().removeAllMapLayers()
         self._load(iface=iface, max_tiles=1)
         print(mock_info.call_args_list)
-        mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
 
@@ -111,7 +112,7 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=2, merge_tiles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
     @mock.patch("vt_reader.info")
@@ -122,31 +123,31 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=2, clip_tiles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
     @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.critical")
-    @mock.patch("vt_reader.can_load_lib", return_value=False)
-    def test_load_from_vtreader_6_merge_python_decoded_tiles(self, mock_can_load, mock_critical, mock_info):
+    @mock.patch("vt_reader.load_lib", return_value=None)
+    def test_load_from_vtreader_6_merge_python_decoded_tiles(self, mock_load_lib, mock_critical, mock_info):
         global iface
         clear_cache()
         self._load(iface=iface, max_tiles=2, merge_tiles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call("Native decoding not supported: {}, {}bit", "linux2", "64")
+        mock_info.assert_any_call("Native decoding not supported. ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
     @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.critical")
-    @mock.patch("vt_reader.can_load_lib", return_value=False)
-    def test_load_from_vtreader_7_clip_python_decoded_tiles(self, mock_can_load, mock_critical, mock_info):
+    @mock.patch("vt_reader.load_lib", return_value=None)
+    def test_load_from_vtreader_7_clip_python_decoded_tiles(self, mock_load_lib, mock_critical, mock_info):
         global iface
         clear_cache()
         self._load(iface=iface, max_tiles=2, clip_tiles=True)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call("Native decoding not supported: {}, {}bit", "linux2", "64")
+        mock_info.assert_any_call("Native decoding not supported. ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
     def _load(
@@ -163,7 +164,7 @@ class VtReaderTests(unittest.TestCase):
         conn["name"] = self.CONNECTION_NAME
         conn["path"] = os.path.join(os.path.dirname(__file__), "..", "sample_data", "uster_zh.mbtiles")
         reader = VtReader(iface=iface, connection=conn)
-        bounds = {"y_min": 10644, "y_max": 10645, "zoom": 14, "height": 2, "width": 3, "x_max": 8589, "x_min": 8587}
+        bounds = Bounds.create(zoom=14, x_min=8587, x_max=8589, y_min=10644, y_max=10645, scheme="xyz")
         reader.set_options(
             merge_tiles=merge_tiles,
             clip_tiles=clip_tiles,

@@ -2,7 +2,7 @@ import itertools
 from .global_map_tiles import GlobalMercator
 from .log_helper import debug
 from typing import List, Tuple, Callable, TypeVar
-from qgis.core import QgsProject, QgsPoint, QgsCoordinateReferenceSystem, QgsCoordinateTransform
+from qgis.core import QgsProject, QgsPointXY, QgsCoordinateReferenceSystem, QgsCoordinateTransform
 
 StrOrInt = TypeVar("StrOrInt", str, int)
 
@@ -156,10 +156,7 @@ def convert_coordinate(source_crs: StrOrInt, target_crs: StrOrInt, lat: float, l
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
     xform = QgsCoordinateTransform(crs_src, crs_dest, QgsProject.instance())
 
-    try:
-        x, y = xform.transform(QgsPoint(lng, lat))
-    except TypeError:
-        x, y = xform.transform(lng, lat)
+    x, y = xform.transform(QgsPointXY(lng, lat))
     return x, y
 
 
