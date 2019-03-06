@@ -32,14 +32,14 @@ class MbtileSourceTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as ctx:
             MBTilesSource(path)
         error = "The file does not exist: {}".format(path)
-        self.assertTrue(error in ctx.exception)
+        self.assertTrue(error in str(ctx.exception))
 
     def test_non_mbtiles(self):
         path = _get_path("textfile.txt")
         with self.assertRaises(RuntimeError) as ctx:
             MBTilesSource(path)
         error = "The file '{}' is not a valid Mapbox vector tile file and cannot be loaded.".format(path)
-        self.assertTrue(error in ctx.exception)
+        self.assertTrue(error in str(ctx.exception))
 
     def test_get_bounds(self):
         src = _create("uster_zh.mbtiles", directory=_sample_dir())
@@ -81,14 +81,14 @@ class MbtileSourceTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as ctx:
             src.load_tiles(14, None)
         error = "tiles_to_load is required"
-        self.assertTrue(error in ctx.exception)
+        self.assertTrue(error in str(ctx.exception))
 
     def test_load_tiles_without_zoom(self):
         src = _create("uster_zh.mbtiles", directory=_sample_dir())
         with self.assertRaises(RuntimeError) as ctx:
             src.load_tiles(None, None)
         error = "zoom_level is required"
-        self.assertTrue(error in ctx.exception)
+        self.assertTrue(error in str(ctx.exception))
 
     def test_load_tiles_restricted(self):
         src = _create("uster_zh.mbtiles", directory=_sample_dir())

@@ -1,6 +1,7 @@
 import sys
 from qgis.testing import unittest
 from util.tile_helper import (
+    Bounds,
     center_tiles_equal,
     convert_coordinate,
     change_scheme,
@@ -86,16 +87,15 @@ class TileHelperTests(unittest.TestCase):
 
     def test_world_bounds(self):
         tile = get_tile_bounds(zoom=14, extent=WORLD_BOUNDS, source_crs=4326, scheme="xyz")
-        bounds_expected = {
-            "y_min": 0,
-            "y_max": 16383,
-            "zoom": 14,
-            "height": 16384,
-            "width": 16384,
-            "x_max": 16383,
-            "x_min": 0,
-            "scheme": "xyz",
-        }
+        bounds_expected = Bounds(
+            y_min=0,
+            y_max=16383,
+            zoom=14,
+            x_max=16383,
+            x_min=0,
+            scheme="xyz"
+        )
+        
         self.assertEqual(bounds_expected, tile)
 
     def test_center_tiles(self):
@@ -115,8 +115,8 @@ class TileHelperTests(unittest.TestCase):
 
     def test_center_tiles_difference(self):
         tile_limit = 4
-        extent_a = {"y_min": 3, "y_max": 5, "zoom": 3, "height": 3, "width": 2, "x_max": 4, "x_min": 3}
-        extent_b = {"y_min": 3, "y_max": 6, "zoom": 3, "height": 4, "width": 8, "x_max": 7, "x_min": 0}
+        extent_a = Bounds(y_min=3, y_max=5, zoom=3, x_max=4, x_min=3, scheme="xyz")
+        extent_b = Bounds(y_min=3, y_max=6, zoom=3, x_max=7, x_min=0, scheme="xyz")
         tiles_equal = center_tiles_equal(tile_limit=tile_limit, extent_a=extent_a, extent_b=extent_b)
         self.assertTrue(tiles_equal)
 

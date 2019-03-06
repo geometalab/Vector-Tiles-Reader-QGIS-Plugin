@@ -226,10 +226,9 @@ class MBTilesSource(AbstractSource):
         return layers
 
     def bounds(self) -> Tuple:
-        bounds = tuple(self._get_metadata_value("bounds"))
+        bounds = self._get_metadata_value("bounds")
         if bounds and isinstance(bounds, str):
             bounds = bounds.replace(" ", "").replace("[", "").replace("]", "").split(",")
-            print("BOUUUUUUUUUUNDS::::::::::: ", bounds, type(bounds))
             bounds = tuple(float(s) for s in bounds)
         return bounds
 

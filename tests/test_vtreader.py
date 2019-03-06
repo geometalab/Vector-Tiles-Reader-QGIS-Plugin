@@ -13,8 +13,11 @@ import shutil
 from osgeo import gdal
 from util.file_helper import clear_cache, get_style_folder
 from util.tile_helper import Bounds
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsProject
 import os
+from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtTest import QSignalSpy
+from typing import Callable
 
 
 class VtReaderTests(unittest.TestCase):
@@ -42,7 +45,7 @@ class VtReaderTests(unittest.TestCase):
 
     @mock.patch("vt_reader.info")
     @mock.patch("vt_reader.critical")
-    @mock.patch("QgsVectorLayer.loadNamedStyle")
+    @mock.patch("qgis.core.QgsVectorLayer.loadNamedStyle")
     def test_load_from_vtreader_0_apply_styles(self, mock_style, mock_critical, mock_info):
         global iface
         clear_cache()
@@ -100,7 +103,7 @@ class VtReaderTests(unittest.TestCase):
         self._load(iface=iface, max_tiles=1)
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
-        mock_info.assert_any_call("Native decoding supported!!!")
+        mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("{} tiles in cache. Max. {} will be loaded additionally.", 1, 0)
         mock_info.assert_any_call("Import complete")
 
@@ -144,20 +147,29 @@ class VtReaderTests(unittest.TestCase):
     def test_load_from_vtreader_7_clip_python_decoded_tiles(self, mock_load_lib, mock_critical, mock_info):
         global iface
         clear_cache()
-        self._load(iface=iface, max_tiles=2, clip_tiles=True)
+
+        # def wait_for_singal(reader: VtReader):
+        #     return QSignalSpy(reader.ready_for_next_loading_step)
+
+        spy = self._load(iface=iface,
+                         max_tiles=2,
+                         clip_tiles=True)
+        # print("Spy isValid:", spy.isValid())
+        # print("Spy wait return value: {}".format(spy.wait(timeout=15000)))
         print(mock_info.call_args_list)
         print(mock_critical.call_args_list)
         mock_info.assert_any_call("Native decoding not supported. ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
     def _load(
-        self,
-        iface,
-        max_tiles,
-        serial_tile_processing_limit=None,
-        merge_tiles=False,
-        clip_tiles=False,
-        apply_styles=False,
+            self,
+            iface,
+            max_tiles: int,
+            serial_tile_processing_limit: int = None,
+            merge_tiles: bool = False,
+            clip_tiles: bool = False,
+            apply_styles: bool = False,
+            on_reader_setup: Callable[[VtReader], QSignalSpy] = None
     ):
         conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
         gdal.PushErrorHandler("CPLQuietErrorHandler")
@@ -172,12 +184,18 @@ class VtReaderTests(unittest.TestCase):
             layer_filter=["landcover", "place", "water_name"],
             apply_styles=apply_styles,
         )
+
+        spy = None
+        if on_reader_setup:
+            spy = on_reader_setup(reader)
+
         reader._loading_options["zoom_level"] = 14
         reader._loading_options["bounds"] = bounds
         if serial_tile_processing_limit:
             reader._nr_tiles_to_process_serial = serial_tile_processing_limit
         reader._load_tiles()
-        reader.shutdown()
+        # reader.shutdown()
+        return spy
 
 
 def suite():

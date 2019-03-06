@@ -26,7 +26,7 @@ class ServerSourceTests(unittest.TestCase):
             ServerSource("http://localhost/mytilejson.json")
         error = "Loading error: Connection refused\n\nURL incorrect? (HTTP Status None)"
         print(ctx.exception)
-        self.assertTrue(error in ctx.exception)
+        self.assertTrue(error in str(ctx.exception))
 
     @mock.patch("util.tile_source.TileJSON")
     @mock.patch("util.tile_source.load_tiles_async", return_value=[((1, 2), "data")])

@@ -12,7 +12,7 @@ import os
 from .log_helper import info, warn
 
 
-def decode_tile_python(_, tile_data_clip):
+def decode_tile_python(tile_data_clip):
     tile = tile_data_clip[0]
     encoded_data = tile_data_clip[1]
     # clip_tile = tile_data_clip[2]

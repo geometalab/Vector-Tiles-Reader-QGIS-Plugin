@@ -35,10 +35,9 @@ def run_all():
             "*/usr/*",
             "*__init__.py",
             "*global_map_tiles*",
-            "/vector-tiles-reader/tests/*",
-            "/vector-tiles-reader/util/*",
-            "/vector-tiles-reader/ext-libs/*",
-            "/vector-tiles-reader/vtr_plugin.py",  # todo: remove from here when tests exist
+            "/tests_directory/tests/*",
+            "/tests_directory/ext-libs/*",
+            # "/tests_directory/vtr_plugin.py",  # todo: remove from here when tests exist
         ]
     )
     cov.start()
