@@ -1,15 +1,8 @@
-FROM mnboos/qgis-testing-environment:qgis3 
+FROM qgis/qgis:latest
 MAINTAINER Martin Boos
 
-RUN Xvfb :99 &
-RUN DISPLAY=:99
-ENV DISPLAY=:99
+RUN pip3 install coveralls
 
-RUN qgis_setup.sh vector_tiles_reader
-#RUN rm -rf /root/.qgis2/python/plugins/vector_tiles_reader
-#RUN ln -s /vector-tiles-reader /root/.qgis2/python/plugins/vector_tiles_reader
-RUN apt-get update && \
-    apt-get install python3-pip -y && \
-    pip3 install coverage && \
-    pip3 install coveralls && \
-    pip3 install mock
+RUN qgis_setup.sh vector_tiles_reader && \
+    rm -f  /root/.local/share/QGIS/QGIS3/profiles/default/python/plugins/vector_tiles_reader && \
+    ln -s /tests_directory/ /root/.local/share/QGIS/QGIS3/profiles/default/python/plugins/vector_tiles_reader
