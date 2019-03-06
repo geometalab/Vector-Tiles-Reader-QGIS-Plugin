@@ -15,9 +15,6 @@ from util.file_helper import clear_cache, get_style_folder
 from util.tile_helper import Bounds
 from qgis.core import QgsProject
 import os
-from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtTest import QSignalSpy
-from typing import Callable
 
 
 class VtReaderTests(unittest.TestCase):
@@ -169,7 +166,6 @@ class VtReaderTests(unittest.TestCase):
             merge_tiles: bool = False,
             clip_tiles: bool = False,
             apply_styles: bool = False,
-            on_reader_setup: Callable[[VtReader], QSignalSpy] = None
     ):
         conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
         gdal.PushErrorHandler("CPLQuietErrorHandler")
@@ -185,17 +181,12 @@ class VtReaderTests(unittest.TestCase):
             apply_styles=apply_styles,
         )
 
-        spy = None
-        if on_reader_setup:
-            spy = on_reader_setup(reader)
-
         reader._loading_options["zoom_level"] = 14
         reader._loading_options["bounds"] = bounds
         if serial_tile_processing_limit:
             reader._nr_tiles_to_process_serial = serial_tile_processing_limit
         reader._load_tiles()
         # reader.shutdown()
-        return spy
 
 
 def suite():
