@@ -148,9 +148,9 @@ class VtReaderTests(unittest.TestCase):
         # def wait_for_singal(reader: VtReader):
         #     return QSignalSpy(reader.ready_for_next_loading_step)
 
-        spy = self._load(iface=iface,
-                         max_tiles=2,
-                         clip_tiles=True)
+        self._load(iface=iface,
+                   max_tiles=2,
+                   clip_tiles=True)
         # print("Spy isValid:", spy.isValid())
         # print("Spy wait return value: {}".format(spy.wait(timeout=15000)))
         print(mock_info.call_args_list)
