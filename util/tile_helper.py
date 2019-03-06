@@ -76,6 +76,8 @@ def create_bounds(zoom, x_min, x_max, y_min, y_max, scheme):
 def center_tiles_equal(tile_limit, extent_a, extent_b):
     center_tiles_a = _center_tiles(tile_limit=tile_limit, extent=extent_a)
     center_tiles_b = _center_tiles(tile_limit=tile_limit, extent=extent_b)
+    print(center_tiles_a)
+    print(center_tiles_b)  # todo: remove
     return center_tiles_a == center_tiles_b
 
 
