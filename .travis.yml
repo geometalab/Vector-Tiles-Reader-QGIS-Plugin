@@ -14,7 +14,7 @@ matrix:
         - pip install flake8 mypy
         - flake8 .
       install:
-          - docker-compose up -d
+          - cd docker && docker-compose up -d
           - sleep 10 # This is required to allow xvfb to start
       script:
           - docker exec -it qgis3 sh -c "qgis_testrunner.sh tests_directory"
