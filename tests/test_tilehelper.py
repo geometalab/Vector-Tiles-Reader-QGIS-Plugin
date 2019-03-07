@@ -98,22 +98,22 @@ class TileHelperTests(unittest.TestCase):
         
         self.assertEqual(bounds_expected, tile)
 
-    def test_center_tiles(self):
+    def test_center_zero_limit(self):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=0, available_tiles=all_tiles)
         self.assertEqual(0, len(t))
 
-    def test_center_tiles_2(self):
+    def test_center_tiles_high_limit(self):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=26, available_tiles=all_tiles)
         self.assertEqual(25, len(t))
 
-    def test_center_tiles_break(self):
+    def test_center_tiles_cancel(self):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=5, available_tiles=all_tiles, should_cancel_func=lambda: True)
         self.assertEqual(1, len(t))
 
-    def test_center_tiles_difference(self):
+    def test_center_tiles_equality(self):
         tile_limit = 4
         extent_a = Bounds(y_min=3, y_max=5, zoom=3, x_max=4, x_min=3, scheme="xyz")
         extent_b = Bounds(y_min=3, y_max=6, zoom=3, x_max=7, x_min=0, scheme="xyz")
