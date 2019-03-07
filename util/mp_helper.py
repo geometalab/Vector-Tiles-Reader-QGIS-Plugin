@@ -41,10 +41,6 @@ def get_lib_for_current_platform():
     return lib
 
 
-def can_load_lib():
-    return load_lib() is not None
-
-
 def load_lib():
     lib = None
     path = get_lib_for_current_platform()
@@ -72,7 +68,10 @@ def load_lib():
     return lib
 
 
-def decode_tile_native(lib, tile_data_clip):
+_native_lib_handle = load_lib()
+
+
+def decode_tile_native(tile_data_clip):
     tile = tile_data_clip[0]
     data = tile_data_clip[1]
     clip_tile = tile_data_clip[2]
@@ -92,7 +91,7 @@ def decode_tile_native(lib, tile_data_clip):
             tile_x = tile.extent[0]
             tile_y = tile.extent[1] - tile_span_y  # subtract tile size because Y starts from top, not from bottom
 
-            ptr = lib.decodeMvtToJson(
+            ptr = _native_lib_handle.decodeMvtToJson(
                 clip_tile,
                 int(tile.zoom_level),
                 int(tile.column),
@@ -104,7 +103,7 @@ def decode_tile_native(lib, tile_data_clip):
                 hex_bytes,
             )
             decoded_data = cast(ptr, c_char_p).value
-            lib.freeme(ptr)
+            _native_lib_handle.freeme(ptr)
 
             # with open(r"c:\temp\output.txt", 'w') as f:
             #     f.write(decoded_data)

@@ -8,6 +8,7 @@ import os
 from io import BytesIO
 from gzip import GzipFile
 import multiprocessing
+import time
 
 import json
 import uuid
@@ -131,11 +132,11 @@ class VtReader(QObject):
         self._feature_count: int = None
         self._allowed_sources: List[str] = None
         self.ready_for_next_loading_step.connect(self._continue_loading)
-        self.native_lib_handle = load_lib()
+        self.native_decoding_supported = load_lib() is not None
         bits = "32"
         if sys.maxsize > 2 ** 32:
             bits = "64"
-        if self.native_lib_handle:
+        if self.native_decoding_supported:
             info("Native decoding supported!!! ({}, {}bit)", platform.system(), bits)
         else:
             info("Native decoding not supported. ({}, {}bit)", platform.system(), bits)
@@ -203,7 +204,7 @@ class VtReader(QObject):
         self._update_progress(msg=msg)
 
     def _update_progress(
-        self, show_dialog: bool = None, progress: int = None, max_progress: int = None, msg: str = None
+            self, show_dialog: bool = None, progress: int = None, max_progress: int = None, msg: str = None
     ):
         if progress is not None:
             self.progress_changed.emit(progress)
@@ -374,14 +375,14 @@ class VtReader(QObject):
         return bounds
 
     def set_options(
-        self,
-        load_mask_layer=False,
-        merge_tiles=True,
-        clip_tiles=False,
-        apply_styles=False,
-        max_tiles=None,
-        layer_filter=None,
-        is_inspection_mode=False,
+            self,
+            load_mask_layer=False,
+            merge_tiles=True,
+            clip_tiles=False,
+            apply_styles=False,
+            max_tiles=None,
+            layer_filter=None,
+            is_inspection_mode=False,
     ):
         """
          * Specify the reader options
@@ -441,19 +442,17 @@ class VtReader(QObject):
         :return:
         """
         clip_tiles = not self._loading_options["inspection_mode"]
-        tiles_with_encoded_data = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
 
-        def _decode_native(x) -> Tuple:
-            return decode_tile_native(self.native_lib_handle, x)
-
-        if self.native_lib_handle:
-            decoder_func = _decode_native
+        if self.native_decoding_supported:
+            decoder_func = decode_tile_native
         else:
             decoder_func = decode_tile_python
 
         tiles = []
 
-        tile_data_tuples = []
+        tiles_with_encoded_data: List[Tuple] = [
+            (t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
+        tile_data_tuples: List[Tuple] = []
 
         if len(tiles_with_encoded_data) <= self._nr_tiles_to_process_serial:
             for t in tiles_with_encoded_data:
@@ -461,17 +460,25 @@ class VtReader(QObject):
                 if decoded_data:
                     tile_data_tuples.append((tile, decoded_data))
         else:
+            def raise_error(e):
+                raise e
+
+            info("Processing tiles in parallel...")
             pool = self._get_pool()
-            rs = pool.map_async(func=decoder_func, iterable=tiles_with_encoded_data, callback=tile_data_tuples.extend)
+            rs = pool.map_async(func=decoder_func,
+                                iterable=tiles_with_encoded_data,
+                                callback=tile_data_tuples.extend,
+                                error_callback=raise_error)
             pool.close()
             current_progress = 0
             nr_of_tiles = len(tiles_with_encoded_data)
             self._update_progress(max_progress=nr_of_tiles, msg="Decoding {} tiles...".format(nr_of_tiles))
             while not rs.ready() and not self.cancel_requested:
+                time.sleep(0.02)
                 QApplication.processEvents()
                 remaining = rs._number_left
                 index = nr_of_tiles - remaining
-                progress = int(100.0 / nr_of_tiles * (index + 1))
+                progress = int(100.0 / nr_of_tiles * (index + 1)) if remaining else 100
                 if progress != current_progress:
                     current_progress = progress
                     self._update_progress(progress=progress)
@@ -479,6 +486,7 @@ class VtReader(QObject):
                 pool.terminate()
             pool.join()
 
+        # todo: clarify this code
         tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
         groups = groupby(tile_data_tuples, lambda t: t[0].id())
         for key, group in groups:
@@ -592,9 +600,9 @@ class VtReader(QObject):
                             should_cancel_func=lambda: self.cancel_requested,
                         )
             if (
-                not layer
-                and (self._allowed_sources is None or file_path in self._allowed_sources)
-                and (not layer_filter or layer_name in layer_filter)
+                    not layer
+                    and (self._allowed_sources is None or file_path in self._allowed_sources)
+                    and (not layer_filter or layer_name in layer_filter)
             ):
                 info("Updating layer source: {}", file_path)
                 self._update_layer_source(file_path, feature_collection)

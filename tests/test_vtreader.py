@@ -14,7 +14,9 @@ from osgeo import gdal
 from util.file_helper import clear_cache, get_style_folder
 from util.tile_helper import Bounds
 from qgis.core import QgsProject
+from PyQt5.QtWidgets import QApplication
 import os
+import time
 
 
 class VtReaderTests(unittest.TestCase):
@@ -79,6 +81,7 @@ class VtReaderTests(unittest.TestCase):
 
         print(mock_info.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
+        mock_info.assert_any_call("Processing tiles in parallel...")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 2)
         mock_info.assert_any_call("Import complete")
 
@@ -186,6 +189,9 @@ class VtReaderTests(unittest.TestCase):
         if serial_tile_processing_limit:
             reader._nr_tiles_to_process_serial = serial_tile_processing_limit
         reader._load_tiles()
+        for _ in range(1, 100):
+            time.sleep(0.01)
+            QApplication.processEvents()
         # reader.shutdown()
 
 
