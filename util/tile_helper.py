@@ -107,8 +107,6 @@ def create_bounds(zoom: int, x_min: int, x_max: int, y_min: int, y_max: int, sch
 def center_tiles_equal(tile_limit: int, extent_a: Bounds, extent_b: Bounds) -> bool:
     center_tiles_a = _center_tiles(tile_limit=tile_limit, extent=extent_a)
     center_tiles_b = _center_tiles(tile_limit=tile_limit, extent=extent_b)
-    print(center_tiles_a)
-    print(center_tiles_b)  # todo: remove
     return center_tiles_a == center_tiles_b
 
 
@@ -272,7 +270,7 @@ def get_tiles_from_center(
     max_x: int = max([t[0] for t in available_tiles])
     max_y: int = max([t[1] for t in available_tiles])
 
-    center_tile_offset = (int(round((max_x - min_x) / 2)), int(round((max_y - min_y) / 2)))
+    center_tile_offset = (int(round((max_x - min_x) // 2)), int(round((max_y - min_y) // 2)))
     selected_tiles = set()
     center_tile = _sum_tiles((min_x, min_y), center_tile_offset)
     if len(selected_tiles) < nr_of_tiles and center_tile in available_tiles:
