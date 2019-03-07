@@ -204,7 +204,7 @@ class VtReader(QObject):
         self._update_progress(msg=msg)
 
     def _update_progress(
-            self, show_dialog: bool = None, progress: int = None, max_progress: int = None, msg: str = None
+        self, show_dialog: bool = None, progress: int = None, max_progress: int = None, msg: str = None
     ):
         if progress is not None:
             self.progress_changed.emit(progress)
@@ -375,14 +375,14 @@ class VtReader(QObject):
         return bounds
 
     def set_options(
-            self,
-            load_mask_layer=False,
-            merge_tiles=True,
-            clip_tiles=False,
-            apply_styles=False,
-            max_tiles=None,
-            layer_filter=None,
-            is_inspection_mode=False,
+        self,
+        load_mask_layer=False,
+        merge_tiles=True,
+        clip_tiles=False,
+        apply_styles=False,
+        max_tiles=None,
+        layer_filter=None,
+        is_inspection_mode=False,
     ):
         """
          * Specify the reader options
@@ -450,8 +450,7 @@ class VtReader(QObject):
 
         tiles = []
 
-        tiles_with_encoded_data: List[Tuple] = [
-            (t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
+        tiles_with_encoded_data: List[Tuple] = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
         tile_data_tuples: List[Tuple] = []
 
         if len(tiles_with_encoded_data) <= self._nr_tiles_to_process_serial:
@@ -460,15 +459,18 @@ class VtReader(QObject):
                 if decoded_data:
                     tile_data_tuples.append((tile, decoded_data))
         else:
+
             def raise_error(e):
                 raise e
 
             info("Processing tiles in parallel...")
             pool = self._get_pool()
-            rs = pool.map_async(func=decoder_func,
-                                iterable=tiles_with_encoded_data,
-                                callback=tile_data_tuples.extend,
-                                error_callback=raise_error)
+            rs = pool.map_async(
+                func=decoder_func,
+                iterable=tiles_with_encoded_data,
+                callback=tile_data_tuples.extend,
+                error_callback=raise_error,
+            )
             pool.close()
             current_progress = 0
             nr_of_tiles = len(tiles_with_encoded_data)
@@ -600,9 +602,9 @@ class VtReader(QObject):
                             should_cancel_func=lambda: self.cancel_requested,
                         )
             if (
-                    not layer
-                    and (self._allowed_sources is None or file_path in self._allowed_sources)
-                    and (not layer_filter or layer_name in layer_filter)
+                not layer
+                and (self._allowed_sources is None or file_path in self._allowed_sources)
+                and (not layer_filter or layer_name in layer_filter)
             ):
                 info("Updating layer source: {}", file_path)
                 self._update_layer_source(file_path, feature_collection)

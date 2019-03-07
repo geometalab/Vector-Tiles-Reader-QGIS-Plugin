@@ -151,9 +151,7 @@ class VtReaderTests(unittest.TestCase):
         # def wait_for_singal(reader: VtReader):
         #     return QSignalSpy(reader.ready_for_next_loading_step)
 
-        self._load(iface=iface,
-                   max_tiles=2,
-                   clip_tiles=True)
+        self._load(iface=iface, max_tiles=2, clip_tiles=True)
         # print("Spy isValid:", spy.isValid())
         # print("Spy wait return value: {}".format(spy.wait(timeout=15000)))
         print(mock_info.call_args_list)
@@ -162,13 +160,13 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Import complete")
 
     def _load(
-            self,
-            iface,
-            max_tiles: int,
-            serial_tile_processing_limit: int = None,
-            merge_tiles: bool = False,
-            clip_tiles: bool = False,
-            apply_styles: bool = False,
+        self,
+        iface,
+        max_tiles: int,
+        serial_tile_processing_limit: int = None,
+        merge_tiles: bool = False,
+        clip_tiles: bool = False,
+        apply_styles: bool = False,
     ):
         conn = copy.deepcopy(MBTILES_CONNECTION_TEMPLATE)
         gdal.PushErrorHandler("CPLQuietErrorHandler")

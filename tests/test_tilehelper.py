@@ -87,15 +87,8 @@ class TileHelperTests(unittest.TestCase):
 
     def test_world_bounds(self):
         tile = get_tile_bounds(zoom=14, extent=WORLD_BOUNDS, source_crs=4326, scheme="xyz")
-        bounds_expected = Bounds(
-            y_min=0,
-            y_max=16383,
-            zoom=14,
-            x_max=16383,
-            x_min=0,
-            scheme="xyz"
-        )
-        
+        bounds_expected = Bounds(y_min=0, y_max=16383, zoom=14, x_max=16383, x_min=0, scheme="xyz")
+
         self.assertEqual(bounds_expected, tile)
 
     def test_center_zero_limit(self):

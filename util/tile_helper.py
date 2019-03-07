@@ -1,4 +1,3 @@
-import os
 import itertools
 from math import floor
 from .global_map_tiles import GlobalMercator

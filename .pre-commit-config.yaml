@@ -3,7 +3,7 @@ repos:
     rev: 18.9b0
     hooks:
     - id: black
-      args: ['-l 120', '--exclude "(ext-libs|ui/qt|.mypy_cache|__pycache__)"']
+      args: ["-l", "120", "--exclude",  "(ext-libs|ui/qt|.mypy_cache|__pycache__)", "."]
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 3.7.7  # pick a git hash / tag to point to
     hooks:
