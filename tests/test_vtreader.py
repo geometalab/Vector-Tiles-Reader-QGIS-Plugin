@@ -5,14 +5,14 @@
 from qgis.testing import unittest
 import sys
 from qgis.utils import iface  # noqa # dont remove! is required for testing (iface wont be found otherwise)
-from vt_reader import VtReader
-from util.connection import MBTILES_CONNECTION_TEMPLATE
+from plugin.vt_reader import VtReader
+from plugin.util.connection import MBTILES_CONNECTION_TEMPLATE
 import copy
 import mock
 import shutil
 from osgeo import gdal
-from util.file_helper import clear_cache, get_style_folder
-from util.tile_helper import Bounds
+from plugin.util.file_helper import clear_cache, get_style_folder
+from plugin.util.tile_helper import Bounds
 from qgis.core import QgsProject
 from PyQt5.QtWidgets import QApplication
 import os
@@ -42,8 +42,8 @@ class VtReaderTests(unittest.TestCase):
         global iface
         self.assertIsNotNone(iface)
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.critical")
     @mock.patch("qgis.core.QgsVectorLayer.loadNamedStyle")
     def test_load_from_vtreader_0_apply_styles(self, mock_style, mock_critical, mock_info):
         global iface
@@ -55,8 +55,8 @@ class VtReaderTests(unittest.TestCase):
         # print mock_style.assert_called_with()
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.load_lib", return_value=None)
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.load_lib", return_value=None)
     @mock.patch.object(VtReader, "_create_qgis_layers")
     def test_load_from_vtreader_0_python_processing(self, mock_qgis, mock_load_lib, mock_info):
         global iface
@@ -70,7 +70,7 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
+    @mock.patch("plugin.vt_reader.info")
     @mock.patch.object(VtReader, "_create_qgis_layers")
     def test_load_from_vtreader_1_multiprocessed(self, mock_qgis, mock_info):
         global iface
@@ -85,19 +85,21 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 2)
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    def test_load_from_vtreader_2(self, mock_info):
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.util.mp_helper.info")
+    def test_load_from_vtreader_2(self, mphelper_mock_info, mock_info):
         global iface
         clear_cache()
         QgsProject.instance().removeAllMapLayers()
         self._load(iface=iface, max_tiles=1)
         print(mock_info.call_args_list)
+        print(mphelper_mock_info.call_args_list)
         mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Decoding finished, {} tiles with data", 1)
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.critical")
     def test_load_from_vtreader_3_with_cache(self, mock_critical, mock_info):
         global iface
         self._load(iface=iface, max_tiles=1)
@@ -107,8 +109,8 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("{} tiles in cache. Max. {} will be loaded additionally.", 1, 0)
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.critical")
     def test_load_from_vtreader_4_merge_native_decoded_tiles(self, mock_critical, mock_info):
         global iface
         clear_cache()
@@ -118,8 +120,8 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.critical")
     def test_load_from_vtreader_5_clip_native_decoded_tiles(self, mock_critical, mock_info):
         global iface
         clear_cache()
@@ -129,9 +131,9 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Native decoding supported!!! ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
-    @mock.patch("vt_reader.load_lib", return_value=None)
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.critical")
+    @mock.patch("plugin.vt_reader.load_lib", return_value=None)
     def test_load_from_vtreader_6_merge_python_decoded_tiles(self, mock_load_lib, mock_critical, mock_info):
         global iface
         clear_cache()
@@ -141,9 +143,9 @@ class VtReaderTests(unittest.TestCase):
         mock_info.assert_any_call("Native decoding not supported. ({}, {}bit)", "Linux", "64")
         mock_info.assert_any_call("Import complete")
 
-    @mock.patch("vt_reader.info")
-    @mock.patch("vt_reader.critical")
-    @mock.patch("vt_reader.load_lib", return_value=None)
+    @mock.patch("plugin.vt_reader.info")
+    @mock.patch("plugin.vt_reader.critical")
+    @mock.patch("plugin.vt_reader.load_lib", return_value=None)
     def test_load_from_vtreader_7_clip_python_decoded_tiles(self, mock_load_lib, mock_critical, mock_info):
         global iface
         clear_cache()

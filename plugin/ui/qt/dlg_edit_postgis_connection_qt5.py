@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_DlgEditPostgisConnection(object):
     def setupUi(self, DlgEditPostgisConnection):
         DlgEditPostgisConnection.setObjectName("DlgEditPostgisConnection")
@@ -97,4 +98,3 @@ class Ui_DlgEditPostgisConnection(object):
         self.lblpgPassword.setText(_translate("DlgEditPostgisConnection", "Password"))
         self.lblpgName.setText(_translate("DlgEditPostgisConnection", "Name"))
         self.chkpgStorePassword.setText(_translate("DlgEditPostgisConnection", "Save Password"))
-

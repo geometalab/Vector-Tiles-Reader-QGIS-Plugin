@@ -20,54 +20,24 @@ from qgis.core import QgsProject, QgsVectorLayer
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 
-if not os.environ.get("VTR_TESTS"):
-    from .util.qgis_helper import get_loaded_layers_of_connection
-    from .util.log_helper import info, critical, debug, remove_key
-    from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
-    from .util.feature_helper import (
-        FeatureMerger,
-        geo_types,
-        is_multi,
-        map_coordinates_recursive,
-        GeoTypes,
-        clip_features,
-    )
-    from .util.file_helper import (
-        get_styles,
-        get_style_folder,
-        assure_temp_dirs_exist,
-        get_cache_entry,
-        is_gzipped,
-        get_geojson_file_name,
-        cache_tile,
-    )
-    from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
-    from .util.connection import ConnectionTypes
-    from .util.mp_helper import decode_tile_native, decode_tile_python, load_lib
-else:
-    from util.qgis_helper import get_loaded_layers_of_connection
-    from util.log_helper import info, critical, debug, remove_key
-    from util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
-    from util.feature_helper import (
-        FeatureMerger,
-        geo_types,
-        is_multi,
-        map_coordinates_recursive,
-        GeoTypes,
-        clip_features,
-    )
-    from util.file_helper import (
-        get_styles,
-        get_style_folder,
-        assure_temp_dirs_exist,
-        get_cache_entry,
-        is_gzipped,
-        get_geojson_file_name,
-        cache_tile,
-    )
-    from util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
-    from util.connection import ConnectionTypes
-    from util.mp_helper import decode_tile_native, decode_tile_python, load_lib
+
+from .util.qgis_helper import get_loaded_layers_of_connection
+from .util.log_helper import info, critical, debug, remove_key
+from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
+from .util.feature_helper import FeatureMerger, geo_types, is_multi, map_coordinates_recursive, GeoTypes, clip_features
+from .util.file_helper import (
+    get_styles,
+    get_style_folder,
+    assure_temp_dirs_exist,
+    get_cache_entry,
+    is_gzipped,
+    get_geojson_file_name,
+    cache_tile,
+)
+from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
+from .util.connection import ConnectionTypes
+from .util.mp_helper import decode_tile_native, decode_tile_python, load_lib
+
 
 is_windows = sys.platform.startswith("win32")
 if is_windows:

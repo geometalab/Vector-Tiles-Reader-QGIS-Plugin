@@ -18,7 +18,7 @@ _temp_dir = tempfile.gettempdir()
 
 
 def get_plugin_directory():
-    path = os.path.join(os.path.dirname(__file__), "..")
+    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     return path
 
 
@@ -36,7 +36,7 @@ def get_styles(connection_name):
 
 
 def get_icons_directory():
-    return os.path.join(get_plugin_directory(), "styles", "icons")
+    return os.path.join(get_plugin_directory(), "plugin", "ui", "icons")
 
 
 def get_cache_directory():

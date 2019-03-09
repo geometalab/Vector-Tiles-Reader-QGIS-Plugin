@@ -1,5 +1,5 @@
 from qgis.testing import unittest
-from util.network_helper import url_exists
+from plugin.util.network_helper import url_exists
 
 
 class NetworkHelperTests(unittest.TestCase):

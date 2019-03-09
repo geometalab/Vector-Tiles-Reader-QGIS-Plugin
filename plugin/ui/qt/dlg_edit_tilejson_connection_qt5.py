@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_DlgEditTileJSONConnection(object):
     def setupUi(self, DlgEditTileJSONConnection):
         DlgEditTileJSONConnection.setObjectName("DlgEditTileJSONConnection")
@@ -66,8 +67,12 @@ class Ui_DlgEditTileJSONConnection(object):
         self.groupBox.setTitle(_translate("DlgEditTileJSONConnection", "Connection"))
         self.label.setText(_translate("DlgEditTileJSONConnection", "Name"))
         self.lblTileJsonUrl.setText(_translate("DlgEditTileJSONConnection", "TileJSON URL"))
-        self.txtUrl.setToolTip(_translate("DlgEditTileJSONConnection", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)"))
+        self.txtUrl.setToolTip(
+            _translate(
+                "DlgEditTileJSONConnection",
+                "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)",
+            )
+        )
         self.lblServerStyleJsonUrl.setText(_translate("DlgEditTileJSONConnection", "GL Style JSON URL"))
         self.btnSave.setText(_translate("DlgEditTileJSONConnection", "Save"))
         self.btnCancel.setText(_translate("DlgEditTileJSONConnection", "Cancel"))
-

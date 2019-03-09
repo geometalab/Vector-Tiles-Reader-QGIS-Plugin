@@ -1,6 +1,6 @@
 import sys
 from qgis.testing import unittest
-from util.tile_helper import (
+from plugin.util.tile_helper import (
     Bounds,
     center_tiles_equal,
     convert_coordinate,

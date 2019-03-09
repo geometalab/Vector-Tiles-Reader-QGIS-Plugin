@@ -4,7 +4,7 @@
 #
 from qgis.testing import unittest
 import sys
-from util.tile_source import ServerSource
+from plugin.util.tile_source import ServerSource
 import mock
 
 
@@ -28,9 +28,9 @@ class ServerSourceTests(unittest.TestCase):
         print(ctx.exception)
         self.assertTrue(error in str(ctx.exception))
 
-    @mock.patch("util.tile_source.TileJSON")
-    @mock.patch("util.tile_source.load_tiles_async", return_value=[((1, 2), "data")])
-    @mock.patch("util.tile_source.url_exists", return_value=(True, None, "https://localhost"))
+    @mock.patch("plugin.util.tile_source.TileJSON")
+    @mock.patch("plugin.util.tile_source.load_tiles_async", return_value=[((1, 2), "data")])
+    @mock.patch("plugin.util.tile_source.url_exists", return_value=(True, None, "https://localhost"))
     def test_load(self, mock_url_exists, mock_load_tiles_async, mock_tile_json):
         src = ServerSource("https://localhost")
         mock_url_exists.assert_called_with("https://localhost")

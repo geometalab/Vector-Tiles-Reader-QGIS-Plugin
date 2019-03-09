@@ -1,6 +1,6 @@
 from qgis.testing import unittest
-from util.tile_helper import get_tile_bounds, tile_to_latlon, WORLD_BOUNDS
-from util.tile_json import TileJSON
+from plugin.util.tile_helper import get_tile_bounds, tile_to_latlon, WORLD_BOUNDS
+from plugin.util.tile_json import TileJSON
 
 
 class TileJsonTests(unittest.TestCase):

@@ -8,7 +8,7 @@ exclude =
     ext-libs,
     .mypy_cache,
     global_map_tiles.py,
-    ui/qt
+    plugin/ui/qt
 ignore = E111,
          E121,
          E122,

@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_ConnectionsGroup(object):
     def setupUi(self, ConnectionsGroup):
         ConnectionsGroup.setObjectName("ConnectionsGroup")
@@ -66,4 +67,3 @@ class Ui_ConnectionsGroup(object):
         self.btnDelete.setText(_translate("ConnectionsGroup", "Delete"))
         self.btnLoad.setText(_translate("ConnectionsGroup", "Load"))
         self.btnSave.setText(_translate("ConnectionsGroup", "Save"))
-

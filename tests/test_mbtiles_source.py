@@ -5,7 +5,7 @@
 from qgis.testing import unittest
 import os
 import sys
-from util.tile_source import MBTilesSource
+from plugin.util.tile_source import MBTilesSource
 
 
 class MbtileSourceTests(unittest.TestCase):

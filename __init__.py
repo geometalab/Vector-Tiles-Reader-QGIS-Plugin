@@ -22,7 +22,7 @@ if ext_libs_path not in sys.path:
 
 
 def classFactory(iface):
-    from .vtr_plugin import VtrPlugin
+    from .plugin.vtr_plugin import VtrPlugin
 
     return VtrPlugin(iface)
 

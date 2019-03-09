@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_DlgConnections(object):
     def setupUi(self, DlgConnections):
         DlgConnections.setObjectName("DlgConnections")
@@ -19,7 +20,7 @@ class Ui_DlgConnections(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.chkKeepOpen = QtWidgets.QCheckBox(DlgConnections)
         self.chkKeepOpen.setObjectName("chkKeepOpen")
-        self.horizontalLayout.addWidget(self.chkKeepOpen, 0, QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
+        self.horizontalLayout.addWidget(self.chkKeepOpen, 0, QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         self.btnAdd = QtWidgets.QPushButton(DlgConnections)
         self.btnAdd.setEnabled(False)
         self.btnAdd.setMinimumSize(QtCore.QSize(80, 0))
@@ -146,19 +147,34 @@ class Ui_DlgConnections(object):
         self.btnClose.setText(_translate("DlgConnections", "Close"))
         self.btnHelp.setText(_translate("DlgConnections", "Help"))
         self.grpTilejsonConnections.setTitle(_translate("DlgConnections", "Connections"))
-        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabServer), _translate("DlgConnections", "Server"))
+        self.tabConnections.setTabText(
+            self.tabConnections.indexOf(self.tabServer), _translate("DlgConnections", "Server")
+        )
         self.lblMbtilesStyleJsonUrl.setText(_translate("DlgConnections", "GL Style JSON URL"))
-        self.txtPath.setToolTip(_translate("DlgConnections", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)"))
+        self.txtPath.setToolTip(
+            _translate(
+                "DlgConnections",
+                "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)",
+            )
+        )
         self.btnBrowse.setText(_translate("DlgConnections", "Browse"))
         self.lblSource.setText(_translate("DlgConnections", "Path"))
         self.btnConnectFile.setText(_translate("DlgConnections", "Refresh"))
-        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabFile), _translate("DlgConnections", "MBTiles"))
+        self.tabConnections.setTabText(
+            self.tabConnections.indexOf(self.tabFile), _translate("DlgConnections", "MBTiles")
+        )
         self.btnSelectDirectory.setText(_translate("DlgConnections", "Browse"))
         self.lblDirectoryStyleJsonUrl.setText(_translate("DlgConnections", "GL Style JSON URL"))
         self.lblSource_2.setText(_translate("DlgConnections", "Path"))
-        self.txtDirectoryPath.setToolTip(_translate("DlgConnections", "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)"))
+        self.txtDirectoryPath.setToolTip(
+            _translate(
+                "DlgConnections",
+                "The URL to the TileJSON of the tile service (e.g. http://yourtilehoster.com/index.json)",
+            )
+        )
         self.btnConnectDirectory.setText(_translate("DlgConnections", "Refresh"))
-        self.tabConnections.setTabText(self.tabConnections.indexOf(self.tabDirectory), _translate("DlgConnections", "Directory"))
+        self.tabConnections.setTabText(
+            self.tabConnections.indexOf(self.tabDirectory), _translate("DlgConnections", "Directory")
+        )
         self.grpOptions.setTitle(_translate("DlgConnections", "Options"))
         self.grpLayers.setTitle(_translate("DlgConnections", "Layers"))
-

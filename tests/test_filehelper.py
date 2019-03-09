@@ -1,7 +1,7 @@
 import sys
 import os
 from qgis.testing import unittest
-from util.file_helper import (
+from plugin.util.file_helper import (
     get_temp_dir,
     get_style_folder,
     get_plugin_directory,
@@ -15,7 +15,7 @@ from util.file_helper import (
     get_styles,
     get_cache_entry,
 )
-from util import file_helper
+from plugin.util import file_helper
 
 
 class FileHelperTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class FileHelperTests(unittest.TestCase):
         pass
 
     def test_get_plugin_dir(self):
-        self.assertEqual("/tests_directory/util/..", get_plugin_directory())
+        self.assertEqual("/tests_directory", get_plugin_directory())
 
     def test_get_temp_dir(self):
         self.assertEqual("/tmp/vector_tiles_reader", get_temp_dir())
@@ -44,7 +44,8 @@ class FileHelperTests(unittest.TestCase):
         self.assertEqual("/tmp/vector_tiles_reader/styles/my_connection", get_style_folder("my_connection"))
 
     def test_get_icons_dir(self):
-        self.assertEqual("/tests_directory/util/../styles/icons", get_icons_directory())
+        self.assertEqual("/tests_directory/plugin/ui/icons", get_icons_directory())
+        self.assertTrue(os.path.isdir(get_icons_directory()))
 
     def test_get_cache_dir(self):
         self.assertEqual("/tmp/vector_tiles_reader/cache", get_cache_directory())
@@ -60,7 +61,8 @@ class FileHelperTests(unittest.TestCase):
         self.assertFalse(is_sqlite_db(os.path.realpath(__file__)))
 
     def test_get_sample_dir(self):
-        self.assertEqual("/tests_directory/util/../sample_data", get_sample_data_directory())
+        self.assertEqual("/tests_directory/sample_data", get_sample_data_directory())
+        self.assertTrue(os.path.isdir(get_sample_data_directory()))
 
     def test_create_temp_dirs(self):
         assure_temp_dirs_exist()

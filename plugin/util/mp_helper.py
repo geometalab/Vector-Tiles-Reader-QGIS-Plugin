@@ -1,5 +1,7 @@
 from ctypes import cdll, c_bool, c_uint16, c_double, c_char_p, c_void_p, cast
 
+from .file_helper import get_plugin_directory
+
 import mapbox_vector_tile
 
 try:
@@ -37,7 +39,8 @@ def get_lib_for_current_platform():
     elif sys.platform.startswith("darwin"):
         lib = "pbf2geojson_osx_{}.so".format(bitness_string)
     if lib:
-        lib = os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "ext-libs", "pbf2geojson", lib)
+        # lib = os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "ext-libs", "pbf2geojson", lib)
+        lib = os.path.join(os.path.abspath(get_plugin_directory()), "ext-libs", "pbf2geojson", lib)
     return lib
 
 
@@ -112,4 +115,5 @@ def decode_tile_native(tile_data_clip):
             info("Decoding failed: {}", sys.exc_info()[1])
             # with open(r"c:\temp\output.txt", 'w') as f:
             #     f.write(decoded_data)
+
     return tile, decoded_data
