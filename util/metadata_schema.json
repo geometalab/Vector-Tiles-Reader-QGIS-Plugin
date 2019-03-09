@@ -5,7 +5,8 @@
   "type": "object",
   "required": [
     "minzoom",
-    "maxzoom"
+    "maxzoom",
+    "tiles"
   ],
   "definitions": {
     "zoomlevel": {
@@ -16,11 +17,70 @@
     "epsg": {
       "type": "string",
       "pattern": "^(epsg|EPSG):\\d{4,5}$"
+    },
+    "vectorLayer": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "minzoon": {
+          "$ref": "#/definitions/zoomlevel"
+        },
+        "maxzoon": {
+          "$ref": "#/definitions/zoomlevel"
+        }
+      }
     }
   },
   "properties": {
+    "bounds": {
+      "description": "Bounds MUST define an area covered by all zoom levels. The bounds are represented in WGS:84 latitude and longitude values, in the order left, bottom, right, top. Values may be integers or floating point numbers.",
+      "type": "array",
+      "minLength": 4,
+      "maxLength": 4,
+      "minimum": -180,
+      "maximum": 180,
+      "items": {
+        "type": "number"
+      }
+    },
+    "center": {
+      "description": "The first value is the longitude, the second is latitude (both in WGS:84 values), the third value is the zoom level as an integer. Longitude and latitude MUST be within the specified bounds. The zoom level MUST be between minzoom and maxzoom.",
+      "type": "array",
+      "minimum": -180,
+      "maximum": 180,
+      "minLength": 3,
+      "maxLength": 3,
+      "items": {
+        "type": "number"
+      }
+    },
+    "tiles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "json": {
+      "type": "string",
+      "description": "A JSON string defining a single object containing the 'vector_layers' property as an array of vector layers"
+    },
+    "vector_layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/vectorLayer"
+      }
+    },
     "crs": {
-      "$ref": "#/definitions/epsg",
+      "$ref": "#/definitions/epsg"
     },
     "srs": {
       "$ref": "#/definitions/epsg"
@@ -39,14 +99,30 @@
       ]
     }
   },
-  "anyOf":  [
+  "allOf": [
     {
-      "not": {
-        "required": [
-          "crs",
-          "srs"
-        ]
-      }
+      "anyOf": [
+        {
+          "description": "Either 'crs' or 'srs' are allowed but not both. Both can be omitted.",
+          "not": {
+            "required": [
+              "crs",
+              "srs"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "description": "Either 'json' or 'vector_layers' is required.",
+      "anyOf": [
+        {
+          "required": ["json"]
+        },
+        {
+          "required": ["vector_layers"]
+        }
+      ]
     }
   ]
 }
