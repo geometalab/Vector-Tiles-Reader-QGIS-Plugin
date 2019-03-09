@@ -1,9 +1,11 @@
 import itertools
 from math import floor
+from typing import Callable, List, Tuple, TypeVar
+
+from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsPointXY, QgsProject
+
 from .global_map_tiles import GlobalMercator
 from .log_helper import debug
-from typing import List, Tuple, Callable, TypeVar
-from qgis.core import QgsProject, QgsPointXY, QgsCoordinateReferenceSystem, QgsCoordinateTransform
 
 StrOrInt = TypeVar("StrOrInt", str, int)
 

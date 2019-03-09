@@ -13,46 +13,43 @@ of the License, or (at your option) any later version.
 
 """
 
+import ast
+import logging
 import os
+import platform
 import re
 import sys
 import traceback
-import ast
-import platform
+from typing import List, Tuple
 
-import logging
-from .util.log_helper import info, critical, debug
-from .util.network_helper import url_exists, load_url
-from .util.tile_helper import (
-    latlon_to_tile,
-    get_zoom_by_scale,
-    clamp,
-    get_code_from_epsg,
-    get_tile_bounds,
-    tile_to_latlon,
-    extent_overlap_bounds,
-    center_tiles_equal,
-    clamp_bounds,
-    convert_coordinate,
-    WORLD_BOUNDS,
-)
-
-from .vt_reader import VtReader
-
-from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
-from .util.qgis_helper import get_loaded_layers_of_connection
-from .util.tile_helper import Bounds
-from .util.file_helper import get_icons_directory, clear_cache, get_plugin_directory, get_temp_dir
-from typing import Tuple, List
-from qgis.core import QgsMapLayer, QgsProject, QgsApplication, QgsRectangle, QgsCoordinateReferenceSystem, QgsPointXY
-from qgis.gui import QgsMessageBarItem
-
-from PyQt5.QtWidgets import QMenu, QAction, QToolButton, QProgressBar, QPushButton, QMessageBox
-from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QSettings, Qt
-from PyQt5.QtGui import QIcon, QColor
+from PyQt5.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QColor, QIcon
+from PyQt5.QtWidgets import QAction, QMenu, QMessageBox, QProgressBar, QPushButton, QToolButton
 
 from mapboxstyle2qgis import core
+from qgis.core import QgsApplication, QgsCoordinateReferenceSystem, QgsMapLayer, QgsPointXY, QgsProject, QgsRectangle
+from qgis.gui import QgsMessageBarItem
 
+from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
+from .util.file_helper import clear_cache, get_icons_directory, get_plugin_directory, get_temp_dir
+from .util.log_helper import critical, debug, info
+from .util.network_helper import load_url, url_exists
+from .util.qgis_helper import get_loaded_layers_of_connection
+from .util.tile_helper import (
+    WORLD_BOUNDS,
+    Bounds,
+    center_tiles_equal,
+    clamp,
+    clamp_bounds,
+    convert_coordinate,
+    extent_overlap_bounds,
+    get_code_from_epsg,
+    get_tile_bounds,
+    get_zoom_by_scale,
+    latlon_to_tile,
+    tile_to_latlon,
+)
+from .vt_reader import VtReader
 
 # try:
 #     pth = 'C:\\Program Files\\JetBrains\\PyCharm 2017.2.3\\debug-eggs\\pycharm-debug.egg'

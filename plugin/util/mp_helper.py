@@ -1,17 +1,16 @@
-from ctypes import cdll, c_bool, c_uint16, c_double, c_char_p, c_void_p, cast
-
-from .file_helper import get_plugin_directory
+import os
+import sys
+from ctypes import c_bool, c_char_p, c_double, c_uint16, c_void_p, cast, cdll
 
 import mapbox_vector_tile
+
+from .file_helper import get_plugin_directory
+from .log_helper import info, warn
 
 try:
     import simplejson as json
 except ImportError:
     import json
-import sys
-import os
-
-from .log_helper import info, warn
 
 
 def decode_tile_python(tile_data_clip):

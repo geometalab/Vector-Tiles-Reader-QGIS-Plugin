@@ -1,27 +1,25 @@
+import ast
+import copy
+import os
+import webbrowser
+from collections import OrderedDict
+
+from PyQt5.QtCore import QSettings, pyqtSignal
+from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMessageBox
+
 from ..util.connection import (
-    ConnectionTypes,
+    DIRECTORY_CONNECTION_TEMPLATE,
     MBTILES_CONNECTION_TEMPLATE,
     TILEJSON_CONNECTION_TEMPLATE,
-    DIRECTORY_CONNECTION_TEMPLATE,
+    ConnectionTypes,
 )
-
-import copy
-import webbrowser
-import ast
-from collections import OrderedDict
-import os
-
-from .options_group import OptionsGroup
 from .connections_group import ConnectionsGroup
-
+from .options_group import OptionsGroup
 from .qt.dlg_about_qt5 import Ui_DlgAbout
 from .qt.dlg_connections_qt5 import Ui_DlgConnections
 from .qt.dlg_edit_postgis_connection_qt5 import Ui_DlgEditPostgisConnection
 from .qt.dlg_edit_tilejson_connection_qt5 import Ui_DlgEditTileJSONConnection
-
-from PyQt5.QtWidgets import QDialog, QApplication, QFileDialog, QMessageBox
-from PyQt5.QtCore import pyqtSignal, QSettings
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 if "VTR_TESTS" not in os.environ or os.environ["VTR_TESTS"] != "1":
     from ..ui import resources_rc_qt5  # noqa

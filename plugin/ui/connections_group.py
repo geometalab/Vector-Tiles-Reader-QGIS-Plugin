@@ -1,11 +1,13 @@
 import copy
 import csv
+from typing import Dict
+
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QDialog, QFileDialog, QGroupBox, QMessageBox
+
+from ..util.connection import ConnectionTypes
 from ..util.log_helper import info
 from .qt.connections_group_qt5 import Ui_ConnectionsGroup
-from ..util.connection import ConnectionTypes
-from PyQt5.QtWidgets import QGroupBox, QFileDialog, QMessageBox, QDialog
-from PyQt5.QtCore import pyqtSignal
-from typing import Dict
 
 
 class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):

@@ -1,43 +1,41 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from itertools import groupby
-import sys
-import platform
-import os
-from io import BytesIO
-from gzip import GzipFile
-import multiprocessing
-import time
-
 import json
-import uuid
+import multiprocessing
+import os
+import platform
+import sys
+import time
 import traceback
-from typing import Dict, List, Tuple, Optional
-
-from qgis.core import QgsProject, QgsVectorLayer
+import uuid
+from gzip import GzipFile
+from io import BytesIO
+from itertools import groupby
+from typing import Dict, List, Optional, Tuple
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 
+from qgis.core import QgsProject, QgsVectorLayer
 
-from .util.qgis_helper import get_loaded_layers_of_connection
-from .util.log_helper import info, critical, debug, remove_key
-from .util.tile_helper import get_all_tiles, get_code_from_epsg, clamp, Bounds, VectorTile
-from .util.feature_helper import FeatureMerger, geo_types, is_multi, map_coordinates_recursive, GeoTypes, clip_features
-from .util.file_helper import (
-    get_styles,
-    get_style_folder,
-    assure_temp_dirs_exist,
-    get_cache_entry,
-    is_gzipped,
-    get_geojson_file_name,
-    cache_tile,
-)
-from .util.tile_source import ServerSource, MBTilesSource, DirectorySource, AbstractSource
 from .util.connection import ConnectionTypes
-from .util.mp_helper import decode_tile_native, decode_tile_python, load_lib
+from .util.feature_helper import FeatureMerger, GeoTypes, clip_features, geo_types, is_multi, map_coordinates_recursive
+from .util.file_helper import (
+    assure_temp_dirs_exist,
+    cache_tile,
+    get_cache_entry,
+    get_geojson_file_name,
+    get_style_folder,
+    get_styles,
+    is_gzipped,
+)
 
+from .util.log_helper import critical, debug, info, remove_key
+from .util.mp_helper import decode_tile_native, decode_tile_python, load_lib
+from .util.qgis_helper import get_loaded_layers_of_connection
+from .util.tile_helper import Bounds, VectorTile, clamp, get_all_tiles, get_code_from_epsg
+from .util.tile_source import AbstractSource, DirectorySource, MBTilesSource, ServerSource
 
 is_windows = sys.platform.startswith("win32")
 if is_windows:

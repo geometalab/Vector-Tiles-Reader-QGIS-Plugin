@@ -1,15 +1,16 @@
+import ast
+import os
 import sys
+from typing import List, Optional, Tuple
+
+from .log_helper import critical, debug, info
+from .network_helper import load_url
+from .tile_helper import WORLD_BOUNDS, get_tile_bounds
 
 try:
     import simplejson as json
 except ImportError:
     import json
-import os
-import ast
-from .log_helper import critical, debug, info
-from .tile_helper import get_tile_bounds, WORLD_BOUNDS
-from .network_helper import load_url
-from typing import List, Optional, Tuple
 
 
 class TileJSON(object):

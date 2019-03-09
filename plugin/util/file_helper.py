@@ -1,14 +1,15 @@
 import os
-import tempfile
-import sys
-import time
 import shutil
+import sys
+import tempfile
+import time
+
+from .log_helper import critical, info, warn
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle as pickle
-from .log_helper import info, critical, warn
 
 
 geojson_folder = "tmp"

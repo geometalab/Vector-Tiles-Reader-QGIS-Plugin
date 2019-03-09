@@ -1,21 +1,23 @@
+import os
 import sqlite3
+import sys
+import traceback
 import urllib.parse
-from typing import Tuple, List
+from typing import List, Tuple
+
+from PyQt5.QtCore import QObject, pyqtSignal
+
+from .file_helper import is_sqlite_db
+from .log_helper import critical, debug, info, warn
+from .network_helper import load_tiles_async, url_exists
+from .tile_helper import WORLD_BOUNDS, Bounds, VectorTile, get_tile_bounds, get_tiles_from_center
+from .tile_json import TileJSON
 
 try:
     import simplejson as json
 except ImportError:
     import json
-import os
-import sys
-import traceback
 
-from .tile_json import TileJSON
-from .log_helper import info, warn, critical, debug
-from .tile_helper import VectorTile, get_tiles_from_center, get_tile_bounds, Bounds, WORLD_BOUNDS
-from .network_helper import url_exists, load_tiles_async
-from .file_helper import is_sqlite_db
-from PyQt5.QtCore import pyqtSignal, QObject
 
 _DEFAULT_CRS = "EPSG:3857"
 

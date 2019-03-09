@@ -13,8 +13,8 @@ of the License, or (at your option) any later version.
 
 """
 import os
-import sys
 import site
+import sys
 
 ext_libs_path = os.path.join(os.path.dirname(__file__), "ext-libs")
 if ext_libs_path not in sys.path:

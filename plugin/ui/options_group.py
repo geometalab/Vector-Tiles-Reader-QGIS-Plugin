@@ -1,6 +1,7 @@
-from .qt.options_qt5 import Ui_OptionsGroup
-from PyQt5.QtWidgets import QGroupBox, QAbstractButton
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QAbstractButton, QGroupBox
+
+from .qt.options_qt5 import Ui_OptionsGroup
 
 
 class OptionsGroup(QGroupBox, Ui_OptionsGroup):

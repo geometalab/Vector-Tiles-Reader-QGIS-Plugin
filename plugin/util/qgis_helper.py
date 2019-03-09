@@ -1,5 +1,6 @@
-from qgis.core import QgsProject, QgsVectorLayer
 from typing import List
+
+from qgis.core import QgsProject, QgsVectorLayer
 
 
 def get_loaded_layers_of_connection(connection_name: str) -> List[QgsVectorLayer]:

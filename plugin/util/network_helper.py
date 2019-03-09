@@ -1,10 +1,13 @@
-from .log_helper import warn, info, remove_key
 from time import sleep
-from typing import Tuple, Callable, List, Optional
-from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
+from typing import Callable, List, Optional, Tuple
+
 from PyQt5.QtCore import QUrl
+from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt5.QtWidgets import QApplication
+
 from qgis.core import QgsNetworkAccessManager
+
+from .log_helper import info, remove_key, warn
 
 
 def url_exists(url: str) -> Tuple[bool, Optional[str], str]:

@@ -1,8 +1,10 @@
-from qgis.core import QgsRectangle, QgsGeometry, QgsField, QgsSpatialIndex
+import numbers
+import uuid
+
 from PyQt5.QtCore import QVariant
 
-import uuid
-import numbers
+from qgis.core import QgsField, QgsGeometry, QgsRectangle, QgsSpatialIndex
+
 from .log_helper import info
 from .tile_helper import tile_to_latlon
 

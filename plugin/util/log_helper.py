@@ -1,10 +1,10 @@
+import importlib
 import logging
 import os
-import sys
 import pkgutil
-import importlib
-import tempfile
 import re
+import sys
+import tempfile
 
 try:
     from qgis.core import QgsApplication
