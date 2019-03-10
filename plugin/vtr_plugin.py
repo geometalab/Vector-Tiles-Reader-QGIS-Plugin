@@ -20,13 +20,12 @@ import platform
 import re
 import sys
 import traceback
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
+from mapboxstyle2qgis import core
 from PyQt5.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox, QProgressBar, QPushButton, QToolButton
-
-from mapboxstyle2qgis import core
 from qgis.core import QgsApplication, QgsCoordinateReferenceSystem, QgsMapLayer, QgsPointXY, QgsProject, QgsRectangle
 from qgis.gui import QgsMessageBarItem
 

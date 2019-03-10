@@ -1,6 +1,6 @@
 import itertools
 from math import floor
-from typing import Callable, List, Tuple, TypeVar, Optional
+from typing import Callable, List, Optional, Tuple, TypeVar
 
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsPointXY, QgsProject
 

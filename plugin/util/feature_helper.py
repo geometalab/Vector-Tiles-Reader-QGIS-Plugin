@@ -2,7 +2,6 @@ import numbers
 import uuid
 
 from PyQt5.QtCore import QVariant
-
 from qgis.core import QgsField, QgsGeometry, QgsRectangle, QgsSpatialIndex
 
 from .log_helper import info

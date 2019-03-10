@@ -16,7 +16,6 @@ from typing import Dict, List, Optional, Tuple
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
-
 from qgis.core import QgsProject, QgsVectorLayer
 
 from .util.connection import ConnectionTypes
@@ -30,7 +29,6 @@ from .util.file_helper import (
     get_styles,
     is_gzipped,
 )
-
 from .util.log_helper import critical, debug, info, remove_key
 from .util.mp_helper import decode_tile_native, decode_tile_python, load_lib
 from .util.qgis_helper import get_loaded_layers_of_connection

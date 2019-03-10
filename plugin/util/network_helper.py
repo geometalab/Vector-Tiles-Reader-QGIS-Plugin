@@ -4,7 +4,6 @@ from typing import Callable, List, Optional, Tuple
 from PyQt5.QtCore import QUrl
 from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt5.QtWidgets import QApplication
-
 from qgis.core import QgsNetworkAccessManager
 
 from .log_helper import info, remove_key, warn
