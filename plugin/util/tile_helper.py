@@ -13,7 +13,7 @@ StrOrInt = TypeVar("StrOrInt", str, int)
  * Top left: (lng=WORLD_BOUNDS[0], lat=WORLD_BOUNDS[3])
  * Bottom right: (lng=WORLD_BOUNDS[2], lat=WORLD_BOUNDS[1])
 """
-WORLD_BOUNDS = [-180, -85.05112878, 180, 85.05112878]
+WORLD_BOUNDS = (-180, -85.05112878, 180, 85.05112878)
 
 
 class Bounds(dict):

@@ -78,7 +78,7 @@ class VtReader(QObject):
 
     def __init__(self, iface, connection: dict):
         """
-         * The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
+        The mbtiles_path can also be an URL in zxy format: z=zoom, x=tile column, y=tile row
         :param iface: 
         :param connection:
         """
@@ -114,7 +114,7 @@ class VtReader(QObject):
 
     def set_allowed_sources(self, sources: List[str]):
         """
-         * A list of layer sources (i.e. file paths) can be specified.
+        A list of layer sources (i.e. file paths) can be specified.
          These layers will later be ignored, i.e. not added.
         :param sources: The sources which can be created. If None, all are allowed, if empty list, none is allowed
         :return:
@@ -123,7 +123,7 @@ class VtReader(QObject):
 
     def get_source(self) -> AbstractSource:
         """
-         * Returns the source being used of the current reader. This method is intended for external use,
+        Returns the source being used of the current reader. This method is intended for external use,
          i.e. from outside of this reader. SQlite objects must only be used in the thread they were created.
          As a result of this, each reader creates two identical connections, but one is created within and one
          outisde of the thread.
@@ -185,7 +185,7 @@ class VtReader(QObject):
 
     def _get_empty_feature_collection(self, layer_name: str, zoom_level: int) -> dict:
         """
-         * Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
+        Returns an empty GeoJSON FeatureCollection with the coordinate reference system (crs) set to EPSG3857
         """
         # todo: when improving CRS handling: the correct CRS of the source has to be set here
 
@@ -210,8 +210,7 @@ class VtReader(QObject):
 
     def cancel(self):
         """
-         * Cancels the loading process.
-        :return: 
+        Cancels the loading process.
         """
         self.cancel_requested = True
         if self._source:
@@ -353,7 +352,7 @@ class VtReader(QObject):
         is_inspection_mode=False,
     ):
         """
-         * Specify the reader options
+        Specify the reader options
         :param is_inspection_mode:
         :param load_mask_layer:  If True the mask layer will also be loaded
         :param merge_tiles: If True neighbouring tiles and features will be merged
@@ -378,7 +377,7 @@ class VtReader(QObject):
 
     def load_tiles_async(self, bounds: Bounds):
         """
-         * Loads the vector tiles from either a file or a URL and adds them to QGIS
+        Loads the vector tiles from either a file or a URL and adds them to QGIS
         :param bounds:
         :return: 
         """
@@ -404,7 +403,7 @@ class VtReader(QObject):
 
     def _decode_tiles(self, tiles_with_encoded_data):
         """
-         * Decodes the PBF data from all the specified tiles and reports the progress
+        Decodes the PBF data from all the specified tiles and reports the progress
          * If a tile is loaded from the cache, the decoded_data is already set and doesn't have to be encoded
         :param tiles_with_encoded_data:
         :return:
@@ -479,7 +478,7 @@ class VtReader(QObject):
     @staticmethod
     def _unzip(data):
         """
-         * If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
+        If the passed data is gzipped, it will be unzipped. Otherwise it will be returned untouched
         :param data:
         :return:
         """
@@ -493,7 +492,7 @@ class VtReader(QObject):
 
     def _process_tiles(self, tiles, layer_filter):
         """
-         * Creates GeoJSON for all the specified tiles and reports the progress
+        Creates GeoJSON for all the specified tiles and reports the progress
         :param tiles: 
         :return: 
         """
@@ -511,7 +510,7 @@ class VtReader(QObject):
 
     def _create_qgis_layers(self, merge_features, apply_styles, clip_tiles):
         """
-         * Creates a hierarchy of groups and layers in qgis
+        Creates a hierarchy of groups and layers in qgis
         """
         own_layers: List[QgsVectorLayer] = get_loaded_layers_of_connection(self._connection["name"])
         for l in own_layers:
@@ -625,7 +624,7 @@ class VtReader(QObject):
     @staticmethod
     def _update_layer_source(layer_source, feature_collection):
         """
-         * Updates the layers GeoJSON source file
+        Updates the layers GeoJSON source file
         :param layer_source: The path to the geoJSON file that is the source of the layer
         :param feature_collection: The feature collection to dump
         :return: 
@@ -636,7 +635,7 @@ class VtReader(QObject):
     @staticmethod
     def _apply_named_style(existing_styles, style_dir, layer, geo_type):
         """
-         * Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
+        Looks for a styles with the same name as the layer and if one is found, it is applied to the layer
         :param layer: The layer to which the style shall be applied
         :param geo_type: The geo type of the features on the layer (point, linestring or polygon)
         :return: 
@@ -662,7 +661,7 @@ class VtReader(QObject):
 
     def _create_named_layer(self, json_src, layer_name, geo_type, zoom_level):
         """
-         * Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
+        Creates a QgsVectorLayer and adds it to the group specified by layer_target_group
          * Invalid geometries will be removed during the process of merging features over tile boundaries
         """
 
@@ -683,7 +682,7 @@ class VtReader(QObject):
 
     def _add_features_to_feature_collection(self, tile, layer_filter):
         """
-         * Transforms all features of the specified tile into GeoJSON
+        Transforms all features of the specified tile into GeoJSON
          * The resulting GeoJSON feature will be applied to the features of the corresponding GeoJSON FeatureCollection
         :param tile:
         :return:
@@ -778,7 +777,7 @@ class VtReader(QObject):
     @staticmethod
     def _create_geojson_feature_from_coordinates(geo_type, coordinates, properties, split_multi_geometries):
         """
-        * Returns a JSON object that represents a GeoJSON feature
+        Returns a JSON object that represents a GeoJSON feature
         :param geo_type: 
         :param coordinates: 
         :param properties: 
@@ -811,7 +810,7 @@ class VtReader(QObject):
     @staticmethod
     def _get_absolute_coordinates(coordinates, tile, extent):
         """
-         * The coordinates of a geometry, are relative to the tile the feature is located on.
+        The coordinates of a geometry, are relative to the tile the feature is located on.
          * Due to this, we've to get the absolute coordinates of the geometry.
         """
         delta_x = tile.extent[2] - tile.extent[0]

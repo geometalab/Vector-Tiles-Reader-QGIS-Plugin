@@ -245,8 +245,8 @@ class VtrPlugin:
 
     def _have_extent_or_scale_changed(self) -> bool:
         if self._current_reader:
-            has_scale_changed = self._has_scale_changed()[0]
-            has_extent_changed = self._has_extent_changed()[0]
+            has_scale_changed, _ = self._has_scale_changed()
+            has_extent_changed, _ = self._has_extent_changed()
             return has_scale_changed or has_extent_changed
         else:
             return False
@@ -256,7 +256,7 @@ class VtrPlugin:
         self._scale_to_load = None
         self._extent_to_load = None
 
-        has_scale_changed, new_target_scale, has_scale_increased = self._has_scale_changed()
+        has_scale_changed, new_target_scale = self._has_scale_changed()
         if has_scale_changed:
             self._scale_to_load = None
         else:
@@ -304,7 +304,7 @@ class VtrPlugin:
 
     def _handle_map_scale_or_extents_changed(self):
         if not self._is_loading and self._current_reader and self.connections_dialog.options.auto_zoom_enabled():
-            has_scale_changed, new_scale, has_scale_increased = self._has_scale_changed()
+            has_scale_changed, new_scale = self._has_scale_changed()
             has_extent_changed, new_extent = self._has_extent_changed()
 
             self._scale_to_load: int = None
@@ -430,7 +430,7 @@ class VtrPlugin:
         info("Creating styles from: {}", url)
         valid, error, url = url_exists(url)
         if not valid:
-            info("StyleJSON not found. URL invalid?")
+            info("StyleJSON not found. URL invalid? {}", error)
         else:
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
             status, data = load_url(url)
@@ -516,14 +516,13 @@ class VtrPlugin:
 
         return has_changed, new_extent
 
-    def _has_scale_changed(self):
+    def _has_scale_changed(self) -> Tuple[bool, int]:
         new_scale = self._get_current_map_scale()
         if self._scale_to_load:
             new_scale = self._scale_to_load
 
         has_changed = new_scale != self._loaded_scale
-        scale_increased = self._current_scale is None or new_scale > self._current_scale
-        return has_changed, new_scale, scale_increased
+        return has_changed, new_scale
 
     def _handle_scale_change(self, new_scale):
         scale_increased = self._current_scale is None or new_scale > self._current_scale
@@ -904,7 +903,7 @@ class VtrPlugin:
                 bounds = src.bounds()
             x_min, y_min = convert_coordinate("epsg:4326", self._get_qgis_crs(), lat=bounds[1], lng=bounds[0])
             x_max, y_max = convert_coordinate("epsg:4326", self._get_qgis_crs(), lat=bounds[3], lng=bounds[2])
-            bounds = [x_min, y_min, x_max, y_max]
+            bounds = (x_min, y_min, x_max, y_max)
         else:
             if not loaded_extent:
                 bounds = self._get_visible_extent_as_latlon()
@@ -921,9 +920,9 @@ class VtrPlugin:
                     y=loaded_extent.y_max(),
                     scheme=loaded_extent.scheme(),
                 )
-                bounds = [min_bounds[0], min_bounds[1], max_bounds[2], max_bounds[3]]
-        for l in layers:
-            l.setExtent(QgsRectangle(*bounds))
+                bounds = (min_bounds[0], min_bounds[1], max_bounds[2], max_bounds[3])
+        for layer in layers:
+            layer.setExtent(QgsRectangle(*bounds))
 
     def reader_progress_changed(self, progress):
         self.handle_progress_update(progress=progress)
@@ -983,7 +982,7 @@ class VtrPlugin:
 
         if sort_layers:
             layers = sorted(layers, key=lambda n: self._get_omt_layer_sort_id(n))
-        for index, layer_name in enumerate(layers):
+        for layer_name in layers:
             group = root_group.findGroup(layer_name)
             if not group:
                 root_group.addGroup(layer_name)
