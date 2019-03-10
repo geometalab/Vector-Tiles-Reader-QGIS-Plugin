@@ -50,7 +50,7 @@ def run_all():
     print("")
     cov.stop()
     cov.save()
-    cov.html_report(directory="tests/htmlcov")
+    cov.html_report(directory="/tests_directory/htmlcov")
     print(cov.report())
 
 

@@ -21,6 +21,7 @@ class VtrPluginTests(unittest.TestCase):
     def test_plugin_creation(self):
         global iface
         p = VtrPlugin(iface)
+        p.initGui()
         self.assertTrue(p is not None)
 
 
