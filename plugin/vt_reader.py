@@ -97,7 +97,7 @@ class VtReader(QObject):
         self._loaded_pois_by_id = {}
         self._clip_tiles_at_tile_bounds: False = None
         self._flush = False
-        self._feature_count: int = None
+        self._feature_count: int = 0
         self._allowed_sources: List[str] = None
         self.ready_for_next_loading_step.connect(self._continue_loading)
         self.native_decoding_supported = load_lib() is not None

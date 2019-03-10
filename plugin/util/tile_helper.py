@@ -1,6 +1,6 @@
 import itertools
 from math import floor
-from typing import Callable, List, Tuple, TypeVar
+from typing import Callable, List, Tuple, TypeVar, Optional
 
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsPointXY, QgsProject
 
@@ -13,7 +13,7 @@ StrOrInt = TypeVar("StrOrInt", str, int)
  * Top left: (lng=WORLD_BOUNDS[0], lat=WORLD_BOUNDS[3])
  * Bottom right: (lng=WORLD_BOUNDS[2], lat=WORLD_BOUNDS[1])
 """
-WORLD_BOUNDS = (-180, -85.05112878, 180, 85.05112878)
+WORLD_BOUNDS = (-180.0, -85.05112878, 180.0, 85.05112878)
 
 
 class Bounds(dict):
@@ -78,7 +78,7 @@ class VectorTile:
         return self.column, self.row
 
 
-def clamp(value: int, low: int = None, high: int = None) -> int:
+def clamp(value: Optional[int], low: Optional[int] = None, high: Optional[int] = None) -> Optional[int]:
     if low is not None and value < low:
         value = low
     if high is not None and value > high:

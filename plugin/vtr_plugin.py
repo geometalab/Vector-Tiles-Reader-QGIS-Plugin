@@ -20,7 +20,7 @@ import platform
 import re
 import sys
 import traceback
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from PyQt5.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon
@@ -804,7 +804,8 @@ class VtrPlugin:
                 reader.load_tiles_async(bounds=bounds)
             except Exception as e:
                 critical("An exception occured: {}", e)
-                tb_lines = traceback.format_tb(sys.exc_traceback)
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                tb_lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
                 tb_text = ""
                 for line in tb_lines:
                     tb_text += line
@@ -828,7 +829,7 @@ class VtrPlugin:
         for layer in self.iface.mapCanvas().layers():
             layer.triggerRepaint()
 
-    def _create_reader(self, connection: dict) -> VtReader:
+    def _create_reader(self, connection: dict) -> Optional[VtReader]:
         # A lazy import is required because the vtreader depends on the external libs
         from .vt_reader import VtReader
 
