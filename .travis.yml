@@ -19,7 +19,7 @@ matrix:
       script:
           - docker exec -it qgis3 sh -c "qgis_testrunner.sh tests_directory"
       after_success:
-        - docker exec -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" -e TRAVIS_BRANCH="$TRAVIS_BRANCH" -it qgis3 sh -c "cd tests_directory/ && coveralls"
+        - bash <(curl -s https://codecov.io/bash)
       before_deploy:
         - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2qgis/sample_data\* ext-libs/mapboxstyle2qgis/tests\* ext-libs/mapboxstyle2qgis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
         - unzip tmp.zip -d vector_tiles_reader

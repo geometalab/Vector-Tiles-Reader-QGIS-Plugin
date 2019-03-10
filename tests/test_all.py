@@ -2,9 +2,10 @@
 #
 # This code is licensed under the GPL 2.0 license.
 #
-from qgis.testing import unittest
-import coverage
 import sys
+
+import coverage
+from qgis.testing import unittest
 
 
 def get_tests():
@@ -50,7 +51,8 @@ def run_all():
     print("")
     cov.stop()
     cov.save()
-    cov.html_report(directory="/tests_directory/htmlcov")
+    cov.html_report(directory="/tests_directory/coverage")
+    cov.xml_report(outfile="/tests_directory/coverage/coverage_report.xml")
     print(cov.report())
 
 
