@@ -12,7 +12,7 @@ matrix:
         - docker
       before_install:
         - pip install flake8 mypy
-        - flake8 --config=setup.cfg plugin
+        - flake8 plugin
       install:
           - cd docker && docker-compose up -d
           - sleep 10 # This is required to allow xvfb to start
