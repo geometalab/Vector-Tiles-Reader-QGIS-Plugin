@@ -12,7 +12,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * OpenMapTiles.com with OSM Bright MB GL style (default)
     * Nextzen.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.0.1
+version=3.0.2
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +22,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---3.0.2---
+    * Disconnect internal event at shutdown of reader
     ---3.0.1---
     * Bugfix: Loading error fixed 'Error during network request: 201'
     * Bugfix: '>' not supported between instances of 'NoneType' and 'int'
