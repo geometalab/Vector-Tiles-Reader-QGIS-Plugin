@@ -78,6 +78,7 @@ class VtReader(QObject):
     tile_limit_reached = pyqtSignal(int, name='tile_limit_reached')
     cancelled = pyqtSignal(name='cancelled')
     add_layer_to_group = pyqtSignal(object, name='add_layer_to_group')
+    _ready_for_next_loading_step = pyqtSignal()
 
     _loading_options = {
         'zoom_level': None,
@@ -121,6 +122,7 @@ class VtReader(QObject):
         self._flush = False
         self._feature_count = None
         self._allowed_sources = None
+        self._ready_for_next_loading_step.connect(self._continue_loading)
 
     def connection(self):
         return self._connection
@@ -165,6 +167,7 @@ class VtReader(QObject):
         self._source.progress_changed.disconnect()
         self._source.max_progress_changed.disconnect()
         self._source.message_changed.disconnect()
+        self._ready_for_next_loading_step.disconnect()
         self._source.close_connection()
 
     def id(self):
@@ -310,7 +313,7 @@ class VtReader(QObject):
                         cache_tile(cache_name=source_name, zoom_level=zoom_level, x=t.column, y=t.row,
                                    decoded_data=t.decoded_data)
                     self._all_tiles.extend(tiles)
-            self._continue_loading()
+            self._ready_for_next_loading_step.emit()
 
         except Exception as e:
             tb = ""
