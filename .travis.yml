@@ -40,7 +40,7 @@ matrix:
     - language: cpp
       branches:
           only:
-          - develop
+          - dev-qgis3
       os:
         - linux
       compiler:
@@ -66,7 +66,7 @@ matrix:
     - language: cpp
       branches:
           only:
-          - develop
+          - dev-qgis3
       os:
         - osx
       compiler:
