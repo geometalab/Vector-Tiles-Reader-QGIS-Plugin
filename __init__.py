@@ -24,7 +24,18 @@ if ext_libs_path not in sys.path:
 def classFactory(iface):
     from .plugin.vtr_plugin import VtrPlugin
 
-    return VtrPlugin(iface)
+    version = ""
+    metadata_path = os.path.join(os.path.dirname(__file__), "metadata.txt")
+    if os.path.isfile(metadata_path):
+        with open(metadata_path, 'r') as f:
+            arr = f.readlines()
+        for line in arr:
+            line = line.replace("\n", "")
+            if line.startswith("version"):
+                version = line.split("=")[1]
+                break
+
+    return VtrPlugin(iface, version=version)
 
 
 def run_all():

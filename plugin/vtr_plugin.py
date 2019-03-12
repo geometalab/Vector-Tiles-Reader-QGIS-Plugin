@@ -95,13 +95,14 @@ class VtrPlugin:
         current_scale = int(round(canvas.scale()))
         return current_scale
 
-    def __init__(self, iface):
+    def __init__(self, iface, version: Optional[str] = None):
         self.iface = iface
         iface.newProjectCreated.connect(self._on_project_change)
         iface.projectRead.connect(self._on_project_change)
         QgsProject.instance().layersWillBeRemoved.connect(self._on_remove)
         python_version = platform.python_version()
-        info("Vector Tiles Reader (Python {})".format(python_version))
+        plugin_version = f" {version}" if version else ""
+        info("Vector Tiles Reader{} (Python {})".format(plugin_version, python_version))
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
         self.connections_dialog = ConnectionsDialog(self._get_initial_browse_directory())
