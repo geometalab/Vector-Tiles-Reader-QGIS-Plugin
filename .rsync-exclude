@@ -1,0 +1,9 @@
+ext-libs/mapboxstyle2qgis/sample_data/
+ext-libs/mapboxstyle2qgis/tests/
+ext-libs/mapboxstyle2qgis/.*
+*.pyc
+__pycache__
+*.ui
+*.bat
+sample_data/*.png
+sample_data/uster_zh.mbtiles

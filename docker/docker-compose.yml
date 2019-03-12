@@ -4,19 +4,12 @@
 version: '3'
 
 services:
-  qgis2:
+  qgis3:
+    container_name: qgis3
     build:
       context: ../
       dockerfile: docker/Dockerfile
-      args:
-        TAG: "release-2_18"
     volumes:
-      - ./..:/vector-tiles-reader
-      - ./..:/tests_directory
-  qgis3:
-    build:
-      context: ../
-      dockerfile: docker/DockerfileQGIS3
-    volumes:
-      - ..:/vector-tiles-reader
-      - ..:/tests_directory
+      - ${TRAVIS_BUILD_DIR}:/tests_directory
+    environment:
+      - DISPLAY=:99

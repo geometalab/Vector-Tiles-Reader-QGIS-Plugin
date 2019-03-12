@@ -1,6 +1,17 @@
 import sys
-import unittest
-from util.tile_helper import *
+from qgis.testing import unittest
+from plugin.util.tile_helper import (
+    Bounds,
+    center_tiles_equal,
+    convert_coordinate,
+    change_scheme,
+    WORLD_BOUNDS,
+    latlon_to_tile,
+    get_zoom_by_scale,
+    get_code_from_epsg,
+    get_tile_bounds,
+    get_tiles_from_center,
+)
 import itertools
 
 
@@ -38,8 +49,10 @@ class TileHelperTests(unittest.TestCase):
 
     def test_bottom_right_latlon_to_tile_for_each_zoom(self):
         for n in range(0, 24):
-            bottom_right = latlon_to_tile(zoom=n, lat=WORLD_BOUNDS[1], lng=WORLD_BOUNDS[2], source_crs=4326, scheme="xyz")
-            max_tile = (2**n) - 1
+            bottom_right = latlon_to_tile(
+                zoom=n, lat=WORLD_BOUNDS[1], lng=WORLD_BOUNDS[2], source_crs=4326, scheme="xyz"
+            )
+            max_tile = (2 ** n) - 1
             self.assertEqual((max_tile, max_tile), bottom_right, "Zoom level {} incorrect".format(n))
 
     def test_latlon_to_tile_tms(self):
@@ -73,42 +86,36 @@ class TileHelperTests(unittest.TestCase):
         self.assertEqual(3857, get_code_from_epsg("epsg:3857"))
 
     def test_world_bounds(self):
-        tile = get_tile_bounds(zoom=14, bounds=WORLD_BOUNDS, source_crs=4326, scheme="xyz")
-        bounds_expected = {'y_min': 0,
-                           'y_max': 16383,
-                           'zoom': 14,
-                           'height': 16384,
-                           'width': 16384,
-                           'x_max': 16383,
-                           'x_min': 0,
-                           'scheme': 'xyz'}
+        tile = get_tile_bounds(zoom=14, extent=WORLD_BOUNDS, source_crs=4326, scheme="xyz")
+        bounds_expected = Bounds(y_min=0, y_max=16383, zoom=14, x_max=16383, x_min=0, scheme="xyz")
+
         self.assertEqual(bounds_expected, tile)
 
-    def test_center_tiles(self):
+    def test_center_zero_limit(self):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=0, available_tiles=all_tiles)
         self.assertEqual(0, len(t))
 
-    def test_center_tiles_2(self):
+    def test_center_tiles_high_limit(self):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=26, available_tiles=all_tiles)
         self.assertEqual(25, len(t))
 
-    def test_center_tiles_break(self):
+    def test_center_tiles_cancel(self):
         all_tiles = list(itertools.product(range(1, 6), range(1, 6)))
         t = get_tiles_from_center(nr_of_tiles=5, available_tiles=all_tiles, should_cancel_func=lambda: True)
         self.assertEqual(1, len(t))
 
-    def test_center_tiles_difference(self):
+    def test_center_tiles_equality(self):
         tile_limit = 4
-        extent_a = {'y_min': 3, 'y_max': 5, 'zoom': 3, 'height': 3, 'width': 2, 'x_max': 4, 'x_min': 3}
-        extent_b = {'y_min': 3, 'y_max': 6, 'zoom': 3, 'height': 4, 'width': 8, 'x_max': 7, 'x_min': 0}
+        extent_a = Bounds(y_min=3, y_max=5, zoom=3, x_max=4, x_min=3, scheme="xyz")
+        extent_b = Bounds(y_min=3, y_max=6, zoom=3, x_max=7, x_min=0, scheme="xyz")
         tiles_equal = center_tiles_equal(tile_limit=tile_limit, extent_a=extent_a, extent_b=extent_b)
         self.assertTrue(tiles_equal)
 
 
 def suite():
-    s = unittest.makeSuite(TileHelperTests, 'test')
+    s = unittest.makeSuite(TileHelperTests, "test")
     return s
 
 

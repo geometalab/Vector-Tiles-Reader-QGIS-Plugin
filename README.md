@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin.svg?branch=master)](https://travis-ci.org/geometalab/Vector-Tiles-Reader-QGIS-Plugin)
 [![Coverage Status](https://coveralls.io/repos/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin/badge.svg?branch=HEAD)](https://coveralls.io/github/geometalab/Vector-Tiles-Reader-QGIS-Plugin?branch=HEAD)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 # Vector Tiles Reader QGIS-Plugin
 
@@ -55,7 +56,6 @@ Name conventions for Vector Tiles Reader QGIS Plugin:
 * Abbreviated names  : "VT Reader" or "vtr"
 
 ## Requirements
-* QGIS 2.18
 * QGIS 3
 * This Plugin was tested on Ubuntu 17.10, Windows 10 and OSX
 
@@ -66,18 +66,6 @@ Download the latest published release inside QGIS:
 2. Search for 'Vector Tiles Reader'
 3. Install
 
-### Windows (QGIS 2)
-Copy cloned folder or create symlink to: 
-%userprofile%/.qgis2/python/plugins
-
-To create the symlink open a command prompt as Administrator and run:
-```
-:: Set the path on the next line to the directory where the plugin is located
-
-set PATH_TO_VTR="C:\DEV\Vector-Tiles-Reader-QGIS-Plugin"
-mklink /D "%userprofile%/.qgis2/python/plugins/vector_tiles_reader" %PATH_TO_VTR%
-```
-
 ### Windows (QGIS 3)
 ```
 :: Set the path on the next line to the directory where the plugin is located
@@ -86,12 +74,7 @@ set PATH_TO_VTR="C:\DEV\Vector-Tiles-Reader-QGIS-Plugin"
 mklink /D "%appdata%\QGIS\QGIS3\profiles\default\python\plugins\vector_tiles_reader" %PATH_TO_VTR%
 
 :: Make sure the IDE knows about the qgis package (run in admin console)
-mklink /D "%programfiles%\QGIS 3.4\apps\Python37\Lib\site-packages\qgis" "%programfiles%\QGIS 3.4\apps\qgis\python\qgis"
-```
-
-### Ubuntu (QGIS 2)
-```
-ln -sr ./ ~/.qgis2/python/plugins/Vector-Tile-Reader
+mklink /D "%programfiles%\QGIS 3.6\apps\Python37\Lib\site-packages\qgis" "%programfiles%\QGIS 3.6\apps\qgis\python\qgis"
 ```
 
 ### Ubuntu (QGIS 3)

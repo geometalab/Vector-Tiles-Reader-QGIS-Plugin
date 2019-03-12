@@ -12,8 +12,8 @@ deprecated/
 data/*
 .vscode/*
 ui/*.pyc
-setup.cfg
 dockcross*
+vector_tiles_reader/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -52,7 +52,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
-htmlcov/
+coverage/
 .tox/
 .coverage
 .coverage.*
