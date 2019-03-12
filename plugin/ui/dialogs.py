@@ -293,7 +293,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
 
         load = True
         threshold = 20
-        if self._nr_of_tiles > threshold and not self.options.tile_number_limit():
+        if self._nr_of_tiles and self._nr_of_tiles > threshold and not self.options.tile_number_limit():
             msg = (
                 f"You are about to load {self._nr_of_tiles} tiles. That's a lot and may take some while. Do you "
                 f"want to continue? "
