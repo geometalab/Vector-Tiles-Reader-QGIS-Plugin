@@ -167,6 +167,8 @@ def get_code_from_epsg(epsg_string: StrOrInt) -> int:
     code = str(epsg_string).upper()
     if code.startswith("EPSG:"):
         code = code.replace("EPSG:", "")
+    elif code.startswith("USER:"):
+        code = code.replace("USER:", "")
     return int(code)
 
 
