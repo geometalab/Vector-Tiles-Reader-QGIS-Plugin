@@ -571,7 +571,6 @@ class VtReader(QObject):
                 and (self._allowed_sources is None or file_path in self._allowed_sources)
                 and (not layer_filter or layer_name in layer_filter)
             ):
-                info("Updating layer source: {}", file_path)
                 self._update_layer_source(file_path, feature_collection)
                 layer = self._create_named_layer(
                     json_src=file_path, layer_name=layer_name, geo_type=geo_type, zoom_level=zoom_level
