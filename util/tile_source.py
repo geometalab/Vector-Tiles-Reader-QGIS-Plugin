@@ -169,10 +169,8 @@ class ServerSource(AbstractSource):
             tiles_to_load = get_tiles_from_center(max_tiles, tiles_to_load, should_cancel_func=lambda: self._cancelling)
             self.tile_limit_reached.emit()
 
-        parameters = urllib.parse.parse_qs(urllib.parse.urlparse(self.url).query)
-        api_key = ""
-        if "api_key" in list(parameters.keys()):
-            api_key = parameters["api_key"][0]
+        query = urllib.parse.urlparse(self.url).query
+        parameters = urllib.parse.parse_qs(query)
         nextzen_servers = ["a", "b", "c", "d"]
         for i, t in enumerate(tiles_to_load):
             col = t[0]
@@ -181,9 +179,13 @@ class ServerSource(AbstractSource):
                 .replace("{z}", str(int(zoom_level)))\
                 .replace("{x}", str(int(col)))\
                 .replace("{y}", str(int(row)))\
-                .replace("{api_key}", str(api_key))\
                 .replace("{s}", nextzen_servers[divmod(i, len(nextzen_servers))[1]])  # nextzen server placeholder
-            load_url += "?api_key={}".format(api_key)
+            for key in parameters:
+                val = parameters[key]
+                if isinstance(val, list):
+                    val = val[0]
+                load_url = load_url.replace("{{}}".format(key), val)
+
             urls.append((load_url, col, row))
 
         self.max_progress_changed.emit(len(urls))
