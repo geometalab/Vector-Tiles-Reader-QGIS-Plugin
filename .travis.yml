@@ -22,8 +22,8 @@ matrix:
         - bash <(curl -s https://codecov.io/bash)
 #        - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
       before_deploy:
-        - zip -r tmp.zip ext-libs/ sample_data/koh-samui_thailand.mbtiles sample_data/metadata.json ui/ util/ metadata.txt README.md *.py -x ext-libs/mapboxstyle2qgis/sample_data\* ext-libs/mapboxstyle2qgis/tests\* ext-libs/mapboxstyle2qgis/.* \*.pyc \*/__pycache__\* \*.ui \*.bat
-        - unzip tmp.zip -d vector_tiles_reader
+        - mkdir vector_tiles_reader
+        - rsync -r -R --exclude-from=.rsync-exclude ext-libs/ plugin/ sample_data/ metadata.txt README.md *.py vector_tiles_reader
         - zip -r Vector-Tiles-Reader-${TRAVIS_TAG}.zip vector_tiles_reader
         - rm -rf vector_tiles_reader
       deploy:
@@ -34,7 +34,7 @@ matrix:
         draft: true
         on:
           tags: true
-          branch: master
+          branch: master-qgis3
 
     - language: cpp
       branches:

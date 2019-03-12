@@ -13,6 +13,7 @@ data/*
 .vscode/*
 ui/*.pyc
 dockcross*
+vector_tiles_reader/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
