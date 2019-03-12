@@ -53,7 +53,7 @@ class VtReader(QObject):
     cancelled = pyqtSignal(name="cancelled")
     add_layer_to_group = pyqtSignal(object, name="add_layer_to_group")
 
-    ready_for_next_loading_step = pyqtSignal()
+    _ready_for_next_loading_step = pyqtSignal()
 
     _loading_options = {
         "zoom_level": None,
@@ -97,7 +97,7 @@ class VtReader(QObject):
         self._flush = False
         self._feature_count: int = 0
         self._allowed_sources: List[str] = None
-        self.ready_for_next_loading_step.connect(self._continue_loading)
+        self._ready_for_next_loading_step.connect(self._continue_loading)
         self.native_decoding_supported = load_lib() is not None
         bits = "32"
         if sys.maxsize > 2 ** 32:
@@ -151,6 +151,7 @@ class VtReader(QObject):
         self._source.progress_changed.disconnect()
         self._source.max_progress_changed.disconnect()
         self._source.message_changed.disconnect()
+        self._ready_for_next_loading_step.disconnect()
         self._source.close_connection()
 
     def id(self) -> str:
@@ -289,7 +290,7 @@ class VtReader(QObject):
                             decoded_data=t.decoded_data,
                         )
                     self._all_tiles.extend(tiles)
-            self.ready_for_next_loading_step.emit()
+            self._ready_for_next_loading_step.emit()
 
         except Exception as e:
             tb = ""
