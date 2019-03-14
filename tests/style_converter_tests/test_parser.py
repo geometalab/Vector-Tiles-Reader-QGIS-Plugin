@@ -12,7 +12,7 @@ from plugin.style_converter.core import _create_icons, generate_styles, process
 
 
 class StyleConverterParserTests(unittest.TestCase):
-    sample_data_dir = os.path.join(get_plugin_directory(), "style_converter", "sample_data")
+    sample_data_dir = os.path.join(get_plugin_directory(), "plugin", "style_converter", "sample_data")
 
     def test_icon_creation(self):
 
@@ -29,7 +29,7 @@ class StyleConverterParserTests(unittest.TestCase):
         # path = os.path.join(os.path.dirname(__file__), "..", "sample_data", "klokantech_terrain.json")
         # path = os.path.join(os.path.dirname(__file__), "..", "sample_data", "klokantech_basic.json")
         # path = os.path.join(os.path.dirname(__file__), "..", "sample_data", "positron.json")
-        path = os.path.join(os.path.dirname(__file__), "..", "sample_data", "mapcat.json")
+        path = os.path.join(self.sample_data_dir, "mapcat.json"))
         data = self._load_file(path)
         data = json.loads(data)
         output_directory = get_temp_dir(os.path.join("style_converter_tests", "generated"))
