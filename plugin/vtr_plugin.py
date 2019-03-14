@@ -22,13 +22,13 @@ import sys
 import traceback
 from typing import List, Optional, Tuple
 
-from mapboxstyle2qgis import core
 from PyQt5.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox, QProgressBar, QPushButton, QToolButton
 from qgis.core import QgsApplication, QgsCoordinateReferenceSystem, QgsMapLayer, QgsPointXY, QgsProject, QgsRectangle
 from qgis.gui import QgsMessageBarItem
 
+from .style_converter import core
 from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
 from .util.file_helper import clear_cache, get_icons_directory, get_plugin_directory, get_temp_dir
 from .util.log_helper import critical, debug, info
