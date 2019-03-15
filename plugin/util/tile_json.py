@@ -4,7 +4,7 @@ import sys
 from typing import List, Optional, Tuple
 
 from .log_helper import critical, debug, info
-from .network_helper import load_url
+from .network_helper import http_get
 from .tile_helper import WORLD_BOUNDS, get_tile_bounds
 
 try:
@@ -31,7 +31,7 @@ class TileJSON(object):
                 with open(self.url, "r") as f:
                     data = f.read()
             else:
-                status, data = load_url(self.url)
+                status, data = http_get(self.url)
             self.json = json.loads(data)
             if self.json:
                 debug("TileJSON loaded")

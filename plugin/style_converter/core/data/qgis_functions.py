@@ -3,11 +3,12 @@ Define new functions using @qgsfunction. feature and parent must always be the
 last args. Use args=-1 to pass a list of values as arguments
 """
 
+import json
+import os
+
 # from qgis.core import *
 # from qgis.gui import *
 from qgis.utils import qgsfunction
-import os
-import json
 
 
 def interpolate(a, b, ratio):

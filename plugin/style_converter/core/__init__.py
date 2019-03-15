@@ -1,18 +1,22 @@
-import os
-import json
-import copy
-import colorsys
-import urllib
 import base64
+import colorsys
+import copy
+import json
+import os
 import shutil
 from itertools import groupby
+from typing import Dict, Tuple, TypeVar
+
+from qgis.core import QgsExpression
+
+from ...util.network_helper import http_get
+from .data import qgis_functions
 from .xml_helper import create_style_file, escape_xml
+
+StrOrDict = TypeVar("StrOrDict", str, dict)
 
 
 def register_qgis_expressions():
-    from qgis.core import QgsExpression
-    from .data import qgis_functions
-
     QgsExpression.registerFunction(qgis_functions.get_zoom_for_scale)
     QgsExpression.registerFunction(qgis_functions.if_not_exists)
     QgsExpression.registerFunction(qgis_functions.interpolate_exp)
@@ -37,12 +41,11 @@ def get_background_color(text):
     return bg_color
 
 
-def generate_styles(style_json, output_directory, web_request_executor=None):
+def generate_styles(style_json: StrOrDict, output_directory: str) -> None:
     """
      * Creates and exports the styles
     :param style_json:
     :param output_directory:
-    :param web_request_executor:
     :return:
     """
     try:
@@ -51,7 +54,7 @@ def generate_styles(style_json, output_directory, web_request_executor=None):
         pass
     styles = process(style_json)
     write_styles(styles_by_target_layer=styles, output_directory=output_directory)
-    create_icons(style=style_json, web_request_executor=web_request_executor, output_directory=output_directory)
+    create_icons(style=style_json, output_directory=output_directory)
 
 
 def _apply_source_layer(layer, all_layers):
@@ -133,18 +136,17 @@ def process(style_json):
     return styles_by_file_name
 
 
-def create_icons(style, web_request_executor, output_directory):
+def create_icons(style, output_directory):
     """
     Loads the sprites defined by sprites.json and sprites.data and extracts the specific items by creating
     svg icons that clip the defined region (defined in sprites.json) from the sprites.png so that only one icons
     remains.
     :param style:
-    :param web_request_executor:
     :param output_directory:
     :return:
     """
 
-    image_data, image_definition_data = _load_sprite_data(style, web_request_executor)
+    image_data, image_definition_data = _load_sprite_data(style)
     if image_data and image_definition_data:
         _create_icons(image_data, image_definition_data, output_directory)
 
@@ -175,43 +177,36 @@ def _create_icons(image_base64, image_definition_data, output_directory):
             f.write(svg_data)
 
 
-def _load_sprite_data(style, web_request_executor):
-    if not web_request_executor:
-        web_request_executor = _execute_get_request
-
+def _load_sprite_data(style: dict) -> Tuple:
+    image_data = None
+    image_definition_data = None
     if "sprite" in style:
         image_url = "{}.png".format(style["sprite"])
         image_definitions_url = "{}.json".format(style["sprite"])
         if not image_url.startswith("http") or not image_definitions_url.startswith("http"):
             return None, None
 
-        image_data = web_request_executor(image_url)
-        image_definition_data = web_request_executor(image_definitions_url)
+        _, image_data = http_get(image_url)
+        _, image_definition_data = http_get(image_definitions_url)
         if not image_data:
             raise "No image found at: {}".format(image_url)
         else:
             image_data = base64.b64encode(image_data)
+
         if not image_definition_data:
             raise "No image definitions found at: {}".format(image_definition_data)
         else:
             image_definition_data = json.loads(str(image_definition_data))
-        return image_data, image_definition_data
-    return None, None
+    return image_data, image_definition_data
 
 
-def _execute_get_request(url):
-    response = urllib.urlopen(url)
-    data = response.read()
-    return data
-
-
-def _add_default_transparency_styles(style_dict):
+def _add_default_transparency_styles(style: dict):
     for t in ["point", "linestring", "polygon"]:
         file_name = "transparent.{}.qml".format(t)
-        style_dict[file_name] = {"styles": [], "file_name": file_name, "layer-transparency": 100, "type": None}
+        style[file_name] = {"styles": [], "file_name": file_name, "layer-transparency": 100, "type": None}
 
 
-def write_styles(styles_by_target_layer, output_directory):
+def write_styles(styles_by_target_layer: Dict[str, dict], output_directory: str) -> None:
     """
     Creates the qml files that can be applied to qgis layers.
     :param styles_by_target_layer:

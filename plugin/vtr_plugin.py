@@ -32,7 +32,7 @@ from .style_converter import core
 from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
 from .util.file_helper import clear_cache, get_icons_directory, get_plugin_directory, get_temp_dir
 from .util.log_helper import critical, debug, info
-from .util.network_helper import load_url, url_exists
+from .util.network_helper import http_get, url_exists
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import (
     WORLD_BOUNDS,
@@ -433,12 +433,12 @@ class VtrPlugin:
             info("StyleJSON not found. URL invalid? {}", error)
         else:
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
-            status, data = load_url(url)
+            status, data = http_get(url)
             if status == 200:
                 try:
                     core.register_qgis_expressions()
                     info("Styles will be written to: {}", output_directory)
-                    core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
+                    core.generate_styles(data, output_directory)
                 except:
                     tb = ""
                     if traceback:
@@ -456,11 +456,6 @@ class VtrPlugin:
                     critical("Setting style background color failed: {}, {}", sys.exc_info(), tb)
             else:
                 info("Loading StyleJSON failed: HTTP status {}", status)
-
-    @staticmethod
-    def _load_style_data(url):
-        status, data = load_url(url)
-        return data
 
     def reader_cancelled(self):
         info("Loading cancelled")

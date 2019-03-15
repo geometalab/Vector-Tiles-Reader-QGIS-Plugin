@@ -10,7 +10,7 @@ from .log_helper import info, remove_key, warn
 
 
 def url_exists(url: str) -> Tuple[bool, Optional[str], str]:
-    reply = get_async_reply(url, head_only=True)
+    reply = http_get_async(url, head_only=True)
     while not reply.isFinished():
         QApplication.processEvents()
 
@@ -39,7 +39,7 @@ def url_exists(url: str) -> Tuple[bool, Optional[str], str]:
     return success, error, url
 
 
-def get_async_reply(url: str, head_only: bool = False) -> QNetworkReply:
+def http_get_async(url: str, head_only: bool = False) -> QNetworkReply:
     m = QgsNetworkAccessManager.instance()
     req = QNetworkRequest(QUrl(url))
     if head_only:
@@ -53,7 +53,7 @@ def load_tiles_async(
     urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None
 ) -> List:
     replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = [
-        (get_async_reply(url), (col, row)) for url, col, row in urls_with_col_and_row
+        (http_get_async(url), (col, row)) for url, col, row in urls_with_col_and_row
     ]
     total_nr_of_requests = len(replies)
     all_finished = False
@@ -99,8 +99,8 @@ def load_tiles_async(
     return all_results
 
 
-def load_url(url: str) -> Tuple[int, str]:
-    reply = get_async_reply(url)
+def http_get(url: str) -> Tuple[int, str]:
+    reply = http_get_async(url)
     while not reply.isFinished():
         QApplication.processEvents()
 
