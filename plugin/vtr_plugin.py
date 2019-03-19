@@ -101,7 +101,7 @@ class VtrPlugin:
         iface.projectRead.connect(self._on_project_change)
         QgsProject.instance().layersWillBeRemoved.connect(self._on_remove)
         python_version = platform.python_version()
-        plugin_version = f" {version}" if version else ""
+        plugin_version = " {}".format(version) if version else ""
         info("Vector Tiles Reader{} (Python {})".format(plugin_version, python_version))
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
@@ -483,7 +483,7 @@ class VtrPlugin:
         """
         if limit:
             self.iface.messageBar().pushWarning(
-                "", f"Only {limit} tiles were loaded according to the limit in the options"
+                "", "Only {} tiles were loaded according to the limit in the options".format(limit)
             )
 
     def _has_extent_changed(self) -> Tuple[bool, Bounds]:
@@ -655,7 +655,7 @@ class VtrPlugin:
         source_crs = self._get_qgis_crs()
         if self.connections_dialog.options.ignore_crs_from_metadata():
             if source_crs != 3857:
-                info(f"Using EPSG:3857 for tile calculation instead of EPSG:{source_crs}")
+                info("Using EPSG:3857 for tile calculation instead of EPSG:{}".format(source_crs))
             source_crs = 3857
 
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating

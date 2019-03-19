@@ -524,7 +524,7 @@ class VtReader(QObject):
                 l.setCustomProperty("VectorTilesReader/is_empty", False)
 
         nr_layers = len(self.feature_collections_by_layer_name_and_geotype)
-        self._update_progress(progress=0, max_progress=nr_layers, msg=f"Creating {nr_layers} layers...")
+        self._update_progress(progress=0, max_progress=nr_layers, msg="Creating {} layers...".format(nr_layers))
         layer_filter = self._loading_options["layer_filter"]
 
         clipping_bounds = None
@@ -594,9 +594,9 @@ class VtReader(QObject):
         if len(new_layers) > 0 and not self.cancel_requested:
             self._update_progress(msg="Adding new layers...")
             only_layers = list([layer_name_tuple[2] for layer_name_tuple in new_layers])
-            info(f"Adding {len(only_layers)} layers to QGIS...")
+            info("Adding {} layers to QGIS...", len(only_layers))
             QgsProject.instance().addMapLayers(only_layers, False)
-        info(f"Adding {len(new_layers)} new layers to layer group...")
+        info("Adding {} new layers to layer group...", len(new_layers))
         for name, geo_type, layer in new_layers:
             if self.cancel_requested:
                 break
@@ -607,7 +607,7 @@ class VtReader(QObject):
             conn_name = self.connection()["name"]
             styles_folder = get_style_folder(conn_name)
             styles = get_styles(conn_name)
-            info(f"Applying styles to {len(new_layers)} layers...")
+            info("Applying styles to {} layers...", len(new_layers))
             self._update_progress(progress=0, max_progress=len(new_layers), msg="Styling layers...")
             for name, geo_type, layer in new_layers:
                 count += 1

@@ -127,7 +127,7 @@ class TileJSON(object):
 
     def _get_value(self, field_name: str, is_array: bool = False, is_required: bool = False):
         if not self.json or (is_required and field_name not in self.json):
-            raise RuntimeError(f"The field '{field_name}' is required but not found. This is invalid TileJSON.")
+            raise RuntimeError("The field '{}' is required but not found. This is invalid TileJSON.".format(field_name))
 
         result = None
         if field_name in self.json:
@@ -137,7 +137,7 @@ class TileJSON(object):
                 result.extend(result_arr)
                 if is_required and len(result) == 0:
                     raise RuntimeError(
-                        f"The field '{field_name}' is required but is empty. At least one entry is expected."
+                        "The field '{}' is required but is empty. At least one entry is expected.".format(field_name)
                     )
             else:
                 result = self.json[field_name]
