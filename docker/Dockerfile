@@ -1,4 +1,5 @@
-FROM qgis/qgis:latest
+ARG QGIS_TAG
+FROM qgis/qgis:${QGIS_TAG}
 MAINTAINER Martin Boos
 
 RUN qgis_setup.sh vector_tiles_reader && \

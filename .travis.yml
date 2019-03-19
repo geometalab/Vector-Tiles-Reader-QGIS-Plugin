@@ -14,7 +14,7 @@ matrix:
         - pip install flake8 mypy
         - flake8 plugin
       install:
-          - cd docker && docker-compose up -d
+          - cd docker && docker-compose build --build-arg QGIS_TAG=latest && docker-compose up -d
           - sleep 10 # This is required to allow xvfb to start
       script:
           - docker exec -it qgis3 sh -c "qgis_testrunner.sh tests_directory"
@@ -36,6 +36,44 @@ matrix:
         on:
           tags: true
           branch: master-qgis3
+
+    - language: python
+      python: 3.6
+      dist: xenial
+      sudo: true
+      branches:
+        only:
+        - master-qgis3
+        - dev-qgis3
+      services:
+        - docker
+      before_install:
+        - pip install flake8 mypy
+        - flake8 plugin
+      install:
+          - cd docker && docker-compose build --build-arg QGIS_TAG=release-3_6 && docker-compose up -d
+          - sleep 10 # This is required to allow xvfb to start
+      script:
+          - docker exec -it qgis3 sh -c "qgis_testrunner.sh tests_directory"
+          -
+    - language: python
+      python: 3.6
+      dist: xenial
+      sudo: true
+      branches:
+        only:
+        - master-qgis3
+        - dev-qgis3
+      services:
+        - docker
+      before_install:
+        - pip install flake8 mypy
+        - flake8 plugin
+      install:
+          - cd docker && docker-compose build --build-arg QGIS_TAG=release-3_4 && docker-compose up -d
+          - sleep 10 # This is required to allow xvfb to start
+      script:
+          - docker exec -it qgis3 sh -c "qgis_testrunner.sh tests_directory"
 
     - language: cpp
       branches:
