@@ -48,6 +48,7 @@ def run_all():
             "*global_map_tiles*",
             "/tests_directory/tests/*",
             "/tests_directory/ext-libs/*",
+            "/tests_directory/plugin/ui/qt/*",
             # "/tests_directory/vtr_plugin.py",  # todo: remove from here when tests exist
         ]
     )
