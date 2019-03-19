@@ -295,7 +295,8 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         threshold = 20
         if self._nr_of_tiles and self._nr_of_tiles > threshold and not self.options.tile_number_limit():
             msg = (
-                "You are about to load {} tiles. That's a lot and may take some while. Do you want to continue?".format(self._nr_of_tiles)
+                "You are about to load {} tiles. That's a lot and may take some while."
+                " Do you want to continue?".format(self._nr_of_tiles)
             )
             reply = QMessageBox.question(self.activateWindow(), "Confirm Load", msg, QMessageBox.Yes, QMessageBox.No)
             if reply != QMessageBox.Yes:
