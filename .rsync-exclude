@@ -1,6 +1,5 @@
-ext-libs/mapboxstyle2qgis/sample_data/
-ext-libs/mapboxstyle2qgis/tests/
-ext-libs/mapboxstyle2qgis/.*
+plugin/style_converter/sample_data/
+plugin/style_converter/.*
 *.pyc
 __pycache__
 *.ui
