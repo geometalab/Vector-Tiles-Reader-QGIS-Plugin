@@ -19,6 +19,10 @@ def get_tests():
     from tests.test_tilejson import TileJsonTests
     from tests.test_networkhelper import NetworkHelperTests
 
+    from tests.style_converter_tests.test_filters import StyleConverterFilterTests
+    from tests.style_converter_tests.test_helper import StyleConverterHelperTests
+    from tests.style_converter_tests.test_parser import StyleConverterParserTests
+
     tests = [
         unittest.TestLoader().loadTestsFromTestCase(VtrPluginTests),
         unittest.TestLoader().loadTestsFromTestCase(MbtileSourceTests),
@@ -28,6 +32,9 @@ def get_tests():
         unittest.TestLoader().loadTestsFromTestCase(TileJsonTests),
         unittest.TestLoader().loadTestsFromTestCase(NetworkHelperTests),
         unittest.TestLoader().loadTestsFromTestCase(VtReaderTests),
+        unittest.TestLoader().loadTestsFromTestCase(StyleConverterFilterTests),
+        unittest.TestLoader().loadTestsFromTestCase(StyleConverterHelperTests),
+        unittest.TestLoader().loadTestsFromTestCase(StyleConverterParserTests),
     ]
     return tests
 
@@ -41,6 +48,7 @@ def run_all():
             "*global_map_tiles*",
             "/tests_directory/tests/*",
             "/tests_directory/ext-libs/*",
+            "/tests_directory/plugin/ui/qt/*",
             # "/tests_directory/vtr_plugin.py",  # todo: remove from here when tests exist
         ]
     )

@@ -2,23 +2,13 @@ import os
 import uuid
 from xml.sax.saxutils import escape
 
-_join_styles = {
-    None: "round",
-    "bevel": "bevel",
-    "round": "round",
-    "miter": "miter"
-}
+_join_styles = {None: "round", "bevel": "bevel", "round": "round", "miter": "miter"}
 
-_cap_styles = {
-    None: "round",
-    "butt": "flat",
-    "square": "square",
-    "round": "round"
-}
+_cap_styles = {None: "round", "butt": "flat", "square": "square", "round": "round"}
 
 
 def create_style_file(output_directory, layer_style):
-    with open(os.path.join(os.path.dirname(__file__), "data/qml_template.xml"), 'r') as f:
+    with open(os.path.join(os.path.dirname(__file__), "data/qml_template.xml"), "r") as f:
         template = f.read()
 
     layer_type = layer_style["type"]
@@ -44,25 +34,28 @@ def create_style_file(output_directory, layer_style):
                 labeling_rules.append(_get_rule(index, s, rule_content=labeling_settings))
             if "icon-image" in s:
                 rules.append(_get_rule(index, s, rule_content=""))
-                icn = _get_icon_symbol(index=index,
-                                       style=s,
-                                       icons_directory=icons_directory,
-                                       icon_expr=s["icon-image"])
+                icn = _get_icon_symbol(index=index, style=s, icons_directory=icons_directory, icon_expr=s["icon-image"])
                 symbols.append(icn)
 
     rule_string = """<rules key="{key}">
     {rules}
-    </rules>""".format(key=str(uuid.uuid4()), rules="\n".join(rules))
+    </rules>""".format(
+        key=str(uuid.uuid4()), rules="\n".join(rules)
+    )
 
     symbol_string = """<symbols>
     {symbols}
-    </symbols>""".format(symbols="\n".join(symbols))
+    </symbols>""".format(
+        symbols="\n".join(symbols)
+    )
 
     renderer = """<renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
     {rules}
     {symbols}
   </renderer-v2>
-    """.format(rules=rule_string, symbols=symbol_string)
+    """.format(
+        rules=rule_string, symbols=symbol_string
+    )
 
     if not rules:
         renderer = """<renderer-v2 type="nullSymbol"/>"""
@@ -73,16 +66,18 @@ def create_style_file(output_directory, layer_style):
             {rules}
         </rules>
     </labeling>
-    """.format(rules="\n".join(labeling_rules)).replace("$key$", '{' + str(uuid.uuid4()) + '}')
+    """.format(
+        rules="\n".join(labeling_rules)
+    ).replace(
+        "$key$", "{" + str(uuid.uuid4()) + "}"
+    )
 
-    template = template.format(renderer=renderer,
-                               labeling=labeling_string,
-                               layer_transparency=layer_transparency)
+    template = template.format(renderer=renderer, labeling=labeling_string, layer_transparency=layer_transparency)
     file_path = os.path.join(output_directory, layer_style["file_name"])
     if not os.path.isdir(output_directory):
         os.makedirs(output_directory)
 
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         f.write(template)
 
 
@@ -104,7 +99,7 @@ def _get_labeling_settings(style):
             text_transform = "lower"
         else:
             raise ValueError("Unknown text_transform '{}'".format(text_transform))
-        field_name = '{transform}({field})'.format(transform=text_transform, field=field_name)
+        field_name = "{transform}({field})".format(transform=text_transform, field=field_name)
 
     italic_font = 0
     if isinstance(font, list):
@@ -128,10 +123,7 @@ def _get_labeling_settings(style):
     # if buffer_size > 0:
     #     draw_buffer = 1
 
-    label_placement_flags = {
-        "line": 9,
-        "above": 10
-    }
+    # label_placement_flags = {"line": 9, "above": 10}
 
     return """
     <settings>
@@ -149,16 +141,18 @@ def _get_labeling_settings(style):
             <Italic expr="{italic_font}" field="" active="true" useExpr="true"/>
         </data-defined>
     </settings>
-    """.format(font=font,
-               italic_font=italic_font,
-               font_size=font_size,
-               font_size_expr=font_size_expr,
-               field_name=field_name,
-               text_color=text_color,
-               buffer_size=buffer_size,
-               buffer_color=buffer_color,
-               font_size_expr_active=font_size_expr_active,
-               draw_buffer=draw_buffer)
+    """.format(  # noqa
+        font=font,
+        italic_font=italic_font,
+        font_size=font_size,
+        font_size_expr=font_size_expr,
+        field_name=field_name,
+        text_color=text_color,
+        buffer_size=buffer_size,
+        buffer_color=buffer_color,
+        font_size_expr_active=font_size_expr_active,
+        draw_buffer=draw_buffer,
+    )
 
 
 def _get_icon_symbol(index, style, icons_directory, icon_expr):
@@ -167,8 +161,9 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
     fallback_path = "'" + os.path.join(icons_directory, "empty.svg'").replace("\\", "/")
     svg_expr = "if_not_exists({svg_path}, {fallback_path})".format(svg_path=svg_path, fallback_path=fallback_path)
     rendering_pass = _get_value_safe(style, "rendering_pass", 0)
-    icon_size_expr = "get_icon_size({icon}, '{icons_dir}')".format(icon=icon_expr,
-                                                                   icons_dir=icons_directory.replace("\\", "/"))
+    icon_size_expr = "get_icon_size({icon}, '{icons_dir}')".format(
+        icon=icon_expr, icons_dir=icons_directory.replace("\\", "/")
+    )
     return """<!-- {description} -->
           <symbol alpha="{opacity}" clip_to_extent="1" type="marker" name="{index}">
         <layer pass="{rendering_pass}" class="SvgMarker" locked="0">
@@ -198,12 +193,14 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
           <prop k="vertical_anchor_point" v="1"/>
         </layer>
       </symbol>
-    """.format(description=style["name"],
-               opacity=opacity,
-               svg_path=svg_expr,
-               index=index,
-               size=icon_size_expr,
-               rendering_pass=rendering_pass)
+    """.format(
+        description=style["name"],
+        opacity=opacity,
+        svg_path=svg_expr,
+        index=index,
+        size=icon_size_expr,
+        rendering_pass=rendering_pass,
+    )
 
 
 def _get_fill_symbol(index, style, icons_directory):
@@ -219,20 +216,24 @@ def _get_fill_symbol(index, style, icons_directory):
         label = "{}-zoom-{}".format(label, style["zoom_level"])
 
     if fill_pattern:
-        symbol = _get_fill_pattern_symbol_xml(pattern=fill_pattern,
-                                              label=label,
-                                              index=index,
-                                              opacity=opacity,
-                                              rendering_pass=rendering_pass,
-                                              icons_directory=icons_directory)
+        symbol = _get_fill_pattern_symbol_xml(
+            pattern=fill_pattern,
+            label=label,
+            index=index,
+            opacity=opacity,
+            rendering_pass=rendering_pass,
+            icons_directory=icons_directory,
+        )
     else:
-        symbol = _get_fill_symbol_xml(fill_color_rgba=fill_color_rgba,
-                                      fill_outline_color_rgba=fill_outline_color_rgba,
-                                      index=index,
-                                      label=label,
-                                      offset=offset,
-                                      opacity=opacity,
-                                      rendering_pass=rendering_pass)
+        symbol = _get_fill_symbol_xml(
+            fill_color_rgba=fill_color_rgba,
+            fill_outline_color_rgba=fill_outline_color_rgba,
+            index=index,
+            label=label,
+            offset=offset,
+            opacity=opacity,
+            rendering_pass=rendering_pass,
+        )
     return symbol
 
 
@@ -279,11 +280,9 @@ def _get_fill_pattern_symbol_xml(pattern, label, index, opacity, rendering_pass,
             </layer>
           </symbol>
         </layer>
-      </symbol>""".format(description=label,
-                          opacity=opacity,
-                          index=index,
-                          svg_path=svg_expr,
-                          rendering_pass=rendering_pass)
+      </symbol>""".format(
+        description=label, opacity=opacity, index=index, svg_path=svg_expr, rendering_pass=rendering_pass
+    )
 
 
 def _get_fill_symbol_xml(fill_color_rgba, fill_outline_color_rgba, index, label, offset, opacity, rendering_pass):
@@ -303,13 +302,15 @@ def _get_fill_symbol_xml(fill_color_rgba, fill_outline_color_rgba, index, label,
                     <prop k="style" v="solid"/>
                 </layer>
             </symbol>
-            """.format(opacity=opacity,
-                       index=index,
-                       fill_color=fill_color_rgba,
-                       fill_outline_color=fill_outline_color_rgba,
-                       offset=offset,
-                       description=label,
-                       rendering_pass=rendering_pass)
+            """.format(
+        opacity=opacity,
+        index=index,
+        fill_color=fill_color_rgba,
+        fill_outline_color=fill_outline_color_rgba,
+        offset=offset,
+        description=label,
+        rendering_pass=rendering_pass,
+    )
     return symbol
 
 
@@ -369,19 +370,21 @@ def _get_line_symbol(index, style):
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
       </symbol>
-      """.format(index=index,
-                 width_dd_active=width_dd_active,
-                 line_width=width,
-                 line_width_expr=width_expr,
-                 opacity=opacity,
-                 line_color=color,
-                 capstyle=capstyle,
-                 joinstyle=joinstyle,
-                 use_custom_dash=use_custom_dash,
-                 custom_dash=dash_string,
-                 dash_expr=dash_expr,
-                 description=label,
-                 rendering_pass=rendering_passs)
+      """.format(
+        index=index,
+        width_dd_active=width_dd_active,
+        line_width=width,
+        line_width_expr=width_expr,
+        opacity=opacity,
+        line_color=color,
+        capstyle=capstyle,
+        joinstyle=joinstyle,
+        use_custom_dash=use_custom_dash,
+        custom_dash=dash_string,
+        dash_expr=dash_expr,
+        description=label,
+        rendering_pass=rendering_passs,
+    )
     return symbol
 
 
@@ -419,12 +422,16 @@ def _get_rule(index, style, rule_content):
     rule = """<rule key="$key$" {filter} symbol="{symbol}"{max_denom}{min_denom} label="{label}" description="{label}">
     {rule_content}
     </rule>
-    """.format(max_denom=max_denom,
-               min_denom=min_denom,
-               symbol=index,
-               label=label,
-               filter=rule_filter,
-               rule_content=rule_content).replace("$key$", '{' + rule_key + '}')
+    """.format(
+        max_denom=max_denom,
+        min_denom=min_denom,
+        symbol=index,
+        label=label,
+        filter=rule_filter,
+        rule_content=rule_content,
+    ).replace(
+        "$key$", "{" + rule_key + "}"
+    )
     return rule
 
 

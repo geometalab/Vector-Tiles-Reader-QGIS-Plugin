@@ -22,17 +22,17 @@ import sys
 import traceback
 from typing import List, Optional, Tuple
 
-from mapboxstyle2qgis import core
 from PyQt5.QtCore import QObject, QSettings, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox, QProgressBar, QPushButton, QToolButton
 from qgis.core import QgsApplication, QgsCoordinateReferenceSystem, QgsMapLayer, QgsPointXY, QgsProject, QgsRectangle
 from qgis.gui import QgsMessageBarItem
 
+from .style_converter import core
 from .ui.dialogs import AboutDialog, ConnectionsDialog, OptionsGroup
 from .util.file_helper import clear_cache, get_icons_directory, get_plugin_directory, get_temp_dir
 from .util.log_helper import critical, debug, info
-from .util.network_helper import load_url, url_exists
+from .util.network_helper import http_get, url_exists
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import (
     WORLD_BOUNDS,
@@ -101,7 +101,7 @@ class VtrPlugin:
         iface.projectRead.connect(self._on_project_change)
         QgsProject.instance().layersWillBeRemoved.connect(self._on_remove)
         python_version = platform.python_version()
-        plugin_version = f" {version}" if version else ""
+        plugin_version = " {}".format(version) if version else ""
         info("Vector Tiles Reader{} (Python {})".format(plugin_version, python_version))
         self.settings = QSettings("Vector Tile Reader", "vectortilereader")
         self._clear_cache_when_version_changed()
@@ -433,12 +433,12 @@ class VtrPlugin:
             info("StyleJSON not found. URL invalid? {}", error)
         else:
             output_directory = get_temp_dir(os.path.join("styles", connection["name"]))
-            status, data = load_url(url)
+            status, data = http_get(url)
             if status == 200:
                 try:
                     core.register_qgis_expressions()
                     info("Styles will be written to: {}", output_directory)
-                    core.generate_styles(data, output_directory, web_request_executor=self._load_style_data)
+                    core.generate_styles(data, output_directory)
                 except:
                     tb = ""
                     if traceback:
@@ -456,11 +456,6 @@ class VtrPlugin:
                     critical("Setting style background color failed: {}, {}", sys.exc_info(), tb)
             else:
                 info("Loading StyleJSON failed: HTTP status {}", status)
-
-    @staticmethod
-    def _load_style_data(url):
-        status, data = load_url(url)
-        return data
 
     def reader_cancelled(self):
         info("Loading cancelled")
@@ -488,7 +483,7 @@ class VtrPlugin:
         """
         if limit:
             self.iface.messageBar().pushWarning(
-                "", f"Only {limit} tiles were loaded according to the limit in the options"
+                "", "Only {} tiles were loaded according to the limit in the options".format(limit)
             )
 
     def _has_extent_changed(self) -> Tuple[bool, Bounds]:
@@ -660,7 +655,7 @@ class VtrPlugin:
         source_crs = self._get_qgis_crs()
         if self.connections_dialog.options.ignore_crs_from_metadata():
             if source_crs != 3857:
-                info(f"Using EPSG:3857 for tile calculation instead of EPSG:{source_crs}")
+                info("Using EPSG:3857 for tile calculation instead of EPSG:{}".format(source_crs))
             source_crs = 3857
 
         # the tile bounds returned here must have the same scheme as the source, otherwise thing's get pretty irritating

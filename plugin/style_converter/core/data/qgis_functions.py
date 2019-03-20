@@ -3,33 +3,39 @@ Define new functions using @qgsfunction. feature and parent must always be the
 last args. Use args=-1 to pass a list of values as arguments
 """
 
-from qgis.core import *
-from qgis.gui import *
-import os
 import json
+import os
+
+# from qgis.core import *
+# from qgis.gui import *
+from qgis.utils import qgsfunction
+
 
 def interpolate(a, b, ratio):
     return (a * (1 - ratio)) + (b * ratio)
 
+
 def get_exponential_interpolation_factor(input, base, lower, upper):
     difference = upper - lower
     progress = input - lower
-    if (difference == 0):
+    if difference == 0:
         return difference
     elif base == 1:
         return progress / difference
     else:
-        ratio = ((base**progress) - 1) / ((base**difference) - 1)
+        ratio = ((base ** progress) - 1) / ((base ** difference) - 1)
         return ratio
 
-@qgsfunction(args='auto', group='Custom')
-def if_not_exists(file_path, default, feature, parent):
-	if os.path.isfile(file_path):
-		return file_path
-	else:
-		return default
 
-@qgsfunction(args='auto', group='Custom')
+@qgsfunction(args="auto", group="Custom")
+def if_not_exists(file_path, default, feature, parent):
+    if os.path.isfile(file_path):
+        return file_path
+    else:
+        return default
+
+
+@qgsfunction(args="auto", group="Custom")
 def interpolate_exp(zoom, base, lower_zoom, upper_zoom, lower_value, upper_value, feature, parent):
     ratio = get_exponential_interpolation_factor(zoom, base, lower_zoom, upper_zoom)
     return interpolate(lower_value, upper_value, ratio)
@@ -40,14 +46,15 @@ mvtr_icons_dir = None
 global mvtr_icons_data
 mvtr_icons_data = None
 
-@qgsfunction(args='auto', group='Custom')
+
+@qgsfunction(args="auto", group="Custom")
 def get_icon_size(name, icons_directory, feature, parent):
     global mvtr_icons_dir
     global mvtr_icons_data
 
     if not mvtr_icons_dir or mvtr_icons_dir != icons_directory:
         mvtr_icons_dir = icons_directory
-        with open(os.path.join(icons_directory, "sprite.json"), 'r') as f:
+        with open(os.path.join(icons_directory, "sprite.json"), "r") as f:
             mvtr_icons_data = json.loads(f.read())
     size = max(mvtr_icons_data[name]["width"], mvtr_icons_data[name]["height"])
     return size
@@ -77,15 +84,17 @@ _zoom_level_by_lower_scale_bound = {
     500: 20,
     250: 21,
     100: 22,
-    0: 23
+    0: 23,
 }
+
 
 def get_zoom(scale, lower_scale, upper_scale, lower_zoom, upper_zoom):
     ratio = float(upper_scale - scale) / (upper_scale - lower_scale)
     zoom = lower_zoom + (upper_zoom - lower_zoom) * ratio
     return zoom
 
-@qgsfunction(args='auto', group='Custom')
+
+@qgsfunction(args="auto", group="Custom")
 def get_zoom_for_scale(scale, feature, parent):
     scale = int(scale)
     scales_sorted = list(reversed(sorted(_zoom_level_by_lower_scale_bound)))
@@ -96,7 +105,7 @@ def get_zoom_for_scale(scale, feature, parent):
     for index, s in enumerate(scales_sorted):
         if scale > s:
             lower_scale = s
-            upper_scale = scales_sorted[index+1]
+            upper_scale = scales_sorted[index + 1]
             lower_zoom = _zoom_level_by_lower_scale_bound[upper_scale]
             upper_zoom = _zoom_level_by_lower_scale_bound[lower_scale]
             break

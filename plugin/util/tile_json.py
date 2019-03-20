@@ -4,7 +4,7 @@ import sys
 from typing import List, Optional, Tuple
 
 from .log_helper import critical, debug, info
-from .network_helper import load_url
+from .network_helper import http_get
 from .tile_helper import WORLD_BOUNDS, get_tile_bounds
 
 try:
@@ -31,7 +31,7 @@ class TileJSON(object):
                 with open(self.url, "r") as f:
                     data = f.read()
             else:
-                status, data = load_url(self.url)
+                status, data = http_get(self.url)
             self.json = json.loads(data)
             if self.json:
                 debug("TileJSON loaded")
@@ -127,7 +127,7 @@ class TileJSON(object):
 
     def _get_value(self, field_name: str, is_array: bool = False, is_required: bool = False):
         if not self.json or (is_required and field_name not in self.json):
-            raise RuntimeError(f"The field '{field_name}' is required but not found. This is invalid TileJSON.")
+            raise RuntimeError("The field '{}' is required but not found. This is invalid TileJSON.".format(field_name))
 
         result = None
         if field_name in self.json:
@@ -137,7 +137,7 @@ class TileJSON(object):
                 result.extend(result_arr)
                 if is_required and len(result) == 0:
                     raise RuntimeError(
-                        f"The field '{field_name}' is required but is empty. At least one entry is expected."
+                        "The field '{}' is required but is empty. At least one entry is expected.".format(field_name)
                     )
             else:
                 result = self.json[field_name]

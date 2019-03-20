@@ -1,17 +1,22 @@
-import os
-import json
-import copy
-import colorsys
-import urllib
 import base64
+import colorsys
+import copy
+import json
+import os
 import shutil
 from itertools import groupby
+from typing import Dict, Tuple, TypeVar
+
+from qgis.core import QgsExpression
+
+from ...util.network_helper import http_get
+from .data import qgis_functions
 from .xml_helper import create_style_file, escape_xml
+
+StrOrDict = TypeVar("StrOrDict", str, dict)
 
 
 def register_qgis_expressions():
-    from qgis.core import QgsExpression
-    from .data import qgis_functions
     QgsExpression.registerFunction(qgis_functions.get_zoom_for_scale)
     QgsExpression.registerFunction(qgis_functions.if_not_exists)
     QgsExpression.registerFunction(qgis_functions.interpolate_exp)
@@ -36,10 +41,10 @@ def get_background_color(text):
     return bg_color
 
 
-def generate_styles(style_json, output_directory, web_request_executor=None):
+def generate_styles(style_json: StrOrDict, output_directory: str) -> None:
     """
      * Creates and exports the styles
-    :param text:
+    :param style_json:
     :param output_directory:
     :return:
     """
@@ -49,7 +54,7 @@ def generate_styles(style_json, output_directory, web_request_executor=None):
         pass
     styles = process(style_json)
     write_styles(styles_by_target_layer=styles, output_directory=output_directory)
-    create_icons(style=style_json, web_request_executor=web_request_executor, output_directory=output_directory)
+    create_icons(style=style_json, output_directory=output_directory)
 
 
 def _apply_source_layer(layer, all_layers):
@@ -76,7 +81,7 @@ def _apply_source_layer(layer, all_layers):
 def process(style_json):
     """
      * Creates the style definitions and returns them mapped by filename
-    :param text:
+    :param style_json:
     :return:
     """
     if not isinstance(style_json, dict):
@@ -103,11 +108,7 @@ def process(style_json):
 
             file_name = "{}{}.qml".format(source_layer, geo_type_name)
             if file_name not in styles_by_file_name:
-                styles_by_file_name[file_name] = {
-                    "file_name": file_name,
-                    "type": layer_type,
-                    "styles": []
-                }
+                styles_by_file_name[file_name] = {"file_name": file_name, "type": layer_type, "styles": []}
             qgis_styles = get_styles(l)
             filter_expr = None
             if "filter" in l:
@@ -122,26 +123,30 @@ def process(style_json):
             rule = style["rule"]
             name = style["name"]
             zoom = style["zoom_level"]
-            styles_with_same_target = list(filter(lambda s: s["name"] != name and s["rule"] == rule and zoom and s["zoom_level"] <= zoom, styles[:index]))
-            groups_by_name = list(groupby(styles_with_same_target, key=lambda s: s["name"]))
+            styles_with_same_target = list(
+                filter(
+                    lambda st: st["name"] != name and st["rule"] == rule and zoom and st["zoom_level"] <= zoom,
+                    styles[:index],
+                )
+            )
+            groups_by_name = list(groupby(styles_with_same_target, key=lambda st: st["name"]))
             style["rendering_pass"] = len(groups_by_name)
 
     _add_default_transparency_styles(styles_by_file_name)
     return styles_by_file_name
 
 
-def create_icons(style, web_request_executor, output_directory):
+def create_icons(style, output_directory):
     """
     Loads the sprites defined by sprites.json and sprites.data and extracts the specific items by creating
     svg icons that clip the defined region (defined in sprites.json) from the sprites.png so that only one icons
     remains.
     :param style:
-    :param web_request_executor:
     :param output_directory:
     :return:
     """
 
-    image_data, image_definition_data = _load_sprite_data(style, web_request_executor)
+    image_data, image_definition_data = _load_sprite_data(style)
     if image_data and image_definition_data:
         _create_icons(image_data, image_definition_data, output_directory)
 
@@ -151,7 +156,7 @@ def _create_icons(image_base64, image_definition_data, output_directory):
     if not os.path.isdir(icons_directory):
         os.makedirs(icons_directory)
 
-    with open(os.path.join(icons_directory, "sprite.json"), 'w') as f:
+    with open(os.path.join(icons_directory, "sprite.json"), "w") as f:
         f.write(json.dumps(image_definition_data))
 
     src_icon_path = os.path.join(os.path.dirname(__file__), "data", "icons", "empty.svg")
@@ -159,63 +164,49 @@ def _create_icons(image_base64, image_definition_data, output_directory):
 
     template_path = os.path.join(os.path.dirname(__file__), "data", "svg_template.svg")
     assert os.path.isfile(template_path)
-    with open(template_path, 'r') as f:
+    with open(template_path, "r") as f:
         template_data = f.read()
     for name in image_definition_data:
         img_def = image_definition_data[name]
         file_name = "{}.svg".format(name)
-        svg_data = template_data.format(width=img_def["width"],
-                                        height=img_def["height"],
-                                        x=img_def["x"],
-                                        y=img_def["y"],
-                                        base64_data=image_base64)
+        svg_data = template_data.format(
+            width=img_def["width"], height=img_def["height"], x=img_def["x"], y=img_def["y"], base64_data=image_base64
+        )
         target_file = os.path.join(icons_directory, file_name)
-        with open(target_file, 'w') as f:
+        with open(target_file, "w") as f:
             f.write(svg_data)
 
 
-def _load_sprite_data(style, web_request_executor):
-    if not web_request_executor:
-        web_request_executor = _execute_get_request
-
+def _load_sprite_data(style: dict) -> Tuple:
+    image_data = None
+    image_definition_data = None
     if "sprite" in style:
         image_url = "{}.png".format(style["sprite"])
         image_definitions_url = "{}.json".format(style["sprite"])
         if not image_url.startswith("http") or not image_definitions_url.startswith("http"):
             return None, None
 
-        image_data = web_request_executor(image_url)
-        image_definition_data = web_request_executor(image_definitions_url)
+        _, image_data = http_get(image_url)
+        _, image_definition_data = http_get(image_definitions_url)
         if not image_data:
             raise "No image found at: {}".format(image_url)
         else:
             image_data = base64.b64encode(image_data)
+
         if not image_definition_data:
             raise "No image definitions found at: {}".format(image_definition_data)
         else:
             image_definition_data = json.loads(str(image_definition_data))
-        return image_data, image_definition_data
-    return None, None
+    return image_data, image_definition_data
 
 
-def _execute_get_request(url):
-    response = urllib.urlopen(url)
-    data = response.read()
-    return data
-
-
-def _add_default_transparency_styles(style_dict):
+def _add_default_transparency_styles(style: dict):
     for t in ["point", "linestring", "polygon"]:
         file_name = "transparent.{}.qml".format(t)
-        style_dict[file_name] = {
-            "styles": [],
-            "file_name": file_name,
-            "layer-transparency": 100,
-            "type": None
-        }
+        style[file_name] = {"styles": [], "file_name": file_name, "layer-transparency": 100, "type": None}
 
 
-def write_styles(styles_by_target_layer, output_directory):
+def write_styles(styles_by_target_layer: Dict[str, dict], output_directory: str) -> None:
     """
     Creates the qml files that can be applied to qgis layers.
     :param styles_by_target_layer:
@@ -234,31 +225,13 @@ def write_styles(styles_by_target_layer, output_directory):
         create_style_file(output_directory=output_directory, layer_style=style)
 
 
-_comparision_operators = {
-    "match": "=",
-    "==": "=",
-    "<=": "<=",
-    ">=": ">=",
-    "<": "<",
-    ">": ">",
-    "!=": "!="
-}
+_comparision_operators = {"match": "=", "==": "=", "<=": "<=", ">=": ">=", "<": "<", ">": ">", "!=": "!="}
 
-_combining_operators = {
-    "all": "and",
-    "any": "or",
-    "none": "and not"
-}
+_combining_operators = {"all": "and", "any": "or", "none": "and not"}
 
-_membership_operators = {
-    "in": "in",
-    "!in": "not in"
-}
+_membership_operators = {"in": "in", "!in": "not in"}
 
-_existential_operators = {
-    "has": "is not null",
-    "!has": "is null"
-}
+_existential_operators = {"has": "is not null", "!has": "is null"}
 
 """
  * the upper bound map scales by zoom level.
@@ -292,7 +265,7 @@ upper_bound_map_scales_by_zoom_level = {
     21: 500,
     22: 250,
     23: 100,
-    24: 0
+    24: 0,
 }
 
 
@@ -303,11 +276,7 @@ def get_styles(layer):
 
     layer_type = layer["type"]
 
-    base_style = {
-        "zoom_level": None,
-        "min_scale_denom": None,
-        "max_scale_denom": None
-    }
+    base_style = {"zoom_level": None, "min_scale_denom": None, "max_scale_denom": None}
 
     if layer_id:
         base_style["name"] = layer_id
@@ -317,7 +286,9 @@ def get_styles(layer):
 
     all_values = []
     if layer_type == "fill":
-        all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-color", is_color=True, default="rgba(0,0,0,0)"))
+        all_values.extend(
+            get_properties_values_for_zoom(layer, "paint/fill-color", is_color=True, default="rgba(0,0,0,0)")
+        )
         all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-outline-color", is_color=True))
         all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-translate"))
         all_values.extend(get_properties_values_for_zoom(layer, "paint/fill-opacity"))
@@ -326,7 +297,9 @@ def get_styles(layer):
         all_values.extend(get_properties_values_for_zoom(layer, "layout/line-join"))
         all_values.extend(get_properties_values_for_zoom(layer, "layout/line-cap"))
         all_values.extend(get_properties_values_for_zoom(layer, "paint/line-width", default=0, can_interpolate=True))
-        all_values.extend(get_properties_values_for_zoom(layer, "paint/line-color", is_color=True, default="rgba(0,0,0,0)"))
+        all_values.extend(
+            get_properties_values_for_zoom(layer, "paint/line-color", is_color=True, default="rgba(0,0,0,0)")
+        )
         all_values.extend(get_properties_values_for_zoom(layer, "paint/line-opacity"))
         all_values.extend(get_properties_values_for_zoom(layer, "paint/line-dasharray"))
     elif layer_type == "symbol":
@@ -371,13 +344,13 @@ def get_styles(layer):
             resulting_styles.append(clone)
         styles_backwards = list(reversed(resulting_styles))
         for index, s in enumerate(styles_backwards):
-            if index < len(resulting_styles)-1:
-                next_style = styles_backwards[index+1]
+            if index < len(resulting_styles) - 1:
+                next_style = styles_backwards[index + 1]
                 for k in s:
                     if k not in next_style:
                         next_style[k] = s[k]
 
-    resulting_styles = sorted(resulting_styles, key=lambda s: s["zoom_level"])
+    resulting_styles = sorted(resulting_styles, key=lambda st: st["zoom_level"])
     _apply_scale_range(resulting_styles)
 
     return resulting_styles
@@ -397,7 +370,6 @@ def _parse_expr(expr, take=None):
         is_data_expression = True if op in data_expression_operators else False
         if not is_data_expression:
             return ""
-            raise RuntimeError("Unknown expression: ", expr)
         else:
             if op == "get":
                 assert len(expr) == 2
@@ -427,15 +399,15 @@ def _get_qgis_fields(expr):
     if isinstance(expr, list):
         # todo: what happens here?
         raise RuntimeError("invalid: ", expr)
-        return []
 
     values = []
     val = None
     is_expr = False
+    new_is_expr = False
     for s in expr:
         if not is_expr:
-            new_is_expr = s == '{'
-        elif s == '}':
+            new_is_expr = s == "{"
+        elif s == "}":
             new_is_expr = False
         has_changed = new_is_expr != is_expr
         is_expr = new_is_expr
@@ -446,10 +418,7 @@ def _get_qgis_fields(expr):
         if has_changed:
             continue
         if val is None:
-            val = {
-                "text": "",
-                "is_expr": is_expr
-            }
+            val = {"text": "", "is_expr": is_expr}
         if isinstance(s, list):
             raise RuntimeError("Unknown s: ", expr)
         val["text"] += s
@@ -475,7 +444,7 @@ def parse_color(color):
     elif color.startswith("#"):
         color = color.replace("#", "")
         if len(color) == 3:
-            color = "".join(list(map(lambda c: c+c, color)))
+            color = "".join(list(map(lambda c: c + c, color)))
         elif len(color) == 6:
             return "#" + color
         return ",".join(list(map(lambda v: str(int(v)), bytearray.fromhex(color))))
@@ -487,8 +456,16 @@ def _get_color_string(color):
     color = color.lower()
     has_alpha = color.startswith("hsla(") or color.startswith("rgba(")
     is_hsl = color.startswith("hsl")
-    colors = color.replace("hsla(", "").replace("hsl(", "").replace("rgba(", "").replace("rgb(", "").replace(")", "")\
-        .replace(" ", "").replace("%", "").split(",")
+    colors = (
+        color.replace("hsla(", "")
+        .replace("hsl(", "")
+        .replace("rgba(", "")
+        .replace("rgb(", "")
+        .replace(")", "")
+        .replace(" ", "")
+        .replace("%", "")
+        .split(",")
+    )
     colors = list(map(lambda c: float(c), colors))
     a = 1
     if has_alpha:
@@ -496,14 +473,14 @@ def _get_color_string(color):
     if is_hsl:
         h = colors[0] / 360.0
         s = colors[1] / 100.0
-        l = colors[2] / 100.0
-        r, g, b = colorsys.hls_to_rgb(h, l, s)
+        l_value = colors[2] / 100.0
+        r, g, b = colorsys.hls_to_rgb(h, l_value, s)
         return ",".join(list(map(lambda c: str(int(round(255.0 * c))), [r, g, b, a])))
     else:
         r = colors[0]
         g = colors[1]
         b = colors[2]
-        a = round(255.0*a)
+        a = round(255.0 * a)
         return ",".join(list(map(lambda c: str(int(c)), [r, g, b, a])))
 
 
@@ -516,7 +493,7 @@ def _apply_scale_range(styles):
         if index == len(styles) - 1:
             min_scale_denom = 1
         else:
-            zoom_of_next = styles[index+1]["zoom_level"]
+            zoom_of_next = styles[index + 1]["zoom_level"]
             min_scale_denom = upper_bound_map_scales_by_zoom_level[zoom_of_next]
         s["min_scale_denom"] = min_scale_denom
         s["max_scale_denom"] = max_scale_denom
@@ -531,7 +508,9 @@ def _get_property_value(obj, property_path):
     return value, property_name
 
 
-def get_properties_values_for_zoom(paint, property_path, is_color=False, is_expression=False, can_interpolate=False, default=None, take=None):
+def get_properties_values_for_zoom(
+    paint, property_path, is_color=False, is_expression=False, can_interpolate=False, default=None, take=None
+):
     """
     Returns a list of properties (defined by name, zoom_level, value and is_qgis_expr)
     If stops are defined, multiple properties will be in the list. One for each zoom-level defined by the stops.
@@ -580,29 +559,27 @@ def get_properties_values_for_zoom(paint, property_path, is_color=False, is_expr
                 second_value = next_stop[1]
                 max_scale = upper_bound_map_scales_by_zoom_level[int(lower_zoom)]
                 min_scale = upper_bound_map_scales_by_zoom_level[int(upper_zoom)]
-                value = "interpolate_exp(get_zoom_for_scale(@map_scale), {base}, {min_zoom}, {max_zoom}, {first_value}, {second_value})"\
-                    .format(min_zoom=int(lower_zoom),
-                            max_zoom=int(upper_zoom),
-                            base=base,
-                            min_scale=min_scale,
-                            max_scale=max_scale,
-                            first_value=value,
-                            second_value=second_value)
-            properties.append({
-                "name": property_name,
-                "zoom_level": int(lower_zoom),
-                "value": value,
-                "is_qgis_expr": is_qgis_expr})
+                value = (
+                    "interpolate_exp(get_zoom_for_scale(@map_scale), {base}, {min_zoom}, {max_zoom}, "
+                    "{first_value}, {second_value})".format(
+                        min_zoom=int(lower_zoom),
+                        max_zoom=int(upper_zoom),
+                        base=base,
+                        min_scale=min_scale,
+                        max_scale=max_scale,
+                        first_value=value,
+                        second_value=second_value,
+                    )
+                )
+            properties.append(
+                {"name": property_name, "zoom_level": int(lower_zoom), "value": value, "is_qgis_expr": is_qgis_expr}
+            )
     elif value is not None:
         if is_color:
             value = parse_color(value)
         if is_expression:
             value = _parse_expr(value, take=take)
-        properties.append({
-            "name": property_name,
-            "zoom_level": None,
-            "value": value,
-            "is_qgis_expr": is_expression})
+        properties.append({"name": property_name, "zoom_level": None, "value": value, "is_qgis_expr": is_expression})
     return properties
 
 
@@ -629,7 +606,7 @@ def get_qgis_rule(mb_filter, escape_result=True, depth=0):
         result = _get_comparision_expr(mb_filter)
     elif op in _combining_operators:
         is_none = op == "none"
-        all_exprs = map(lambda f: get_qgis_rule(f, escape_result=False, depth=depth+1), mb_filter[1:])
+        all_exprs = map(lambda f: get_qgis_rule(f, escape_result=False, depth=depth + 1), mb_filter[1:])
         all_exprs = list(filter(lambda e: e is not None, all_exprs))
         comb_op = _combining_operators[op]
         if comb_op == "and" and len(all_exprs) > 1:
@@ -669,11 +646,7 @@ class If(object):
                 assert isinstance(self.else_if, If)
                 else_dump = self.else_if.dumps()
 
-        return "if ({}, {}, {})".format(
-            self.comparision,
-            "'{}'".format(self.if_value),
-            else_dump
-        )
+        return "if ({}, {}, {})".format(self.comparision, "'{}'".format(self.if_value), else_dump)
 
     def __repr__(self):
         return self.dumps()
@@ -721,11 +694,11 @@ def _get_comparision_expr(mb_filter):
     op = _comparision_operators[mb_filter[0]]
     attr = mb_filter[1]
     value = mb_filter[2]
-    if attr == '$type':
+    if attr == "$type":
         return None
     attr_in_quotes = not attr.startswith("@")
     if attr_in_quotes:
-        attr = "\"{}\"".format(attr)
+        attr = '"{}"'.format(attr)
     null_allowed = op == "!="
     if null_allowed:
         null = "{attr} is null or {attr}"
@@ -738,7 +711,7 @@ def _get_comparision_expr(mb_filter):
 def _get_membership_expr(mb_filter):
     assert mb_filter[0] in _membership_operators
     assert len(mb_filter) >= 3
-    what = "\"{}\"".format(mb_filter[1])
+    what = '"{}"'.format(mb_filter[1])
     op = _membership_operators[mb_filter[0]]
     collection = "({})".format(", ".join(list(map(lambda e: "'{}'".format(e), mb_filter[2:]))))
     is_not = mb_filter[0].startswith("!")
