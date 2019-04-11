@@ -1004,23 +1004,19 @@ class VtrPlugin:
             self._current_reader.get_source().close_connection()
             self._current_reader = None
 
-        try:
-            self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
-            QgsProject.instance().layersWillBeRemoved.disconnect(self._on_remove)
-            self.iface.newProjectCreated.disconnect(self._on_project_change)
-            self.iface.projectRead.disconnect(self._on_project_change)
-            self._debouncer.stop()
-            self._debouncer.shutdown()
-            self.iface.layerToolBar().removeAction(self.toolButtonAction)
-            self.iface.pluginToolBar().removeAction(self.plugin_toolbar_button_action)
-            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
-            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
-            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
-            self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
-            self.iface.addLayerMenu().removeAction(self.open_connections_action)
-        except:
-            pass
-
+        self.iface.mapCanvas().xyCoordinates.disconnect(self._handle_mouse_move)
+        QgsProject.instance().layersWillBeRemoved.disconnect(self._on_remove)
+        self.iface.newProjectCreated.disconnect(self._on_project_change)
+        self.iface.projectRead.disconnect(self._on_project_change)
+        self._debouncer.stop()
+        self._debouncer.shutdown()
+        self.iface.layerToolBar().removeAction(self.toolButtonAction)
+        self.iface.pluginToolBar().removeAction(self.plugin_toolbar_button_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.about_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.open_connections_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.reload_action)
+        self.iface.removePluginVectorMenu("&Vector Tiles Reader", self.clear_cache_action)
+        self.iface.addLayerMenu().removeAction(self.open_connections_action)
         logging.shutdown()
 
 
