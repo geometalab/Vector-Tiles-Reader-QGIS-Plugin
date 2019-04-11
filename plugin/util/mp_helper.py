@@ -1,11 +1,12 @@
 import os
+import platform
 import sys
 from ctypes import c_bool, c_char_p, c_double, c_uint16, c_void_p, cast, cdll
 
 import mapbox_vector_tile
 
 from .file_helper import get_plugin_directory
-from .log_helper import info, warn
+from .log_helper import critical, info, warn
 
 try:
     import simplejson as json
@@ -44,6 +45,7 @@ def get_lib_for_current_platform():
 
 
 def load_lib():
+    info("Loading native dll...")
     lib = None
     path = get_lib_for_current_platform()
     if path and os.path.isfile(path):
@@ -71,6 +73,29 @@ def load_lib():
 
 
 _native_lib_handle = load_lib()
+
+
+def unload_lib():
+    global _native_lib_handle
+    system = platform.system()
+    try:
+        info("Unloading native dll...")
+        if _native_lib_handle:
+            if system == "Windows":
+                from ctypes import windll
+
+                windll.kernel32.FreeLibrary(_native_lib_handle._handle)
+            else:
+                _native_lib_handle.dlclose()
+        else:
+            info("Dll already unloaded")
+        _native_lib_handle = None
+    except Exception:
+        critical("Unloading native dll failed on {}: {}", system, sys.exc_info())
+
+
+def native_decoding_supported() -> bool:
+    return _native_lib_handle is not None
 
 
 def decode_tile_native(tile_data_clip):
