@@ -99,7 +99,11 @@ class ServerSource(AbstractSource):
         if not url:
             raise RuntimeError("URL is required")
 
-        valid, error, url = url_exists(url)
+        info("is file: {} {}", url, os.path.isfile(url))
+        if os.path.isfile(url):
+            valid = True
+        else:
+            valid, error, url = url_exists(url)
         if not valid:
             critical("The URL seems to be invalid: {}", url)
             raise RuntimeError(error)
