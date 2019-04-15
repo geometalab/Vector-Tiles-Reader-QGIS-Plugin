@@ -99,7 +99,6 @@ class ServerSource(AbstractSource):
         if not url:
             raise RuntimeError("URL is required")
 
-        info("is file: {} {}", url, os.path.isfile(url))
         if os.path.isfile(url):
             valid = True
         else:
