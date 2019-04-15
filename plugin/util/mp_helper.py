@@ -1,11 +1,12 @@
 import os
 import platform
+import shutil
 import sys
 from ctypes import c_bool, c_char_p, c_double, c_uint16, c_void_p, cast, cdll
 
 import mapbox_vector_tile
 
-from .file_helper import get_plugin_directory
+from .file_helper import get_plugin_directory, get_temp_dir
 from .log_helper import critical, info, warn
 
 try:
@@ -25,13 +26,14 @@ def decode_tile_python(tile_data_clip):
     return tile, decoded_data
 
 
-def get_lib_for_current_platform():
+def _get_lib_path():
     is_64_bit = sys.maxsize > 2 ** 32
     if is_64_bit:
         bitness_string = "x86_64"
     else:
         bitness_string = "i686"
     lib = None
+    temp_lib_path = None
     if sys.platform.startswith("linux"):
         lib = "pbf2geojson_linux_{}.so".format(bitness_string)
     elif sys.platform.startswith("win32"):
@@ -39,15 +41,24 @@ def get_lib_for_current_platform():
     elif sys.platform.startswith("darwin"):
         lib = "pbf2geojson_osx_{}.so".format(bitness_string)
     if lib:
-        # lib = os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "ext-libs", "pbf2geojson", lib)
-        lib = os.path.join(os.path.abspath(get_plugin_directory()), "ext-libs", "pbf2geojson", lib)
-    return lib
+        temp_dir = get_temp_dir("native")
+        lib_path = os.path.join(os.path.abspath(get_plugin_directory()), "ext-libs", "pbf2geojson", lib)
+
+        temp_lib_path = os.path.join(temp_dir, lib)
+        if not os.path.isdir(temp_dir):
+            os.makedirs(temp_dir)
+        if os.path.isfile(temp_lib_path) and os.path.getmtime(temp_lib_path) != os.path.getmtime(lib_path):
+            os.remove(temp_lib_path)
+        if not os.path.isfile(temp_lib_path):
+            shutil.copy2(lib_path, temp_dir)
+
+    return temp_lib_path
 
 
 def load_lib():
     info("Loading native dll...")
     lib = None
-    path = get_lib_for_current_platform()
+    path = _get_lib_path()
     if path and os.path.isfile(path):
         try:
             lib = cdll.LoadLibrary(path)
