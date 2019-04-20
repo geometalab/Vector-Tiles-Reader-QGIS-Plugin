@@ -25,14 +25,12 @@ def url_exists(url: str) -> Tuple[bool, Optional[str], str]:
     error: Optional[str] = None
     info("URL check for '{}': status '{}'", url, status)
     if not success:
-        if not status:
-            error = reply.errorString()
         if status == 302:
             error = "Loading error: Moved Temporarily.\n\nURL incorrect? Missing or incorrect API key?"
         elif status == 404:
             error = "Loading error: Resource not found.\n\nURL incorrect?"
-        elif error:
-            error = "Loading error: {}\n\nURL incorrect? (HTTP Status {})".format(error, status)
+        elif reply.error():
+            error = "Loading error: {}\n\nURL incorrect? (HTTP Status {})".format(reply.errorString(), status)
         else:
             error = "Something went wrong with '{}'. HTTP Status is {}".format(remove_key(url), status)
 
