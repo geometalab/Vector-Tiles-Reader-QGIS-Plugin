@@ -27,6 +27,7 @@ from .util.file_helper import (
     get_geojson_file_name,
     get_style_folder,
     get_styles,
+    get_valid_filename,
     is_gzipped,
 )
 from .util.log_helper import critical, debug, info, remove_key
@@ -507,7 +508,8 @@ class VtReader(QObject):
             self._update_progress(progress=index + 1)
 
     def _get_geojson_filename(self, layer_name, geo_type):
-        return "{}.{}.{}".format(self._source.name().replace(" ", "_"), layer_name, geo_type)
+        file_name = "{}.{}.{}".format(self._source.name().replace(" ", "_"), layer_name, geo_type)
+        return get_valid_filename(file_name)
 
     def _create_qgis_layers(self, merge_features, apply_styles, clip_tiles):
         """
@@ -622,7 +624,7 @@ class VtReader(QObject):
         info("Layer creation complete")
 
     @staticmethod
-    def _update_layer_source(layer_source, feature_collection):
+    def _update_layer_source(layer_source: str, feature_collection: dict) -> None:
         """
         Updates the layers GeoJSON source file
         :param layer_source: The path to the geoJSON file that is the source of the layer
