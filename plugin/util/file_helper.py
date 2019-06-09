@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -119,6 +120,21 @@ def get_geojson_file_name(name):
     path = os.path.join(get_temp_dir(), geojson_folder)
     name_with_extension = "{}.{}".format(name, "geojson")
     return os.path.join(path, name_with_extension)
+
+
+def get_valid_filename(s):
+    """
+    Return the given string converted to a string that can be used for a clean
+    filename. Remove leading and trailing spaces; convert other spaces to
+    underscores; and remove anything that is not an alphanumeric, dash,
+    underscore, or dot.
+    >>> get_valid_filename("john's portrait in 2004.jpg")
+    'johns_portrait_in_2004.jpg'
+
+    Source: https://github.com/django/django/blob/master/django/utils/text.py
+    """
+    s = str(s).strip().replace(" ", "_")
+    return re.sub(r"(?u)[^-\w.]", "", s)
 
 
 def is_sqlite_db(path):
