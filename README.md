@@ -102,4 +102,4 @@ Any vector tile service, implementing the [TileJSON specification](https://githu
 
 For the feature to work, you have to create a connection using a URL pointing to the TileJSON of the tile service.
 
-For example you can use `http://free.tilehosting.com/data/v3.json?key={API-KEY}` and get your own API-Key from [OpenMapTiles.com](https://openmaptiles.com/hosting/)
+For example you can use `https://api.maptiler.com/tiles/v3/tiles.json?key={API-KEY}` and get your own API-Key from [MapTiler Cloud](https://cloud.maptiler.com/)
