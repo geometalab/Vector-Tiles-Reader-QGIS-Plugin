@@ -1,6 +1,7 @@
 import os
 import uuid
 from xml.sax.saxutils import escape
+
 from ...util.log_helper import warn
 
 _join_styles = {None: "round", "bevel": "bevel", "round": "round", "miter": "miter"}
