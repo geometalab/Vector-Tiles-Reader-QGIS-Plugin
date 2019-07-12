@@ -26,6 +26,7 @@ changelog=
     * Bugfix: Layer names from the TileJSON containing characters invalid for a filepath, would lead to an exception.
     * Feature: ArcGIS support via TileJSON
     ---3.0.4---
+    * Feature: Loading a TileJSON from the harddisk is now supported
     * Bugfix: Native library might have prevented deinstallation of plugin
     * Bugfix: Error detection in networking code fixed
     ---3.0.3---
@@ -140,7 +141,7 @@ changelog=
 # Tags are comma separated with spaces allowed
 tags=vector tiles, tiles, mbtiles, mapbox, vector, basemap
 
-homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/blob/master/README.md
+homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/
 tracker=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
 repository=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
 category=Vector
