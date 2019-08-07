@@ -12,7 +12,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * OpenMapTiles.com with OSM Bright MB GL style (default)
     * Nextzen.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.0.5
+version=3.1.0
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +22,8 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---3.1.0---
+    * OpenInfraMaps added to predefined connections
     ---3.0.5---
     * Bugfix: Layer names from the TileJSON containing characters invalid for a filepath, would lead to an exception.
     * Feature: ArcGIS support via TileJSON

@@ -492,7 +492,7 @@ class VtReader(QObject):
             file_content = data
         return file_content
 
-    def _process_tiles(self, tiles, layer_filter):
+    def _process_tiles(self, tiles: List[VectorTile], layer_filter):
         """
         Creates GeoJSON for all the specified tiles and reports the progress
         :param tiles: 
@@ -682,7 +682,7 @@ class VtReader(QObject):
         # layer.setAbstract()
         return layer
 
-    def _add_features_to_feature_collection(self, tile, layer_filter):
+    def _add_features_to_feature_collection(self, tile: VectorTile, layer_filter: List[str]):
         """
         Transforms all features of the specified tile into GeoJSON
          * The resulting GeoJSON feature will be applied to the features of the corresponding GeoJSON FeatureCollection

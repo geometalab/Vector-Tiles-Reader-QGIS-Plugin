@@ -2,6 +2,8 @@ import os
 import uuid
 from xml.sax.saxutils import escape
 
+from ...util.log_helper import warn
+
 _join_styles = {None: "round", "bevel": "bevel", "round": "round", "miter": "miter"}
 
 _cap_styles = {None: "round", "butt": "flat", "square": "square", "round": "round"}
@@ -92,14 +94,13 @@ def _get_labeling_settings(style):
 
     font = _get_value_safe(style, "text-font", ["Arial"])
     text_transform = _get_value_safe(style, "text-transform", "").lower()
-    if text_transform:
+    if text_transform and text_transform != "none":
         if text_transform == "uppercase":
-            text_transform = "upper"
+            field_name = f"upper({field_name})"
         elif text_transform == "lowercase":
-            text_transform = "lower"
+            field_name = f"lower({field_name})"
         else:
-            raise ValueError("Unknown text_transform '{}'".format(text_transform))
-        field_name = "{transform}({field})".format(transform=text_transform, field=field_name)
+            warn(f"Style converter: Unknown text_transform '{text_transform}'")
 
     italic_font = 0
     if isinstance(font, list):

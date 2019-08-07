@@ -98,7 +98,7 @@ ls -s ./
 
 #### How can I use the server connection feature?
 
-Any vector tile service, implementing the [TileJSON specification](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0)  should work.
+Any vector tile service, implementing the [TileJSON specification](https://github.com/mapbox/tilejson-spec/tree/master/2.2.0) with the [vector_layers extension](https://github.com/mapbox/tilejson-spec/issues/14) should work.
 
 For the feature to work, you have to create a connection using a URL pointing to the TileJSON of the tile service.
 

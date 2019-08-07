@@ -179,6 +179,7 @@ class ServerSource(AbstractSource):
             if api_key:
                 load_url += "?api_key={}".format(api_key)
             urls.append((load_url, col, row))
+            debug("Loading: {}", load_url)
 
         self.max_progress_changed.emit(len(urls))
         self.message_changed.emit("Getting {} tiles from source...".format(len(urls)))
