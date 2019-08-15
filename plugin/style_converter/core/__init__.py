@@ -378,6 +378,16 @@ def _parse_expr(expr, take=None):
                 raise RuntimeError("Data expression operator not implemented: ", op)
 
     fields = _get_qgis_fields(expr)[:take]
+
+    #issue starts here and can be checked for and fixed
+    #when the http_get returns byte information, that 'b' sometimes sticks to icon name
+    #simply check and if it is there, remove
+    b_string = "'b'"
+    for s, item in enumerate(fields):
+        if b_string in item:
+            new_item = item[2:-1]
+            fields[s] = new_item
+
     result = "+".join(fields)
     return escape_xml(result)
 
