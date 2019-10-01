@@ -160,12 +160,12 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
     opacity = _get_value_safe(style, "fill-opacity", 1)
     svg_path = "'" + os.path.join(icons_directory, "'+{}+'.svg'".format(icon_expr)).replace("\\", "/")
     fallback_path = "'" + os.path.join(icons_directory, "empty.svg'").replace("\\", "/")
-    svg_expr = "if_not_exists({svg_path}, {fallback_path})".format(svg_path=svg_path, fallback_path=fallback_path)
+    svg_expr = f"if_not_exists({svg_path}, {fallback_path})"
     rendering_pass = _get_value_safe(style, "rendering_pass", 0)
-    icon_size_expr = "get_icon_size({icon}, '{icons_dir}')".format(
-        icon=icon_expr, icons_dir=icons_directory.replace("\\", "/")
-    )
-    return """<!-- {description} -->
+    icons_dir = icons_directory.replace("\\", "/")
+    icon_size_expr = f"get_icon_size({icon_expr}, '{icons_dir}')"
+    description = style["name"]
+    return f"""<!-- {description} -->
           <symbol alpha="{opacity}" clip_to_extent="1" type="marker" name="{index}">
         <layer pass="{rendering_pass}" class="SvgMarker" locked="0">
           <prop k="angle" v="0"/>
@@ -173,7 +173,7 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
           <prop k="horizontal_anchor_point" v="1"/>
           <prop k="name" v=""/>
           <prop k="name_dd_active" v="1"/>
-          <prop k="name_dd_expression" v="{svg_path}"/>
+          <prop k="name_dd_expression" v="{svg_expr}"/>
           <prop k="name_dd_field" v=""/>
           <prop k="name_dd_useexpr" v="1"/>
           <prop k="offset" v="0,0"/>
@@ -188,20 +188,13 @@ def _get_icon_symbol(index, style, icons_directory, icon_expr):
           <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="size_unit" v="Pixel"/>
           <prop k="size_dd_active" v="1"/>
-          <prop k="size_dd_expression" v="{size}"/>
+          <prop k="size_dd_expression" v="{icon_size_expr}"/>
           <prop k="size_dd_field" v=""/>
           <prop k="size_dd_useexpr" v="1"/>
           <prop k="vertical_anchor_point" v="1"/>
         </layer>
       </symbol>
-    """.format(
-        description=style["name"],
-        opacity=opacity,
-        svg_path=svg_expr,
-        index=index,
-        size=icon_size_expr,
-        rendering_pass=rendering_pass,
-    )
+    """
 
 
 def _get_fill_symbol(index, style, icons_directory):
@@ -241,8 +234,8 @@ def _get_fill_symbol(index, style, icons_directory):
 def _get_fill_pattern_symbol_xml(pattern, label, index, opacity, rendering_pass, icons_directory):
     svg_path = "'" + os.path.join(icons_directory, "'+{}+'.svg'".format(pattern)).replace("\\", "/")
     fallback_path = "'" + os.path.join(icons_directory, "empty.svg'").replace("\\", "/")
-    svg_expr = "if_not_exists({svg_path}, {fallback_path})".format(svg_path=svg_path, fallback_path=fallback_path)
-    return """<!-- {description} -->
+    svg_expr = f"if_not_exists({svg_path}, {fallback_path})"
+    return f"""<!-- {label} -->
           <symbol alpha="{opacity}" clip_to_extent="1" type="fill" name="{index}">
         <layer pass="{rendering_pass}" class="SVGFill" locked="0">
           <prop k="angle" v="0"/>
@@ -254,7 +247,7 @@ def _get_fill_pattern_symbol_xml(pattern, label, index, opacity, rendering_pass,
           <prop k="pattern_width_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="pattern_width_unit" v="Pixel"/>
           <prop k="svgFile" v=""/>
-          <prop k="svgFile_dd_expression" v="{svg_path}"/>
+          <prop k="svgFile_dd_expression" v="{svg_expr}"/>
           <prop k="svgFile_dd_active" v="1"/>
           <prop k="svgFile_dd_field" v=""/>
           <prop k="svgFile_dd_useexpr" v="1"/>
@@ -281,37 +274,27 @@ def _get_fill_pattern_symbol_xml(pattern, label, index, opacity, rendering_pass,
             </layer>
           </symbol>
         </layer>
-      </symbol>""".format(
-        description=label, opacity=opacity, index=index, svg_path=svg_expr, rendering_pass=rendering_pass
-    )
+      </symbol>"""
 
 
 def _get_fill_symbol_xml(fill_color_rgba, fill_outline_color_rgba, index, label, offset, opacity, rendering_pass):
-    symbol = """<!-- {description} -->
+    symbol = f"""<!-- {label} -->
         <symbol alpha="{opacity}" clip_to_extent="1" type="fill" name="{index}">
                 <layer pass="{rendering_pass}" class="SimpleFill" locked="0">
                     <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
-                    <prop k="color" v="{fill_color}"/>
+                    <prop k="color" v="{fill_color_rgba}"/>
                     <prop k="joinstyle" v="bevel"/>
                     <prop k="offset" v="{offset}"/>
                     <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
                     <prop k="offset_unit" v="Pixel"/>
-                    <prop k="outline_color" v="{fill_outline_color}"/>
+                    <prop k="outline_color" v="{fill_outline_color_rgba}"/>
                     <prop k="outline_style" v="solid"/>
                     <prop k="outline_width" v="0.7"/>
                     <prop k="outline_width_unit" v="Pixel"/>
                     <prop k="style" v="solid"/>
                 </layer>
             </symbol>
-            """.format(
-        opacity=opacity,
-        index=index,
-        fill_color=fill_color_rgba,
-        fill_outline_color=fill_outline_color_rgba,
-        offset=offset,
-        description=label,
-        rendering_pass=rendering_pass,
-    )
+            """
     return symbol
 
 
@@ -330,7 +313,7 @@ def _get_line_symbol(index, style):
     joinstyle = _join_styles[_get_value_safe(style, "line-join")]
     opacity = _get_value_safe(style, "line-opacity", 1)
     dashes = _get_value_safe(style, "line-dasharray")
-    rendering_passs = _get_value_safe(style, "rendering_pass", 0)
+    rendering_pass = _get_value_safe(style, "rendering_pass", 0)
     dash_string = "0;0"
     dash_expr = ""
     use_custom_dash = 0
@@ -347,45 +330,31 @@ def _get_line_symbol(index, style):
     label = _get_value_safe(style, "name", "")
     if style["zoom_level"] is not None:
         label = "{}-zoom-{}".format(label, style["zoom_level"])
-    symbol = """<!-- {description} -->
+    symbol = f"""<!-- {label} -->
     <symbol alpha="{opacity}" clip_to_extent="1" type="line" name="{index}">
         <layer pass="{rendering_pass}" class="SimpleLine" locked="0">
           <prop k="capstyle" v="{capstyle}"/>
           <prop k="customdash_dd_expression" v="{dash_expr}"/>
           <prop k="customdash_dd_useexpr" v="{use_custom_dash}"/>
-          <prop k="customdash" v="{custom_dash}"/>
+          <prop k="customdash" v="{dash_string}"/>
           <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="use_custom_dash" v="{use_custom_dash}"/>
           <prop k="customdash_unit" v="Pixel"/>
           <prop k="draw_inside_polygon" v="0"/>
           <prop k="joinstyle" v="{joinstyle}"/>
-          <prop k="line_color" v="{line_color}"/>
+          <prop k="line_color" v="{color}"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="{line_width}"/>
+          <prop k="line_width" v="{width}"/>
           <prop k="line_width_unit" v="Pixel"/>
           <prop k="width_dd_active" v="{width_dd_active}"/>
-          <prop k="width_dd_expression" v="{line_width_expr}"/>
+          <prop k="width_dd_expression" v="{width_expr}"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="Pixel"/>
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
         </layer>
       </symbol>
-      """.format(
-        index=index,
-        width_dd_active=width_dd_active,
-        line_width=width,
-        line_width_expr=width_expr,
-        opacity=opacity,
-        line_color=color,
-        capstyle=capstyle,
-        joinstyle=joinstyle,
-        use_custom_dash=use_custom_dash,
-        custom_dash=dash_string,
-        dash_expr=dash_expr,
-        description=label,
-        rendering_pass=rendering_passs,
-    )
+      """
     return symbol
 
 
@@ -420,17 +389,10 @@ def _get_rule(index, style, rule_content):
     if min_denom_value is not None:
         min_denom = ' scalemindenom="{}"'.format(min_denom_value)
 
-    rule = """<rule key="$key$" {filter} symbol="{symbol}"{max_denom}{min_denom} label="{label}" description="{label}">
+    rule = f"""<rule key="$key$" {rule_filter} symbol="{index}"{max_denom}{min_denom} label="{label}" description="{label}">
     {rule_content}
     </rule>
-    """.format(
-        max_denom=max_denom,
-        min_denom=min_denom,
-        symbol=index,
-        label=label,
-        filter=rule_filter,
-        rule_content=rule_content,
-    ).replace(
+    """.replace(
         "$key$", "{" + rule_key + "}"
     )
     return rule
