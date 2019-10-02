@@ -149,7 +149,7 @@ class Ui_OptionsGroup(object):
         self.chkApplyStyles.setToolTip(
             _translate(
                 "OptionsGroup",
-                "Apply a build-in, predefined QGIS style made for OpenMapTiles (instead of random QGIS default style)",
+                "Apply a build-in, predefined QGIS style (instead of random QGIS default style)",
             )
         )
         self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply GL JSON style (if specified)"))

@@ -75,21 +75,37 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
         [("ID", "id"), ("Min. Zoom", "minzoom"), ("Max. Zoom", "maxzoom"), ("Description", "description")]
     )
 
+    _MAPTILER = "MapTiler Cloud (default entry with credits)"
+    _MAPTILER_CUSTOM_KEY = "MapTiler Cloud (with custom key)"
     _OMT = "OpenMapTiles.com (default entry with credits)"
     _OMT_CUSTOM_KEY = "OpenMapTiles.com (with custom key)"
     _MAPZEN = "Mapzen.com (default entry with credits)"
     _MAPCAT = "Mapcat.com (default entry with credits)"
     _NEXTZEN = "Nextzen.org (default entry with credits)"
-    _OIM = "OpenInfraMap.org"
+    _OIM = "OpenInfraMap.org (default entry with credits)"
 
     _predefined_tilejson_connections = {
+        _MAPTILER: {
+            "name": _MAPTILER,
+            "url": "https://api.maptiler.com/tiles/v3/tiles.json?key={token}",
+            "token": "6irhAXGgsi8TrIDL0211",
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json",
+        },
+        _MAPTILER_CUSTOM_KEY: {
+            "name": _MAPTILER_CUSTOM_KEY,
+            "url": "https://api.maptiler.com/tiles/v3/tiles.json?key={token}",
+            "can_edit": True,
+            "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json",
+        },
         _OMT: {
+            "disabled": True,
             "name": _OMT,
             "url": "https://free.tilehosting.com/data/v3.json?key={token}",
             "token": "6irhAXGgsi8TrIDL0211",
             "style": "https://raw.githubusercontent.com/openmaptiles/osm-bright-gl-style/master/style.json",
         },
         _OMT_CUSTOM_KEY: {
+            "disabled": True,
             "name": _OMT_CUSTOM_KEY,
             "url": "https://maps.tilehosting.com/data/v3.json?key={token}",
             "can_edit": True,

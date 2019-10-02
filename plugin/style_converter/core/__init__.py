@@ -169,6 +169,8 @@ def _create_icons(image_base64, image_definition_data, output_directory):
     for name in image_definition_data:
         img_def = image_definition_data[name]
         file_name = "{}.svg".format(name)
+        if isinstance(image_base64, bytes):
+            image_base64 = image_base64.decode("utf-8")
         svg_data = template_data.format(
             width=img_def["width"], height=img_def["height"], x=img_def["x"], y=img_def["y"], base64_data=image_base64
         )
@@ -373,7 +375,7 @@ def _parse_expr(expr, take=None):
         else:
             if op == "get":
                 assert len(expr) == 2
-                return _parse_expr("{}".format(expr[1]))
+                return _parse_expr(expr[1])
             else:
                 raise RuntimeError("Data expression operator not implemented: ", op)
 
@@ -389,10 +391,10 @@ def _map_value_to_qgis_expr(val):
     :return:
     """
 
-    if val["is_expr"]:
-        return '"{}"'.format(val["text"].encode("utf-8"))
-    else:
-        return "'{}'".format(val["text"].encode("utf-8"))
+    text = val["text"]
+    if isinstance(text, bytes):
+        text = text.decode("utf-8")
+    return f'"{text}"' if val["is_expr"] else f"'{text}'"
 
 
 def _get_qgis_fields(expr):
@@ -557,19 +559,9 @@ def get_properties_values_for_zoom(
                 next_stop = stops[index + 1]
                 upper_zoom = next_stop[0]
                 second_value = next_stop[1]
-                max_scale = upper_bound_map_scales_by_zoom_level[int(lower_zoom)]
-                min_scale = upper_bound_map_scales_by_zoom_level[int(upper_zoom)]
                 value = (
-                    "interpolate_exp(get_zoom_for_scale(@map_scale), {base}, {min_zoom}, {max_zoom}, "
-                    "{first_value}, {second_value})".format(
-                        min_zoom=int(lower_zoom),
-                        max_zoom=int(upper_zoom),
-                        base=base,
-                        min_scale=min_scale,
-                        max_scale=max_scale,
-                        first_value=value,
-                        second_value=second_value,
-                    )
+                    f"interpolate_exp(get_zoom_for_scale(@map_scale), {base}, {int(lower_zoom)}, {int(upper_zoom)}, "
+                    f"{value}, {second_value})"
                 )
             properties.append(
                 {"name": property_name, "zoom_level": int(lower_zoom), "value": value, "is_qgis_expr": is_qgis_expr}

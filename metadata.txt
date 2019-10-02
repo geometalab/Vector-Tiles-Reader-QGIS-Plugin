@@ -9,10 +9,11 @@ qgisMaximumVersion=3.98
 description=Reader (short VT reader) which reads Vector Tiles from various predefined and configurable sources
 about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specification as QGIS layers in a group. Styled vector tiles are typically used as high quality base maps. Sources can be an internet server, an MBTiles file or a directory of files. If an Mapbox GL JSON style is configured, the style is (partially) converted to QGIS styles.
     The plugin has connections already configured for the following providers:
-    * OpenMapTiles.com with OSM Bright MB GL style (default)
+    * MapTiler.com
     * Nextzen.org
+    * OpenInfraMap.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.1.0
+version=3.2.0
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +23,10 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---3.2.0---
+    * Fix: Due to a bug in the style parser, no labels/icons were shown anymore (icons are still not visible, due to an issue in QGIS)
+    * OpenMapTiles removed from predefined connections
+    * MapTiler added to predefined connections
     ---3.1.0---
     * OpenInfraMaps added to predefined connections
     ---3.0.5---
