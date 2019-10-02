@@ -12,7 +12,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * OpenMapTiles.com with OSM Bright MB GL style (default)
     * Nextzen.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.1.0
+version=3.2.0
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -22,6 +22,10 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---3.2.0---
+    * Fix: Due to a bug in the style parser, no labels/icons were shown anymore (icons are still not visible, due to an issue in QGIS)
+    * OpenMapTiles removed from predefined connections
+    * MapTiler added to predefined connections
     ---3.1.0---
     * OpenInfraMaps added to predefined connections
     ---3.0.5---
