@@ -82,7 +82,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
     _MAPZEN = "Mapzen.com (default entry with credits)"
     _MAPCAT = "Mapcat.com (default entry with credits)"
     _NEXTZEN = "Nextzen.org (default entry with credits)"
-    _OIM = "OpenInfraMap.org"
+    _OIM = "OpenInfraMap.org (default entry with credits)"
 
     _predefined_tilejson_connections = {
         _MAPTILER: {
