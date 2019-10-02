@@ -40,7 +40,6 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         self.cbxConnections.currentIndexChanged["QString"].connect(self._handle_connection_change)
         self.btnCreateConnection.clicked.connect(self._create_connection)
         self.connections = {}
-        self.selected_connection = None
         self._load_connections()
         self._add_loaded_connections_to_combobox()
         self.edit_connection_dialog = edit_dialog
@@ -115,19 +114,17 @@ class ConnectionsGroup(QGroupBox, Ui_ConnectionsGroup):
         if self._predefined_connections:
             for index, name in enumerate(self._predefined_connections):
                 conn = self._predefined_connections[name]
-                disabled = "disabled" in conn and conn["disabled"]
-                if name not in self.connections:
-                    if not disabled:
-                        self.connections[name] = conn
-                else:
-                    if disabled:
-                        del self.connections[name]
+                disabled = conn.get("disabled", False)
+                if disabled and name in self.connections:
+                    del self.connections[name]
+                elif not disabled and name not in self.connections:
+                    self.connections[name] = conn
 
-        for name in sorted(self.connections):
+        for name in sorted(self.connections, key=lambda n: n.lower()):
             is_already_added = self.cbxConnections.findText(name) != -1
             if not is_already_added:
                 self.cbxConnections.addItem(name)
-        if len(self.connections) > 0:
+        if self.connections:
             self.cbxConnections.setCurrentIndex(0)
 
     def _delete_connection(self):
