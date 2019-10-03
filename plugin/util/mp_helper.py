@@ -83,8 +83,7 @@ def load_lib():
     return lib
 
 
-_native_lib_handle = load_lib()
-
+_native_lib_handle = None
 
 def unload_lib():
     global _native_lib_handle
@@ -106,6 +105,8 @@ def unload_lib():
 
 
 def native_decoding_supported() -> bool:
+    global _native_lib_handle
+    _native_lib_handle = load_lib()
     return _native_lib_handle is not None
 
 
