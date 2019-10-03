@@ -10,7 +10,9 @@ from shapely.ops import transform
 from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
 import decimal
-from .compat import PY3, vector_tile, apply_map
+from .Mapbox import vector_tile_pb2 as vector_tile
+
+PY3 = True
 
 
 if sys.version_info[0] < 3:
@@ -272,11 +274,11 @@ class VectorTile:
             x, y = point
             return self._round(x), self._round(y)
 
-        exterior = apply_map(fn, shape.exterior.coords)
+        exterior = list(map(fn, shape.exterior.coords))
         rings = None
 
         if len(shape.interiors) > 0:
-            rings = [apply_map(fn, ring.coords) for ring in shape.interiors]
+            rings = [list(map(fn, ring.coords)) for ring in shape.interiors]
 
         sign = 1.0 if y_coord_down else -1.0
         oriented_shape = orient(Polygon(exterior, rings), sign=sign)

@@ -1,4 +1,4 @@
-from .compat import vector_tile
+from .Mapbox import vector_tile_pb2 as vector_tile
 import sys
 
 if sys.version_info[0] < 3:
