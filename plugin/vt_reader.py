@@ -421,8 +421,6 @@ class VtReader(QObject):
         else:
             decoder_func = decode_tile_python
 
-        tiles = []
-
         tiles_with_encoded_data: List[Tuple] = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
         tile_data_tuples: List[Tuple] = []
 
@@ -461,22 +459,14 @@ class VtReader(QObject):
                 pool.terminate()
             pool.join()
 
-        # todo: clarify this code
-        tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
-        groups = groupby(tile_data_tuples, lambda t: t[0].id())
-        for key, group in groups:
-            tile = None
-            data = {}
-            for t, decoded_data in list(group):
-                if not decoded_data:
-                    continue
+        tiles_by_id = {}
+        for t, decoded_data in tile_data_tuples:
+            if not decoded_data:
+                continue
 
-                if not tile:
-                    tile = t
-                for layer_name in decoded_data:
-                    data[layer_name] = decoded_data[layer_name]
-            tile.decoded_data = data
-            tiles.append(tile)
+            tile = tiles_by_id.setdefault(t.id(), t)
+            tile.decoded_data = {**tile.decoded_data, **decoded_data}
+        tiles = list(tiles_by_id.values())
 
         info("Decoding finished, {} tiles with data", len(tiles))
         return tiles
