@@ -1,7 +1,7 @@
 from time import sleep
 from typing import Callable, List, Optional, Tuple
 
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QUrl, QThreadPool, QRunnable
 from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt5.QtWidgets import QApplication
 from qgis.core import QgsNetworkAccessManager
@@ -47,54 +47,99 @@ def http_get_async(url: str, head_only: bool = False) -> QNetworkReply:
     return reply
 
 
-def load_tiles_async(
-    urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None
-) -> List:
-    replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = [
-        (http_get_async(url), (col, row)) for url, col, row in urls_with_col_and_row
-    ]
-    total_nr_of_requests = len(replies)
-    all_finished = False
-    nr_finished_before = 0
-    finished_tiles = set()
-    nr_finished = 0
-    all_results = []
-    cancelling = False
-    while not all_finished:
-        sleep(0.075)
-        cancelling: bool = cancelling_func and cancelling_func()
-        if cancelling:
-            break
+class Downloader(QRunnable):
 
-        results = []
-        new_finished = list(filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies))
-        nr_finished += len(new_finished)
-        for reply, tile_coord in new_finished:
-            finished_tiles.add(tile_coord)
-            if reply.error():
-                warn(
-                    "Error during network request: {}, {}",
-                    remove_key(reply.errorString()),
-                    remove_key(reply.url().toDisplayString()),
-                )
-            else:
-                content = reply.readAll().data()
-                results.append((tile_coord, content))
-            reply.deleteLater()
-        QApplication.processEvents()
-        all_results.extend(results)
-        all_finished = nr_finished == total_nr_of_requests
-        if nr_finished != nr_finished_before:
-            nr_finished_before = nr_finished
-            if on_progress_changed:
-                on_progress_changed(nr_finished)
-    if not all_finished and cancelling:
-        unfinished_requests = [reply for reply, tile_coord in replies if not reply.isFinished]
-        for r in unfinished_requests:
-            r.abort()
-    if cancelling:
-        all_results = []
-    return all_results
+    def __init__(self, url: str, tile_coord: Tuple[int, int]):
+        super(Downloader, self).__init__()
+
+        self.setAutoDelete(False)
+        self.url = url
+        self.coord = tile_coord
+        self.reply: Optional[QNetworkReply] = None
+        self.content = None
+
+    def run(self):
+        reply = http_get_async(self.url)
+        while not reply.isFinished():
+            QApplication.processEvents()
+
+        content = None
+        if reply.error():
+            warn(
+                "Error during network request: {}, {}",
+                remove_key(reply.errorString()),
+                remove_key(reply.url().toDisplayString()),
+            )
+        else:
+            content = reply.readAll().data()
+        self.content = content
+        reply.deleteLater()
+
+
+def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None):
+    downloaders: List[Downloader] = [
+        Downloader(url=url, tile_coord=(col, row)) for url, col, row in urls_with_col_and_row
+    ]
+    pool = QThreadPool()
+    for d in downloaders:
+        pool.start(d)
+    if pool.activeThreadCount():
+        pool.waitForDone()
+
+    results = list(map(lambda d: (d.coord, d.content), downloaders))
+    results = list(filter(lambda r: r[1], results))
+
+    return results
+
+
+# def load_tiles_async__(
+#     urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None
+# ) -> List:
+#     replies: List[Tuple[QNetworkReply, Tuple[int, int]]] = [
+#         (http_get_async(url), (col, row)) for url, col, row in urls_with_col_and_row
+#     ]
+#     total_nr_of_requests = len(replies)
+#     all_finished = False
+#     nr_finished_before = 0
+#     finished_tiles = set()
+#     nr_finished = 0
+#     all_results = []
+#     cancelling = False
+#     while not all_finished:
+#         # sleep(0.05)
+#         cancelling: bool = cancelling_func and cancelling_func()
+#         if cancelling:
+#             break
+#
+#         # results = []
+#         new_finished = list(filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies))
+#         nr_finished += len(new_finished)
+#         for reply, tile_coord in new_finished:
+#             finished_tiles.add(tile_coord)
+#             if reply.error():
+#                 warn(
+#                     "Error during network request: {}, {}",
+#                     remove_key(reply.errorString()),
+#                     remove_key(reply.url().toDisplayString()),
+#                 )
+#             else:
+#                 content = reply.readAll().data()
+#                 all_results.append((tile_coord, content))
+#             reply.deleteLater()
+#         QApplication.processEvents()
+#         # all_results.extend(results)
+#         all_finished = nr_finished == total_nr_of_requests
+#         if nr_finished != nr_finished_before:
+#             nr_finished_before = nr_finished
+#             if on_progress_changed:
+#                 on_progress_changed(nr_finished)
+#     if not all_finished and cancelling:
+#         unfinished_requests = [reply for reply, tile_coord in replies if not reply.isFinished]
+#         for r in unfinished_requests:
+#             r.abort()
+#     if cancelling:
+#         all_results = []
+#     return all_results
 
 
 def http_get(url: str) -> Tuple[int, str]:
