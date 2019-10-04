@@ -11,7 +11,6 @@ import traceback
 import uuid
 from gzip import GzipFile
 from io import BytesIO
-from itertools import groupby
 from typing import Dict, List, Optional, Tuple
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
