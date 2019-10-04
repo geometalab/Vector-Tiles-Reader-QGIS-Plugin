@@ -31,7 +31,7 @@ from .util.file_helper import (
     is_gzipped,
 )
 from .util.log_helper import critical, debug, info, remove_key
-from .util.mp_helper import decode_tile_native, decode_tile_python, native_decoding_supported, unload_lib
+from .util.mp_helper import decode_tile_native, decode_tile_python, native_decoding_supported, unload_lib, load_lib
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import Bounds, VectorTile, clamp, get_all_tiles, get_code_from_epsg
 from .util.tile_source import AbstractSource, DirectorySource, MBTilesSource, ServerSource
@@ -99,7 +99,11 @@ class VtReader(QObject):
         self._feature_count: int = 0
         self._allowed_sources: List[str] = None
         self._ready_for_next_loading_step.connect(self._continue_loading)
+        load_lib()
         self.native_decoding_supported = native_decoding_supported()
+        if connection["name"] == "OpenInfraMap.org (default entry with credits)":
+            # todo: why is OIM failing with the native decoder?
+            self.native_decoding_supported = False
         bits = "32"
         if sys.maxsize > 2 ** 32:
             bits = "64"
