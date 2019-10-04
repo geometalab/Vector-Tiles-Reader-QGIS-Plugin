@@ -1,1 +1,1 @@
-rmdir "%appdata%\QGIS\QGIS3\profiles\default\python\plugins\vector_tiles_reader"
+rd /S /Q "%appdata%\QGIS\QGIS3\profiles\default\python\plugins\vector_tiles_reader"

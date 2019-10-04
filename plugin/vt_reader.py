@@ -11,7 +11,6 @@ import traceback
 import uuid
 from gzip import GzipFile
 from io import BytesIO
-from itertools import groupby
 from typing import Dict, List, Optional, Tuple
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -31,7 +30,7 @@ from .util.file_helper import (
     is_gzipped,
 )
 from .util.log_helper import critical, debug, info, remove_key
-from .util.mp_helper import decode_tile_native, decode_tile_python, native_decoding_supported, unload_lib
+from .util.mp_helper import decode_tile_native, decode_tile_python, native_decoding_supported, unload_lib, load_lib
 from .util.qgis_helper import get_loaded_layers_of_connection
 from .util.tile_helper import Bounds, VectorTile, clamp, get_all_tiles, get_code_from_epsg
 from .util.tile_source import AbstractSource, DirectorySource, MBTilesSource, ServerSource
@@ -99,7 +98,11 @@ class VtReader(QObject):
         self._feature_count: int = 0
         self._allowed_sources: List[str] = None
         self._ready_for_next_loading_step.connect(self._continue_loading)
+        load_lib()
         self.native_decoding_supported = native_decoding_supported()
+        if connection["name"] == "OpenInfraMap.org (default entry with credits)":
+            # todo: why is OIM failing with the native decoder?
+            self.native_decoding_supported = False
         bits = "32"
         if sys.maxsize > 2 ** 32:
             bits = "64"
@@ -417,8 +420,6 @@ class VtReader(QObject):
         else:
             decoder_func = decode_tile_python
 
-        tiles = []
-
         tiles_with_encoded_data: List[Tuple] = [(t[0], self._unzip(t[1]), clip_tiles) for t in tiles_with_encoded_data]
         tile_data_tuples: List[Tuple] = []
 
@@ -457,22 +458,14 @@ class VtReader(QObject):
                 pool.terminate()
             pool.join()
 
-        # todo: clarify this code
-        tile_data_tuples = sorted(tile_data_tuples, key=lambda t: t[0].id())
-        groups = groupby(tile_data_tuples, lambda t: t[0].id())
-        for key, group in groups:
-            tile = None
-            data = {}
-            for t, decoded_data in list(group):
-                if not decoded_data:
-                    continue
+        tiles_by_id = {}
+        for t, decoded_data in tile_data_tuples:
+            if not decoded_data:
+                continue
 
-                if not tile:
-                    tile = t
-                for layer_name in decoded_data:
-                    data[layer_name] = decoded_data[layer_name]
-            tile.decoded_data = data
-            tiles.append(tile)
+            tile = tiles_by_id.setdefault(t.id(), t)
+            tile.decoded_data = {**tile.decoded_data, **decoded_data}
+        tiles = list(tiles_by_id.values())
 
         info("Decoding finished, {} tiles with data", len(tiles))
         return tiles

@@ -59,7 +59,7 @@ class Bounds(dict):
 
 class VectorTile:
 
-    decoded_data = None
+    decoded_data = {}
 
     def __init__(self, scheme, zoom_level, x, y):
         self.scheme = scheme

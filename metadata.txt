@@ -13,7 +13,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * Nextzen.org
     * OpenInfraMap.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.2.0
+version=3.2.1
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -23,6 +23,9 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---3.2.1---
+    * Fix: Loading error on Mac
+    * Fix: Loading of native decoding library
     ---3.2.0---
     * Fix: Due to a bug in the style parser, no labels/icons were shown anymore (icons are still not visible, due to an issue in QGIS)
     * OpenMapTiles removed from predefined connections
