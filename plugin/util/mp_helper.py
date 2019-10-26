@@ -53,6 +53,8 @@ def _get_lib_path():
         if not os.path.isdir(temp_dir):
             os.makedirs(temp_dir)
         if os.path.isfile(temp_lib_path) and os.path.getmtime(temp_lib_path) != os.path.getmtime(lib_path):
+            info("Updating native lib...")
+            unload_lib()
             os.remove(temp_lib_path)
         if not os.path.isfile(temp_lib_path):
             shutil.copy2(lib_path, temp_dir)
@@ -62,11 +64,13 @@ def _get_lib_path():
 
 def load_lib():
     global _native_lib_handle
+
+    path = _get_lib_path()
+
     if _native_lib_handle:
-        info("The native dll is already loaded, not loading again...")
+        info("The native lib is already loaded, not loading again...")
     else:
-        info("Loading native dll...")
-        path = _get_lib_path()
+        info("Loading native lib...")
         if path and os.path.isfile(path):
             try:
                 lib = cdll.LoadLibrary(path)
@@ -97,7 +101,7 @@ def unload_lib():
     global _native_lib_handle
     system = platform.system()
     try:
-        info("Unloading native dll...")
+        info("Unloading native lib...")
         if _native_lib_handle:
             if system == "Windows":
                 from ctypes import windll
@@ -106,9 +110,9 @@ def unload_lib():
             else:
                 _native_lib_handle.dlclose()
         else:
-            info("Dll already unloaded")
+            info("Native lib already unloaded")
     except Exception:
-        critical("Unloading native dll failed on {}: {}", system, sys.exc_info())
+        critical("Unloading native lib failed on {}: {}", system, sys.exc_info())
     finally:
         _native_lib_handle = None
 
