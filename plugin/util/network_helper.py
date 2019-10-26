@@ -106,12 +106,10 @@ def load_tiles_async(
     all_results = []
     cancelling = False
     while not all_finished:
-        # sleep(0.05)
         cancelling: bool = cancelling_func and cancelling_func()
         if cancelling:
             break
 
-        # results = []
         new_finished = list(filter(lambda r: r[0].isFinished() and r[1] not in finished_tiles, replies))
         nr_finished += len(new_finished)
         for reply, tile_coord in new_finished:
@@ -127,7 +125,6 @@ def load_tiles_async(
                 all_results.append((tile_coord, content))
             reply.deleteLater()
         QApplication.processEvents()
-        # all_results.extend(results)
         all_finished = nr_finished == total_nr_of_requests
         if nr_finished != nr_finished_before:
             nr_finished_before = nr_finished
