@@ -1,4 +1,4 @@
-exclude: '^(ext-libs/|tests/|plugin/ui/qt/)$'
+exclude: '((ext-libs/)|(tests/)|(plugin/ui/qt/))$'
 repos:
 -   repo: https://github.com/ambv/black
     rev: 19.10b0
