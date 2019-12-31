@@ -1,3 +1,4 @@
+exclude: 'ext-libs/'
 repos:
 -   repo: https://github.com/ambv/black
     rev: 19.10b0
