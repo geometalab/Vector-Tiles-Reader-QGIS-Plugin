@@ -27,7 +27,7 @@ def classFactory(iface):
     version = ""
     metadata_path = os.path.join(os.path.dirname(__file__), "metadata.txt")
     if os.path.isfile(metadata_path):
-        with open(metadata_path, 'r') as f:
+        with open(metadata_path, "r") as f:
             arr = f.readlines()
         for line in arr:
             line = line.replace("\n", "")

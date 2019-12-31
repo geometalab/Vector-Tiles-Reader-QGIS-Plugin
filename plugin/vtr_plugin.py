@@ -287,7 +287,11 @@ class VtrPlugin:
         info("Bounds of source: {}", bounds)
         is_within_bounds = self.is_extent_within_bounds(extent, bounds)
         if not is_within_bounds:
-            info("Current QGIS extent '{}' is not within bounds '{}'. Setting current QGIS extent to bounds.")
+            info(
+                "Current QGIS extent '{}' is not within bounds '{}'. Setting current QGIS extent to bounds.",
+                extent,
+                bounds,
+            )
             self._set_qgis_extent(zoom=zoom, scheme=scheme, bounds=bounds)
 
         if not self._is_valid_qgis_extent(extent_to_load=extent, zoom=zoom):

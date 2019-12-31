@@ -129,10 +129,7 @@ class ConnectionsDialog(QDialog, Ui_DlgConnections):
             "url": "https://tile.nextzen.org/tilezen/vector/v1/512/all/tilejson.mvt.json?api_key={token}",
             "token": "80xAN5o0QuyFrcPVVIieTA",
         },
-        _OIM: {
-            "name": _OIM,
-            "url": "https://openinframap.org/map.json"
-        }
+        _OIM: {"name": _OIM, "url": "https://openinframap.org/map.json"},
     }
 
     _CONNECTIONS_TAB = "selected_connections_tab"

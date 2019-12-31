@@ -38,9 +38,4 @@ class Ui_DlgAbout(object):
         _translate = QtCore.QCoreApplication.translate
         DlgAbout.setWindowTitle(_translate("DlgAbout", "About Vector Tile Reader"))
         self.btnClose.setText(_translate("DlgAbout", "Close"))
-        self.txtAbout.setHtml(
-            _translate(
-                "DlgAbout",
-                '',
-            )
-        )
+        self.txtAbout.setHtml(_translate("DlgAbout", "",))
