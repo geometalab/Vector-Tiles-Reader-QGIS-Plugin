@@ -3,9 +3,9 @@ import platform
 import shutil
 import sys
 import traceback
-from pathlib import Path
-from datetime import datetime
 from ctypes import c_bool, c_char_p, c_double, c_uint16, c_void_p, cast, cdll
+from datetime import datetime
+from pathlib import Path
 
 import mapbox_vector_tile
 
@@ -157,6 +157,7 @@ def decode_tile_native(tile_data_clip):
             exc_txt = traceback.format_exc()
             info("Decoding failed: {}", exc_txt)
             from mapbox_vector_tile import decode
+
             tb_data = Path(get_temp_dir()) / f"decoding_data_{datetime.now()}.json".replace(" ", "_").replace(":", ".")
             tb_data.write_text(json.dumps(decode(data)))
 

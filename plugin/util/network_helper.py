@@ -1,7 +1,8 @@
-from time import sleep
+# from time import sleep
 from typing import Callable, List, Optional, Tuple
 
-from PyQt5.QtCore import QUrl, QThreadPool, QRunnable
+# from PyQt5.QtCore import QRunnable, QThreadPool, QUrl
+from PyQt5.QtCore import QUrl
 from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt5.QtWidgets import QApplication
 from qgis.core import QgsNetworkAccessManager
@@ -76,7 +77,9 @@ def http_get_async(url: str, head_only: bool = False) -> QNetworkReply:
 #         reply.deleteLater()
 
 
-# def load_tiles_async(urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None):
+# def load_tiles_async(
+#         urls_with_col_and_row, on_progress_changed: Callable = None, cancelling_func: Callable[[], bool] = None
+# ):
 #     downloaders: List[Downloader] = [
 #         Downloader(url=url, tile_coord=(col, row)) for url, col, row in urls_with_col_and_row
 #     ]

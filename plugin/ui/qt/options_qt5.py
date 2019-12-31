@@ -148,8 +148,7 @@ class Ui_OptionsGroup(object):
         self.chkClipTiles.setText(_translate("OptionsGroup", "Clip each tile at bounds (slow)"))
         self.chkApplyStyles.setToolTip(
             _translate(
-                "OptionsGroup",
-                "Apply a build-in, predefined QGIS style (instead of random QGIS default style)",
+                "OptionsGroup", "Apply a build-in, predefined QGIS style (instead of random QGIS default style)",
             )
         )
         self.chkApplyStyles.setText(_translate("OptionsGroup", "Apply GL JSON style (if specified)"))
