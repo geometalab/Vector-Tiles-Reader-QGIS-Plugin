@@ -753,10 +753,6 @@ class VtrPlugin:
             else:
                 self._debouncer.pause()
 
-        if not is_add and not self._get_all_own_layers():
-            info("Loading aborted as there are no layers of the current connection already loaded.")
-            return
-
         merge_tiles = options.merge_tiles_enabled()
         apply_styles = options.apply_styles_enabled()
         tile_limit = options.tile_number_limit()
