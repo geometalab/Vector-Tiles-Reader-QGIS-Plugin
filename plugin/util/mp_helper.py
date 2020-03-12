@@ -47,6 +47,8 @@ def _get_lib_path():
         lib = "pbf2geojson_osx_{}.so".format(bitness_string)
     elif sys.platform.startswith("openbsd"):
         lib = "pbf2geojson_openbsd_{}.so".format(bitness_string)
+    elif sys.platform.startswith("freebsd"):
+        lib = "pbf2geojson_freebsd_{}.so".format(bitness_string)
     if lib:
         temp_dir = get_temp_dir("native")
         lib_path = os.path.join(os.path.abspath(get_plugin_directory()), "ext-libs", "pbf2geojson", lib)
