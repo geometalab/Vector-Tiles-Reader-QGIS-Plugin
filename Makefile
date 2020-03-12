@@ -12,6 +12,7 @@ ifeq ($(detected_OS),Linux)
     CXXFLAGS += -fPIC
 endif
 ifeq ($(detected_OS),OpenBSD)
+    CXXFLAGS += -fPIC -I/usr/local/include
     CXX = c++
 endif
 ifeq ($(detected_OS),Darwin)
@@ -43,4 +44,4 @@ osx:
 	$(CXX) -m32 $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_osx_i686.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
 
 openbsd:
-	$(CXX) -fPIC -std=c++11 -I/usr/local/include -s -Os -Ofast -O3 --shared -o ./ext-libs/pbf2geojson/pbf2geojson_openbsd_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
+	$(CXX) $(CXXFLAGS) -o ./ext-libs/pbf2geojson/pbf2geojson_openbsd_x86_64.so ./ext-libs/pbf2geojson/pbf2geojson.cpp
