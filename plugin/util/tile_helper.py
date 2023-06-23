@@ -1,11 +1,11 @@
 import itertools
-from math import floor
+from math import floor, ceil
 from typing import Callable, List, Optional, Tuple, TypeVar
 
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsPointXY, QgsProject
 
 from .global_map_tiles import GlobalMercator
-from .log_helper import debug
+from .log_helper import debug, info, warn
 
 StrOrInt = TypeVar("StrOrInt", str, int)
 
@@ -58,7 +58,6 @@ class Bounds(dict):
 
 
 class VectorTile:
-
     decoded_data = {}
 
     def __init__(self, scheme, zoom_level, x, y):
@@ -99,7 +98,7 @@ def clamp_bounds(bounds_to_clamp: Bounds, clamp_values: Bounds) -> Bounds:
 
 def extent_overlap_bounds(extent: Bounds, bounds: Bounds) -> bool:
     return (
-        bounds.x_min() <= extent.x_min() <= bounds.x_max() or bounds.x_min() <= extent.x_max() <= bounds.x_max()
+            bounds.x_min() <= extent.x_min() <= bounds.x_max() or bounds.x_min() <= extent.x_max() <= bounds.x_max()
     ) and (bounds.y_min() <= extent.y_min() <= bounds.y_max() or bounds.y_min() <= extent.y_max() <= bounds.y_max())
 
 
@@ -158,8 +157,17 @@ def convert_coordinate(source_crs: StrOrInt, target_crs: StrOrInt, lat: float, l
     crs_src = QgsCoordinateReferenceSystem(source_crs)
     crs_dest = QgsCoordinateReferenceSystem(target_crs)
     xform = QgsCoordinateTransform(crs_src, crs_dest, QgsProject.instance())
+    debug("CRS conversion, In: {} Out: {} Lon: {:.3f} Lat: {:.3f}", source_crs, target_crs, float(lng), float(lat))
+    try:
+        x, y = xform.transform(QgsPointXY(lng, lat))
+    except:  # Handle infinity when caused for known reason
+        shift = 0.001
+        if lat != 90.0 and lng != 180.0:
+            raise RuntimeError("Failed to solve CRS conversion exception: {} Out: {} Lon: {:.3f} Lat: {:.3f}".format(source_crs, target_crs, float(lng), float(lat)))
+        else:
+            x, y = xform.transform(QgsPointXY(lng - shift, lat - shift))
+            warn("CRS conversion exception, applied shift to fix transform for In: {} Out: {} Lon: {:.3f} to {:.3f} Lat: {:.3f} to {:.3f} x: {:.3f} y: {:.3f}", source_crs, target_crs, float(lng), float(lng - shift), float(lat), float(lat - shift), x, y)
 
-    x, y = xform.transform(QgsPointXY(lng, lat))
     return x, y
 
 
@@ -189,7 +197,7 @@ def tile_to_latlon(zoom: int, x: int, y: int, scheme: str = "tms") -> Tuple[floa
 
 
 def get_tile_bounds(
-    zoom: int, extent: Tuple[float, float, float, float], source_crs: str, scheme: str = "xyz"
+        zoom: int, extent: Tuple[float, float, float, float], source_crs: str, scheme: str = "xyz"
 ) -> Bounds:
     """
      * Returns the tile boundaries in XYZ scheme in the form
@@ -227,11 +235,11 @@ def get_tile_bounds(
 
 def get_all_tiles(bounds: Bounds, is_cancel_requested_handler: Callable) -> List[Tuple[int, int]]:
     tiles = []
-    width = bounds.width()
-    height = bounds.height()
+    width = ceil(bounds.width())
+    height = ceil(bounds.height())
     x_min = bounds.x_min()
     y_min = bounds.y_min()
-    debug("Preprocessing {} tiles", width * height)
+    info("Preprocessing {} tiles", width * height)
     for x in range(width):
         if is_cancel_requested_handler():
             break
@@ -261,7 +269,7 @@ _directions = {_UP: (0, -1), _RIGHT: (1, 0), _DOWN: (0, 1), _LEFT: (-1, 0)}
 
 
 def get_tiles_from_center(
-    nr_of_tiles: int, available_tiles: List[Tuple[int, int]], should_cancel_func: Callable[[], bool] = None
+        nr_of_tiles: int, available_tiles: List[Tuple[int, int]], should_cancel_func: Callable[[], bool] = None
 ) -> list:
     if nr_of_tiles > len(available_tiles):
         nr_of_tiles = len(available_tiles)
