@@ -13,7 +13,7 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * Nextzen.org
     * OpenInfraMap.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.2.2
+version=3.3.0
 author=Martin Boos
 email=geometalab@gmail.com
 
@@ -23,6 +23,10 @@ email=geometalab@gmail.com
 
 # Uncomment the following line and add your changelog:
 changelog=
+    ---3.3.0---
+    * Merge PR 292 that fixes the following two errors
+    * Fix: Infinity values resulting from the reprojection
+    * Fix: with and height not being integers
     ---3.2.2---
     * Fix: Make sure native library is unloaded before trying to update it
     ---3.2.1---
