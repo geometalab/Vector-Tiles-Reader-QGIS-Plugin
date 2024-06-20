@@ -1,5 +1,3 @@
-# This file contains metadata for this plugin interpreted by QGIS and e.g. plugins.qgis.org.
-
 # Mandatory items:
 
 [general]
@@ -13,16 +11,26 @@ about=Plugin which reads vector tiles according to Mapbox' Vector Tiles specific
     * Nextzen.org
     * OpenInfraMap.org
     This Python plugin uses prebuilt C++ binaries for performance reasons.
-version=3.3.0
+version=3.3.1
 author=Martin Boos
-email=geometalab@gmail.com
+email=geometalab@ost.ch
 
-# End of mandatory metadata
+repository=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
 
-# Recommended items:
+# Optional items:
 
-# Uncomment the following line and add your changelog:
+homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/blob/dev-qgis3/README.md
+tracker=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
+
+tags=vector tiles, tiles, mbtiles, mapbox, vector, basemap
+category=Vector
+icon=icon.png
+experimental=True
+deprecated=True
+
 changelog=
+    ---3.3.1---
+    * update metadata
     ---3.3.0---
     * Merge PR 292 that fixes the following two errors
     * Fix: Infinity values resulting from the reprojection
@@ -153,17 +161,3 @@ changelog=
     * UI changed: file can be opened directly without adding as connection
     * Experimental flag removed
     * Bugfixes & improvements
-
-# Tags are comma separated with spaces allowed
-tags=vector tiles, tiles, mbtiles, mapbox, vector, basemap
-
-homepage=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/
-tracker=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin/issues
-repository=https://github.com/geometalab/Vector-Tiles-Reader-QGIS-Plugin
-category=Vector
-icon=icon.png
-experimental=True
-
-# deprecated flag (applies to the whole plugin, not just a single version)
-deprecated=False
-
